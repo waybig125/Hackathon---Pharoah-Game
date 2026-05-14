@@ -19,7 +19,10 @@ namespace TheAlchemistsCrypt.UI
 
             // Use standard background sprite or null for a solid color
             Sprite defaultSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Background.psd");
+            if (defaultSprite == null) defaultSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Knob.psd");
+            
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
 
             void CreateHoldButton(string name, Vector2 anchoredPos, Vector2 size, string textStr, UnityEngine.Events.UnityAction<BaseEventData> onDown, UnityEngine.Events.UnityAction<BaseEventData> onUp)
             {
@@ -104,8 +107,8 @@ namespace TheAlchemistsCrypt.UI
             var entryDrag = new EventTrigger.Entry { eventID = EventTriggerType.Drag };
             entryDrag.callback.AddListener((data) => {
                 var pointerData = (PointerEventData)data;
-                // Multiply delta by a sensitivity factor suitable for mobile (e.g. 0.2)
-                inputManager.SetLook(pointerData.delta * 0.2f);
+                // Increased multiplier to 2.0f for better sensitivity
+                inputManager.SetLook(pointerData.delta * 2.0f);
             });
             touchTrigger.triggers.Add(entryDrag);
 

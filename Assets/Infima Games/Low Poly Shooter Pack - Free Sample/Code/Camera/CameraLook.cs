@@ -1,4 +1,4 @@
-﻿// Copyright 2021, Infima Games. All Rights Reserved.
+// Copyright 2021, Infima Games. All Rights Reserved.
 
 using UnityEngine;
 
@@ -15,7 +15,7 @@ namespace InfimaGames.LowPolyShooterPack
         
         [Tooltip("Sensitivity when looking around.")]
         [SerializeField]
-        private Vector2 sensitivity = new Vector2(1, 1);
+        private Vector2 sensitivity = new Vector2(5, 5); // Increased from 1, 1
 
         [Tooltip("Minimum and maximum up/down rotation angle the camera can have.")]
         [SerializeField]
