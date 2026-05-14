@@ -1,4 +1,4 @@
-﻿// Copyright 2021, Infima Games. All Rights Reserved.
+// Copyright 2021, Infima Games. All Rights Reserved.
 
 using System;
 using UnityEngine;
@@ -199,6 +199,16 @@ namespace InfimaGames.LowPolyShooterPack
 
 		protected override void Update()
 		{
+            // --- HACKATHON MOBILE INJECTION ---
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+            {
+                axisMovement = TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
+                axisLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
+                holdingButtonFire = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsFiring;
+                cursorLocked = true; // Force cursor locked on mobile to allow look scripts to work
+            }
+            // ----------------------------------
+
 			//Match Aim.
 			aiming = holdingButtonAim && CanAim();
 			//Match Run.
