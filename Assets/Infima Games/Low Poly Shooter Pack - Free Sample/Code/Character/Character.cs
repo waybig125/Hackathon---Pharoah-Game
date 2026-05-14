@@ -202,10 +202,14 @@ namespace InfimaGames.LowPolyShooterPack
             // --- HACKATHON MOBILE INJECTION ---
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
             {
-                axisMovement = TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
-                axisLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
-                holdingButtonFire = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsFiring;
-                holdingButtonRun = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSprinting;
+                var mobileMove = TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
+                if (mobileMove.sqrMagnitude > 0) axisMovement = mobileMove;
+                
+                var mobileLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
+                if (mobileLook.sqrMagnitude > 0) axisLook = mobileLook;
+
+                holdingButtonFire = holdingButtonFire || TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsFiring;
+                holdingButtonRun = holdingButtonRun || TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSprinting;
                 
                 if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon)
                 {
@@ -217,7 +221,8 @@ namespace InfimaGames.LowPolyShooterPack
                     TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon = false;
                 }
                 
-                cursorLocked = true; // Force cursor locked on mobile to allow look scripts to work
+                if (Application.isMobilePlatform)
+                    cursorLocked = true; // Force cursor locked on mobile to allow look scripts to work
             }
             // ----------------------------------
 

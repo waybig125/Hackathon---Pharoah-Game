@@ -17,8 +17,8 @@ namespace TheAlchemistsCrypt.UI
             var canvasObj = GameObject.Find("MobileHUD");
             if (canvasObj == null) return;
 
-            // Use the standard Knob sprite
-            var knobSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Knob.psd");
+            // Use standard background sprite or null for a solid color
+            Sprite defaultSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Background.psd");
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             void CreateHoldButton(string name, Vector2 anchoredPos, Vector2 size, string textStr, UnityEngine.Events.UnityAction<BaseEventData> onDown, UnityEngine.Events.UnityAction<BaseEventData> onUp)
@@ -34,7 +34,7 @@ namespace TheAlchemistsCrypt.UI
                 rect.sizeDelta = size;
                 
                 var img = go.AddComponent<Image>();
-                img.sprite = knobSprite;
+                img.sprite = defaultSprite;
                 img.color = new Color(0, 0, 0, 0.5f);
                 
                 var textGo = new GameObject("Text");
@@ -47,10 +47,10 @@ namespace TheAlchemistsCrypt.UI
                 text.font = font;
                 text.alignment = TextAnchor.MiddleCenter;
                 text.color = Color.white;
-                text.fontSize = 24;
+                text.fontSize = 40; // Higher font size for better resolution
                 text.resizeTextForBestFit = true;
-                text.resizeTextMinSize = 10;
-                text.resizeTextMaxSize = 30;
+                text.resizeTextMinSize = 20;
+                text.resizeTextMaxSize = 80;
                 
                 var trigger = go.AddComponent<EventTrigger>();
                 

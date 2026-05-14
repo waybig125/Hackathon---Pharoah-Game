@@ -31,36 +31,8 @@ namespace TheAlchemistsCrypt.Input
 
         private void Update()
         {
-            // Desktop Fallback
-            if (Application.isEditor || !Application.isMobilePlatform)
-            {
-                float h = 0f;
-                float v = 0f;
-                if (UnityEngine.Input.GetKey(KeyCode.W) || UnityEngine.Input.GetKey(KeyCode.UpArrow)) v += 1f;
-                if (UnityEngine.Input.GetKey(KeyCode.S) || UnityEngine.Input.GetKey(KeyCode.DownArrow)) v -= 1f;
-                if (UnityEngine.Input.GetKey(KeyCode.D) || UnityEngine.Input.GetKey(KeyCode.RightArrow)) h += 1f;
-                if (UnityEngine.Input.GetKey(KeyCode.A) || UnityEngine.Input.GetKey(KeyCode.LeftArrow)) h -= 1f;
-                
-                MovementInput = new Vector2(h, v).normalized;
-                
-                // For look input, we still need mouse movement, but if axes are missing, we can try/catch or use a different approach.
-                // However, Mouse X and Mouse Y are usually present. If they fail, we catch it.
-                try 
-                {
-                    LookInput = new Vector2(UnityEngine.Input.GetAxis("Mouse X"), UnityEngine.Input.GetAxis("Mouse Y"));
-                }
-                catch (System.ArgumentException) 
-                {
-                    // Fallback to no mouse look if axes are completely broken
-                }
-
-                IsFiring = UnityEngine.Input.GetMouseButton(0);
-                
-                if (UnityEngine.Input.GetKeyDown(KeyCode.Space)) IsJumping = true;
-                if (UnityEngine.Input.GetKeyDown(KeyCode.C)) IsCrouching = !IsCrouching; // Toggle crouch on desktop
-                IsSprinting = UnityEngine.Input.GetKey(KeyCode.LeftShift);
-                if (UnityEngine.Input.GetKeyDown(KeyCode.Q)) IsSwappingWeapon = true;
-            }
+            // Desktop Fallback is disabled because Character.cs uses the New Input System natively for desktop controls.
+            // This manager is now exclusively for mobile UI overrides.
             
             // Note: UI Joystick and Touch Zone will set these values directly via methods called from EventSystem
         }
