@@ -84,6 +84,37 @@ namespace TheAlchemistsCrypt.UI
             CreateHoldButton("SwapButton", new Vector2(-100, 900), new Vector2(120, 120), "SWAP", 
                 data => inputManager.SetSwappingWeapon(), 
                 null);
+
+            // Invisible Touch Zone for Camera Look (Right half of the screen)
+            var touchZoneGo = new GameObject("LookTouchZone");
+            touchZoneGo.transform.SetParent(canvasObj.transform, false);
+            var touchRect = touchZoneGo.AddComponent<RectTransform>();
+            touchRect.anchorMin = new Vector2(0.5f, 0); // Start from middle
+            touchRect.anchorMax = new Vector2(1, 1); // Full height, right side
+            touchRect.offsetMin = Vector2.zero;
+            touchRect.offsetMax = Vector2.zero;
+
+            var touchImg = touchZoneGo.AddComponent<Image>();
+            touchImg.color = new Color(0, 0, 0, 0); // Completely transparent
+            touchImg.raycastTarget = true; // Still catches raycasts
+
+            var touchTrigger = touchZoneGo.AddComponent<EventTrigger>();
+
+            // Drag event
+            var entryDrag = new EventTrigger.Entry { eventID = EventTriggerType.Drag };
+            entryDrag.callback.AddListener((data) => {
+                var pointerData = (PointerEventData)data;
+                // Multiply delta by a sensitivity factor suitable for mobile (e.g. 0.2)
+                inputManager.SetLook(pointerData.delta * 0.2f);
+            });
+            touchTrigger.triggers.Add(entryDrag);
+
+            // Pointer Up event (reset look to zero when finger lifted)
+            var entryUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+            entryUp.callback.AddListener((data) => {
+                inputManager.SetLook(Vector2.zero);
+            });
+            touchTrigger.triggers.Add(entryUp);
         }
     }
 }
