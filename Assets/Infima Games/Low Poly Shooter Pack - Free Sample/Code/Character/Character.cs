@@ -205,6 +205,19 @@ namespace InfimaGames.LowPolyShooterPack
                 axisMovement = TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
                 axisLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
                 holdingButtonFire = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsFiring;
+                holdingButtonRun = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSprinting;
+                
+                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon)
+                {
+                    if (inventory != null)
+                    {
+                        int nextIndex = inventory.GetEquippedIndex() + 1;
+                        if (nextIndex >= inventory.GetWeapons().Length) nextIndex = 0;
+                        inventory.Equip(nextIndex);
+                    }
+                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon = false;
+                }
+                
                 cursorLocked = true; // Force cursor locked on mobile to allow look scripts to work
             }
             // ----------------------------------

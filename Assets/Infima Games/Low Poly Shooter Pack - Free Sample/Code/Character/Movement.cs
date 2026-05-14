@@ -1,4 +1,4 @@
-﻿// Copyright 2021, Infima Games. All Rights Reserved.
+// Copyright 2021, Infima Games. All Rights Reserved.
 
 using System.Linq;
 using UnityEngine;
@@ -28,7 +28,11 @@ namespace InfimaGames.LowPolyShooterPack
         [Tooltip("How fast the player moves while running."), SerializeField]
         private float speedRunning = 9.0f;
 
-        #endregion
+        [Tooltip("How fast the player moves while crouching."), SerializeField]
+        private float speedCrouching = 3.0f;
+
+        [Tooltip("How high the player jumps."), SerializeField]
+        private float jumpForce = 5.0f;
 
         #region PROPERTIES
 
@@ -136,8 +140,20 @@ namespace InfimaGames.LowPolyShooterPack
             //Move.
             MoveCharacter();
             
+            //Jump
+            ProcessJumping();
+            
             //Unground.
             grounded = false;
+        }
+
+        private void ProcessJumping()
+        {
+            if (grounded && TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsJumping)
+            {
+                rigidBody.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsJumping = false;
+            }
         }
 
         /// Moves the camera to the character, processes jumping and plays sounds every frame.
@@ -163,13 +179,27 @@ namespace InfimaGames.LowPolyShooterPack
             //Calculate local-space direction by using the player's input.
             var movement = new Vector3(frameInput.x, 0.0f, frameInput.y);
             
-            //Running speed calculation.
-            if(playerCharacter.IsRunning())
+            //Running and Crouching speed calculation.
+            bool isCrouching = TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsCrouching;
+            
+            if (isCrouching)
+            {
+                movement *= speedCrouching;
+                capsule.height = Mathf.Lerp(capsule.height, 1.0f, Time.deltaTime * 10f);
+                capsule.center = Vector3.Lerp(capsule.center, new Vector3(0, -0.5f, 0), Time.deltaTime * 10f);
+            }
+            else if(playerCharacter.IsRunning())
+            {
                 movement *= speedRunning;
+                capsule.height = Mathf.Lerp(capsule.height, 2.0f, Time.deltaTime * 10f);
+                capsule.center = Vector3.Lerp(capsule.center, Vector3.zero, Time.deltaTime * 10f);
+            }
             else
             {
                 //Multiply by the normal walking speed.
                 movement *= speedWalking;
+                capsule.height = Mathf.Lerp(capsule.height, 2.0f, Time.deltaTime * 10f);
+                capsule.center = Vector3.Lerp(capsule.center, Vector3.zero, Time.deltaTime * 10f);
             }
 
             //World space velocity calculation. This allows us to add it to the rigidbody's velocity properly.
@@ -177,8 +207,8 @@ namespace InfimaGames.LowPolyShooterPack
 
             #endregion
             
-            //Update Velocity.
-            Velocity = new Vector3(movement.x, 0.0f, movement.z);
+            //Update Velocity. Preserve Y velocity!
+            Velocity = new Vector3(movement.x, Velocity.y, movement.z);
         }
 
         /// <summary>

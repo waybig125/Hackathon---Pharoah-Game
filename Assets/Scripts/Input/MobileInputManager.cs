@@ -13,10 +13,20 @@ namespace TheAlchemistsCrypt.Input
         public Vector2 MovementInput { get; private set; }
         public Vector2 LookInput { get; private set; }
         public bool IsFiring { get; private set; }
+        public bool IsJumping { get; set; }
+        public bool IsCrouching { get; set; }
+        public bool IsSprinting { get; set; }
+        public bool IsSwappingWeapon { get; set; }
 
         private void Awake()
         {
             Instance = this;
+            
+            // Auto-attach MobileHUDButtons
+            if (gameObject.GetComponent<TheAlchemistsCrypt.UI.MobileHUDButtons>() == null)
+            {
+                gameObject.AddComponent<TheAlchemistsCrypt.UI.MobileHUDButtons>();
+            }
         }
 
         private void Update()
@@ -31,8 +41,7 @@ namespace TheAlchemistsCrypt.Input
                 if (UnityEngine.Input.GetKey(KeyCode.D) || UnityEngine.Input.GetKey(KeyCode.RightArrow)) h += 1f;
                 if (UnityEngine.Input.GetKey(KeyCode.A) || UnityEngine.Input.GetKey(KeyCode.LeftArrow)) h -= 1f;
                 
-                // Only override if there is actual keyboard input (allows testing UI in editor)
-                if (h != 0 || v != 0) MovementInput = new Vector2(h, v).normalized;
+                MovementInput = new Vector2(h, v).normalized;
                 
                 // For look input, we still need mouse movement, but if axes are missing, we can try/catch or use a different approach.
                 // However, Mouse X and Mouse Y are usually present. If they fail, we catch it.
@@ -46,6 +55,11 @@ namespace TheAlchemistsCrypt.Input
                 }
 
                 IsFiring = UnityEngine.Input.GetMouseButton(0);
+                
+                if (UnityEngine.Input.GetKeyDown(KeyCode.Space)) IsJumping = true;
+                if (UnityEngine.Input.GetKeyDown(KeyCode.C)) IsCrouching = !IsCrouching; // Toggle crouch on desktop
+                IsSprinting = UnityEngine.Input.GetKey(KeyCode.LeftShift);
+                if (UnityEngine.Input.GetKeyDown(KeyCode.Q)) IsSwappingWeapon = true;
             }
             
             // Note: UI Joystick and Touch Zone will set these values directly via methods called from EventSystem
@@ -67,6 +81,26 @@ namespace TheAlchemistsCrypt.Input
         public void SetFiring(bool state)
         {
             IsFiring = state;
+        }
+
+        public void SetJumping(bool state)
+        {
+            IsJumping = state;
+        }
+
+        public void SetCrouching(bool state)
+        {
+            IsCrouching = state;
+        }
+
+        public void SetSprinting(bool state)
+        {
+            IsSprinting = state;
+        }
+
+        public void SetSwappingWeapon()
+        {
+            IsSwappingWeapon = true;
         }
     }
 }
