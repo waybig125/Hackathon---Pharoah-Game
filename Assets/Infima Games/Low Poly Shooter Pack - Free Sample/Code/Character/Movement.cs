@@ -34,6 +34,8 @@ namespace InfimaGames.LowPolyShooterPack
         [Tooltip("How high the player jumps."), SerializeField]
         private float jumpForce = 5.0f;
 
+        #endregion
+
         #region PROPERTIES
 
         //Velocity.
