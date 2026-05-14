@@ -211,8 +211,7 @@ namespace InfimaGames.LowPolyShooterPack
                 {
                     if (inventory != null)
                     {
-                        int nextIndex = inventory.GetEquippedIndex() + 1;
-                        if (nextIndex >= inventory.GetWeapons().Length) nextIndex = 0;
+                        int nextIndex = inventory.GetNextIndex();
                         inventory.Equip(nextIndex);
                     }
                     TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon = false;

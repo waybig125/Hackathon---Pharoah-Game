@@ -11,7 +11,7 @@ namespace TheAlchemistsCrypt.UI
             // Only create these buttons on mobile or editor
             if (!Application.isMobilePlatform && !Application.isEditor) return;
 
-            var inputManager = FindObjectOfType<TheAlchemistsCrypt.Input.MobileInputManager>();
+            var inputManager = FindFirstObjectByType<TheAlchemistsCrypt.Input.MobileInputManager>();
             if (inputManager == null) return;
 
             var canvasObj = GameObject.Find("MobileHUD");
