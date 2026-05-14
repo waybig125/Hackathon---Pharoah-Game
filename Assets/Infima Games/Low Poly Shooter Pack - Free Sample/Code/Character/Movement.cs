@@ -151,10 +151,15 @@ namespace InfimaGames.LowPolyShooterPack
 
         private void ProcessJumping()
         {
-            if (grounded && TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsJumping)
+            bool isMobileJumping = TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsJumping;
+            bool isDesktopJumping = UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.spaceKey.isPressed;
+            
+            if (grounded && (isMobileJumping || isDesktopJumping))
             {
                 rigidBody.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
-                TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsJumping = false;
+                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) {
+                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsJumping = false;
+                }
             }
         }
 
