@@ -17,7 +17,6 @@ public class CityMaterialFixer : MonoBehaviour
             normalMap = Resources.Load<Texture>("Textures/EgyptianNormalMap");
         }
 
-        Shader egyptianShader = Shader.Find("Custom/AncientEgyptian");
         Renderer[] renderers = GetComponentsInChildren<Renderer>();
         foreach (var r in renderers)
         {
@@ -29,14 +28,13 @@ public class CityMaterialFixer : MonoBehaviour
             {
                 if (mat == null) continue;
                 
-                if (egyptianShader != null)
+                Shader standardLit = Shader.Find("Universal Render Pipeline/Lit");
+                if (standardLit != null)
                 {
-                    mat.shader = egyptianShader;
-                    mat.SetColor("_Warmth", new Color(1.0f, 0.9f, 0.75f)); // Warmer
-                    mat.SetFloat("_Contrast", 1.2f);
-                    mat.SetFloat("_SandAmount", 0.3f);
-                    mat.SetFloat("_CrackScale", 25.0f);
-                    mat.SetFloat("_CrackIntensity", 0.4f);
+                    mat.shader = standardLit;
+                    mat.SetColor("_BaseColor", new Color(1.0f, 0.9f, 0.75f)); // Warm tint
+                    mat.SetFloat("_Smoothness", 0.1f); // Matte stone
+                    mat.SetFloat("_Metallic", 0.0f);
                 }
 
                 // Set the normal map
@@ -44,6 +42,7 @@ public class CityMaterialFixer : MonoBehaviour
                 {
                     mat.SetTexture("_BumpMap", normalMap);
                     mat.EnableKeyword("_NORMALMAP");
+                    mat.SetFloat("_BumpScale", 1.5f); // Make normal map more visible
                 }
                 
                 // Set tiling
