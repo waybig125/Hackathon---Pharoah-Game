@@ -68,7 +68,7 @@ namespace TheAlchemistsCrypt.Editor
         private void RunAudit()
         {
             meshColliders.Clear();
-            meshColliders = Object.FindObjectsByType<MeshCollider>(FindObjectsSortMode.None).ToList();
+            meshColliders = Object.FindObjectsByType<MeshCollider>().ToList();
             Debug.Log($"Found {meshColliders.Count} MeshColliders in the scene.");
         }
     }

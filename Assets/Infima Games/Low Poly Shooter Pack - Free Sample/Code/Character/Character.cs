@@ -202,17 +202,25 @@ namespace InfimaGames.LowPolyShooterPack
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
             {
                 var mobileMove = TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
-                axisMovement = mobileMove; // Allow zero for stopping
+                if (mobileMove != Vector2.zero) axisMovement = mobileMove;
                 
                 var mobileLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
-                axisLook = mobileLook;
-                // Clear look input after consumption to prevent continuous spinning/drift
-                TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetLook(Vector2.zero);
+                if (mobileLook != Vector2.zero)
+                {
+                    // Accumulate look input, it will be consumed by GetInputLook
+                    axisLook += mobileLook;
+                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetLook(Vector2.zero);
+                }
                 
-                // Use explicit state instead of |= to avoid sticking
-                holdingButtonFire = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsFiring;
-                holdingButtonAim = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsAiming;
-                holdingButtonRun = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSprinting;
+                // Set explicit button states from mobile if applicable
+                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsFiring) holdingButtonFire = true;
+                else if (Application.isMobilePlatform) holdingButtonFire = false;
+
+                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsAiming) holdingButtonAim = true;
+                else if (Application.isMobilePlatform) holdingButtonAim = false;
+
+                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSprinting) holdingButtonRun = true;
+                else if (Application.isMobilePlatform) holdingButtonRun = false;
                 
                 if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon)
                 {
@@ -225,7 +233,7 @@ namespace InfimaGames.LowPolyShooterPack
                 }
                 
                 if (Application.isMobilePlatform)
-                    cursorLocked = true; // Force cursor locked on mobile to allow look scripts to work
+                    cursorLocked = true; 
             }
             // ----------------------------------
 
@@ -292,23 +300,14 @@ namespace InfimaGames.LowPolyShooterPack
 		
 		public override Vector2 GetInputMovement()
 		{
-			// Returns mobile input if available
-			if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput != Vector2.zero)
-				return TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
-				
 			return axisMovement;
 		}
 		public override Vector2 GetInputLook()
 		{
-			// Returns mobile input if available
-			if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput != Vector2.zero)
-			{
-				Vector2 mobileLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
-				// Reset look input after reading to prevent continuous rotation
-				TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetLook(Vector2.zero);
-				return mobileLook;
-			}
-			return axisLook;
+            Vector2 look = axisLook;
+            // Consume look input for this frame
+            axisLook = Vector2.zero;
+			return look;
 		}
 
 		#endregion

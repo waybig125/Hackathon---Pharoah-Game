@@ -6,15 +6,15 @@ namespace TheAlchemistsCrypt.Environment
     {
         [Header("Fog Settings")]
         public bool enableFog = true;
-        // Vibrant Green + Gray Mix
-        public Color fogColor = new Color(0.35f, 0.65f, 0.40f, 1f);
-        public float fogDensity = 0.015f; // Increased for thick Egyptian fog
+        // Darker, more dusky Egyptian Night color (Dusty Blue/Gray/Sand)
+        public Color fogColor = new Color(0.12f, 0.11f, 0.15f, 1f);
+        public float fogDensity = 0.02f; 
         public FogMode fogMode = FogMode.ExponentialSquared;
 
         [Header("Lighting Settings")]
-        public Color ambientLight = new Color(0.85f, 0.82f, 0.75f);
-        public Color sunColor = new Color(1.0f, 0.95f, 0.8f, 1.0f);
-        public float sunIntensity = 3.0f;
+        public Color ambientLight = new Color(0.15f, 0.15f, 0.2f); // Darker blueish ambient
+        public Color sunColor = new Color(0.6f, 0.5f, 0.4f, 1.0f); // Dimmer, warmer "moonlight"
+        public float sunIntensity = 0.8f; 
 
         private void Start()
         {
@@ -41,7 +41,8 @@ namespace TheAlchemistsCrypt.Environment
             Light sun = RenderSettings.sun;
             if (sun == null)
             {
-                Light[] lights = Object.FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                // Fix Unity 6 API
+                Light[] lights = Object.FindObjectsByType<Light>(FindObjectsInactive.Include);
                 foreach (Light l in lights)
                 {
                     if (l.type == LightType.Directional && l.name != "TopDownClarityLight")

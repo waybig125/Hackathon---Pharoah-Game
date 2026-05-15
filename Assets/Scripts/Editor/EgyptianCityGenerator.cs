@@ -4,14 +4,11 @@ using UnityEditor;
 namespace TheAlchemistsCrypt.Editor
 {
     /// <summary>
-    /// Procedural Egyptian City Generator v8:
-    /// - Temple moved very close to player spawn (-40m from spawn)
-    /// - Massive 70m clear zone around temple to ensure visibility
-    /// - 3 Tree types distributed 33/33/33
-    /// - Fog: Vibrant Green + 0.5x Gray mix
-    /// - Ground: "Skin/Sandy" color, tiling fixed
-    /// - Top-down Directional Light for perfect color clarity
-    /// - Props strictly outside house bounds
+    /// Procedural Egyptian City Generator v9:
+    /// - Night/Dusk Vibe: Darker fog, lower intensity lights
+    /// - Tree Fix: Forced upright rotation (-90 X for GLBs)
+    /// - Material Fix: Robust URP shader detection to eliminate Magenta
+    /// - Temple: Walkable interior colliders
     /// </summary>
     public class EgyptianCityGenerator : EditorWindow
     {
@@ -53,7 +50,6 @@ namespace TheAlchemistsCrypt.Editor
             var wallMat  = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/BrickOldSharp0108_5_S_1_URP.mat");
             var floorMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/MarbleTiles0040_1_S_1_URP.mat");
 
-            // Warm skin/sandy color
             Material sandMat = MakeMat(new Color(0.92f, 0.85f, 0.72f)); 
             Material woodMat = MakeMat(new Color(0.38f, 0.25f, 0.10f));
             Material darkMat = MakeMat(new Color(0.05f, 0.04f, 0.03f));
@@ -65,12 +61,11 @@ namespace TheAlchemistsCrypt.Editor
             floor.transform.localScale = new Vector3(totalSize / 5f, 1f, totalSize / 5f);
             var floorRenderer = floor.GetComponent<Renderer>();
             
-            // Apply skin/sandy color to ground
             if (floorMat) 
             {
                 var inst = new Material(floorMat);
-                inst.color = new Color(0.92f, 0.78f, 0.62f); // Warmer Sandy/Skin color
-                inst.mainTextureScale = new Vector2(300, 300); // Increased tiling for clarity
+                inst.color = new Color(0.92f, 0.78f, 0.62f); 
+                inst.mainTextureScale = new Vector2(300, 300); 
                 floorRenderer.sharedMaterial = inst;
             }
             else
@@ -86,14 +81,13 @@ namespace TheAlchemistsCrypt.Editor
             var crate = Load("Assets/EgyptianAssets/crate.glb");
             var barrel = Load("Assets/EgyptianAssets/barrel.glb");
 
-            // Temple at -20 (Spawn is at -60, so 40m in front)
             if (chamber)
             {
                 var ch = Instantiate(chamber, root.transform);
                 ch.name = "CentralTemple";
                 ch.transform.position    = new Vector3(0, 0, -20);
-                ch.transform.localScale  = Vector3.one * 550f; // LARGER
-                ch.transform.rotation    = Quaternion.Euler(0, 180, 0); // Corrected to 0 on X axis
+                ch.transform.localScale  = Vector3.one * 550f; 
+                ch.transform.rotation    = Quaternion.Euler(0, 180, 0); 
                 AddCollidersToMesh(ch, makeTriggerOnSmallFaces: true);
             }
 
@@ -106,7 +100,6 @@ namespace TheAlchemistsCrypt.Editor
                     float pz = start + z * (blockSize + streetWidth);
                     var pos = new Vector3(px, 0, pz);
 
-                    // HUGE Clear zone (70m) around temple center (-20)
                     if (Vector3.Distance(pos, new Vector3(0, 0, -20)) < 70f)
                         continue;
 
@@ -120,7 +113,6 @@ namespace TheAlchemistsCrypt.Editor
                 }
             }
 
-            // Pyramids further back
             PlacePyramid(root, new Vector3(-totalSize * 1.5f, -10f,  totalSize * 1.5f), 400f, sandMat);
             PlacePyramid(root, new Vector3( totalSize * 1.8f, -10f, -totalSize * 2.0f), 600f, sandMat);
         }
@@ -129,36 +121,32 @@ namespace TheAlchemistsCrypt.Editor
         {
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
-            // Vibrant Green + 0.5x Gray
-            RenderSettings.fogColor = new Color(0.35f, 0.65f, 0.40f, 1f); 
-            RenderSettings.fogDensity = 0.015f; // Thick Egyptian Fog
+            RenderSettings.fogColor = new Color(0.12f, 0.11f, 0.15f, 1f); 
+            RenderSettings.fogDensity = 0.02f; 
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            // Much Lighter ambient to prevent "Brown Scene" overlay
-            RenderSettings.ambientLight = new Color(0.95f, 0.92f, 0.88f); 
+            RenderSettings.ambientLight = new Color(0.15f, 0.15f, 0.2f); 
             
-            // Ensure skybox isn't just a solid brown color
-            RenderSettings.skybox = null; // Forces default or allows camera color to show through clearly
-            // Existing Sun
+            RenderSettings.skybox = null; 
             Light sun = null;
             foreach (var l in Object.FindObjectsByType<Light>(FindObjectsInactive.Include))
                 if (l.type == LightType.Directional && l.name != "TopDownClarityLight") { sun = l; break; }
 
             if (sun != null)
             {
-                sun.intensity = 3.0f; // Boost sun
-                sun.transform.rotation = Quaternion.Euler(55f, -30f, 0f);
+                sun.intensity = 0.8f; 
+                sun.color = new Color(0.6f, 0.5f, 0.4f);
+                sun.transform.rotation = Quaternion.Euler(75f, -30f, 0f);
             }
 
-            // TOP-DOWN CLARITY LIGHT
             var topLightObj = GameObject.Find("TopDownClarityLight");
             if (topLightObj != null) Object.DestroyImmediate(topLightObj);
             topLightObj = new GameObject("TopDownClarityLight");
             var topLight = topLightObj.AddComponent<Light>();
             topLight.type = LightType.Directional;
-            topLight.intensity = 3.5f; // MASSIVE boost for side-lighting/fill
-            topLight.color = new Color(1f, 0.98f, 0.9f); // Slightly warm white
-            topLight.transform.rotation = Quaternion.Euler(85f, 10f, 0f); // Slightly off-center for better shading
+            topLight.intensity = 1.0f; 
+            topLight.color = new Color(0.7f, 0.75f, 1.0f); 
+            topLight.transform.rotation = Quaternion.Euler(85f, 10f, 0f); 
             topLight.shadows = LightShadows.None;
         }
 
@@ -168,7 +156,6 @@ namespace TheAlchemistsCrypt.Editor
             float r = Random.value;
             if (r < 0.45f)
             {
-                // All 3 trees used evenly
                 float tr = Random.value;
                 var prefab = (tr < 0.33f ? tree1 : (tr < 0.66f ? tree2 : tree3));
                 if (prefab == null) prefab = tree1; 
@@ -176,8 +163,8 @@ namespace TheAlchemistsCrypt.Editor
                 var t = Instantiate(prefab, parent);
                 t.transform.position = pos + new Vector3(Random.Range(-4f, 4f), 0, Random.Range(-4f, 4f));
                 t.transform.localScale = Vector3.one * Random.Range(7f, 12f);
-                // Using 0 on X because 90 and -90 made them horizontal/upside down
-                t.transform.rotation = Quaternion.Euler(0, Random.Range(0, 360), 0);
+                // Tree rotation fix: GLB assets often need -90 on X to stand upright
+                t.transform.rotation = Quaternion.Euler(-90, Random.Range(0, 360), 0);
                 AddCollidersToMesh(t);
             }
             else if (r < 0.65f && column != null)
@@ -185,7 +172,6 @@ namespace TheAlchemistsCrypt.Editor
                 var col = Instantiate(column, parent);
                 bool fallen = Random.value < 0.3f;
                 col.transform.position = pos + new Vector3(Random.Range(-2f, 2f), fallen ? 0.4f : 0, Random.Range(-2f, 2f));
-                // If not fallen, use 0 on X (upright)
                 col.transform.rotation = fallen ? Quaternion.Euler(0, Random.Range(0, 360), 90) : Quaternion.Euler(0, Random.Range(0, 360), 0);
                 col.transform.localScale = Vector3.one * Random.Range(0.9f, 1.3f);
                 AddCollidersToMesh(col);
@@ -209,7 +195,6 @@ namespace TheAlchemistsCrypt.Editor
             AddWindows(house.transform, h, w, d, darkMat);
             AddDoor(house.transform, h, w, d, woodMat, sandMat, darkMat);
 
-            // Props Guaranteed Outside with larger buffer
             if (Random.value < 0.35f && crate != null)
             {
                 var c = Instantiate(crate, parent);
@@ -251,7 +236,7 @@ namespace TheAlchemistsCrypt.Editor
                 Vector3 localPos;
                 if (isXAxis) {
                     localPos = new Vector3(positive ? 0.505f : -0.505f, 0.15f, along / span);
-                    winD = 2.5f / d; // Fixed width window
+                    winD = 2.5f / d; 
                 } else {
                     localPos = new Vector3(along / w, 0.15f, positive ? 0.505f : -0.505f);
                     winW = 2.5f / w;
@@ -264,7 +249,6 @@ namespace TheAlchemistsCrypt.Editor
                 win.GetComponent<Renderer>().sharedMaterial = darkMat;
                 Object.DestroyImmediate(win.GetComponent<Collider>());
 
-                // ADD WINDOW LIGHT (only some houses, and only one side)
                 if (positive && i == 0 && Random.value < 0.4f)
                 {
                     var lp = new GameObject("WindowLight");
@@ -272,7 +256,7 @@ namespace TheAlchemistsCrypt.Editor
                     lp.transform.localPosition = new Vector3(isXAxis ? (positive ? -0.5f : 0.5f) : 0, 0, isXAxis ? 0 : (positive ? -0.5f : 0.5f));
                     var l = lp.AddComponent<Light>();
                     l.type = LightType.Point;
-                    l.color = new Color(1f, 0.6f, 0.2f); // Warm Egyptian glow
+                    l.color = new Color(1f, 0.6f, 0.2f); 
                     l.range = 15f;
                     l.intensity = 2.5f;
                 }
@@ -286,19 +270,15 @@ namespace TheAlchemistsCrypt.Editor
             float normDoorW = doorW / w;
             float normDoorY = -0.5f + normDoorH * 0.5f;
             
-            // Door panel (recessed slightly)
             var panel = MakeCubePrim(house, new Vector3(0f, normDoorY, 0.505f), new Vector3(normDoorW, normDoorH, 0.05f), woodMat);
             Object.DestroyImmediate(panel.GetComponent<Collider>());
             
-            // Door Frame Top
             var frameTop = MakeCubePrim(house, new Vector3(0f, normDoorY + normDoorH * 0.5f + 0.02f, 0.515f), new Vector3(normDoorW + 0.1f, 0.04f, 0.08f), darkMat);
             Object.DestroyImmediate(frameTop.GetComponent<Collider>());
             
-            // Door Frame Left
             var frameLeft = MakeCubePrim(house, new Vector3(-normDoorW * 0.5f - 0.02f, normDoorY, 0.515f), new Vector3(0.04f, normDoorH, 0.08f), darkMat);
             Object.DestroyImmediate(frameLeft.GetComponent<Collider>());
             
-            // Door Frame Right
             var frameRight = MakeCubePrim(house, new Vector3(normDoorW * 0.5f + 0.02f, normDoorY, 0.515f), new Vector3(0.04f, normDoorH, 0.08f), darkMat);
             Object.DestroyImmediate(frameRight.GetComponent<Collider>());
         }
@@ -338,7 +318,6 @@ namespace TheAlchemistsCrypt.Editor
 
         private static Material MakeMat(Color color)
         {
-            // Robust shader finding with fallback to avoid Magenta
             var shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null) shader = Shader.Find("Lit");
             if (shader == null) shader = Shader.Find("Standard");
@@ -360,11 +339,15 @@ namespace TheAlchemistsCrypt.Editor
                 if (mf.sharedMesh == null) continue;
                 var mc = mf.gameObject.AddComponent<MeshCollider>();
                 mc.sharedMesh = mf.sharedMesh;
-                if (makeTriggerOnSmallFaces && mf.sharedMesh.bounds.size.magnitude < 15f) mc.isTrigger = true;
+                // Walkable temple fix: avoid making temple floors triggers
+                if (makeTriggerOnSmallFaces && mf.sharedMesh.bounds.size.magnitude < 15f && !obj.name.Contains("Temple")) mc.isTrigger = true;
             }
             
-            // Fix any broken materials from GLB imports (Magenta fix)
-            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            // Aggressive URP Shader/Magenta Fix
+            var shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+
             if (shader != null)
             {
                 foreach (var r in obj.GetComponentsInChildren<Renderer>())
@@ -373,16 +356,17 @@ namespace TheAlchemistsCrypt.Editor
                     bool changed = false;
                     for (int i = 0; i < mats.Length; i++)
                     {
-                        if (mats[i] == null || mats[i].shader == null || mats[i].shader.name != "Universal Render Pipeline/Lit")
+                        if (mats[i] == null || mats[i].shader == null || !mats[i].shader.name.Contains("Universal Render Pipeline"))
                         {
                             var oldMat = mats[i];
                             var newMat = new Material(shader);
                             if (oldMat != null)
                             {
-                                if (oldMat.HasProperty("_Color")) newMat.color = oldMat.color;
                                 if (oldMat.HasProperty("_BaseColor")) newMat.SetColor("_BaseColor", oldMat.GetColor("_BaseColor"));
-                                if (oldMat.HasProperty("_MainTex")) newMat.mainTexture = oldMat.mainTexture;
+                                else if (oldMat.HasProperty("_Color")) newMat.SetColor("_BaseColor", oldMat.color);
+                                
                                 if (oldMat.HasProperty("_BaseMap")) newMat.SetTexture("_BaseMap", oldMat.GetTexture("_BaseMap"));
+                                else if (oldMat.HasProperty("_MainTex")) newMat.SetTexture("_BaseMap", oldMat.mainTexture);
                             }
                             mats[i] = newMat;
                             changed = true;

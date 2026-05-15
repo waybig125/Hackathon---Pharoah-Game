@@ -16,8 +16,14 @@ namespace TheAlchemistsCrypt.UI
 
             private void Awake()
             {
+                UpdateRadius();
+            }
+
+            private void UpdateRadius()
+            {
                 if (background != null)
-                    radius = background.sizeDelta.x * 0.45f;
+                    radius = background.sizeDelta.x * 0.4f;
+                if (radius <= 0) radius = 100f;
             }
 
             public void OnPointerDown(PointerEventData data)  => UpdateJoystick(data);
@@ -32,8 +38,7 @@ namespace TheAlchemistsCrypt.UI
             {
                 if (background == null || handle == null) return;
                 
-                radius = background.sizeDelta.x * 0.45f;
-                if (radius <= 0) radius = 100f; 
+                UpdateRadius();
 
                 Vector2 localPoint;
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(background, data.position, data.pressEventCamera, out localPoint);
@@ -60,7 +65,7 @@ namespace TheAlchemistsCrypt.UI
             {
                 held = true;
                 if (background) background.color = pressedColor;
-                transform.localScale = Vector3.one * 0.9f;
+                transform.localScale = Vector3.one * 0.85f;
                 onDown?.Invoke();
             }
 
@@ -79,13 +84,24 @@ namespace TheAlchemistsCrypt.UI
             }
         }
 
-        private class LookTouchZone : MonoBehaviour, IDragHandler, IPointerUpHandler
+        private class LookTouchZone : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler
         {
             public TheAlchemistsCrypt.Input.MobileInputManager inputManager;
-            public float sensitivity = 1.0f;
+            // Sensitivity tuned for CameraLook.cs (which uses 2800)
+            // data.delta is in pixels. We want to pass a value that feels like Mouse X/Y.
+            public float sensitivity = 0.05f; 
+
+            public void OnPointerDown(PointerEventData data) { }
 
             public void OnDrag(PointerEventData data)
-                => inputManager?.SetLook(data.delta * sensitivity);
+            {
+                if (inputManager != null)
+                {
+                    // Normalize by screen width to keep sensitivity consistent across devices
+                    Vector2 input = new Vector2(data.delta.x / Screen.width, data.delta.y / Screen.height);
+                    inputManager.SetLook(input * 1500f * sensitivity);
+                }
+            }
 
             public void OnPointerUp(PointerEventData data)
                 => inputManager?.SetLook(Vector2.zero);
@@ -102,10 +118,7 @@ namespace TheAlchemistsCrypt.UI
             if (inputManager == null) return;
 
             GameObject canvasObj = GameObject.Find("MobileHUD");
-            if (canvasObj != null)
-            {
-                DestroyImmediate(canvasObj);
-            }
+            if (canvasObj != null) DestroyImmediate(canvasObj);
 
             canvasObj = new GameObject("MobileHUD");
             var cv = canvasObj.AddComponent<Canvas>();
@@ -117,27 +130,13 @@ namespace TheAlchemistsCrypt.UI
             scaler.matchWidthOrHeight = 0.5f; 
             canvasObj.AddComponent<GraphicRaycaster>();
 
-            // Robust Icon Loading - Prefer Inspiration Assets
             Sprite GetIcon(string name, string fallback = null)
             {
-                // Try Inspiration folder first
                 var s = Resources.Load<Sprite>("UI/Icons/Inspiration/" + name);
-                if (s == null && fallback != null)
-                {
-                    s = Resources.Load<Sprite>("UI/Icons/" + fallback);
-                }
-                
-                if (s == null)
-                {
-                    // Try Texture2D fallback
-                    var t = Resources.Load<Texture2D>("UI/Icons/Inspiration/" + name);
-                    if (t == null && fallback != null) t = Resources.Load<Texture2D>("UI/Icons/" + fallback);
-                    if (t != null) s = Sprite.Create(t, new Rect(0,0,t.width,t.height), new Vector2(0.5f,0.5f));
-                }
+                if (s == null && fallback != null) s = Resources.Load<Sprite>("UI/Icons/" + fallback);
                 return s;
             }
 
-            // Load Sprites
             Sprite icoJump = GetIcon("jump", "icon_jump");
             Sprite icoAttack = GetIcon("bullet", "icon_attack");
             Sprite icoAim = GetIcon("aim");
@@ -149,29 +148,28 @@ namespace TheAlchemistsCrypt.UI
             Sprite joyKnob = GetIcon("Controller");
             Sprite btnBg = GetIcon("Button");
 
-            // Look Zone
+            // LOOK ZONE (Full Right Side)
             var lookObj = new GameObject("LookZone");
             lookObj.transform.SetParent(canvasObj.transform, false);
             var lookRect = lookObj.AddComponent<RectTransform>();
-            lookRect.anchorMin = new Vector2(0.3f, 0f); 
+            lookRect.anchorMin = new Vector2(0.4f, 0f); 
             lookRect.anchorMax = new Vector2(1f, 1f);
             lookRect.offsetMin = lookRect.offsetMax = Vector2.zero;
             var lookImg = lookObj.AddComponent<Image>();
-            lookImg.color = new Color(1,1,1,0.01f); 
+            lookImg.color = new Color(1,1,1,0.005f); 
             var lookZone = lookObj.AddComponent<LookTouchZone>();
             lookZone.inputManager = inputManager;
 
-            // Colors
-            var goldColor = new Color(1.0f, 0.84f, 0.0f, 0.85f); // Pharaoh Gold
-            var darkGold = new Color(0.6f, 0.5f, 0.1f, 0.75f);
+            var goldColor = new Color(1.0f, 0.84f, 0.0f, 0.8f); 
+            var darkGold = new Color(0.4f, 0.35f, 0.1f, 0.6f);
 
-            // Joystick
+            // JOYSTICK (Left Side)
             var joyBgObj = new GameObject("JoystickBg");
             joyBgObj.transform.SetParent(canvasObj.transform, false);
             var joyBgRect = joyBgObj.AddComponent<RectTransform>();
             joyBgRect.anchorMin = joyBgRect.anchorMax = new Vector2(0f, 0f);
-            joyBgRect.pivot = new Vector2(0f, 0f);
-            joyBgRect.anchoredPosition = new Vector2(150f, 150f); 
+            joyBgRect.pivot = new Vector2(0.5f, 0.5f);
+            joyBgRect.anchoredPosition = new Vector2(300f, 300f); 
             joyBgRect.sizeDelta = new Vector2(350f, 350f);
             var joyBgImg = joyBgObj.AddComponent<Image>();
             joyBgImg.sprite = joyBg;
@@ -181,7 +179,7 @@ namespace TheAlchemistsCrypt.UI
             joyKnobObj.transform.SetParent(joyBgObj.transform, false);
             var joyKnobRect = joyKnobObj.AddComponent<RectTransform>();
             joyKnobRect.anchorMin = joyKnobRect.anchorMax = new Vector2(0.5f, 0.5f);
-            joyKnobRect.sizeDelta = new Vector2(150f, 150f);
+            joyKnobRect.sizeDelta = new Vector2(160f, 160f);
             var joyKnobImg = joyKnobObj.AddComponent<Image>();
             joyKnobImg.sprite = joyKnob;
             joyKnobImg.color = goldColor;
@@ -191,27 +189,27 @@ namespace TheAlchemistsCrypt.UI
             joyScript.handle = joyKnobRect;
             joyScript.inputManager = inputManager;
 
-            // BUTTON CLUSTER
+            // ACTION BUTTONS (Right Side)
             float btnSz = 180f;
-            float margin = 100f;
+            float margin = 120f;
 
-            // JUMP - Top Right of Cluster
-            MakeBtn("JumpBtn", new Vector2(-margin - btnSz * 0.5f, margin + btnSz * 1.5f), btnSz, icoJump, btnBg, goldColor, canvasObj.transform, () => inputManager.SetJumping(true), () => inputManager.SetJumping(false));
-            
-            // ATTACK - Main Action (Bottom Center of Cluster)
-            MakeBtn("AttackBtn", new Vector2(-margin - btnSz * 1.5f - 40f, margin + btnSz * 0.5f), btnSz + 60f, icoAttack, btnBg, goldColor, canvasObj.transform, () => inputManager.SetFiring(true), () => inputManager.SetFiring(false));
+            // ATTACK - Largest, bottom center-right
+            MakeBtn("AttackBtn", new Vector2(-margin - 250f, margin + 120f), 260f, icoAttack, btnBg, goldColor, canvasObj.transform, () => inputManager.SetFiring(true), () => inputManager.SetFiring(false));
 
-            // AIM - Top Left of Cluster
-            MakeBtn("AimBtn", new Vector2(-margin - btnSz * 2.5f - 80f, margin + btnSz * 1.5f), btnSz, icoAim, btnBg, goldColor, canvasObj.transform, () => inputManager.SetAiming(true), () => inputManager.SetAiming(false));
+            // AIM - Above Attack
+            MakeBtn("AimBtn", new Vector2(-margin - 250f, margin + 420f), 200f, icoAim, btnBg, goldColor, canvasObj.transform, () => inputManager.SetAiming(true), () => inputManager.SetAiming(false));
 
-            // RELOAD/SWAP - Top Center
-            MakeBtn("ReloadBtn", new Vector2(-margin - btnSz * 1.5f - 40f, margin + btnSz * 1.5f + 40f), btnSz, icoReload, btnBg, goldColor, canvasObj.transform, () => inputManager.SetSwappingWeapon(), null);
+            // JUMP - Right of Attack
+            MakeBtn("JumpBtn", new Vector2(-margin, margin + 300f), 180f, icoJump, btnBg, goldColor, canvasObj.transform, () => inputManager.SetJumping(true), () => inputManager.SetJumping(false));
 
-            // SPRINT - Bottom Left
-            MakeBtn("SprintBtn", new Vector2(-margin - btnSz * 2.5f - 80f, margin + btnSz * 0.5f), btnSz, icoSprint, btnBg, goldColor, canvasObj.transform, () => inputManager.SetSprinting(true), () => inputManager.SetSprinting(false));
+            // RELOAD/SWAP - Above Aim
+            MakeBtn("ReloadBtn", new Vector2(-margin - 480f, margin + 480f), 160f, icoReload, btnBg, goldColor, canvasObj.transform, () => inputManager.SetSwappingWeapon(), null);
 
-            // CROUCH - Bottom Right
-            MakeBtn("CrouchBtn", new Vector2(-margin - btnSz * 0.5f, margin + btnSz * 0.5f), btnSz, icoCrouch, btnBg, goldColor, canvasObj.transform, () => inputManager.SetCrouching(true), () => inputManager.SetCrouching(false));
+            // SPRINT - Left of Attack
+            MakeBtn("SprintBtn", new Vector2(-margin - 500f, margin + 250f), 160f, icoSprint, btnBg, goldColor, canvasObj.transform, () => inputManager.SetSprinting(true), () => inputManager.SetSprinting(false));
+
+            // CROUCH - Below Sprint
+            MakeBtn("CrouchBtn", new Vector2(-margin - 500f, margin + 80f), 160f, icoCrouch, btnBg, goldColor, canvasObj.transform, () => inputManager.SetCrouching(true), () => inputManager.SetCrouching(false));
         }
 
         private GameObject MakeBtn(string label, Vector2 pos, float sz, Sprite icon, Sprite bgSprite, Color bgColor, Transform parent, System.Action down, System.Action up)
@@ -233,23 +231,12 @@ namespace TheAlchemistsCrypt.UI
                 iconGo.transform.SetParent(go.transform, false);
                 var ir = iconGo.AddComponent<RectTransform>();
                 ir.anchorMin = Vector2.zero; ir.anchorMax = Vector2.one;
-                ir.offsetMin = new Vector2(sz * 0.2f, sz * 0.2f);
-                ir.offsetMax = new Vector2(-sz * 0.2f, -sz * 0.2f);
+                ir.offsetMin = new Vector2(sz * 0.25f, sz * 0.25f);
+                ir.offsetMax = new Vector2(-sz * 0.25f, -sz * 0.25f);
                 var iimg = iconGo.AddComponent<Image>();
                 iimg.sprite = icon;
                 iimg.color = Color.white;
                 iimg.raycastTarget = false;
-            }
-            else
-            {
-                var txtGo = new GameObject("Label");
-                txtGo.transform.SetParent(go.transform, false);
-                var t = txtGo.AddComponent<Text>();
-                t.text = label.Replace("Btn", "");
-                t.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-                t.alignment = TextAnchor.MiddleCenter;
-                t.resizeTextForBestFit = true;
-                t.color = Color.white;
             }
 
             var btn = go.AddComponent<HUDButton>();
