@@ -24,7 +24,8 @@ public class CityMaterialFixer : MonoBehaviour
             MeshCollider mc = r.GetComponent<MeshCollider>();
             if (mc != null) DestroyImmediate(mc);
 
-            foreach (var mat in r.materials)
+            Material[] mats = r.sharedMaterials;
+            foreach (var mat in mats)
             {
                 if (mat == null) continue;
                 
