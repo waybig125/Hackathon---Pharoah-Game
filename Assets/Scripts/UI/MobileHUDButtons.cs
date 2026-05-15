@@ -30,7 +30,8 @@ namespace TheAlchemistsCrypt.UI
             
             // Final fallback to avoid "No Font Asset has been assigned" error
             if (font == null) {
-                font = Font.GetDefault();
+                var allFonts = Resources.FindObjectsOfTypeAll<Font>();
+                if (allFonts.Length > 0) font = allFonts[0];
             }
 
             void CreateHoldButton(string name, Vector2 anchoredPos, Vector2 size, string textStr, UnityEngine.Events.UnityAction<BaseEventData> onDown, UnityEngine.Events.UnityAction<BaseEventData> onUp)
