@@ -17,20 +17,16 @@ namespace TheAlchemistsCrypt.UI
             var canvasObj = GameObject.Find("MobileHUD");
             if (canvasObj == null) return;
 
-            // Fallback for missing builtin resources
-            Sprite defaultSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Background.psd");
-            if (defaultSprite == null) defaultSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Knob.psd");
-            if (defaultSprite == null)
-            {
-                // Create a simple white texture/sprite as fallback
-                Texture2D tex = new Texture2D(1, 1);
-                tex.SetPixel(0, 0, Color.white);
-                tex.Apply();
-                defaultSprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
-            }
+            // Create procedural sprites to avoid missing builtin resource errors
+            Texture2D whiteTex = new Texture2D(1, 1);
+            whiteTex.SetPixel(0, 0, Color.white);
+            whiteTex.Apply();
+            Sprite defaultSprite = Sprite.Create(whiteTex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
             
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            // Try to find a font, but don't fail if not found
+            var font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (font == null) font = Resources.GetBuiltinResource<Font>("LiberationSans.ttf");
 
             void CreateHoldButton(string name, Vector2 anchoredPos, Vector2 size, string textStr, UnityEngine.Events.UnityAction<BaseEventData> onDown, UnityEngine.Events.UnityAction<BaseEventData> onUp)
             {
