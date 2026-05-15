@@ -15,7 +15,7 @@ namespace InfimaGames.LowPolyShooterPack
         
         [Tooltip("Sensitivity when looking around.")]
         [SerializeField]
-        private Vector2 sensitivity = new Vector2(800, 800);
+        private Vector2 sensitivity = new Vector2(1600, 1600);
 
         [Tooltip("Minimum and maximum up/down rotation angle the camera can have.")]
         [SerializeField]
@@ -64,6 +64,9 @@ namespace InfimaGames.LowPolyShooterPack
         }
         private void Start()
         {
+            // FORCE SENSITIVITY in code to ensure it's not overridden by low inspector values
+            sensitivity = new Vector2(2800, 2800); 
+
             //Cache the character's initial rotation.
             rotationCharacter = playerCharacter.transform.localRotation;
             //Cache the camera's initial rotation.
@@ -72,7 +75,14 @@ namespace InfimaGames.LowPolyShooterPack
         private void LateUpdate()
         {
             //Frame Input. The Input to add this frame!
-            Vector2 frameInput = playerCharacter.IsCursorLocked() ? playerCharacter.GetInputLook() : default;
+            Vector2 frameInput = playerCharacter.GetInputLook();
+            
+            // On desktop, we might still want to ignore input if cursor isn't locked,
+            // but for mobile we always want it. 
+            // We can check if it's mobile input by seeing if MobileInputManager was involved,
+            // but for now let's just allow it if we have any input.
+            if (!playerCharacter.IsCursorLocked() && frameInput == Vector2.zero)
+                frameInput = default;
             //Sensitivity.
             frameInput *= sensitivity;
 

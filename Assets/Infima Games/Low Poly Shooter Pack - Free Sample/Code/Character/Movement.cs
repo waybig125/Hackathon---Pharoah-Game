@@ -23,16 +23,16 @@ namespace InfimaGames.LowPolyShooterPack
         [Header("Speeds")]
 
         [SerializeField]
-        private float speedWalking = 54.0f;
+        private float speedWalking = 800.0f;
 
         [Tooltip("How fast the player moves while running."), SerializeField]
-        private float speedRunning = 96.0f;
+        private float speedRunning = 1500.0f;
 
         [Tooltip("How fast the player moves while crouching."), SerializeField]
-        private float speedCrouching = 3.0f;
+        private float speedCrouching = 200.0f;
 
         [Tooltip("How high the player jumps."), SerializeField]
-        private float jumpForce = 5.0f;
+        private float jumpForce = 12.0f;
 
         #endregion
 
@@ -43,8 +43,11 @@ namespace InfimaGames.LowPolyShooterPack
         {
             //Getter.
             get => rigidBody.linearVelocity;
-            //Setter.
-            set => rigidBody.linearVelocity = value;
+            set 
+            {
+                if (float.IsNaN(value.x) || float.IsNaN(value.y) || float.IsNaN(value.z)) return;
+                rigidBody.linearVelocity = value;
+            }
         }
 
         #endregion
@@ -232,7 +235,15 @@ namespace InfimaGames.LowPolyShooterPack
             #endregion
             
             //Update Velocity. Preserve Y velocity!
-            Velocity = new Vector3(movement.x, Velocity.y, movement.z);
+            // Safety check for NaN to prevent physics crashes
+            if (!float.IsNaN(movement.x) && !float.IsNaN(movement.z))
+            {
+                Velocity = new Vector3(movement.x, Velocity.y, movement.z);
+            }
+            else
+            {
+                Velocity = new Vector3(0, Velocity.y, 0);
+            }
         }
 
         /// <summary>

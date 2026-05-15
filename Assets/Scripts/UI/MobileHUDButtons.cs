@@ -47,11 +47,20 @@ namespace TheAlchemistsCrypt.UI
             private void UpdateJoystick(PointerEventData data)
             {
                 if (background == null || handle == null) return;
+                
+                // Ensure radius is always valid even if screen size changed
+                radius = background.sizeDelta.x * 0.45f;
+                if (radius <= 0) radius = 100f; // Safety fallback
+
                 Vector2 localPoint;
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(background, data.position, data.pressEventCamera, out localPoint);
                 Vector2 clamped = Vector2.ClampMagnitude(localPoint, radius);
                 handle.anchoredPosition = clamped;
                 Vector2 input = clamped / radius;
+                
+                // Final safety check for NaN
+                if (float.IsNaN(input.x) || float.IsNaN(input.y)) input = Vector2.zero;
+                
                 inputManager?.SetMovement(input);
             }
         }
@@ -121,13 +130,14 @@ namespace TheAlchemistsCrypt.UI
                 var scaler = canvasObj.AddComponent<CanvasScaler>();
                 scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                 scaler.referenceResolution = new Vector2(1920, 1080);
+                scaler.matchWidthOrHeight = 1f; // Height matching prevents stretching on ultrawide phones
                 canvasObj.AddComponent<GraphicRaycaster>();
             }
 
-            // Cleanup
+            // Robust Cleanup - use DestroyImmediate to prevent frame-lag stray buttons
             var toDestroy = new List<GameObject>();
             foreach (Transform child in canvasObj.transform) toDestroy.Add(child.gameObject);
-            foreach (var go in toDestroy) Destroy(go);
+            foreach (var go in toDestroy) DestroyImmediate(go);
 
             var circleSprite = CreateCircleSprite(256, Color.white);
 
@@ -168,7 +178,7 @@ namespace TheAlchemistsCrypt.UI
             var joyBgRect = joyBgObj.AddComponent<RectTransform>();
             joyBgRect.anchorMin = joyBgRect.anchorMax = new Vector2(0f, 0f);
             joyBgRect.pivot = new Vector2(0f, 0f);
-            joyBgRect.anchoredPosition = new Vector2(150f, 350f); // MOVED UP to prevent overlap
+            joyBgRect.anchoredPosition = new Vector2(180f, 400f); // MOVED EVEN HIGHER to prevent bottom-edge overlap on curved screens
             joyBgRect.sizeDelta = new Vector2(300f, 300f);
             var joyBgImg = joyBgObj.AddComponent<Image>();
             joyBgImg.sprite = circleSprite;
@@ -188,11 +198,12 @@ namespace TheAlchemistsCrypt.UI
             joyScript.handle = joyKnobRect;
             joyScript.inputManager = inputManager;
 
-            // BUTTON CLUSTER - FIXED SPACING
-            float btnSz = 160f;
-            float margin = 80f;
-            var themeColor = new Color(0.1f, 0.1f, 0.1f, 0.6f); // Darker back
-            var attackColor = new Color(0.9f, 0.2f, 0.1f, 0.8f);
+            // BUTTON CLUSTER - EGYPTIAN THEME - MORE VIBRANT
+            float btnSz = 170f;
+            float margin = 90f;
+            var themeColor = new Color(0.35f, 0.25f, 0.15f, 0.85f); // Richer Stone/Dark Brown
+            var accentColor = new Color(1.0f, 0.84f, 0.0f, 0.95f); // TRUE GOLD (Vibrant)
+            var attackColor = new Color(1.0f, 0.84f, 0.0f, 0.95f); // GOLD instead of Red
 
             // JUMP - Far Right
             MakeBtn("JumpBtn", new Vector2(-margin - btnSz * 0.5f, margin + btnSz * 1.5f), btnSz, icoJump, themeColor, canvasObj.transform, () => inputManager.SetJumping(true), () => inputManager.SetJumping(false));
@@ -207,7 +218,7 @@ namespace TheAlchemistsCrypt.UI
             MakeBtn("CrouchBtn", new Vector2(-margin - btnSz * 0.5f, margin + btnSz * 0.5f), btnSz, icoCrouch, themeColor, canvasObj.transform, () => inputManager.SetCrouching(true), () => inputManager.SetCrouching(false));
 
             // SWAP - Top Right
-            var swapBtn = MakeBtn("SwapBtn", new Vector2(-margin - 60f, -margin - 60f), 120f, icoSwap, new Color(0.3f,0.3f,0.5f,0.8f), canvasObj.transform, () => inputManager.SetSwappingWeapon(), null);
+            var swapBtn = MakeBtn("SwapBtn", new Vector2(-margin - 60f, -margin - 60f), 120f, icoSwap, themeColor, canvasObj.transform, () => inputManager.SetSwappingWeapon(), null);
             var swapRect = swapBtn.GetComponent<RectTransform>();
             swapRect.anchorMin = swapRect.anchorMax = new Vector2(1f, 1f);
         }

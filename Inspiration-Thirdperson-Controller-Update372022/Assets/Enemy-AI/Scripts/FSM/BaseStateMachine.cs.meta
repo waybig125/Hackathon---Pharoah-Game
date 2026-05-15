@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 9fdd49a51806bb44c8261b03af699600
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - Data: {fileID: 11400000, guid: e39acbfa652b46f44a45777abbd4bfa0, type: 2}
+  - _initialState: {fileID: 11400000, guid: e6e836d22873ccf42ac421057c82ae3e, type: 2}
+  - Agent: {instanceID: 0}
+  - Animator: {instanceID: 0}
+  - Eyes: {instanceID: 0}
+  - Target: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

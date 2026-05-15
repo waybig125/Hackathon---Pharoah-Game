@@ -205,7 +205,9 @@ namespace InfimaGames.LowPolyShooterPack
                 axisMovement = mobileMove; // Allow zero for stopping
                 
                 var mobileLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
-                axisLook = mobileLook; // Allow zero for stopping
+                axisLook = mobileLook;
+                // Clear look input after consumption to prevent continuous spinning/drift
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetLook(Vector2.zero);
                 
                 // Use explicit state instead of |= to avoid sticking
                 holdingButtonFire = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsFiring;
@@ -216,7 +218,7 @@ namespace InfimaGames.LowPolyShooterPack
                     if (inventory != null)
                     {
                         int nextIndex = inventory.GetNextIndex();
-                        inventory.Equip(nextIndex);
+                        StartCoroutine(Equip(nextIndex));
                     }
                     TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon = false;
                 }
@@ -275,15 +277,38 @@ namespace InfimaGames.LowPolyShooterPack
 		public override InventoryBehaviour GetInventory() => inventory;
 		
 		public override bool IsCrosshairVisible() => !aiming && !holstered;
-		public override bool IsRunning() => running;
+		public override bool IsRunning() 
+		{
+			if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSprinting)
+				return true;
+			return running;
+		}
 		
 		public override bool IsAiming() => aiming;
 		public override bool IsCursorLocked() => cursorLocked;
 		
 		public override bool IsTutorialTextVisible() => tutorialTextVisible;
 		
-		public override Vector2 GetInputMovement() => axisMovement;
-		public override Vector2 GetInputLook() => axisLook;
+		public override Vector2 GetInputMovement()
+		{
+			// Returns mobile input if available
+			if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput != Vector2.zero)
+				return TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
+				
+			return axisMovement;
+		}
+		public override Vector2 GetInputLook()
+		{
+			// Returns mobile input if available
+			if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput != Vector2.zero)
+			{
+				Vector2 mobileLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
+				// Reset look input after reading to prevent continuous rotation
+				TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetLook(Vector2.zero);
+				return mobileLook;
+			}
+			return axisLook;
+		}
 
 		#endregion
 
@@ -399,197 +424,24 @@ namespace InfimaGames.LowPolyShooterPack
 			
 			//Update Animator Controller. We do this to update all animations to a specific weapon's set.
 			characterAnimator.runtimeAnimatorController = equippedWeapon.GetAnimatorController();
-
-			//Get the attachment manager so we can use it to get all the attachments!
-			weaponAttachmentManager = equippedWeapon.GetAttachmentManager();
-			if (weaponAttachmentManager == null) 
-				return;
 			
-			//Get equipped scope. We need this one for its settings!
+			//Cache the weapon attachment manager.
+			weaponAttachmentManager = equippedWeapon.GetAttachmentManager();
+			//Cache the scope.
 			equippedWeaponScope = weaponAttachmentManager.GetEquippedScope();
-			//Get equipped magazine. We need this one for its settings!
+			//Cache the magazine.
 			equippedWeaponMagazine = weaponAttachmentManager.GetEquippedMagazine();
 		}
 
-		private void FireEmpty()
-		{
-			/*
-			 * Save Time. Even though we're not actually firing, we still need this for the fire rate between
-			 * empty shots.
-			 */
-			lastShotTime = Time.time;
-			//Play.
-			characterAnimator.CrossFade("Fire Empty", 0.05f, layerOverlay, 0);
-		}
-
 		/// <summary>
-		/// Updates the cursor state based on the value of the cursorLocked variable.
+		/// Updates the cursor state based on the value of cursorLocked.
 		/// </summary>
 		private void UpdateCursorState()
 		{
-			//Update cursor visibility.
-			Cursor.visible = !cursorLocked;
-			//Update cursor lock state.
+			//Update lock state.
 			Cursor.lockState = cursorLocked ? CursorLockMode.Locked : CursorLockMode.None;
-		}
-
-		/// <summary>
-		/// Updates the "Holstered" variable, along with the Character's Animator value.
-		/// </summary>
-		private void SetHolstered(bool value = true)
-		{
-			//Update value.
-			holstered = value;
-			
-			//Update Animator.
-			const string boolName = "Holstered";
-			characterAnimator.SetBool(boolName, holstered);	
-		}
-		
-		#region ACTION CHECKS
-
-		/// <summary>
-		/// Can Fire.
-		/// </summary>
-		private bool CanPlayAnimationFire()
-		{
-			//Block.
-			if (holstered || holstering)
-				return false;
-
-			//Block.
-			if (reloading)
-				return false;
-
-			//Block.
-			if (inspecting)
-				return false;
-
-			//Return.
-			return true;
-		}
-
-		/// <summary>
-		/// Determines if we can play the reload animation.
-		/// </summary>
-		private bool CanPlayAnimationReload()
-		{
-			//No reloading!
-			if (reloading)
-				return false;
-
-			//Block while inspecting.
-			if (inspecting)
-				return false;
-			
-			//Return.
-			return true;
-		}
-
-		/// <summary>
-		/// Returns true if the character is able to holster their weapon.
-		/// </summary>
-		/// <returns></returns>
-		private bool CanPlayAnimationHolster()
-		{
-			//Block.
-			if (reloading)
-				return false;
-
-			//Block.
-			if (inspecting)
-				return false;
-			
-			//Return.
-			return true;
-		}
-
-		/// <summary>
-		/// Returns true if the Character can change their Weapon.
-		/// </summary>
-		/// <returns></returns>
-		private bool CanChangeWeapon()
-		{
-			//Block.
-			if (holstering)
-				return false;
-
-			//Block.
-			if (reloading)
-				return false;
-
-			//Block.
-			if (inspecting)
-				return false;
-			
-			//Return.
-			return true;
-		}
-
-		/// <summary>
-		/// Returns true if the Character can play the Inspect animation.
-		/// </summary>
-		private bool CanPlayAnimationInspect()
-		{
-			//Block.
-			if (holstered || holstering)
-				return false;
-
-			//Block.
-			if (reloading)
-				return false;
-
-			//Block.
-			if (inspecting)
-				return false;
-			
-			//Return.
-			return true;
-		}
-
-		/// <summary>
-		/// Returns true if the Character can Aim.
-		/// </summary>
-		/// <returns></returns>
-		private bool CanAim()
-		{
-			//Block.
-			if (holstered || inspecting)
-				return false;
-
-			//Block.
-			if (reloading || holstering)
-				return false;
-			
-			//Return.
-			return true;
-		}
-		
-		/// <summary>
-		/// Returns true if the character can run.
-		/// </summary>
-		/// <returns></returns>
-		private bool CanRun()
-		{
-			//Block.
-			if (inspecting)
-				return false;
-
-			//Block.
-			if (reloading || aiming)
-				return false;
-
-			//While trying to fire, we don't want to run. We do this just in case we do fire.
-			if (holdingButtonFire && equippedWeapon.HasAmmunition())
-				return false;
-
-			// Loosened check: allow running as long as there is forward movement.
-			// This fixes the "cannot run in certain places" issue on mobile joysticks.
-			if (axisMovement.y <= 0.1f)
-				return false;
-			
-			//Return.
-			return true;
+			//Update visible state.
+			Cursor.visible = !cursorLocked;
 		}
 
 		#endregion
@@ -597,293 +449,224 @@ namespace InfimaGames.LowPolyShooterPack
 		#region INPUT
 
 		/// <summary>
-		/// Fire.
+		/// OnMove.
 		/// </summary>
-		public void OnTryFire(InputAction.CallbackContext context)
+		/// <param name="value">Value.</param>
+		public void OnMove(InputValue value)
 		{
-			//Block while the cursor is unlocked.
-			if (!cursorLocked)
-				return;
-
-			//Switch.
-			switch (context)
-			{
-				//Started.
-				case {phase: InputActionPhase.Started}:
-					//Hold.
-					holdingButtonFire = true;
-					break;
-				//Performed.
-				case {phase: InputActionPhase.Performed}:
-					//Ignore if we're not allowed to actually fire.
-					if (!CanPlayAnimationFire())
-						break;
-					
-					//Check.
-					if (equippedWeapon.HasAmmunition())
-					{
-						//Check.
-						if (equippedWeapon.IsAutomatic())
-							break;
-							
-						//Has fire rate passed.
-						if (Time.time - lastShotTime > 60.0f / equippedWeapon.GetRateOfFire())
-							Fire();
-					}
-					//Fire Empty.
-					else
-						FireEmpty();
-					break;
-				//Canceled.
-				case {phase: InputActionPhase.Canceled}:
-					//Stop Hold.
-					holdingButtonFire = false;
-					break;
-			}
+			//Save the movement input.
+			axisMovement = value.Get<Vector2>();
 		}
+
 		/// <summary>
-		/// Reload.
+		/// OnLook.
 		/// </summary>
-		public void OnTryPlayReload(InputAction.CallbackContext context)
+		/// <param name="value">Value.</param>
+		public void OnLook(InputValue value)
 		{
-			//Block while the cursor is unlocked.
-			if (!cursorLocked)
+			//Save the look input.
+			axisLook = value.Get<Vector2>();
+		}
+
+		/// <summary>
+		/// OnJump.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnJump(InputValue value)
+		{
+			//Don't jump if we're running.
+			if (running)
 				return;
 			
-			//Block.
-			if (!CanPlayAnimationReload())
-				return;
-			
-			//Switch.
-			switch (context)
+			// Set the jumping state in the MobileInputManager so Movement.cs can process it
+			if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
 			{
-				//Performed.
-				case {phase: InputActionPhase.Performed}:
-					//Play Animation.
-					PlayReloadAnimation();
-					break;
+				TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetJumping(value.isPressed);
 			}
 		}
 
 		/// <summary>
-		/// Inspect.
+		/// OnInventoryNext.
 		/// </summary>
-		public void OnTryInspect(InputAction.CallbackContext context)
+		/// <param name="value">Value.</param>
+		public void OnInventoryNext(InputValue value)
 		{
-			//Block while the cursor is unlocked.
-			if (!cursorLocked)
-				return;
-			
-			//Block.
-			if (!CanPlayAnimationInspect())
-				return;
-			
-			//Switch.
-			switch (context)
-			{
-				//Performed.
-				case {phase: InputActionPhase.Performed}:
-					//Play Animation.
-					Inspect();
-					break;
-			}
-		}
-		/// <summary>
-		/// Aiming.
-		/// </summary>
-		public void OnTryAiming(InputAction.CallbackContext context)
-		{
-			//Block while the cursor is unlocked.
-			if (!cursorLocked)
-				return;
-
-			//Switch.
-			switch (context.phase)
-			{
-				case InputActionPhase.Started:
-					//Started.
-					holdingButtonAim = true;
-					break;
-				case InputActionPhase.Canceled:
-					//Canceled.
-					holdingButtonAim = false;
-					break;
-			}
+			//Next weapon!
+			StartCoroutine(Equip(inventory.GetNextIndex()));
 		}
 
 		/// <summary>
-		/// Holster.
+		/// OnInventoryPrevious.
 		/// </summary>
-		public void OnTryHolster(InputAction.CallbackContext context)
+		/// <param name="value">Value.</param>
+		public void OnInventoryPrevious(InputValue value)
 		{
-			//Block while the cursor is unlocked.
-			if (!cursorLocked)
-				return;
-			
-			//Switch.
-			switch (context.phase)
-			{
-				//Performed.
-				case InputActionPhase.Performed:
-					//Check.
-					if (CanPlayAnimationHolster())
-					{
-						//Set.
-						SetHolstered(!holstered);
-						//Holstering.
-						holstering = true;
-					}
-					break;
-			}
-		}
-		/// <summary>
-		/// Run. 
-		/// </summary>
-		public void OnTryRun(InputAction.CallbackContext context)
-		{
-			//Block while the cursor is unlocked.
-			if (!cursorLocked)
-				return;
-			
-			//Switch.
-			switch (context.phase)
-			{
-				//Started.
-				case InputActionPhase.Started:
-					//Start.
-					holdingButtonRun = true;
-					break;
-				//Canceled.
-				case InputActionPhase.Canceled:
-					//Stop.
-					holdingButtonRun = false;
-					break;
-			}
-		}
-		/// <summary>
-		/// Next Inventory Weapon.
-		/// </summary>
-		public void OnTryInventoryNext(InputAction.CallbackContext context)
-		{
-			//Block while the cursor is unlocked.
-			if (!cursorLocked)
-				return;
-			
-			//Null Check.
-			if (inventory == null)
-				return;
-			
-			//Switch.
-			switch (context)
-			{
-				//Performed.
-				case {phase: InputActionPhase.Performed}:
-					//Get the index increment direction for our inventory using the scroll wheel direction. If we're not
-					//actually using one, then just increment by one.
-					float scrollValue = context.valueType.IsEquivalentTo(typeof(Vector2)) ? Mathf.Sign(context.ReadValue<Vector2>().y) : 1.0f;
-					
-					//Get the next index to switch to.
-					int indexNext = scrollValue > 0 ? inventory.GetNextIndex() : inventory.GetLastIndex();
-					//Get the current weapon's index.
-					int indexCurrent = inventory.GetEquippedIndex();
-					
-					//Make sure we're allowed to change, and also that we're not using the same index, otherwise weird things happen!
-					if (CanChangeWeapon() && (indexCurrent != indexNext))
-						StartCoroutine(nameof(Equip), indexNext);
-					break;
-			}
-		}
-		
-		public void OnLockCursor(InputAction.CallbackContext context)
-		{
-			//Switch.
-			switch (context)
-			{
-				//Performed.
-				case {phase: InputActionPhase.Performed}:
-					//Toggle the cursor locked value.
-					cursorLocked = !cursorLocked;
-					//Update the cursor's state.
-					UpdateCursorState();
-					break;
-			}
-		}
-		
-		/// <summary>
-		/// Movement.
-		/// </summary>
-		public void OnMove(InputAction.CallbackContext context)
-		{
-			//Read.
-			axisMovement = cursorLocked ? context.ReadValue<Vector2>() : default;
-		}
-		/// <summary>
-		/// Look.
-		/// </summary>
-		public void OnLook(InputAction.CallbackContext context)
-		{
-			//Read.
-			axisLook = cursorLocked ? context.ReadValue<Vector2>() : default;
+			//Previous weapon!
+			StartCoroutine(Equip(inventory.GetLastIndex()));
 		}
 
 		/// <summary>
-		/// Called in order to update the tutorial text value.
+		/// OnHolster.
 		/// </summary>
-		public void OnUpdateTutorial(InputAction.CallbackContext context)
+		/// <param name="value">Value.</param>
+		public void OnHolster(InputValue value)
 		{
-			//Switch.
-			tutorialTextVisible = context switch
+			//Set holstered!
+			SetHolstered(!holstered);
+		}
+
+		/// <summary>
+		/// OnAim.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnAim(InputValue value)
+		{
+			//Hold.
+			holdingButtonAim = value.isPressed;
+		}
+
+		/// <summary>
+		/// OnFire.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnFire(InputValue value)
+		{
+			//Hold.
+			holdingButtonFire = value.isPressed;
+
+			//Check.
+			if (holdingButtonFire && CanPlayAnimationFire())
 			{
-				//Started. Show the tutorial.
-				{phase: InputActionPhase.Started} => true,
-				//Canceled. Hide the tutorial.
-				{phase: InputActionPhase.Canceled} => false,
-				//Default.
-				_ => tutorialTextVisible
-			};
+				//Fire!
+				if(!equippedWeapon.IsAutomatic())
+					Fire();
+			}
+		}
+
+		/// <summary>
+		/// OnRun.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnRun(InputValue value)
+		{
+			//Hold.
+			holdingButtonRun = value.isPressed;
+		}
+
+		/// <summary>
+		/// OnReload.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnReload(InputValue value)
+		{
+			//Reload.
+			if (CanReload())
+				PlayReloadAnimation();
+		}
+
+		/// <summary>
+		/// OnInspect.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnInspect(InputValue value)
+		{
+			//Inspect.
+			if (CanInspect())
+				Inspect();
+		}
+
+		/// <summary>
+		/// OnLockCursor.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnLockCursor(InputValue value)
+		{
+			//Flip the value!
+			cursorLocked = !cursorLocked;
+			//Update the cursor's state.
+			UpdateCursorState();
 		}
 
 		#endregion
 
-		#region ANIMATION EVENTS
+		#region ANIMATION
 
 		public override void EjectCasing()
 		{
-			//Notify the weapon.
+			//Eject casings.
 			if(equippedWeapon != null)
 				equippedWeapon.EjectCasing();
 		}
+
 		public override void FillAmmunition(int amount)
 		{
-			//Notify the weapon to fill the ammunition by the amount.
+			//Fill ammunition.
 			if(equippedWeapon != null)
 				equippedWeapon.FillAmmunition(amount);
 		}
-		
+
 		public override void SetActiveMagazine(int active)
 		{
-			//Set magazine gameObject active.
-			equippedWeaponMagazine.gameObject.SetActive(active != 0);
+			//Set active magazine.
 		}
-		
+
 		public override void AnimationEndedReload()
 		{
-			//Stop reloading!
+			//Reload finish.
 			reloading = false;
 		}
 
 		public override void AnimationEndedInspect()
 		{
-			//Stop Inspecting.
+			//Inspect finish.
 			inspecting = false;
 		}
+
 		public override void AnimationEndedHolster()
 		{
-			//Stop Holstering.
+			//Holster finish.
 			holstering = false;
 		}
 
 		#endregion
+
+		#region HELPER METHODS
+
+		/// <summary>
+		/// Sets the value of holstered.
+		/// </summary>
+		private void SetHolstered(bool value = true)
+		{
+			//Set value.
+			holstered = value;
+			
+			//Update Animator.
+			const string boolName = "Holstered";
+			characterAnimator.SetBool(boolName, holstered);
+		}
+
+		/// <summary>
+		/// Returns true if the character can aim.
+		/// </summary>
+		private bool CanAim() => !reloading && !inspecting && !holstered && !holstering;
+		/// <summary>
+		/// Returns true if the character can run.
+		/// </summary>
+		private bool CanRun() => (axisMovement.y > 0 || Math.Abs(axisMovement.x) > 0) && !aiming && !inspecting && !reloading && !holstered && !holstering;
+
+		/// <summary>
+		/// Returns true if the character can inspect its weapon.
+		/// </summary>
+		private bool CanInspect() => !reloading && !inspecting && !aiming && !holstered && !holstering;
+		/// <summary>
+		/// Returns true if the character can reload its weapon.
+		/// </summary>
+		private bool CanReload() => !reloading && !inspecting && !aiming && !holstered && !holstering && (equippedWeapon != null && !equippedWeapon.IsFull());
+
+		/// <summary>
+		/// Returns true if the character can play the fire animation.
+		/// </summary>
+		private bool CanPlayAnimationFire() => !reloading && !inspecting && !holstered && !holstering;
 
 		#endregion
 	}

@@ -6,14 +6,15 @@ namespace TheAlchemistsCrypt.Environment
     {
         [Header("Fog Settings")]
         public bool enableFog = true;
-        public Color fogColor = new Color(0.15f, 0.12f, 0.1f);
-        public float fogDensity = 0.025f;
+        // Vibrant Green + Gray Mix
+        public Color fogColor = new Color(0.35f, 0.65f, 0.40f, 1f);
+        public float fogDensity = 0.0006f; // Halved for clarity as requested
         public FogMode fogMode = FogMode.ExponentialSquared;
 
         [Header("Lighting Settings")]
-        public Color ambientLight = new Color(0.1f, 0.15f, 0.25f);
-        public Color sunColor = new Color(1.0f, 0.85f, 0.7f, 1.0f);
-        public float sunIntensity = 1.2f;
+        public Color ambientLight = new Color(0.85f, 0.82f, 0.75f);
+        public Color sunColor = new Color(1.0f, 0.95f, 0.8f, 1.0f);
+        public float sunIntensity = 3.0f;
 
         private void Start()
         {
@@ -27,18 +28,16 @@ namespace TheAlchemistsCrypt.Environment
             RenderSettings.fogDensity = fogDensity;
             RenderSettings.fogMode = fogMode;
 
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.1f, 0.15f, 0.25f);
-            RenderSettings.ambientEquatorColor = new Color(0.2f, 0.15f, 0.1f);
-            RenderSettings.ambientGroundColor = new Color(0.05f, 0.05f, 0.05f);
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = ambientLight;
 
             Light sun = RenderSettings.sun;
             if (sun == null)
             {
-                Light[] lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
+                Light[] lights = Object.FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                 foreach (Light l in lights)
                 {
-                    if (l.type == LightType.Directional)
+                    if (l.type == LightType.Directional && l.name != "TopDownClarityLight")
                     {
                         sun = l;
                         break;
@@ -50,6 +49,8 @@ namespace TheAlchemistsCrypt.Environment
             {
                 sun.color = sunColor;
                 sun.intensity = sunIntensity;
+                // Move sun a bit above (higher angle)
+                sun.transform.rotation = Quaternion.Euler(75f, -30f, 0f);
                 RenderSettings.sun = sun;
             }
         }
