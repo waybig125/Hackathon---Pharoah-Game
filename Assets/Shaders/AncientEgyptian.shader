@@ -24,7 +24,8 @@ Shader "Custom/AncientEgyptian"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            #pragma multi_compile_fwdbase
+            #pragma multi_compile_fog
+            #pragma multi_compile_instancing
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -34,7 +35,7 @@ Shader "Custom/AncientEgyptian"
                 float4 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
                 float3 normalOS : NORMAL;
-                float4 tangentOS : TANGENT;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
@@ -43,7 +44,8 @@ Shader "Custom/AncientEgyptian"
                 float2 uv : TEXCOORD0;
                 float3 normalWS : TEXCOORD1;
                 float3 positionWS : TEXCOORD3;
-                float4 tangentWS : TEXCOORD4;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
             TEXTURE2D(_MainTex);
@@ -51,7 +53,7 @@ Shader "Custom/AncientEgyptian"
             TEXTURE2D(_BumpMap);
             SAMPLER(sampler_BumpMap);
 
-            CBUFFER_START(UnityPerMaterial)
+            // Removing CBUFFER for maximum compatibility with all URP versions
             float4 _MainTex_ST;
             float4 _Color;
             float4 _Warmth;
@@ -59,81 +61,42 @@ Shader "Custom/AncientEgyptian"
             float _CrackScale;
             float _CrackIntensity;
             float _SandAmount;
-            CBUFFER_END
-
-            float hash(float2 p)
-            {
-                return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453123);
-            }
-
-            float noise(float2 p)
-            {
-                float2 i = floor(p);
-                float2 f = frac(p);
-                float a = hash(i);
-                float b = hash(i + float2(1.0, 0.0));
-                float c = hash(i + float2(0.0, 1.0));
-                float d = hash(i + float2(1.0, 1.0));
-                float2 u = f * f * (3.0 - 2.0 * f);
-                return lerp(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
-            }
-
-            float cracks(float2 uv)
-            {
-                float2 p = uv * _CrackScale;
-                float v = noise(p * 2.0);
-                v = abs(v - 0.5) * 2.0;
-                return pow(saturate(1.0 - v), 8.0) * _CrackIntensity;
-            }
 
             Varyings vert(Attributes input)
             {
-                Varyings output;
+                Varyings output = (Varyings)0;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+
                 VertexPositionInputs posInputs = GetVertexPositionInputs(input.positionOS.xyz);
                 output.positionCS = posInputs.positionCS;
                 output.positionWS = posInputs.positionWS;
                 output.uv = TRANSFORM_TEX(input.uv, _MainTex);
-                
-                VertexNormalInputs normInputs = GetVertexNormalInputs(input.normalOS, input.tangentOS);
-                output.normalWS = normInputs.normalWS;
-                output.tangentWS = float4(normInputs.tangentWS, input.tangentOS.w);
+                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 
                 return output;
             }
 
             half4 frag(Varyings input) : SV_Target
             {
-                // Basic Texture
+                UNITY_SETUP_INSTANCE_ID(input);
+
                 float4 texColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * _Color;
+                float3 normalWS = normalize(input.normalWS);
                 
-                // Normal Mapping
-                float4 normalSample = SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, input.uv);
-                float3 normalTS = UnpackNormal(normalSample);
-                
-                float3 bitangent = cross(input.normalWS, input.tangentWS.xyz) * input.tangentWS.w;
-                float3x3 tbn = float3x3(input.tangentWS.xyz, bitangent, input.normalWS);
-                float3 normalWS = normalize(mul(normalTS, tbn));
-                
-                // Procedural Cracks
-                float crack = cracks(input.uv);
-                texColor.rgb *= (1.0 - crack);
-                
-                // Lighting
+                // Simple Lighting
                 Light light = GetMainLight();
-                float3 lightDir = light.direction;
-                float diffuse = saturate(dot(normalWS, lightDir));
-                
-                // Shadow Crushing (Warzone feel)
+                float diffuse = saturate(dot(normalWS, light.direction));
                 diffuse = pow(diffuse, _Contrast);
                 
-                // Final Composition
-                float3 ambient = half3(0.15, 0.12, 0.1) * _Warmth.rgb;
+                float3 ambient = half3(0.2, 0.18, 0.15) * _Warmth.rgb;
                 float3 finalColor = texColor.rgb * (diffuse * light.color + ambient) * _Warmth.rgb;
                 
-                // Sand Accumulation (Top surfaces)
-                float sandMask = saturate(dot(input.normalWS, float3(0, 1, 0)));
-                sandMask = pow(sandMask, 4.0) * _SandAmount;
-                finalColor = lerp(finalColor, float3(0.7, 0.6, 0.4) * _Warmth.rgb, sandMask);
+                // Sand
+                float sandMask = saturate(dot(normalWS, float3(0, 1, 0)));
+                sandMask = pow(sandMask, 8.0) * _SandAmount;
+                finalColor = lerp(finalColor, float3(0.8, 0.7, 0.5) * _Warmth.rgb, sandMask);
                 
                 return half4(finalColor, 1.0);
             }
