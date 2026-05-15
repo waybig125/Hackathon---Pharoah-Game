@@ -4,9 +4,9 @@ Shader "Custom/AncientEgyptian"
     {
         _MainTex ("Base Texture", 2D) = "white" {}
         [Normal] _BumpMap ("Normal Map", 2D) = "bump" {}
-        _Color ("Main Color", Color) = (1, 0.9, 0.7, 1)
-        _Warmth ("Warmth Tint", Color) = (1, 0.8, 0.6, 1)
-        _Contrast ("Shadow Contrast", Range(0, 2)) = 1.2
+        _Color ("Main Color", Color) = (1, 1, 1, 1)
+        _Warmth ("Warmth Tint", Color) = (1, 0.9, 0.8, 1)
+        _Contrast ("Shadow Contrast", Range(0.1, 3)) = 1.2
         _CrackScale ("Crack Scale", Float) = 20.0
         _CrackIntensity ("Crack Intensity", Range(0, 1)) = 0.5
         _SandAmount ("Sand Accumulation", Range(0, 1)) = 0.3
@@ -24,6 +24,7 @@ Shader "Custom/AncientEgyptian"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_fwdbase
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -82,7 +83,7 @@ Shader "Custom/AncientEgyptian"
                 float2 p = uv * _CrackScale;
                 float v = noise(p * 2.0);
                 v = abs(v - 0.5) * 2.0;
-                return pow(saturate(1.0 - v), 10.0) * _CrackIntensity;
+                return pow(saturate(1.0 - v), 8.0) * _CrackIntensity;
             }
 
             Varyings vert(Attributes input)
@@ -122,17 +123,17 @@ Shader "Custom/AncientEgyptian"
                 float3 lightDir = light.direction;
                 float diffuse = saturate(dot(normalWS, lightDir));
                 
-                // Shadow Crushing
+                // Shadow Crushing (Warzone feel)
                 diffuse = pow(diffuse, _Contrast);
                 
-                // Warm Tint
-                float3 ambient = half3(0.2, 0.15, 0.1) * _Warmth.rgb;
-                float3 finalColor = texColor.rgb * (diffuse * light.color + ambient);
+                // Final Composition
+                float3 ambient = half3(0.15, 0.12, 0.1) * _Warmth.rgb;
+                float3 finalColor = texColor.rgb * (diffuse * light.color + ambient) * _Warmth.rgb;
                 
-                // Sand Accumulation
-                float sand = saturate(dot(input.normalWS, float3(0, 1, 0)));
-                sand = pow(sand, 4.0) * _SandAmount;
-                finalColor = lerp(finalColor, float3(0.8, 0.7, 0.5) * _Warmth.rgb, sand);
+                // Sand Accumulation (Top surfaces)
+                float sandMask = saturate(dot(input.normalWS, float3(0, 1, 0)));
+                sandMask = pow(sandMask, 4.0) * _SandAmount;
+                finalColor = lerp(finalColor, float3(0.7, 0.6, 0.4) * _Warmth.rgb, sandMask);
                 
                 return half4(finalColor, 1.0);
             }

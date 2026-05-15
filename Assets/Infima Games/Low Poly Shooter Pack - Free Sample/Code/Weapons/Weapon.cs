@@ -1,4 +1,4 @@
-﻿// Copyright 2021, Infima Games. All Rights Reserved.
+// Copyright 2021, Infima Games. All Rights Reserved.
 
 using UnityEngine;
 
@@ -177,16 +177,16 @@ namespace InfimaGames.LowPolyShooterPack
 
         public override AudioClip GetAudioClipFireEmpty() => audioClipFireEmpty;
         
-        public override AudioClip GetAudioClipFire() => muzzleBehaviour.GetAudioClipFire();
+        public override AudioClip GetAudioClipFire() => muzzleBehaviour != null ? muzzleBehaviour.GetAudioClipFire() : null;
         
         public override int GetAmmunitionCurrent() => ammunitionCurrent;
 
-        public override int GetAmmunitionTotal() => magazineBehaviour.GetAmmunitionTotal();
+        public override int GetAmmunitionTotal() => magazineBehaviour != null ? magazineBehaviour.GetAmmunitionTotal() : 0;
 
         public override bool IsAutomatic() => automatic;
         public override float GetRateOfFire() => roundsPerMinutes;
         
-        public override bool IsFull() => ammunitionCurrent == magazineBehaviour.GetAmmunitionTotal();
+        public override bool IsFull() => magazineBehaviour != null && ammunitionCurrent == magazineBehaviour.GetAmmunitionTotal();
         public override bool HasAmmunition() => ammunitionCurrent > 0;
 
         public override RuntimeAnimatorController GetAnimatorController() => controller;
