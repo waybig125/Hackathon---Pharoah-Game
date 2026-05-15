@@ -13,7 +13,7 @@ Shader "Custom/AncientEgyptian"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" }
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "Queue"="Geometry" }
         LOD 300
 
         Pass
@@ -24,6 +24,8 @@ Shader "Custom/AncientEgyptian"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             struct Attributes
@@ -43,14 +45,20 @@ Shader "Custom/AncientEgyptian"
                 float4 tangentWS : TEXCOORD4;
             };
 
-            sampler2D _MainTex;
-            sampler2D _BumpMap;
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_MainTex);
+            TEXTURE2D(_BumpMap);
+            SAMPLER(sampler_BumpMap);
+
+            CBUFFER_START(UnityPerMaterial)
+            float4 _MainTex_ST;
             float4 _Color;
             float4 _Warmth;
             float _Contrast;
             float _CrackScale;
             float _CrackIntensity;
             float _SandAmount;
+            CBUFFER_END
 
             float hash(float2 p)
             {
@@ -69,13 +77,12 @@ Shader "Custom/AncientEgyptian"
                 return lerp(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
             }
 
-            // Simple procedural cracks based on voronoi edges
             float cracks(float2 uv)
             {
                 float2 p = uv * _CrackScale;
                 float v = noise(p * 2.0);
                 v = abs(v - 0.5) * 2.0;
-                return pow(1.0 - v, 10.0) * _CrackIntensity;
+                return pow(saturate(1.0 - v), 10.0) * _CrackIntensity;
             }
 
             Varyings vert(Attributes input)
@@ -84,7 +91,7 @@ Shader "Custom/AncientEgyptian"
                 VertexPositionInputs posInputs = GetVertexPositionInputs(input.positionOS.xyz);
                 output.positionCS = posInputs.positionCS;
                 output.positionWS = posInputs.positionWS;
-                output.uv = input.uv;
+                output.uv = TRANSFORM_TEX(input.uv, _MainTex);
                 
                 VertexNormalInputs normInputs = GetVertexNormalInputs(input.normalOS, input.tangentOS);
                 output.normalWS = normInputs.normalWS;
@@ -96,13 +103,15 @@ Shader "Custom/AncientEgyptian"
             half4 frag(Varyings input) : SV_Target
             {
                 // Basic Texture
-                float4 texColor = tex2D(_MainTex, input.uv) * _Color;
+                float4 texColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * _Color;
                 
                 // Normal Mapping
-                float3 normalSample = UnpackNormal(tex2D(_BumpMap, input.uv));
+                float4 normalSample = SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, input.uv);
+                float3 normalTS = UnpackNormal(normalSample);
+                
                 float3 bitangent = cross(input.normalWS, input.tangentWS.xyz) * input.tangentWS.w;
                 float3x3 tbn = float3x3(input.tangentWS.xyz, bitangent, input.normalWS);
-                float3 normalWS = normalize(mul(normalSample, tbn));
+                float3 normalWS = normalize(mul(normalTS, tbn));
                 
                 // Procedural Cracks
                 float crack = cracks(input.uv);
@@ -113,14 +122,14 @@ Shader "Custom/AncientEgyptian"
                 float3 lightDir = light.direction;
                 float diffuse = saturate(dot(normalWS, lightDir));
                 
-                // Shadow Crushing (Warzone look)
+                // Shadow Crushing
                 diffuse = pow(diffuse, _Contrast);
                 
                 // Warm Tint
                 float3 ambient = half3(0.2, 0.15, 0.1) * _Warmth.rgb;
                 float3 finalColor = texColor.rgb * (diffuse * light.color + ambient);
                 
-                // Sand Accumulation on top surfaces
+                // Sand Accumulation
                 float sand = saturate(dot(input.normalWS, float3(0, 1, 0)));
                 sand = pow(sand, 4.0) * _SandAmount;
                 finalColor = lerp(finalColor, float3(0.8, 0.7, 0.5) * _Warmth.rgb, sand);
@@ -130,4 +139,5 @@ Shader "Custom/AncientEgyptian"
             ENDHLSL
         }
     }
+    Fallback "Universal Render Pipeline/Lit"
 }

@@ -24,8 +24,8 @@ namespace TheAlchemistsCrypt.UI
             Sprite defaultSprite = Sprite.Create(whiteTex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
             
             // Try to find a font, but don't fail if not found
-            var font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             if (font == null) font = Resources.GetBuiltinResource<Font>("LiberationSans.ttf");
 
             void CreateHoldButton(string name, Vector2 anchoredPos, Vector2 size, string textStr, UnityEngine.Events.UnityAction<BaseEventData> onDown, UnityEngine.Events.UnityAction<BaseEventData> onUp)
