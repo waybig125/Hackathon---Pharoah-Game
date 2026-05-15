@@ -18,39 +18,33 @@ public class PunchCombat : MonoBehaviour
 
     void Update()
     {
-        // We override the 'Fire' behavior if this is the active weapon
-        // This is a bit of a hack since we can't easily change the Weapon class
     }
     
-    // We will call this from an Animation Event or a custom hook
     public void Punch()
     {
         Debug.Log("Punching!");
+        if (playerCharacter == null || playerCharacter.GetCameraWorld() == null) return;
+
         Ray ray = new Ray(playerCharacter.GetCameraWorld().transform.position, playerCharacter.GetCameraWorld().transform.forward);
         if (Physics.Raycast(ray, out RaycastHit hit, range, mask))
         {
             Debug.Log($"Hit {hit.collider.name} with tag {hit.collider.tag}");
             
-            // Handle Target
-            if (hit.collider.CompareTag("Target"))
-            {
-                var target = hit.collider.GetComponent<TargetScript>();
-                if (target != null) target.isHit = true;
-            }
-            // Handle Explosive Barrel
-            else if (hit.collider.CompareTag("ExplosiveBarrel"))
-            {
-                var barrel = hit.collider.GetComponent<ExplosiveBarrelScript>();
-                if (barrel != null) barrel.explode = true;
-            }
-            // Handle Gas Tank
-            else if (hit.collider.CompareTag("GasTank"))
-            {
-                var tank = hit.collider.GetComponent<GasTankScript>();
-                if (tank != null) tank.isHit = true;
-            }
+            // Handle LPSP objects by components instead of interfaces
+            
+            // Target
+            var target = hit.collider.GetComponent<TargetScript>();
+            if (target != null) target.isHit = true;
+            
+            // Explosive Barrel
+            var barrel = hit.collider.GetComponent<ExplosiveBarrelScript>();
+            if (barrel != null) barrel.explode = true;
+            
+            // Gas Tank
+            var tank = hit.collider.GetComponent<GasTankScript>();
+            if (tank != null) tank.isHit = true;
 
-            // Apply physical force if it has a rigidbody
+            // Apply physical force
             Rigidbody hitRb = hit.collider.GetComponent<Rigidbody>();
             if (hitRb != null)
             {
