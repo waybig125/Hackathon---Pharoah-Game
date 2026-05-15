@@ -8,7 +8,7 @@ namespace TheAlchemistsCrypt.Environment
         public bool enableFog = true;
         // Vibrant Green + Gray Mix
         public Color fogColor = new Color(0.35f, 0.65f, 0.40f, 1f);
-        public float fogDensity = 0.0006f; // Halved for clarity as requested
+        public float fogDensity = 0.015f; // Increased for thick Egyptian fog
         public FogMode fogMode = FogMode.ExponentialSquared;
 
         [Header("Lighting Settings")]
@@ -27,6 +27,13 @@ namespace TheAlchemistsCrypt.Environment
             RenderSettings.fogColor = fogColor;
             RenderSettings.fogDensity = fogDensity;
             RenderSettings.fogMode = fogMode;
+
+            // Apply solid color to camera to blend sky with fog perfectly
+            if (Camera.main != null)
+            {
+                Camera.main.clearFlags = CameraClearFlags.SolidColor;
+                Camera.main.backgroundColor = fogColor;
+            }
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = ambientLight;

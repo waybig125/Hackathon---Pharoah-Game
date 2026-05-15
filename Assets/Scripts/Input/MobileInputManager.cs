@@ -13,6 +13,7 @@ namespace TheAlchemistsCrypt.Input
         public Vector2 MovementInput { get; private set; }
         public Vector2 LookInput { get; private set; }
         public bool IsFiring { get; private set; }
+        public bool IsAiming { get; private set; }
         public bool IsJumping { get; set; }
         public bool IsJumpHeld { get; private set; }
         public float JumpStartTime { get; private set; }
@@ -57,6 +58,11 @@ namespace TheAlchemistsCrypt.Input
         public void SetFiring(bool state)
         {
             IsFiring = state;
+        }
+
+        public void SetAiming(bool state)
+        {
+            IsAiming = state;
         }
 
         public void SetJumping(bool state)

@@ -211,6 +211,7 @@ namespace InfimaGames.LowPolyShooterPack
                 
                 // Use explicit state instead of |= to avoid sticking
                 holdingButtonFire = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsFiring;
+                holdingButtonAim = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsAiming;
                 holdingButtonRun = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSprinting;
                 
                 if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon)

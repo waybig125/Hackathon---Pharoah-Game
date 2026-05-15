@@ -234,15 +234,18 @@ namespace InfimaGames.LowPolyShooterPack
 
             #endregion
             
-            //Update Velocity. Preserve Y velocity!
-            // Safety check for NaN to prevent physics crashes
-            if (!float.IsNaN(movement.x) && !float.IsNaN(movement.z))
+            // Update Velocity. Preserve Y velocity!
+            // Extremely robust safety check for NaN/Infinity to prevent physics crashes
+            float curY = Velocity.y;
+            if (float.IsNaN(curY) || float.IsInfinity(curY)) curY = 0;
+
+            if (!float.IsNaN(movement.x) && !float.IsNaN(movement.z) && !float.IsInfinity(movement.x) && !float.IsInfinity(movement.z))
             {
-                Velocity = new Vector3(movement.x, Velocity.y, movement.z);
+                Velocity = new Vector3(movement.x, curY, movement.z);
             }
             else
             {
-                Velocity = new Vector3(0, Velocity.y, 0);
+                Velocity = new Vector3(0, curY, 0);
             }
         }
 

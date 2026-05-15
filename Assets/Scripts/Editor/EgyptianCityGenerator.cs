@@ -131,7 +131,7 @@ namespace TheAlchemistsCrypt.Editor
             RenderSettings.fogMode = FogMode.ExponentialSquared;
             // Vibrant Green + 0.5x Gray
             RenderSettings.fogColor = new Color(0.35f, 0.65f, 0.40f, 1f); 
-            RenderSettings.fogDensity = 0.0006f; // Halved for clarity
+            RenderSettings.fogDensity = 0.015f; // Thick Egyptian Fog
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             // Much Lighter ambient to prevent "Brown Scene" overlay
@@ -369,18 +369,26 @@ namespace TheAlchemistsCrypt.Editor
             {
                 foreach (var r in obj.GetComponentsInChildren<Renderer>())
                 {
-                    if (r.sharedMaterial == null || r.sharedMaterial.shader == null || r.sharedMaterial.shader.name.Contains("Error") || r.sharedMaterial.shader.name == "Hidden/InternalErrorShader")
+                    var mats = r.sharedMaterials;
+                    bool changed = false;
+                    for (int i = 0; i < mats.Length; i++)
                     {
-                        var newMat = new Material(shader);
-                        if (r.sharedMaterial != null) newMat.color = r.sharedMaterial.color;
-                        r.material = newMat; // Reassign fixed material instance
+                        if (mats[i] == null || mats[i].shader == null || mats[i].shader.name != "Universal Render Pipeline/Lit")
+                        {
+                            var oldMat = mats[i];
+                            var newMat = new Material(shader);
+                            if (oldMat != null)
+                            {
+                                if (oldMat.HasProperty("_Color")) newMat.color = oldMat.color;
+                                if (oldMat.HasProperty("_BaseColor")) newMat.SetColor("_BaseColor", oldMat.GetColor("_BaseColor"));
+                                if (oldMat.HasProperty("_MainTex")) newMat.mainTexture = oldMat.mainTexture;
+                                if (oldMat.HasProperty("_BaseMap")) newMat.SetTexture("_BaseMap", oldMat.GetTexture("_BaseMap"));
+                            }
+                            mats[i] = newMat;
+                            changed = true;
+                        }
                     }
-                    else if (r.sharedMaterial.shader.name == "Standard") 
-                    {
-                        // Upgrade standard to URP if needed
-                        var urpShader = Shader.Find("Universal Render Pipeline/Lit");
-                        if (urpShader != null) r.material.shader = urpShader;
-                    }
+                    if (changed) r.sharedMaterials = mats;
                 }
             }
             foreach (var r in obj.GetComponentsInChildren<Renderer>()) { r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On; r.receiveShadows = true; }
