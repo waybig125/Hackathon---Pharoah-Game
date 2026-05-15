@@ -24,7 +24,7 @@ namespace TheAlchemistsCrypt.UI
 
             // Load Font and Icons
             Font medievalFont = Resources.Load<Font>("UI/Fonts/MedievalSharp");
-            if (medievalFont == null) medievalFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            if (medievalFont == null) medievalFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             // Load icons (fallback to null if not imported yet)
             Sprite sprintIcon = Resources.Load<Sprite>("UI/Icons/icon_sprint");
@@ -148,8 +148,8 @@ namespace TheAlchemistsCrypt.UI
             var entryDrag = new EventTrigger.Entry { eventID = EventTriggerType.Drag };
             entryDrag.callback.AddListener((data) => {
                 var pointerData = (PointerEventData)data;
-                // Increased multiplier from 2.0f to 10.0f for responsive sensitivity
-                inputManager.SetLook(pointerData.delta * 10.0f);
+                // Increased multiplier for even faster mobile sensitivity
+                inputManager.SetLook(pointerData.delta * 20.0f);
             });
             touchTrigger.triggers.Add(entryDrag);
 

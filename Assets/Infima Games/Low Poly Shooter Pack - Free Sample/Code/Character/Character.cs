@@ -118,14 +118,13 @@ namespace InfimaGames.LowPolyShooterPack
 		private bool holstering;
 
 		/// <summary>
-		/// Look Axis Values.
+		/// Movement Axis Values.
 		/// </summary>
-		private Vector2 axisLook;
+		private Vector2 axisMovement;
 		/// <summary>
 		/// Look Axis Values.
 		/// </summary>
-		private Vector2 axisMovement;
-		
+		private Vector2 axisLook;
 		/// <summary>
 		/// True if the player is holding the aiming button.
 		/// </summary>
@@ -583,8 +582,9 @@ namespace InfimaGames.LowPolyShooterPack
 			if (holdingButtonFire && equippedWeapon.HasAmmunition())
 				return false;
 
-			//This blocks running backwards, or while fully moving sideways.
-			if (axisMovement.y <= 0 || Math.Abs(Mathf.Abs(axisMovement.x) - 1) < 0.01f)
+			// Loosened check: allow running as long as there is forward movement.
+			// This fixes the "cannot run in certain places" issue on mobile joysticks.
+			if (axisMovement.y <= 0.1f)
 				return false;
 			
 			//Return.
