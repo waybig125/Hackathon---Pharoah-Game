@@ -6,8 +6,8 @@ namespace TheAlchemistsCrypt.UI
 {
     public class Joystick : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler
     {
-        [SerializeField] private RectTransform background;
-        [SerializeField] private RectTransform handle;
+        public RectTransform background;
+        public RectTransform handle;
         // [SerializeField] private float range = 100f; // Unused warning fix
 
         public void OnPointerDown(PointerEventData eventData)

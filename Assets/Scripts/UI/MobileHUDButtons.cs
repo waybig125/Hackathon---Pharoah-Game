@@ -6,6 +6,11 @@ namespace TheAlchemistsCrypt.UI
 {
     public class MobileHUDButtons : MonoBehaviour
     {
+        private Sprite circleSprite;
+        private Sprite joystickBgSprite;
+        private Sprite joystickHandleSprite;
+        private Font medievalFont;
+
         private void Start()
         {
             if (!Application.isMobilePlatform && !Application.isEditor) return;
@@ -14,31 +19,31 @@ namespace TheAlchemistsCrypt.UI
             if (inputManager == null) return;
 
             var canvasObj = GameObject.Find("MobileHUD");
-            if (canvasObj == null) return;
-
-            // Ensure GraphicRaycaster exists so buttons are clickable!
-            if (canvasObj.GetComponent<GraphicRaycaster>() == null)
+            if (canvasObj == null)
             {
+                canvasObj = new GameObject("MobileHUD");
+                var canvas = canvasObj.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvasObj.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                 canvasObj.AddComponent<GraphicRaycaster>();
             }
 
             // Load Font and Icons
-            Font medievalFont = Resources.Load<Font>("UI/Fonts/MedievalSharp");
+            medievalFont = Resources.Load<Font>("UI/Fonts/MedievalSharp");
             if (medievalFont == null) medievalFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-            // Load icons (fallback to null if not imported yet)
             Sprite sprintIcon = Resources.Load<Sprite>("UI/Icons/icon_sprint");
             Sprite jumpIcon = Resources.Load<Sprite>("UI/Icons/icon_jump");
             Sprite crouchIcon = Resources.Load<Sprite>("UI/Icons/icon_crouch");
             Sprite swapIcon = Resources.Load<Sprite>("UI/Icons/icon_swap");
+            Sprite attackIcon = Resources.Load<Sprite>("UI/Icons/icon_attack"); // Assuming we might have one or use a fallback
 
-            // Procedural background sprite
-            Texture2D tex = new Texture2D(1, 1);
-            tex.SetPixel(0, 0, Color.white);
-            tex.Apply();
-            Sprite defaultBg = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
+            // Create procedural circle sprite
+            circleSprite = CreateCircleSprite(128, new Color(1, 1, 1, 1));
+            joystickBgSprite = CreateCircleSprite(256, new Color(0.2f, 0.15f, 0.1f, 0.7f)); // Bronze/Stone color
+            joystickHandleSprite = CreateCircleSprite(128, new Color(0.8f, 0.7f, 0.5f, 0.9f)); // Golden color
 
-            void CreateHoldButton(string name, Vector2 anchoredPos, Vector2 size, string textStr, Sprite iconSprite, UnityEngine.Events.UnityAction<BaseEventData> onDown, UnityEngine.Events.UnityAction<BaseEventData> onUp)
+            void CreateRoundButton(string name, Vector2 anchoredPos, Vector2 size, Sprite iconSprite, string fallbackText, UnityEngine.Events.UnityAction<BaseEventData> onDown, UnityEngine.Events.UnityAction<BaseEventData> onUp, Color bgColor)
             {
                 var go = new GameObject(name);
                 go.transform.SetParent(canvasObj.transform, false);
@@ -46,26 +51,25 @@ namespace TheAlchemistsCrypt.UI
                 var rect = go.AddComponent<RectTransform>();
                 rect.anchorMin = new Vector2(1, 0);
                 rect.anchorMax = new Vector2(1, 0);
-                rect.pivot = new Vector2(1, 0);
+                rect.pivot = new Vector2(0.5f, 0.5f);
                 rect.anchoredPosition = anchoredPos;
                 rect.sizeDelta = size;
                 
                 var img = go.AddComponent<Image>();
-                img.sprite = defaultBg;
-                img.color = new Color(0.1f, 0.1f, 0.1f, 0.6f); // Darker background for contrast
+                img.sprite = circleSprite;
+                img.color = bgColor;
                 
-                // Add Icon if exists, otherwise text
                 if (iconSprite != null)
                 {
                     var iconGo = new GameObject("Icon");
                     iconGo.transform.SetParent(go.transform, false);
                     var iconRect = iconGo.AddComponent<RectTransform>();
-                    iconRect.anchorMin = new Vector2(0.2f, 0.2f);
-                    iconRect.anchorMax = new Vector2(0.8f, 0.8f);
-                    iconRect.offsetMin = Vector2.zero; iconRect.offsetMax = Vector2.zero;
+                    iconRect.anchorMin = Vector2.zero; iconRect.anchorMax = Vector2.one;
+                    iconRect.offsetMin = size * 0.2f; iconRect.offsetMax = -size * 0.2f;
                     var iconImg = iconGo.AddComponent<Image>();
                     iconImg.sprite = iconSprite;
                     iconImg.color = Color.white;
+                    iconImg.raycastTarget = false;
                 }
                 else
                 {
@@ -75,22 +79,20 @@ namespace TheAlchemistsCrypt.UI
                     textRect.anchorMin = Vector2.zero; textRect.anchorMax = Vector2.one;
                     textRect.offsetMin = Vector2.zero; textRect.offsetMax = Vector2.zero;
                     var text = textGo.AddComponent<Text>();
-                    text.text = textStr;
+                    text.text = fallbackText;
                     text.font = medievalFont;
                     text.alignment = TextAnchor.MiddleCenter;
                     text.color = Color.white;
-                    text.fontSize = 45;
+                    text.fontSize = (int)(size.x * 0.3f);
                     text.resizeTextForBestFit = true;
-                    text.resizeTextMinSize = 20;
-                    text.resizeTextMaxSize = 80;
+                    text.raycastTarget = false;
                 }
                 
                 var trigger = go.AddComponent<EventTrigger>();
                 
-                // Visual Feedback Callbacks
                 var entryDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
                 entryDown.callback.AddListener((data) => {
-                    img.color = new Color(0.3f, 0.3f, 0.3f, 0.8f);
+                    img.color = new Color(bgColor.r * 1.5f, bgColor.g * 1.5f, bgColor.b * 1.5f, 0.9f);
                     rect.localScale = new Vector3(0.9f, 0.9f, 0.9f);
                     onDown?.Invoke(data);
                 });
@@ -98,67 +100,115 @@ namespace TheAlchemistsCrypt.UI
                 
                 var entryUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
                 entryUp.callback.AddListener((data) => {
-                    img.color = new Color(0.1f, 0.1f, 0.1f, 0.6f);
+                    img.color = bgColor;
                     rect.localScale = Vector3.one;
                     onUp?.Invoke(data);
                 });
                 trigger.triggers.Add(entryUp);
             }
 
-            // Curved Ergonomic Layout for Thumb
-            // Jump (Bottom Right, closest to thumb rest)
-            CreateHoldButton("JumpButton", new Vector2(-200, 200), new Vector2(140, 140), "JUMP", jumpIcon,
+            // Layout Settings (Curved for thumb)
+            float radius = 400f;
+            Vector2 center = new Vector2(-150, 150);
+
+            // Jump (Bottom Right)
+            CreateRoundButton("JumpButton", center + new Vector2(0, 0), new Vector2(180, 180), jumpIcon, "JUMP",
                 data => inputManager.SetJumping(true), 
-                data => inputManager.SetJumping(false));
+                data => inputManager.SetJumping(false), new Color(0.2f, 0.2f, 0.2f, 0.7f));
 
-            // Sprint (Above Jump)
-            CreateHoldButton("SprintButton", new Vector2(-250, 400), new Vector2(120, 120), "SPRINT", sprintIcon,
+            // Attack / Fire (Repurposed Red Button)
+            CreateRoundButton("AttackButton", center + new Vector2(-220, 100), new Vector2(200, 200), attackIcon, "ATTACK",
+                data => inputManager.SetFiring(true), 
+                data => inputManager.SetFiring(false), new Color(0.6f, 0.1f, 0.1f, 0.8f));
+
+            // Sprint
+            CreateRoundButton("SprintButton", center + new Vector2(-100, 250), new Vector2(140, 140), sprintIcon, "RUN",
                 data => inputManager.SetSprinting(true), 
-                data => inputManager.SetSprinting(false));
+                data => inputManager.SetSprinting(false), new Color(0.2f, 0.2f, 0.2f, 0.7f));
 
-            // Crouch (Left of Jump)
-            CreateHoldButton("CrouchButton", new Vector2(-400, 250), new Vector2(120, 120), "CROUCH", crouchIcon,
+            // Crouch
+            CreateRoundButton("CrouchButton", center + new Vector2(-300, -50), new Vector2(140, 140), crouchIcon, "CROUCH",
                 data => inputManager.SetCrouching(true), 
-                data => inputManager.SetCrouching(false));
+                data => inputManager.SetCrouching(false), new Color(0.2f, 0.2f, 0.2f, 0.7f));
 
-            // Swap Weapon (Top Right)
-            CreateHoldButton("SwapButton", new Vector2(-100, 900), new Vector2(120, 120), "SWAP", swapIcon,
+            // Swap
+            CreateRoundButton("SwapButton", new Vector2(-150, 850), new Vector2(130, 130), swapIcon, "SWAP",
                 data => inputManager.SetSwappingWeapon(), 
-                null);
+                null, new Color(0.3f, 0.3f, 0.4f, 0.7f));
 
-            // Invisible Touch Zone for Camera Look (Right half of the screen)
+            // Create Themed Joystick
+            CreateJoystick(canvasObj, inputManager);
+
+            // Look Touch Zone (Right Half)
             var touchZoneGo = new GameObject("LookTouchZone");
             touchZoneGo.transform.SetParent(canvasObj.transform, false);
-            // Ensure the touch zone is behind the buttons
             touchZoneGo.transform.SetAsFirstSibling();
-            
             var touchRect = touchZoneGo.AddComponent<RectTransform>();
-            touchRect.anchorMin = new Vector2(0.5f, 0); // Start from middle
-            touchRect.anchorMax = new Vector2(1, 1); // Full height, right side
-            touchRect.offsetMin = Vector2.zero;
-            touchRect.offsetMax = Vector2.zero;
-
+            touchRect.anchorMin = new Vector2(0.4f, 0);
+            touchRect.anchorMax = new Vector2(1, 1);
+            touchRect.offsetMin = Vector2.zero; touchRect.offsetMax = Vector2.zero;
             var touchImg = touchZoneGo.AddComponent<Image>();
-            touchImg.color = new Color(0, 0, 0, 0); // Completely transparent
-            touchImg.raycastTarget = true;
-
+            touchImg.color = Color.clear;
             var touchTrigger = touchZoneGo.AddComponent<EventTrigger>();
-
-            // Drag event - Increased sensitivity
             var entryDrag = new EventTrigger.Entry { eventID = EventTriggerType.Drag };
             entryDrag.callback.AddListener((data) => {
-                var pointerData = (PointerEventData)data;
-                // Increased multiplier for even faster mobile sensitivity
-                inputManager.SetLook(pointerData.delta * 20.0f);
+                inputManager.SetLook(((PointerEventData)data).delta * 20.0f);
             });
             touchTrigger.triggers.Add(entryDrag);
-
-            // Pointer Up event (reset look to zero when finger lifted)
             var entryUpLook = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-            entryUpLook.callback.AddListener((data) => {
-                inputManager.SetLook(Vector2.zero);
-            });
+            entryUpLook.callback.AddListener((data) => inputManager.SetLook(Vector2.zero));
             touchTrigger.triggers.Add(entryUpLook);
+        }
+
+        private void CreateJoystick(GameObject canvas, TheAlchemistsCrypt.Input.MobileInputManager inputManager)
+        {
+            var joyGo = new GameObject("ThemedJoystick");
+            joyGo.transform.SetParent(canvas.transform, false);
+            var rect = joyGo.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0, 0);
+            rect.anchorMax = new Vector2(0, 0);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(250, 250);
+            rect.sizeDelta = new Vector2(300, 300);
+
+            var bgImg = joyGo.AddComponent<Image>();
+            bgImg.sprite = joystickBgSprite;
+
+            var handleGo = new GameObject("Handle");
+            handleGo.transform.SetParent(joyGo.transform, false);
+            var handleRect = handleGo.AddComponent<RectTransform>();
+            handleRect.sizeDelta = new Vector2(120, 120);
+            var handleImg = handleGo.AddComponent<Image>();
+            handleImg.sprite = joystickHandleSprite;
+
+            var joystick = joyGo.AddComponent<Joystick>();
+            joystick.background = rect;
+            joystick.handle = handleRect;
+        }
+
+        private Sprite CreateCircleSprite(int size, Color color)
+        {
+            Texture2D tex = new Texture2D(size, size);
+            float center = size / 2f;
+            float radius = size / 2f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), new Vector2(center, center));
+                    if (dist <= radius)
+                    {
+                        float alpha = Mathf.SmoothStep(radius, radius - 2, dist);
+                        tex.SetPixel(x, y, new Color(color.r, color.g, color.b, color.a * alpha));
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
         }
     }
 }
