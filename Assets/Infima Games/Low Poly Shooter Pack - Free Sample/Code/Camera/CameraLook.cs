@@ -15,7 +15,7 @@ namespace InfimaGames.LowPolyShooterPack
         
         [Tooltip("Sensitivity when looking around.")]
         [SerializeField]
-        private Vector2 sensitivity = new Vector2(250, 250);
+        private Vector2 sensitivity = new Vector2(800, 800);
 
         [Tooltip("Minimum and maximum up/down rotation angle the camera can have.")]
         [SerializeField]

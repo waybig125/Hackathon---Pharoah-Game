@@ -5,13 +5,8 @@ using System.Collections.Generic;
 
 namespace TheAlchemistsCrypt.UI
 {
-    /// <summary>
-    /// Mobile HUD: Custom joystick, icon buttons with press feedback, look touch zone.
-    /// Cleans up pre-existing HUD children before rebuilding.
-    /// </summary>
     public class MobileHUDButtons : MonoBehaviour
     {
-        // ── Procedural circle sprite ─────────────────────────────────────────────
         private static Sprite CreateCircleSprite(int size, Color color)
         {
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
@@ -28,20 +23,17 @@ namespace TheAlchemistsCrypt.UI
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
         }
 
-        // ── Custom Joystick ──────────────────────────────────────────────────────
         private class CustomJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
         {
             public RectTransform background;
             public RectTransform handle;
             public TheAlchemistsCrypt.Input.MobileInputManager inputManager;
             private float radius;
-            private Canvas canvas;
 
             private void Awake()
             {
-                canvas = GetComponentInParent<Canvas>();
                 if (background != null)
-                    radius = background.sizeDelta.x * 0.5f;
+                    radius = background.sizeDelta.x * 0.45f;
             }
 
             public void OnPointerDown(PointerEventData data)  => UpdateJoystick(data);
@@ -55,27 +47,20 @@ namespace TheAlchemistsCrypt.UI
             private void UpdateJoystick(PointerEventData data)
             {
                 if (background == null || handle == null) return;
-
                 Vector2 localPoint;
-                RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                    background, data.position, data.pressEventCamera, out localPoint);
-
-                // Clamp within radius
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(background, data.position, data.pressEventCamera, out localPoint);
                 Vector2 clamped = Vector2.ClampMagnitude(localPoint, radius);
                 handle.anchoredPosition = clamped;
-
-                // Normalise to [-1, 1]
                 Vector2 input = clamped / radius;
-                inputManager?.SetMovement(new Vector2(input.x, input.y));
+                inputManager?.SetMovement(input);
             }
         }
 
-        // ── Button with icon + active-state feedback ─────────────────────────────
         private class HUDButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
         {
             public Image background;
             public Color normalColor;
-            public Color pressedColor = new Color(1f, 0.85f, 0.3f, 0.95f);   // golden glow when pressed
+            public Color pressedColor = new Color(1f, 0.9f, 0.4f, 1f);
             public System.Action onDown;
             public System.Action onUp;
             private bool held;
@@ -84,7 +69,7 @@ namespace TheAlchemistsCrypt.UI
             {
                 held = true;
                 if (background) background.color = pressedColor;
-                transform.localScale = new Vector3(0.88f, 0.88f, 0.88f);
+                transform.localScale = Vector3.one * 0.9f;
                 onDown?.Invoke();
             }
 
@@ -96,32 +81,28 @@ namespace TheAlchemistsCrypt.UI
                 onUp?.Invoke();
             }
 
-            // Keep visual in sync while dragging off
             private void Update()
             {
                 if (background == null) return;
-                background.color = Color.Lerp(background.color,
-                    held ? pressedColor : normalColor, Time.deltaTime * 12f);
+                background.color = Color.Lerp(background.color, held ? pressedColor : normalColor, Time.deltaTime * 15f);
             }
         }
 
-        // ── Look Touch Zone (right half of screen) ───────────────────────────────
         private class LookTouchZone : MonoBehaviour, IDragHandler, IPointerUpHandler
         {
             public TheAlchemistsCrypt.Input.MobileInputManager inputManager;
-            private const float SENSITIVITY = 0.08f;
+            // INCREASED SENSITIVITY from 0.25 to 1.0
+            public float sensitivity = 1.0f;
 
             public void OnDrag(PointerEventData data)
-                => inputManager?.SetLook(data.delta * SENSITIVITY);
+                => inputManager?.SetLook(data.delta * sensitivity);
 
             public void OnPointerUp(PointerEventData data)
                 => inputManager?.SetLook(Vector2.zero);
         }
 
-        // ─────────────────────────────────────────────────────────────────────────
         private void Start()
         {
-            // Build HUD even in editor so we can preview
             BuildHUD();
         }
 
@@ -130,183 +111,152 @@ namespace TheAlchemistsCrypt.UI
             var inputManager = FindAnyObjectByType<TheAlchemistsCrypt.Input.MobileInputManager>();
             if (inputManager == null) return;
 
-            // ── Find/Create the Canvas ──
             GameObject canvasObj = GameObject.Find("MobileHUD");
             if (canvasObj == null)
             {
                 canvasObj = new GameObject("MobileHUD");
                 var cv = canvasObj.AddComponent<Canvas>();
                 cv.renderMode = RenderMode.ScreenSpaceOverlay;
-                cv.sortingOrder = 10;
+                cv.sortingOrder = 100;
                 var scaler = canvasObj.AddComponent<CanvasScaler>();
                 scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                 scaler.referenceResolution = new Vector2(1920, 1080);
-                scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-                scaler.matchWidthOrHeight = 0.5f;
                 canvasObj.AddComponent<GraphicRaycaster>();
             }
 
-            // ── Clean up ALL old children (removes stray red/black buttons) ──
+            // Cleanup
             var toDestroy = new List<GameObject>();
-            foreach (Transform child in canvasObj.transform)
-                toDestroy.Add(child.gameObject);
-            foreach (var go in toDestroy)
-                Destroy(go);
+            foreach (Transform child in canvasObj.transform) toDestroy.Add(child.gameObject);
+            foreach (var go in toDestroy) Destroy(go);
 
-            // ── Sprites ──
-            var circleSprite  = CreateCircleSprite(256, Color.white);
-            var joyBgSprite   = CreateCircleSprite(256, new Color(0.05f, 0.05f, 0.05f, 0.65f));
-            var joyKnobSprite = CreateCircleSprite(256, new Color(0.85f, 0.75f, 0.45f, 0.95f));
+            var circleSprite = CreateCircleSprite(256, Color.white);
 
-            // ── Load icons (Resources/UI/Icons/) ──
-            Sprite icoJump   = Resources.Load<Sprite>("UI/Icons/icon_jump");
-            Sprite icoAttack = Resources.Load<Sprite>("UI/Icons/icon_attack");
-            Sprite icoSprint = Resources.Load<Sprite>("UI/Icons/icon_sprint");
-            Sprite icoCrouch = Resources.Load<Sprite>("UI/Icons/icon_crouch");
-            Sprite icoSwap   = Resources.Load<Sprite>("UI/Icons/icon_swap");
+            // Robust Icon Loading
+            Sprite GetIcon(string name)
+            {
+                var s = Resources.Load<Sprite>("UI/Icons/" + name);
+                if (s == null)
+                {
+                    // Try Texture2D fallback
+                    var t = Resources.Load<Texture2D>("UI/Icons/" + name);
+                    if (t != null) s = Sprite.Create(t, new Rect(0,0,t.width,t.height), new Vector2(0.5f,0.5f));
+                }
+                return s;
+            }
 
-            // ─────────────────────────────────────────────────────────────────────
-            // LOOK TOUCH ZONE — right 55 % of screen, behind everything else
-            // ─────────────────────────────────────────────────────────────────────
+            Sprite icoJump = GetIcon("icon_jump");
+            Sprite icoAttack = GetIcon("icon_attack");
+            Sprite icoSprint = GetIcon("icon_sprint");
+            Sprite icoCrouch = GetIcon("icon_crouch");
+            Sprite icoSwap = GetIcon("icon_swap");
+
+            // Look Zone
             var lookObj = new GameObject("LookZone");
             lookObj.transform.SetParent(canvasObj.transform, false);
-            lookObj.transform.SetAsFirstSibling();
             var lookRect = lookObj.AddComponent<RectTransform>();
-            lookRect.anchorMin = new Vector2(0.4f, 0f);
-            lookRect.anchorMax = new Vector2(1f,   1f);
+            lookRect.anchorMin = new Vector2(0.3f, 0f); // Larger zone
+            lookRect.anchorMax = new Vector2(1f, 1f);
             lookRect.offsetMin = lookRect.offsetMax = Vector2.zero;
             var lookImg = lookObj.AddComponent<Image>();
-            lookImg.color = Color.clear;
+            lookImg.color = new Color(1,1,1,0.01f); // Almost invisible but raycastable
             var lookZone = lookObj.AddComponent<LookTouchZone>();
             lookZone.inputManager = inputManager;
 
-            // ─────────────────────────────────────────────────────────────────────
-            // JOYSTICK — bottom-left
-            // ─────────────────────────────────────────────────────────────────────
+            // Joystick
             var joyBgObj = new GameObject("JoystickBg");
             joyBgObj.transform.SetParent(canvasObj.transform, false);
             var joyBgRect = joyBgObj.AddComponent<RectTransform>();
             joyBgRect.anchorMin = joyBgRect.anchorMax = new Vector2(0f, 0f);
             joyBgRect.pivot = new Vector2(0f, 0f);
-            joyBgRect.anchoredPosition = new Vector2(60f, 60f);
-            joyBgRect.sizeDelta = new Vector2(260f, 260f);
+            joyBgRect.anchoredPosition = new Vector2(150f, 350f); // MOVED UP to prevent overlap
+            joyBgRect.sizeDelta = new Vector2(300f, 300f);
             var joyBgImg = joyBgObj.AddComponent<Image>();
-            joyBgImg.sprite = joyBgSprite;
-            joyBgImg.color = new Color(0.06f, 0.06f, 0.06f, 0.7f);
+            joyBgImg.sprite = circleSprite;
+            joyBgImg.color = new Color(0, 0, 0, 0.4f);
 
             var joyKnobObj = new GameObject("JoystickKnob");
             joyKnobObj.transform.SetParent(joyBgObj.transform, false);
             var joyKnobRect = joyKnobObj.AddComponent<RectTransform>();
             joyKnobRect.anchorMin = joyKnobRect.anchorMax = new Vector2(0.5f, 0.5f);
-            joyKnobRect.pivot = new Vector2(0.5f, 0.5f);
-            joyKnobRect.anchoredPosition = Vector2.zero;
-            joyKnobRect.sizeDelta = new Vector2(110f, 110f);
+            joyKnobRect.sizeDelta = new Vector2(120f, 120f);
             var joyKnobImg = joyKnobObj.AddComponent<Image>();
-            joyKnobImg.sprite = joyKnobSprite;
-            joyKnobImg.color = new Color(0.9f, 0.8f, 0.5f, 0.95f);
+            joyKnobImg.sprite = circleSprite;
+            joyKnobImg.color = new Color(1, 0.9f, 0.2f, 0.9f);
 
             var joyScript = joyBgObj.AddComponent<CustomJoystick>();
-            joyScript.background    = joyBgRect;
-            joyScript.handle        = joyKnobRect;
-            joyScript.inputManager  = inputManager;
+            joyScript.background = joyBgRect;
+            joyScript.handle = joyKnobRect;
+            joyScript.inputManager = inputManager;
 
-            // ─────────────────────────────────────────────────────────────────────
-            // ACTION BUTTONS — bottom-right cluster (D-pad-like)
-            //   Layout (screen-space, anchored bottom-right):
-            //       [SPRINT]
-            //  [CROUCH] [JUMP]
-            //      [ATTACK]
-            // ─────────────────────────────────────────────────────────────────────
-            float btnSize   = 140f;
-            float btnGap    = 20f;
-            float baseX     = -80f;   // offset from right edge
-            float baseY     =  80f;   // offset from bottom
+            // BUTTON CLUSTER - FIXED SPACING
+            float btnSz = 160f;
+            float margin = 80f;
+            var themeColor = new Color(0.1f, 0.1f, 0.1f, 0.6f); // Darker back
+            var attackColor = new Color(0.9f, 0.2f, 0.1f, 0.8f);
 
-            // Helper: creates one round icon button anchored bottom-right
-            HUDButton MakeBtn(string label, Vector2 pos, float sz, Sprite icon,
-                              Color bg, System.Action down, System.Action up)
+            // JUMP - Far Right
+            MakeBtn("JumpBtn", new Vector2(-margin - btnSz * 0.5f, margin + btnSz * 1.5f), btnSz, icoJump, themeColor, canvasObj.transform, () => inputManager.SetJumping(true), () => inputManager.SetJumping(false));
+            
+            // ATTACK - Main Action
+            MakeBtn("AttackBtn", new Vector2(-margin - btnSz * 1.5f - 40f, margin + btnSz * 0.5f), btnSz + 40f, icoAttack, attackColor, canvasObj.transform, () => inputManager.SetFiring(true), () => inputManager.SetFiring(false));
+
+            // SPRINT - Left of Attack
+            MakeBtn("SprintBtn", new Vector2(-margin - btnSz * 2.5f - 80f, margin + btnSz * 0.5f), btnSz, icoSprint, themeColor, canvasObj.transform, () => inputManager.SetSprinting(true), () => inputManager.SetSprinting(false));
+
+            // CROUCH - Below Jump
+            MakeBtn("CrouchBtn", new Vector2(-margin - btnSz * 0.5f, margin + btnSz * 0.5f), btnSz, icoCrouch, themeColor, canvasObj.transform, () => inputManager.SetCrouching(true), () => inputManager.SetCrouching(false));
+
+            // SWAP - Top Right
+            var swapBtn = MakeBtn("SwapBtn", new Vector2(-margin - 60f, -margin - 60f), 120f, icoSwap, new Color(0.3f,0.3f,0.5f,0.8f), canvasObj.transform, () => inputManager.SetSwappingWeapon(), null);
+            var swapRect = swapBtn.GetComponent<RectTransform>();
+            swapRect.anchorMin = swapRect.anchorMax = new Vector2(1f, 1f);
+        }
+
+        private GameObject MakeBtn(string label, Vector2 pos, float sz, Sprite icon, Color bg, Transform parent, System.Action down, System.Action up)
+        {
+            var go = new GameObject(label);
+            go.transform.SetParent(parent, false);
+            var r = go.AddComponent<RectTransform>();
+            r.anchorMin = r.anchorMax = new Vector2(1f, 0f);
+            r.anchoredPosition = pos;
+            r.sizeDelta = new Vector2(sz, sz);
+
+            var img = go.AddComponent<Image>();
+            img.sprite = CreateCircleSprite(128, Color.white);
+            img.color = bg;
+
+            if (icon != null)
             {
-                var go = new GameObject(label);
-                go.transform.SetParent(canvasObj.transform, false);
-                var r = go.AddComponent<RectTransform>();
-                r.anchorMin = r.anchorMax = new Vector2(1f, 0f);
-                r.pivot = new Vector2(0.5f, 0.5f);
-                r.anchoredPosition = pos;
-                r.sizeDelta = new Vector2(sz, sz);
-
-                var img = go.AddComponent<Image>();
-                img.sprite = circleSprite;
-                img.color  = bg;
-
-                // Icon child
-                if (icon != null)
-                {
-                    var iconGo = new GameObject("Icon");
-                    iconGo.transform.SetParent(go.transform, false);
-                    var ir = iconGo.AddComponent<RectTransform>();
-                    ir.anchorMin = Vector2.zero; ir.anchorMax = Vector2.one;
-                    ir.offsetMin = new Vector2(sz * 0.2f, sz * 0.2f);
-                    ir.offsetMax = new Vector2(-sz * 0.2f, -sz * 0.2f);
-                    var iimg = iconGo.AddComponent<Image>();
-                    iimg.sprite = icon;
-                    iimg.color = Color.white;
-                    iimg.raycastTarget = false;
-                }
-
-                var btn = go.AddComponent<HUDButton>();
-                btn.background   = img;
-                btn.normalColor  = bg;
-                btn.onDown = down;
-                btn.onUp   = up;
-                return btn;
+                var iconGo = new GameObject("Icon");
+                iconGo.transform.SetParent(go.transform, false);
+                var ir = iconGo.AddComponent<RectTransform>();
+                ir.anchorMin = Vector2.zero; ir.anchorMax = Vector2.one;
+                ir.offsetMin = new Vector2(sz * 0.25f, sz * 0.25f);
+                ir.offsetMax = new Vector2(-sz * 0.25f, -sz * 0.25f);
+                var iimg = iconGo.AddComponent<Image>();
+                iimg.sprite = icon;
+                iimg.color = Color.white;
+                iimg.raycastTarget = false;
+            }
+            else
+            {
+                // Fallback text if icon fails
+                var txtGo = new GameObject("Label");
+                txtGo.transform.SetParent(go.transform, false);
+                var t = txtGo.AddComponent<Text>();
+                t.text = label.Replace("Btn", "");
+                t.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                t.alignment = TextAnchor.MiddleCenter;
+                t.resizeTextForBestFit = true;
+                t.color = Color.white;
             }
 
-            // Stone/gold color theme
-            var stoneColor  = new Color(0.18f, 0.15f, 0.12f, 0.80f);
-            var attackColor = new Color(0.65f, 0.15f, 0.05f, 0.85f);
-
-            // JUMP — right of center
-            MakeBtn("JumpBtn",
-                new Vector2(baseX, baseY + btnSize * 0.5f + btnGap * 0.5f),
-                btnSize, icoJump, stoneColor,
-                () => inputManager.SetJumping(true),
-                () => inputManager.SetJumping(false));
-
-            // ATTACK — center (big)
-            MakeBtn("AttackBtn",
-                new Vector2(baseX - btnSize - btnGap, baseY + btnSize * 0.5f + btnGap * 0.5f),
-                btnSize + 20f, icoAttack, attackColor,
-                () => inputManager.SetFiring(true),
-                () => inputManager.SetFiring(false));
-
-            // SPRINT — above attack
-            MakeBtn("SprintBtn",
-                new Vector2(baseX - btnSize - btnGap, baseY + btnSize * 1.5f + btnGap * 1.5f),
-                btnSize - 20f, icoSprint, stoneColor,
-                () => inputManager.SetSprinting(true),
-                () => inputManager.SetSprinting(false));
-
-            // CROUCH — below attack
-            MakeBtn("CrouchBtn",
-                new Vector2(baseX - btnSize - btnGap, baseY - btnSize * 0.5f + btnGap * 0.5f),
-                btnSize - 20f, icoCrouch, stoneColor,
-                () => inputManager.SetCrouching(true),
-                () => inputManager.SetCrouching(false));
-
-            // SWAP — top-right corner
-            MakeBtn("SwapBtn",
-                new Vector2(-60f, 0f),   // anchored top-right via different anchor
-                100f, icoSwap, new Color(0.25f, 0.2f, 0.35f, 0.8f),
-                () => inputManager.SetSwappingWeapon(),
-                null);
-
-            // Fix SWAP anchor to top-right
-            var swapRect = canvasObj.transform.Find("SwapBtn")?.GetComponent<RectTransform>();
-            if (swapRect != null)
-            {
-                swapRect.anchorMin = swapRect.anchorMax = new Vector2(1f, 1f);
-                swapRect.anchoredPosition = new Vector2(-80f, -80f);
-            }
+            var btn = go.AddComponent<HUDButton>();
+            btn.background = img;
+            btn.normalColor = bg;
+            btn.onDown = down;
+            btn.onUp = up;
+            return go;
         }
     }
 }

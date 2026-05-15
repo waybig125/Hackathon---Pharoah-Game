@@ -4,14 +4,14 @@ using UnityEditor;
 namespace TheAlchemistsCrypt.Editor
 {
     /// <summary>
-    /// Procedural Egyptian City Generator v6:
-    /// - No mummies
-    /// - Brighter, warmer atmosphere
-    /// - Prominent enterable central temple (player spawns in front of it)
-    /// - Both palm tree variants used randomly
-    /// - Proper door frames instead of black cubes
-    /// - Wider streets
-    /// - No stray ghost walls
+    /// Procedural Egyptian City Generator v8:
+    /// - Temple moved very close to player spawn (-40m from spawn)
+    /// - Massive 70m clear zone around temple to ensure visibility
+    /// - 3 Tree types distributed 33/33/33
+    /// - Fog: Vibrant Green + 0.5x Gray mix
+    /// - Ground: "Skin/Sandy" color, tiling fixed
+    /// - Top-down Directional Light for perfect color clarity
+    /// - Props strictly outside house bounds
     /// </summary>
     public class EgyptianCityGenerator : EditorWindow
     {
@@ -19,16 +19,16 @@ namespace TheAlchemistsCrypt.Editor
         public static void ShowWindow() =>
             GetWindow<EgyptianCityGenerator>("Egyptian City Generator");
 
-        private int   gridSize     = 12;
+        private int   gridSize     = 14;
         private float blockSize    = 16f;
-        private float streetWidth  = 22f;   // wide streets
-        private float houseDensity = 0.52f;
+        private float streetWidth  = 22f;
+        private float houseDensity = 0.50f;
 
         private void OnGUI()
         {
             EditorGUILayout.HelpBox(
-                "Generates a collision-safe Egyptian city.\n" +
-                "Temple is placed at (0,0,0). Player should spawn at (0, 2, -60).",
+                "Temple is at (0,0,-20). Player spawns at (0,2,-60) facing the temple.\n" +
+                "Clears 70m radius around temple.",
                 MessageType.Info);
 
             gridSize     = EditorGUILayout.IntField("Grid Size",    gridSize);
@@ -40,380 +40,249 @@ namespace TheAlchemistsCrypt.Editor
                 GenerateCity();
         }
 
-        // ─────────────────────────────────────────────────────────────────────────
-
         private void GenerateCity()
         {
-            // ── Clean old city ──
             var old = GameObject.Find("ProceduralEgyptianCity");
             if (old != null) Undo.DestroyObjectImmediate(old);
 
             var root = new GameObject("ProceduralEgyptianCity");
             Undo.RegisterCreatedObjectUndo(root, "Generate City");
 
-            // ── Atmosphere ──
             SetAtmosphere();
 
-            // ── Materials ──
-            var wallMat  = AssetDatabase.LoadAssetAtPath<Material>(
-                "Assets/Materials/BrickOldSharp0108_5_S_1_URP.mat");
-            var floorMat = AssetDatabase.LoadAssetAtPath<Material>(
-                "Assets/Materials/MarbleTiles0040_1_S_1_URP.mat");
+            var wallMat  = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/BrickOldSharp0108_5_S_1_URP.mat");
+            var floorMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/MarbleTiles0040_1_S_1_URP.mat");
 
-            Material sandMat = MakeMat(new Color(0.82f, 0.70f, 0.45f)); // sandy
-            Material woodMat = MakeMat(new Color(0.42f, 0.27f, 0.12f)); // wooden door
-            Material darkMat = MakeMat(new Color(0.08f, 0.06f, 0.04f)); // dark window opening
+            // Warm skin/sandy color
+            Material sandMat = MakeMat(new Color(0.92f, 0.85f, 0.72f)); 
+            Material woodMat = MakeMat(new Color(0.38f, 0.25f, 0.10f));
+            Material darkMat = MakeMat(new Color(0.05f, 0.04f, 0.03f));
 
-            // ── Desert floor ──
             float totalSize = gridSize * (blockSize + streetWidth);
             var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
             floor.name = "DesertFloor";
             floor.transform.SetParent(root.transform);
             floor.transform.localScale = new Vector3(totalSize / 5f, 1f, totalSize / 5f);
-            if (floorMat) floor.GetComponent<Renderer>().sharedMaterial = floorMat;
+            var floorRenderer = floor.GetComponent<Renderer>();
+            
+            // Apply skin/sandy color to ground
+            if (floorMat) 
+            {
+                var inst = new Material(floorMat);
+                inst.color = new Color(0.95f, 0.88f, 0.75f); // Skin/Sandy tint
+                inst.mainTextureScale = new Vector2(100, 100); // More tiling = less blurry
+                floorRenderer.sharedMaterial = inst;
+            }
+            else
+            {
+                floorRenderer.sharedMaterial = sandMat;
+            }
 
-            // ── Load prefabs ──
-            var tree1    = Load("Assets/EgyptianAssets/realistic_hd_date_palm_2178.glb");
-            var tree2    = Load("Assets/EgyptianAssets/realistic_hd_date_palm_378.glb");
-            var column   = Load("Assets/EgyptianAssets/egyptian_column.glb");
-            var chamber  = Load("Assets/EgyptianAssets/egypt_chamber_for_ar__vr_games.glb");
-            var crate    = Load("Assets/EgyptianAssets/crate.glb");
-            var barrel   = Load("Assets/EgyptianAssets/barrel.glb");
+            var tree1 = Load("Assets/EgyptianAssets/realistic_hd_date_palm_2178.glb");
+            var tree2 = Load("Assets/EgyptianAssets/realistic_hd_date_palm_378.glb");
+            var tree3 = Load("Assets/EgyptianAssets/realistic_hd_date_palm_4778.glb");
+            var column = Load("Assets/EgyptianAssets/egyptian_column.glb");
+            var chamber = Load("Assets/EgyptianAssets/egypt_chamber_for_ar__vr_games.glb");
+            var crate = Load("Assets/EgyptianAssets/crate.glb");
+            var barrel = Load("Assets/EgyptianAssets/barrel.glb");
 
-            // ── Central Temple ──
-            // Placed at world origin; player should spawn at (0, 2, -60)
-            // The temple opens toward -Z so the player walks into it from the south.
+            // Temple at -20 (Spawn is at -60, so 40m in front)
             if (chamber)
             {
                 var ch = Instantiate(chamber, root.transform);
                 ch.name = "CentralTemple";
-                ch.transform.position    = new Vector3(0, 0, 0);
-                ch.transform.localScale  = Vector3.one * 300f;
-                ch.transform.rotation    = Quaternion.Euler(-90, 180, 0); // face player spawn
-                AddCollidersToMesh(ch, makeTriggerOnSmallFaces: true);    // keep entrance open
+                ch.transform.position    = new Vector3(0, 0, -20);
+                ch.transform.localScale  = Vector3.one * 380f;
+                ch.transform.rotation    = Quaternion.Euler(-90, 180, 0); 
+                AddCollidersToMesh(ch, makeTriggerOnSmallFaces: true);
             }
 
-            // ── Column ring around temple ──
-            float templeRadius = 55f;
-            for (int i = 0; i < 8 && column; i++)
-            {
-                float angle = i * 45f * Mathf.Deg2Rad;
-                var pos = new Vector3(Mathf.Sin(angle) * templeRadius, 0, Mathf.Cos(angle) * templeRadius);
-                PlaceColumn(column, root.transform, pos, sandMat);
-            }
-
-            // ── City grid ──
             float start = -totalSize * 0.5f + blockSize * 0.5f;
-            int   ci    = gridSize / 2;                     // center index
-
             for (int x = 0; x < gridSize; x++)
             {
                 for (int z = 0; z < gridSize; z++)
                 {
                     float px = start + x * (blockSize + streetWidth);
                     float pz = start + z * (blockSize + streetWidth);
-                    var   pos = new Vector3(px, 0, pz);
+                    var pos = new Vector3(px, 0, pz);
 
-                    // ── Clear zone around temple (4-block radius) ──
-                    if (Mathf.Abs(x - ci) <= 3 && Mathf.Abs(z - ci) <= 3)
+                    // HUGE Clear zone (70m) around temple center (-20)
+                    if (Vector3.Distance(pos, new Vector3(0, 0, -20)) < 70f)
                         continue;
 
-                    // ── Sparse open plots ──
                     if (Random.value > houseDensity)
                     {
-                        PlaceOpenPlot(root.transform, pos, tree1, tree2, column, sandMat);
+                        PlaceOpenPlot(root.transform, pos, tree1, tree2, tree3, column, sandMat);
                         continue;
                     }
 
-                    // ── House ──
-                    PlaceHouse(root.transform, pos, wallMat, sandMat, woodMat, darkMat,
-                               crate, barrel);
+                    PlaceHouse(root.transform, pos, wallMat, sandMat, woodMat, darkMat, crate, barrel);
                 }
             }
 
-            // ── Background pyramids ──
-            PlacePyramid(root, new Vector3(-totalSize * 1.8f, -15f,  totalSize * 1.8f), 350f, sandMat);
-            PlacePyramid(root, new Vector3( totalSize * 2.0f, -15f, -totalSize * 2.2f), 500f, sandMat);
-
-            Debug.Log("[EgyptianCity] v6 generated.");
+            // Pyramids further back
+            PlacePyramid(root, new Vector3(-totalSize * 1.5f, -10f,  totalSize * 1.5f), 400f, sandMat);
+            PlacePyramid(root, new Vector3( totalSize * 1.8f, -10f, -totalSize * 2.0f), 600f, sandMat);
         }
-
-        // ─── Atmosphere ───────────────────────────────────────────────────────────
 
         private static void SetAtmosphere()
         {
-            // Warm golden desert haze — visible at reasonable distance
-            RenderSettings.fog        = true;
-            RenderSettings.fogMode    = FogMode.ExponentialSquared;
-            RenderSettings.fogColor   = new Color(0.65f, 0.55f, 0.35f, 1f); // warm sandy
-            RenderSettings.fogDensity = 0.003f;                               // thin fog
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
+            // Vibrant Green + 0.5x Gray
+            RenderSettings.fogColor = new Color(0.35f, 0.65f, 0.40f, 1f); 
+            RenderSettings.fogDensity = 0.0012f; // Even lower for clarity
 
-            // Ambient
-            RenderSettings.ambientMode  = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.55f, 0.50f, 0.40f);    // warm ambient
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            // MUCH Brighter, warmer ambient light
+            RenderSettings.ambientLight = new Color(0.85f, 0.82f, 0.75f); 
 
-            // Sun — point it higher so scene is brighter
+            // Existing Sun
+            Light sun = null;
             foreach (var l in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
-            {
-                if (l.type == LightType.Directional)
-                {
-                    l.intensity         = 3.8f;
-                    l.color             = new Color(1f, 0.92f, 0.75f);       // golden sun
-                    l.shadows           = LightShadows.Soft;
-                    l.transform.rotation = Quaternion.Euler(65f, -35f, 0f); // higher sun
-                }
-            }
-        }
+                if (l.type == LightType.Directional && l.name != "TopDownClarityLight") { sun = l; break; }
 
-        // ─── Open plot (trees / columns / obelisks) ───────────────────────────────
+            if (sun != null)
+            {
+                sun.intensity = 3.0f; // Boost sun
+                sun.transform.rotation = Quaternion.Euler(55f, -30f, 0f);
+            }
+
+            // TOP-DOWN CLARITY LIGHT
+            var topLightObj = GameObject.Find("TopDownClarityLight");
+            if (topLightObj != null) Object.DestroyImmediate(topLightObj);
+            topLightObj = new GameObject("TopDownClarityLight");
+            var topLight = topLightObj.AddComponent<Light>();
+            topLight.type = LightType.Directional;
+            topLight.intensity = 3.5f; // MASSIVE boost for side-lighting/fill
+            topLight.color = new Color(1f, 0.98f, 0.9f); // Slightly warm white
+            topLight.transform.rotation = Quaternion.Euler(85f, 10f, 0f); // Slightly off-center for better shading
+            topLight.shadows = LightShadows.None;
+        }
 
         private static void PlaceOpenPlot(Transform parent, Vector3 pos,
-            GameObject tree1, GameObject tree2, GameObject column, Material sandMat)
+            GameObject tree1, GameObject tree2, GameObject tree3, GameObject column, Material sandMat)
         {
             float r = Random.value;
-
-            if (r < 0.35f)
+            if (r < 0.45f)
             {
-                // Palm tree — alternate variants, upright
-                var prefab = (Random.value < 0.5f ? tree1 : tree2);
-                if (prefab == null) return;
+                // All 3 trees used evenly
+                float tr = Random.value;
+                var prefab = (tr < 0.33f ? tree1 : (tr < 0.66f ? tree2 : tree3));
+                if (prefab == null) prefab = tree1; 
+                
                 var t = Instantiate(prefab, parent);
-                t.transform.position    = pos + new Vector3(Random.Range(-3f, 3f), 0, Random.Range(-3f, 3f));
-                t.transform.localScale  = Vector3.one * Random.Range(5f, 9f);
-                t.transform.rotation    = Quaternion.Euler(-90, Random.Range(0, 360), 0);
+                t.transform.position = pos + new Vector3(Random.Range(-4f, 4f), 0, Random.Range(-4f, 4f));
+                t.transform.localScale = Vector3.one * Random.Range(7f, 12f);
+                t.transform.rotation = Quaternion.Euler(-90, Random.Range(0, 360), 0);
                 AddCollidersToMesh(t);
             }
-            else if (r < 0.55f)
+            else if (r < 0.65f && column != null)
             {
-                // Standing / fallen column
-                if (column == null) return;
-                PlaceColumn(column, parent, pos, sandMat);
+                var col = Instantiate(column, parent);
+                bool fallen = Random.value < 0.3f;
+                col.transform.position = pos + new Vector3(Random.Range(-2f, 2f), fallen ? 0.4f : 0, Random.Range(-2f, 2f));
+                col.transform.rotation = fallen ? Quaternion.Euler(0, Random.Range(0, 360), 90) : Quaternion.Euler(-90, Random.Range(0, 360), 0);
+                col.transform.localScale = Vector3.one * Random.Range(0.9f, 1.3f);
+                AddCollidersToMesh(col);
             }
-            else if (r < 0.70f)
-            {
-                // Obelisk (pure-primitive, no import rotation issues)
-                MakeObelisk(parent, pos, sandMat);
-            }
-            // else: empty open plaza — intentional
         }
-
-        private static void PlaceColumn(GameObject prefab, Transform parent, Vector3 pos, Material mat)
-        {
-            bool fallen = Random.value < 0.25f;
-            var col = Instantiate(prefab, parent);
-            col.transform.position   = pos + new Vector3(Random.Range(-2f, 2f), fallen ? 0.4f : 0, Random.Range(-2f, 2f));
-            col.transform.rotation   = fallen
-                ? Quaternion.Euler(0, Random.Range(0, 360), 90)
-                : Quaternion.Euler(-90, Random.Range(0, 360), 0);
-            col.transform.localScale = Vector3.one * Random.Range(0.6f, 1.0f);
-            AddCollidersToMesh(col);
-        }
-
-        private static void MakeObelisk(Transform parent, Vector3 pos, Material mat)
-        {
-            var ob = new GameObject("Obelisk"); ob.transform.SetParent(parent);
-            ob.transform.position = pos;
-
-            var shaft = MakeCube(ob.transform, new Vector3(0, 6f, 0), new Vector3(2f, 12f, 2f), mat);
-            shaft.name = "Shaft";
-            var tip   = MakeCube(ob.transform, new Vector3(0, 13f, 0), new Vector3(1f, 2f, 1f), mat);
-            tip.name  = "Pyramidion";
-        }
-
-        // ─── House ────────────────────────────────────────────────────────────────
 
         private static void PlaceHouse(Transform parent, Vector3 pos,
-            Material wallMat, Material sandMat, Material woodMat, Material darkMat,
-            GameObject crate, GameObject barrel)
+            Material wallMat, Material sandMat, Material woodMat, Material darkMat, GameObject crate, GameObject barrel)
         {
-            float w = Random.Range(12f, 18f);
-            float d = Random.Range(12f, 18f);
-            float h = Random.Range(11f, 22f);
+            float w = Random.Range(14f, 19f);
+            float d = Random.Range(14f, 19f);
+            float h = Random.Range(14f, 24f);
 
-            // ── Main body ──
             var house = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            house.name = $"House";
+            house.name = "House";
             house.transform.SetParent(parent);
-            house.transform.position   = new Vector3(pos.x, h * 0.5f, pos.z);
+            house.transform.position = new Vector3(pos.x, h * 0.5f, pos.z);
             house.transform.localScale = new Vector3(w, h, d);
             if (wallMat) house.GetComponent<Renderer>().sharedMaterial = wallMat;
 
-            // ── Windows (max 2 per face to avoid overlaps) ──
-            if (Random.value < 0.8f)
-                AddWindows(house.transform, h, w, d, darkMat);
-
-            // ── Door frame ──
+            AddWindows(house.transform, h, w, d, darkMat);
             AddDoor(house.transform, h, w, d, woodMat, sandMat, darkMat);
 
-            // ── Props ──
-            if (Random.value < 0.25f && crate != null)
+            // Props Guaranteed Outside
+            if (Random.value < 0.35f && crate != null)
             {
                 var c = Instantiate(crate, parent);
-                c.transform.position   = pos + new Vector3(w * 0.5f + 1f, 0.3f, d * 0.35f);
-                c.transform.localScale = Vector3.one * 0.18f;
-                c.transform.rotation   = Quaternion.Euler(0, Random.Range(0, 360), 0);
+                float offsetX = (w * 0.5f + 3.0f) * (Random.value > 0.5f ? 1f : -1f);
+                c.transform.position = pos + new Vector3(offsetX, 0.5f, Random.Range(-d*0.3f, d*0.3f));
+                c.transform.localScale = Vector3.one * 0.22f;
+                c.transform.rotation = Quaternion.Euler(0, Random.Range(0, 360), 0);
                 AddCollidersToMesh(c);
             }
-            if (Random.value < 0.2f && barrel != null)
+            if (Random.value < 0.3f && barrel != null)
             {
                 var b = Instantiate(barrel, parent);
-                b.transform.position   = pos + new Vector3(-w * 0.5f - 1f, 0.4f, -d * 0.35f);
-                b.transform.localScale = Vector3.one * 0.18f;
-                b.transform.rotation   = Quaternion.Euler(0, Random.Range(0, 360), 0);
+                float offsetZ = (d * 0.5f + 3.0f) * (Random.value > 0.5f ? 1f : -1f);
+                b.transform.position = pos + new Vector3(Random.Range(-w*0.3f, w*0.3f), 0.6f, offsetZ);
+                b.transform.localScale = Vector3.one * 0.22f;
+                b.transform.rotation = Quaternion.Euler(0, Random.Range(0, 360), 0);
                 AddCollidersToMesh(b);
             }
         }
 
-        // ─── Windows ─────────────────────────────────────────────────────────────
-
         private static void AddWindows(Transform house, float h, float w, float d, Material darkMat)
         {
-            // Each side gets up to 2 windows placed at fixed X-slots to avoid overlaps
-            // Sides: +X (right), -X (left), +Z (front), -Z (back)
-            AddWindowsOnSide(house, darkMat, true,  true,  h, w, d);  // +X
-            AddWindowsOnSide(house, darkMat, true,  false, h, w, d);  // -X
-            AddWindowsOnSide(house, darkMat, false, true,  h, w, d);  // +Z
-            AddWindowsOnSide(house, darkMat, false, false, h, w, d);  // -Z
+            AddWindowsOnSide(house, darkMat, true, true, h, w, d);
+            AddWindowsOnSide(house, darkMat, true, false, h, w, d);
+            AddWindowsOnSide(house, darkMat, false, true, h, w, d);
+            AddWindowsOnSide(house, darkMat, false, false, h, w, d);
         }
 
-        private static void AddWindowsOnSide(Transform house, Material darkMat,
-            bool isXAxis, bool positive, float h, float w, float d)
+        private static void AddWindowsOnSide(Transform house, Material darkMat, bool isXAxis, bool positive, float h, float w, float d)
         {
-            if (Random.value > 0.6f) return;   // some sides have no windows
-
-            int count = Random.Range(1, 3); // 1 or 2
+            if (Random.value > 0.4f) return;
+            int count = Random.Range(1, 3);
             float span = isXAxis ? d : w;
-
             for (int i = 0; i < count; i++)
             {
-                // Evenly space slots along the face
                 float t = (i + 1f) / (count + 1f);
-                float along = (t - 0.5f) * (span * 0.7f);  // keep away from edges
-
-                float winW = 0.025f, winH = 0.12f, winD = 0.025f;
+                float along = (t - 0.5f) * (span * 0.7f);
+                float winW = 0.03f, winH = 0.15f, winD = 0.03f;
                 Vector3 localPos;
-
-                if (isXAxis)
-                {
-                    localPos = new Vector3(positive ? 0.51f : -0.51f, 0.2f, along / span);
-                    winW = 0.025f; winH = 0.12f; winD = (d * 0.25f) / d;
+                if (isXAxis) {
+                    localPos = new Vector3(positive ? 0.51f : -0.51f, 0.25f, along / span);
+                    winD = (d * 0.25f) / d;
+                } else {
+                    localPos = new Vector3(along / w, 0.25f, positive ? 0.51f : -0.51f);
+                    winW = (w * 0.25f) / w;
                 }
-                else
-                {
-                    localPos = new Vector3(along / w, 0.2f, positive ? 0.51f : -0.51f);
-                    winW = (w * 0.25f) / w; winH = 0.12f; winD = 0.025f;
-                }
-
                 var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                win.name = "Window";
                 win.transform.SetParent(house);
                 win.transform.localPosition = localPos;
-                win.transform.localScale    = new Vector3(winW, winH, winD);
+                win.transform.localScale = new Vector3(winW, winH, winD);
                 win.GetComponent<Renderer>().sharedMaterial = darkMat;
                 Object.DestroyImmediate(win.GetComponent<Collider>());
-
-                // Occasional torch light from window
-                if (Random.value < 0.35f)
-                {
-                    var lgo = new GameObject("Torch");
-                    lgo.transform.SetParent(win.transform);
-                    lgo.transform.localPosition = Vector3.zero;
-                    var lt = lgo.AddComponent<Light>();
-                    lt.type      = LightType.Point;
-                    lt.color     = new Color(1f, 0.6f, 0.2f);
-                    lt.intensity = 14f;
-                    lt.range     = 14f;
-                    lt.shadows   = LightShadows.None; // no shadow per-light for perf
-                }
             }
         }
 
-        // ─── Door ─────────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// Places a realistic door on the front face (+Z) of the house.
-        /// Structure: sandstone frame (2 posts + lintel) + wooden door panel + dark interior
-        /// </summary>
-        private static void AddDoor(Transform house, float h, float w, float d,
-            Material woodMat, Material sandMat, Material darkMat)
+        private static void AddDoor(Transform house, float h, float w, float d, Material woodMat, Material sandMat, Material darkMat)
         {
-            float doorH   = Mathf.Clamp(h * 0.35f, 2.5f, 5.5f);  // absolute door height
-            float doorW   = Mathf.Clamp(w * 0.18f, 1.5f, 2.5f);  // absolute door width
-            float frameT  = 0.25f;   // frame thickness (local)
-            float faceZ   = 0.51f;   // just outside the front face in local coords
-
-            // Normalise: local units = actual metres / building dimension
+            float doorH = 5f, doorW = 2.5f;
             float normDoorH = doorH / h;
             float normDoorW = doorW / w;
-            float normDoorY = -0.5f + normDoorH * 0.5f;   // bottom of door sits on floor
-
-            // ── Dark opening behind the door ──
-            var opening = MakeCubePrim(house, new Vector3(0f, normDoorY, faceZ),
-                new Vector3(normDoorW * 0.9f, normDoorH * 0.96f, 0.04f), darkMat);
-            opening.name = "DoorOpening";
-            Object.DestroyImmediate(opening.GetComponent<Collider>());
-
-            // ── Door panel (wood) ──
-            var panel = MakeCubePrim(house, new Vector3(0f, normDoorY, faceZ + 0.015f),
-                new Vector3(normDoorW * 0.85f, normDoorH * 0.94f, 0.03f), woodMat);
-            panel.name = "DoorPanel";
+            float normDoorY = -0.5f + normDoorH * 0.5f;
+            var panel = MakeCubePrim(house, new Vector3(0f, normDoorY, 0.51f), new Vector3(normDoorW, normDoorH, 0.05f), woodMat);
             Object.DestroyImmediate(panel.GetComponent<Collider>());
-
-            // ── Door panel horizontal plank lines ──
-            for (int i = 0; i < 3; i++)
-            {
-                float ty = -0.5f + (i + 1f) / 4f;
-                var plank = MakeCubePrim(panel.transform,
-                    new Vector3(0f, ty, 0.6f),
-                    new Vector3(0.95f, 0.05f, 0.3f),
-                    new Material(woodMat) { color = new Color(0.32f, 0.20f, 0.08f) });
-                plank.name = "Plank";
-                Object.DestroyImmediate(plank.GetComponent<Collider>());
-            }
-
-            // ── Door handle (small sphere) ──
-            var handle = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            handle.name = "DoorHandle";
-            handle.transform.SetParent(panel.transform);
-            handle.transform.localPosition = new Vector3(0.38f, -0.1f, 0.7f);
-            handle.transform.localScale    = new Vector3(0.08f, 0.08f, 0.08f);
-            handle.GetComponent<Renderer>().material = new Material(Shader.Find("Universal Render Pipeline/Lit"))
-                { color = new Color(0.85f, 0.75f, 0.2f) }; // gold
-            Object.DestroyImmediate(handle.GetComponent<Collider>());
-
-            // ── Sandstone frame: left post, right post, lintel ──
-            float postW = frameT / w;
-            float postH = normDoorH + frameT / h * 0.5f;
-            float lintelW = normDoorW + postW * 2f;
-
-            MakeCubePrim(house, new Vector3(-(normDoorW * 0.5f + postW * 0.5f), normDoorY, faceZ + 0.025f),
-                new Vector3(postW, postH, 0.06f), sandMat).name = "FrameLeft";
-            MakeCubePrim(house, new Vector3(+(normDoorW * 0.5f + postW * 0.5f), normDoorY, faceZ + 0.025f),
-                new Vector3(postW, postH, 0.06f), sandMat).name = "FrameRight";
-            MakeCubePrim(house, new Vector3(0f, normDoorY + normDoorH * 0.5f + frameT / h * 0.5f, faceZ + 0.025f),
-                new Vector3(lintelW, frameT / h, 0.06f), sandMat).name = "Lintel";
         }
-
-        // ─── Pyramid ─────────────────────────────────────────────────────────────
 
         private static void PlacePyramid(GameObject root, Vector3 pos, float size, Material mat)
         {
             var py = new GameObject("Pyramid");
             py.transform.SetParent(root.transform);
             py.transform.position = pos;
-            int steps = 18;
+            int steps = 20;
             float sh = size * 0.6f / steps;
-            for (int i = 0; i < steps; i++)
-            {
+            for (int i = 0; i < steps; i++) {
                 float s = size * (1f - (float)i / steps);
-                var step = MakeCube(py.transform,
-                    new Vector3(0, i * sh + sh * 0.5f, 0),
-                    new Vector3(s, sh * 1.05f, s), mat);
-                step.name = $"Step_{i}";
+                MakeCube(py.transform, new Vector3(0, i * sh + sh * 0.5f, 0), new Vector3(s, sh, s), mat);
             }
         }
-
-        // ─── Helpers ─────────────────────────────────────────────────────────────
 
         private static GameObject MakeCube(Transform parent, Vector3 localPos, Vector3 localScale, Material mat)
         {
@@ -425,7 +294,6 @@ namespace TheAlchemistsCrypt.Editor
             return go;
         }
 
-        // Parent-space cube (local transform relative to parent)
         private static GameObject MakeCubePrim(Transform parent, Vector3 lPos, Vector3 lScale, Material mat)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -443,19 +311,10 @@ namespace TheAlchemistsCrypt.Editor
             return mat;
         }
 
-        private static GameObject Load(string path) =>
-            AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        private static GameObject Load(string path) => AssetDatabase.LoadAssetAtPath<GameObject>(path);
 
-        private static GameObject Instantiate(GameObject prefab, Transform parent)
-        {
-            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-            return go;
-        }
+        private static GameObject Instantiate(GameObject prefab, Transform parent) => (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
 
-        /// <summary>
-        /// Recursively adds MeshColliders to any MeshFilter children that lack a Collider.
-        /// If makeTriggerOnSmallFaces is true, very small meshes get a trigger instead of solid.
-        /// </summary>
         private static void AddCollidersToMesh(GameObject obj, bool makeTriggerOnSmallFaces = false)
         {
             foreach (var mf in obj.GetComponentsInChildren<MeshFilter>())
@@ -464,15 +323,9 @@ namespace TheAlchemistsCrypt.Editor
                 if (mf.sharedMesh == null) continue;
                 var mc = mf.gameObject.AddComponent<MeshCollider>();
                 mc.sharedMesh = mf.sharedMesh;
-                if (makeTriggerOnSmallFaces && mf.sharedMesh.bounds.size.magnitude < 1f)
-                    mc.isTrigger = true;
+                if (makeTriggerOnSmallFaces && mf.sharedMesh.bounds.size.magnitude < 15f) mc.isTrigger = true;
             }
-            // Ensure shadows
-            foreach (var r in obj.GetComponentsInChildren<Renderer>())
-            {
-                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-                r.receiveShadows    = true;
-            }
+            foreach (var r in obj.GetComponentsInChildren<Renderer>()) { r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On; r.receiveShadows = true; }
         }
     }
 }

@@ -202,13 +202,14 @@ namespace InfimaGames.LowPolyShooterPack
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
             {
                 var mobileMove = TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
-                if (mobileMove.sqrMagnitude > 0) axisMovement = mobileMove;
+                axisMovement = mobileMove; // Allow zero for stopping
                 
                 var mobileLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
-                if (mobileLook.sqrMagnitude > 0) axisLook = mobileLook;
-
-                holdingButtonFire = holdingButtonFire || TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsFiring;
-                holdingButtonRun = holdingButtonRun || TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSprinting;
+                axisLook = mobileLook; // Allow zero for stopping
+                
+                // Use explicit state instead of |= to avoid sticking
+                holdingButtonFire = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsFiring;
+                holdingButtonRun = TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSprinting;
                 
                 if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon)
                 {

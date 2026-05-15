@@ -23,10 +23,10 @@ namespace InfimaGames.LowPolyShooterPack
         [Header("Speeds")]
 
         [SerializeField]
-        private float speedWalking = 9.0f;
+        private float speedWalking = 54.0f;
 
         [Tooltip("How fast the player moves while running."), SerializeField]
-        private float speedRunning = 16.0f;
+        private float speedRunning = 96.0f;
 
         [Tooltip("How fast the player moves while crouching."), SerializeField]
         private float speedCrouching = 3.0f;
