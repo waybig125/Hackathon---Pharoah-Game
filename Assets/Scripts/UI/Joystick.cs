@@ -8,7 +8,7 @@ namespace TheAlchemistsCrypt.UI
     {
         [SerializeField] private RectTransform background;
         [SerializeField] private RectTransform handle;
-        [SerializeField] private float range = 100f;
+        // [SerializeField] private float range = 100f; // Unused warning fix
 
         public void OnPointerDown(PointerEventData eventData)
         {

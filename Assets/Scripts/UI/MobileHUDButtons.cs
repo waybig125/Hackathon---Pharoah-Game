@@ -11,7 +11,7 @@ namespace TheAlchemistsCrypt.UI
             // Only create these buttons on mobile or editor
             if (!Application.isMobilePlatform && !Application.isEditor) return;
 
-            var inputManager = FindFirstObjectByType<TheAlchemistsCrypt.Input.MobileInputManager>();
+            var inputManager = FindAnyObjectByType<TheAlchemistsCrypt.Input.MobileInputManager>();
             if (inputManager == null) return;
 
             var canvasObj = GameObject.Find("MobileHUD");
@@ -31,7 +31,6 @@ namespace TheAlchemistsCrypt.UI
             
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            if (font == null) font = Font.GetDefault();
 
             void CreateHoldButton(string name, Vector2 anchoredPos, Vector2 size, string textStr, UnityEngine.Events.UnityAction<BaseEventData> onDown, UnityEngine.Events.UnityAction<BaseEventData> onUp)
             {

@@ -10,7 +10,7 @@ namespace TheAlchemistsCrypt.Weapons
         public ElementType element;
         [SerializeField] private float speed = 20f;
         [SerializeField] private float lifetime = 5f;
-        [SerializeField] private float damage = 10f;
+        // [SerializeField] private float damage = 10f; // Unused warning fix
 
         private Rigidbody rb;
 
