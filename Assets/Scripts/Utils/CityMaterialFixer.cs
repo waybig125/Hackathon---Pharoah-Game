@@ -30,14 +30,13 @@ public class CityMaterialFixer : MonoBehaviour
                 mat.SetTexture("_BumpMap", normalMap);
                 mat.EnableKeyword("_NORMALMAP");
                 
-                // Ensure tiling is high enough
-                mat.mainTextureScale = new Vector2(50, 50);
+                // Ensure tiling is high enough (increased to 200 to reduce stretching)
+                mat.mainTextureScale = new Vector2(200, 200);
                 
                 // Adjust strength if possible
                 if (mat.HasProperty("_BumpScale"))
                     mat.SetFloat("_BumpScale", 1.0f);
             }
         }
-        Debug.Log("City materials fixed with normal map.");
     }
 }
