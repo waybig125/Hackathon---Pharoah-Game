@@ -168,6 +168,16 @@ namespace InfimaGames.LowPolyShooterPack
                     TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsJumping = false;
                 }
             }
+            
+            // Advanced Variable Jump Feature (Hold to jump higher)
+            if (!grounded && TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsJumpHeld)
+            {
+                // If held for less than 0.3 seconds, apply extra continuous force
+                if (Time.time - TheAlchemistsCrypt.Input.MobileInputManager.Instance.JumpStartTime < 0.3f)
+                {
+                    rigidBody.AddForce(Vector3.up * (jumpForce * 2.0f * Time.deltaTime), ForceMode.Acceleration);
+                }
+            }
         }
 
         /// Moves the camera to the character, processes jumping and plays sounds every frame.

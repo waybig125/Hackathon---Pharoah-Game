@@ -14,6 +14,8 @@ namespace TheAlchemistsCrypt.Input
         public Vector2 LookInput { get; private set; }
         public bool IsFiring { get; private set; }
         public bool IsJumping { get; set; }
+        public bool IsJumpHeld { get; private set; }
+        public float JumpStartTime { get; private set; }
         public bool IsCrouching { get; set; }
         public bool IsSprinting { get; set; }
         public bool IsSwappingWeapon { get; set; }
@@ -31,10 +33,6 @@ namespace TheAlchemistsCrypt.Input
 
         private void Update()
         {
-            // Desktop Fallback is disabled because Character.cs uses the New Input System natively for desktop controls.
-            // This manager is now exclusively for mobile UI overrides.
-            
-            // Note: UI Joystick and Touch Zone will set these values directly via methods called from EventSystem
         }
 
         public void SetMovement(Vector2 input)
@@ -58,6 +56,8 @@ namespace TheAlchemistsCrypt.Input
         public void SetJumping(bool state)
         {
             IsJumping = state;
+            IsJumpHeld = state;
+            if (state) JumpStartTime = Time.time;
         }
 
         public void SetCrouching(bool state)
