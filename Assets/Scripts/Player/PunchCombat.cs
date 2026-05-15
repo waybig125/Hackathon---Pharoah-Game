@@ -29,10 +29,33 @@ public class PunchCombat : MonoBehaviour
         Ray ray = new Ray(playerCharacter.GetCameraWorld().transform.position, playerCharacter.GetCameraWorld().transform.forward);
         if (Physics.Raycast(ray, out RaycastHit hit, range, mask))
         {
-            Debug.Log($"Hit {hit.collider.name}");
-            // Handle damage to barrels or enemies
-            var damageable = hit.collider.GetComponentInParent<InfimaGames.LowPolyShooterPack.Interface.ITarget>();
-            // Note: The LPSP has a Target component.
+            Debug.Log($"Hit {hit.collider.name} with tag {hit.collider.tag}");
+            
+            // Handle Target
+            if (hit.collider.CompareTag("Target"))
+            {
+                var target = hit.collider.GetComponent<TargetScript>();
+                if (target != null) target.isHit = true;
+            }
+            // Handle Explosive Barrel
+            else if (hit.collider.CompareTag("ExplosiveBarrel"))
+            {
+                var barrel = hit.collider.GetComponent<ExplosiveBarrelScript>();
+                if (barrel != null) barrel.explode = true;
+            }
+            // Handle Gas Tank
+            else if (hit.collider.CompareTag("GasTank"))
+            {
+                var tank = hit.collider.GetComponent<GasTankScript>();
+                if (tank != null) tank.isHit = true;
+            }
+
+            // Apply physical force if it has a rigidbody
+            Rigidbody hitRb = hit.collider.GetComponent<Rigidbody>();
+            if (hitRb != null)
+            {
+                hitRb.AddForceAtPosition(ray.direction * damage, hit.point, ForceMode.Impulse);
+            }
         }
     }
 }

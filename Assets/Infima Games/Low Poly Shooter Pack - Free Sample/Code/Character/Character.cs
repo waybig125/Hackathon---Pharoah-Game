@@ -235,10 +235,11 @@ namespace InfimaGames.LowPolyShooterPack
 			if (holdingButtonFire)
 			{
 				//Check.
-				if (CanPlayAnimationFire() && equippedWeapon.HasAmmunition() && equippedWeapon.IsAutomatic())
+				bool isPunching = equippedWeapon.GetComponent<PunchCombat>() != null;
+				if (CanPlayAnimationFire() && (equippedWeapon.HasAmmunition() || isPunching) && (equippedWeapon.IsAutomatic() || isPunching))
 				{
 					//Has fire rate passed.
-					if (Time.time - lastShotTime > 60.0f / equippedWeapon.GetRateOfFire())
+					if (Time.time - lastShotTime > 60.0f / (isPunching ? 120.0f : equippedWeapon.GetRateOfFire()))
 						Fire();
 				}	
 			}
@@ -326,8 +327,19 @@ namespace InfimaGames.LowPolyShooterPack
 		{
 			//Save the shot time, so we can calculate the fire rate correctly.
 			lastShotTime = Time.time;
-			//Fire the weapon! Make sure that we also pass the scope's spread multiplier if we're aiming.
-			equippedWeapon.Fire();
+			
+			// --- HACKATHON PUNCH INJECTION ---
+			var punch = equippedWeapon.GetComponent<PunchCombat>();
+			if (punch != null)
+			{
+				punch.Punch();
+			}
+			else
+			{
+				//Fire the weapon! Make sure that we also pass the scope's spread multiplier if we're aiming.
+				equippedWeapon.Fire();
+			}
+			// ----------------------------------
 
 			//Play firing animation.
 			const string stateName = "Fire";
