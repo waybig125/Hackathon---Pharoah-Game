@@ -17,46 +17,29 @@ public class CityMaterialFixer : MonoBehaviour
             normalMap = Resources.Load<Texture>("Textures/EgyptianNormalMap");
         }
 
+        if (normalMap == null) return;
+
         Renderer[] renderers = GetComponentsInChildren<Renderer>();
         foreach (var r in renderers)
         {
-            // Remove problematic mesh colliders that cause console spam
-            MeshCollider mc = r.GetComponent<MeshCollider>();
-            if (mc != null) DestroyImmediate(mc);
-
-            Material[] mats = r.sharedMaterials;
-            foreach (var mat in mats)
+            // Use sharedMaterials to avoid leaking material instances in editor
+            foreach (var mat in r.sharedMaterials)
             {
                 if (mat == null) continue;
-                
-                Shader standardLit = Shader.Find("Universal Render Pipeline/Lit");
-                if (standardLit != null)
-                {
-                    mat.shader = standardLit;
-                    mat.SetColor("_BaseColor", new Color(1.0f, 0.9f, 0.75f)); // Warm tint
-                    mat.SetFloat("_Smoothness", 0.1f); // Matte stone
-                    mat.SetFloat("_Metallic", 0.0f);
-                }
 
-                // Set the normal map
-                if (normalMap != null)
+                // Only set the normal map - don't change the shader or colors
+                // The original city materials already have the correct URP shader assigned
+                if (mat.HasProperty("_BumpMap"))
                 {
                     mat.SetTexture("_BumpMap", normalMap);
                     mat.EnableKeyword("_NORMALMAP");
-                    mat.SetFloat("_BumpScale", 1.5f); // Make normal map more visible
                 }
-                
-                // Set tiling
-                mat.mainTextureScale = new Vector2(200, 200);
-            }
-        }
+                if (mat.HasProperty("_BumpScale"))
+                    mat.SetFloat("_BumpScale", 1.0f);
 
-        // Add a box collider to the root if not exists for basic floor collision
-        if (GetComponent<BoxCollider>() == null)
-        {
-            BoxCollider floor = gameObject.AddComponent<BoxCollider>();
-            floor.size = new Vector3(2000, 1, 2000); // Massive floor
-            floor.center = new Vector3(0, -0.5f, 0);
+                // Reduce tiling to fix stretching (was 200 which caused blurring)
+                mat.mainTextureScale = new Vector2(10, 10);
+            }
         }
     }
 }
