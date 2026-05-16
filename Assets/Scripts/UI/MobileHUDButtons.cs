@@ -141,35 +141,41 @@ namespace TheAlchemistsCrypt.UI
             go.sizeDelta = new Vector2(s, s);
             
             var img = go.GetComponent<Image>();
-            img.color = new Color(0, 0, 0, 0.5f); // Semi-transparent black
+            img.color = Color.white; // White button background
             if (circleSprite) img.sprite = circleSprite;
 
             var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             iconGo.SetParent(go, false);
             iconGo.sizeDelta = go.sizeDelta * 0.55f;
             var iImg = iconGo.GetComponent<Image>();
-            iImg.color = tint; // White as passed
+            iImg.color = Color.black; // Black icon
             if (icon) iImg.sprite = icon;
 
             var trigger = go.gameObject.AddComponent<EventTrigger>();
             var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-            down.callback.AddListener((d) => { img.color = new Color(1, 1, 1, 0.3f); onDown?.Invoke(); });
+            down.callback.AddListener((d) => { img.color = new Color(0.8f, 0.8f, 0.8f, 1f); onDown?.Invoke(); });
             trigger.triggers.Add(down);
             
             var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-            up.callback.AddListener((d) => { img.color = new Color(0, 0, 0, 0.5f); onUp?.Invoke(); });
+            up.callback.AddListener((d) => { img.color = Color.white; onUp?.Invoke(); });
             trigger.triggers.Add(up);
         }
 
         private void HideDebugLabels()
         {
-            // Find common debug labels in the P_LPSP_UI_Canvas
-            var timescale = GameObject.Find("Timescale");
-            if (timescale) timescale.SetActive(false);
-            var mouseLock = GameObject.Find("Mouse Lock");
-            if (mouseLock) mouseLock.SetActive(false);
-            var tutorial = GameObject.Find("Tutorial");
-            if (tutorial) tutorial.SetActive(false);
+            // Find common debug labels in the P_LPSP_UI_Canvas and children
+            string[] names = { "Text Timescale", "Text Cursor Lock", "Text Tutorial", "Text Tutorial Text", "Text Tutorial Prompt", "Version Text", "Mouse Lock" };
+            foreach (var n in names)
+            {
+                var label = GameObject.Find(n);
+                if (label != null) label.SetActive(false);
+                
+                // Fallback: search by partial name in all objects
+                var all = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
+                foreach(var go in all) {
+                    if (go.name.Contains(n)) go.SetActive(false);
+                }
+            }
         }
 
         private Text CreateStatsText(Transform p, string n, string v, Vector2 pos, Color c)
@@ -217,11 +223,12 @@ namespace TheAlchemistsCrypt.UI
     public class LookSwipeZone : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler
     {
         private int pointerId = -1;
-        public float sensitivity = 1.2f;
+        public float sensitivity = 3.5f; // Buffed for smoother swipe
 
         public void OnPointerDown(PointerEventData data)
         {
-            if (pointerId == -1 && data.position.x >= Screen.width * 0.5f) {
+            // Allow swiping on the right 70% of the screen to avoid joystick conflict
+            if (pointerId == -1 && data.position.x >= Screen.width * 0.3f) {
                 pointerId = data.pointerId;
             }
         }

@@ -14,12 +14,18 @@ namespace TheAlchemistsCrypt.Editor
         private int gridSize = 12;
         private string rootName = "EgyptianCity_V4_Final";
 
+        [MenuItem("Egyptian/Generator V4")]
+        public static void ShowWindow() => GetWindow<StaticEgyptianCityGenerator>("Egyptian City V4");
+
+        [MenuItem("Egyptian/Regenerate City")]
+        public static void QuickRegen() {
+            var g = CreateInstance<StaticEgyptianCityGenerator>();
+            g.Purge(); g.GeneratePolishedCity();
+        }
+
         private void OnGUI()
         {
             EditorGUILayout.HelpBox("V4.2 POLISHED: Glow Pyramids, Multi-Layered Floor, Purged Duplicates.", MessageType.Info);
-            seed = EditorGUILayout.IntField("Seed", seed);
-            if (GUILayout.Button("▶ GENERATE POLISHED CITY", GUILayout.Height(50))) GenerateCity();
-            if (GUILayout.Button("🗑 CLEANUP", GUILayout.Height(30))) Purge();
         }
 
         private void Purge()
@@ -129,6 +135,26 @@ namespace TheAlchemistsCrypt.Editor
                             m.EnableKeyword("_EMISSION");
                         }
                     }
+                }
+            }
+
+            // Spawn Mummies for testing
+            SpawnTestMummies();
+        }
+
+        private void SpawnTestMummies()
+        {
+            string[] styles = { "base_basic_pbr.fbx", "base_basic_shaded.fbx", "mummy_base.fbx" };
+            Vector3 startPos = new Vector3(10, 0, 10); // Near spawn
+            for (int i = 0; i < styles.Length; i++)
+            {
+                var fbx = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Mummy_Assets/" + styles[i]);
+                if (fbx != null)
+                {
+                    var m = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
+                    m.name = "Mummy_Test_" + i;
+                    m.transform.position = startPos + new Vector3(i * 3, 0, 0);
+                    m.transform.rotation = Quaternion.Euler(0, 180, 0);
                 }
             }
         }

@@ -340,7 +340,13 @@ namespace InfimaGames.LowPolyShooterPack
 
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) {
                 var m = TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
-                if (m.sqrMagnitude > 0.001f) move = m;
+                if (m.sqrMagnitude > 0.001f) {
+                    move = m;
+                    axisMovement = Vector2.zero; // Clear keyboard state if joystick is moving
+                } else {
+                    // Force zero movement if we have a mobile manager but no stick input, to avoid stuck keyboard keys
+                    move = Vector2.zero; 
+                }
             }
             
             // Sync axisMovement for Animator!
