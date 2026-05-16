@@ -24,6 +24,9 @@ namespace TheAlchemistsCrypt.Editor
         private void OnGUI()
         {
             EditorGUILayout.HelpBox("V4.2 POLISHED: Glow Pyramids, Multi-Layered Floor, Purged Duplicates.", MessageType.Info);
+            seed = EditorGUILayout.IntField("Seed", seed);
+            if (GUILayout.Button("▶ GENERATE POLISHED CITY", GUILayout.Height(50))) GeneratePolishedCity();
+            if (GUILayout.Button("🗑 CLEANUP", GUILayout.Height(30))) Purge();
         }
 
         private void Purge()
@@ -43,7 +46,7 @@ namespace TheAlchemistsCrypt.Editor
             }
         }
 
-        private void GenerateCity()
+        public void GeneratePolishedCity()
         {
             Random.InitState(seed);
             Purge();
