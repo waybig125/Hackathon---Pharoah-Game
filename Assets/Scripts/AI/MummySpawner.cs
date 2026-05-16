@@ -62,6 +62,18 @@ namespace TheAlchemistsCrypt.AI
                 if (anim == null) anim = go.AddComponent<Animator>();
                 anim.runtimeAnimatorController = controller;
 
+                Avatar avatar = null;
+#if UNITY_EDITOR
+                var subAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(fbxPaths[i]);
+                foreach (var asset in subAssets) {
+                    if (asset is Avatar av) {
+                        avatar = av;
+                        break;
+                    }
+                }
+#endif
+                if (avatar != null) anim.avatar = avatar;
+
                 var agent = go.GetComponent<UnityEngine.AI.NavMeshAgent>();
                 if (agent == null) agent = go.AddComponent<UnityEngine.AI.NavMeshAgent>();
                 agent.speed = 3.8f;
