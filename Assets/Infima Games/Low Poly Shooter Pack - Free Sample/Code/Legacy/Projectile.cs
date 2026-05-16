@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using System.Collections;
 using InfimaGames.LowPolyShooterPack;
@@ -25,9 +25,26 @@ public class Projectile : MonoBehaviour {
 	private void Start ()
 	{
 		//Grab the game mode service, we need it to access the player character!
-		var gameModeService = ServiceLocator.Current.Get<IGameModeService>();
-		//Ignore the main player character's collision. A little hacky, but it should work.
-		Physics.IgnoreCollision(gameModeService.GetPlayerCharacter().GetComponent<Collider>(), GetComponent<Collider>());
+		var gameModeService = ServiceLocator.Current != null ? ServiceLocator.Current.Get<IGameModeService>() : null;
+		GameObject playerObj = null;
+		if (gameModeService != null && gameModeService.GetPlayerCharacter() != null)
+		{
+			playerObj = gameModeService.GetPlayerCharacter().gameObject;
+		}
+		else
+		{
+			playerObj = GameObject.FindGameObjectWithTag("Player");
+		}
+
+		if (playerObj != null)
+		{
+			var playerCollider = playerObj.GetComponent<Collider>();
+			var bulletCollider = GetComponent<Collider>();
+			if (playerCollider != null && bulletCollider != null)
+			{
+				Physics.IgnoreCollision(playerCollider, bulletCollider);
+			}
+		}
 		
 		//Start destroy timer
 		StartCoroutine (DestroyAfter ());

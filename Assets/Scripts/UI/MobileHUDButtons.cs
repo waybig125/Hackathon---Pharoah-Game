@@ -34,12 +34,9 @@ namespace TheAlchemistsCrypt.UI
             BuildHUD();
         }
 
-        private Sprite LoadThemedSprite(string relativePath, string fallbackResourcePath)
+        private Sprite LoadThemedSprite(string spriteName, string fallbackResourcePath)
         {
-            Sprite result = null;
-#if UNITY_EDITOR
-            result = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/egypt_themed_icons/" + relativePath);
-#endif
+            Sprite result = Resources.Load<Sprite>("egypt_themed_icons/" + spriteName);
             if (result == null)
             {
                 result = Resources.Load<Sprite>(fallbackResourcePath);
@@ -49,15 +46,15 @@ namespace TheAlchemistsCrypt.UI
 
         private void LoadSprites()
         {
-            // Load custom Egypt-themed sprites
-            joystickRingSprite = LoadThemedSprite("joystick_outer.png", "UI/Icons/joystick_ring_fallback");
-            joystickKnobSprite = LoadThemedSprite("joystick_knob.png", "UI/Icons/joystick_knob_fallback");
+            // Load custom Egypt-themed sprites from Resources
+            joystickRingSprite = LoadThemedSprite("joystick_outer", "UI/Icons/joystick_ring_fallback");
+            joystickKnobSprite = LoadThemedSprite("joystick_knob", "UI/Icons/joystick_knob_fallback");
             
-            fireIcon = LoadThemedSprite("fire.png", "UI/Icons/Inspiration/bullet");
-            reloadIcon = LoadThemedSprite("reload_ammo.png", "UI/Icons/Inspiration/reload");
-            swapIcon = LoadThemedSprite("swap_weapon.png", "UI/Icons/icon_swap");
-            sprintIcon = LoadThemedSprite("sprint.png", "UI/Icons/icon_sprint");
-            jumpIcon = LoadThemedSprite("jump.png", "UI/Icons/icon_jump");
+            fireIcon = LoadThemedSprite("fire", "UI/Icons/Inspiration/bullet");
+            reloadIcon = LoadThemedSprite("reload_ammo", "UI/Icons/Inspiration/reload");
+            swapIcon = LoadThemedSprite("swap_weapon", "UI/Icons/icon_swap");
+            sprintIcon = LoadThemedSprite("sprint", "UI/Icons/icon_sprint");
+            jumpIcon = LoadThemedSprite("jump", "UI/Icons/icon_jump");
         }
 
         private void GenerateProceduralSprites()

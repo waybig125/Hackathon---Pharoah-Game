@@ -1,4 +1,4 @@
-﻿// Copyright 2021, Infima Games. All Rights Reserved.
+// Copyright 2021, Infima Games. All Rights Reserved.
 
 using UnityEngine;
 
@@ -68,18 +68,52 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         public override void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
         {
-            //We need to get the character component.
-            playerCharacter ??= ServiceLocator.Current.Get<IGameModeService>().GetPlayerCharacter();
+            // Robust check to avoid ServiceLocator or GameMode null issues
+            if (playerCharacter == null)
+            {
+                if (ServiceLocator.Current != null)
+                {
+                    var gameMode = ServiceLocator.Current.Get<IGameModeService>();
+                    if (gameMode != null)
+                    {
+                        playerCharacter = gameMode.GetPlayerCharacter();
+                    }
+                }
+
+                if (playerCharacter == null && animator != null)
+                {
+                    playerCharacter = animator.GetComponentInParent<CharacterBehaviour>();
+                }
+
+                if (playerCharacter == null)
+                {
+                    playerCharacter = FindObjectOfType<CharacterBehaviour>();
+                }
+            }
+
+            if (playerCharacter == null)
+                return;
 
             //Get Inventory.
             playerInventory ??= playerCharacter.GetInventory();
+            if (playerInventory == null)
+                return;
 
             //Try to get the equipped weapon's Weapon component.
             if (!(playerInventory.GetEquipped() is { } weaponBehaviour))
                 return;
             
             //Try grab a reference to the sound managing service.
-            audioManagerService ??= ServiceLocator.Current.Get<IAudioManagerService>();
+            if (audioManagerService == null)
+            {
+                if (ServiceLocator.Current != null)
+                {
+                    audioManagerService = ServiceLocator.Current.Get<IAudioManagerService>();
+                }
+            }
+
+            if (audioManagerService == null)
+                return;
 
             #region Select Correct Clip To Play
 
