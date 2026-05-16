@@ -10,6 +10,7 @@ namespace TheAlchemistsCrypt.Weapons
 
         [Header("Weapon Settings")]
         [SerializeField] private FireMode currentMode = FireMode.Sulfur;
+        public FireMode CurrentMode => currentMode;
         [SerializeField] private float fireRate = 0.5f;
         [SerializeField] private Transform firePoint;
 

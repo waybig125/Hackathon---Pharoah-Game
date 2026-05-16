@@ -22,6 +22,9 @@ public class CityMaterialFixer : MonoBehaviour
         Renderer[] renderers = GetComponentsInChildren<Renderer>();
         foreach (var r in renderers)
         {
+            if (r.gameObject.name.ToLower().Contains("floor") || r.gameObject.name.ToLower().Contains("ground"))
+                continue;
+
             // Use sharedMaterials to avoid leaking material instances in editor
             foreach (var mat in r.sharedMaterials)
             {
