@@ -96,11 +96,10 @@ namespace TheAlchemistsCrypt.Editor
 
             var surface = root.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.Children;
-            surface.useGeometry = NavMeshCollectGeometry.RenderMeshes;
+            surface.useGeometry = UnityEngine.AI.NavMeshCollectGeometry.RenderMeshes;
             // Optimize for large cities
-            var settings = surface.GetBuildSettings();
-            settings.agentRadius = 0.5f;
-            settings.cellSize = 0.2f; // Increased from default to reduce tiles
+            surface.overrideVoxelSize = true;
+            surface.voxelSize = 0.2f; 
             surface.BuildNavMesh();
 
             FixPlayerAndWeapons();
