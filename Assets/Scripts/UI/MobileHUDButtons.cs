@@ -37,9 +37,8 @@ namespace TheAlchemistsCrypt.UI
             var crossImg = crosshair.AddComponent<Image>();
             crossImg.color = new Color(1f, 0.9f, 0.5f, 0.8f);
 
-            // Font loading
-            Font mainFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            if (mainFont == null) mainFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            // Font loading - FIXED for Unity 6
+            Font mainFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             // Stats Panel (Top Left) - Premium Egyptian Gold
             var stats = new GameObject("StatsPanel");
@@ -66,7 +65,8 @@ namespace TheAlchemistsCrypt.UI
                 charSvc?.GetPlayerCharacter()?.GetComponent<InfimaGames.LowPolyShooterPack.Inventory>()?.GetEquipped()?.Reload();
             });
 
-            CreateActionButton(root.transform, "Switch", new Vector2(-420, 180), new Color(0.2f, 0.6f, 0.9f), () => {
+            // Switch button with Elemental Theme (Mercury Aqua, Sulfur Red/Orange, Salt White)
+            CreateActionButton(root.transform, "Switch", new Vector2(-420, 180), new Color(0.2f, 0.8f, 0.9f), () => {
                 var inventory = InfimaGames.LowPolyShooterPack.ServiceLocator.Current.Get<InfimaGames.LowPolyShooterPack.IGameModeService>()?.GetPlayerCharacter()?.GetComponent<InfimaGames.LowPolyShooterPack.Inventory>();
                 if (inventory != null) inventory.Equip(inventory.GetNextIndex());
             });
@@ -154,7 +154,7 @@ namespace TheAlchemistsCrypt.UI
             var lblObj = new GameObject("Label");
             lblObj.transform.SetParent(btnObj.transform, false);
             var lblT = lblObj.AddComponent<Text>();
-            lblT.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            lblT.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             lblT.text = label.ToUpper();
             lblT.color = goldColor;
             lblT.fontSize = isBig ? 40 : 30;
