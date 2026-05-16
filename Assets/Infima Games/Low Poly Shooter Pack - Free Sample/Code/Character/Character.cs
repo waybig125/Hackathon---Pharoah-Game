@@ -342,6 +342,10 @@ namespace InfimaGames.LowPolyShooterPack
                 var m = TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
                 if (m.sqrMagnitude > 0.001f) move = m;
             }
+            
+            // Sync axisMovement for Animator!
+            axisMovement = move;
+            
 			return move;
 		}
 		public override Vector2 GetInputLook()
@@ -708,7 +712,8 @@ namespace InfimaGames.LowPolyShooterPack
 		private bool CanRun()
         {
             Vector2 move = GetInputMovement();
-            return move.y > 0.1f && !aiming && !inspecting && !reloading && !holstered && !holstering;
+            // Allow sprinting if there's any significant movement, even diagonal
+            return move.magnitude > 0.1f && move.y > -0.1f && !aiming && !inspecting && !reloading && !holstered && !holstering;
         }
 
 		/// <summary>

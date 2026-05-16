@@ -12,7 +12,7 @@ namespace TheAlchemistsCrypt.UI
         private Color goldColor = new Color(1f, 0.85f, 0.4f);
         private Color darkColor = new Color(0.05f, 0.05f, 0.05f, 0.85f);
         
-        private Sprite btnSprite;
+        private Sprite circleSprite;
         private Sprite reloadIcon;
         private Sprite fireIcon;
         private Sprite swapIcon;
@@ -31,9 +31,17 @@ namespace TheAlchemistsCrypt.UI
 
         private void LoadSprites()
         {
-            btnSprite = Resources.Load<Sprite>("UI/Button"); 
+            // Use built-in knob for circle or try to find a resource
+            circleSprite = Resources.Load<Sprite>("UI/Circle"); 
+            #if UNITY_EDITOR
+            if (circleSprite == null) circleSprite = UnityEditor.AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+            #endif
+
             reloadIcon = Resources.Load<Sprite>("UI/Icons/Inspiration/reload");
-            fireIcon = Resources.Load<Sprite>("UI/Icons/icon_attack");
+            // User requested Assets/Resources/UI/Icons/icon_crouch.png for fire
+            fireIcon = Resources.Load<Sprite>("UI/Icons/icon_crouch");
+            if (fireIcon == null) fireIcon = Resources.Load<Sprite>("UI/Icons/icon_attack");
+            
             swapIcon = Resources.Load<Sprite>("UI/Icons/icon_swap");
             sprintIcon = Resources.Load<Sprite>("UI/Icons/icon_sprint");
         }
@@ -86,9 +94,9 @@ namespace TheAlchemistsCrypt.UI
             if (joyPrefab != null) {
                 var joyObj = Instantiate(joyPrefab, moveZone);
                 var jRect = joyObj.GetComponent<RectTransform>();
-                jRect.anchorMin = jRect.anchorMax = new Vector2(0.25f, 0.25f);
+                jRect.anchorMin = jRect.anchorMax = new Vector2(0.3f, 0.3f);
                 jRect.anchoredPosition = Vector2.zero;
-                jRect.sizeDelta = new Vector2(350, 350);
+                jRect.sizeDelta = new Vector2(450, 450); // Bigger joystick
                 
                 var j = joyObj.GetComponent<Joystick>();
                 if (j != null) StartCoroutine(JoystickLoop(j));
@@ -100,14 +108,18 @@ namespace TheAlchemistsCrypt.UI
             btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0); // BOTTOM RIGHT
             btnContainer.anchoredPosition = Vector2.zero;
 
+            // Use white icons on black semi-transparent circular buttons
             // Fire (Main)
-            CreateButton(btnContainer, "FIRE", new Vector2(-280, 280), 280, fireIcon, new Color(1, 0.3f, 0.2f), () => SetFire(true), () => SetFire(false));
+            CreateButton(btnContainer, "FIRE", new Vector2(-300, 300), 300, fireIcon, Color.white, () => SetFire(true), () => SetFire(false));
             // Reload
-            CreateButton(btnContainer, "RELOAD", new Vector2(-580, 180), 180, reloadIcon, goldColor, () => Reload());
+            CreateButton(btnContainer, "RELOAD", new Vector2(-650, 150), 180, reloadIcon, Color.white, () => Reload());
             // Swap
-            CreateButton(btnContainer, "SWAP", new Vector2(-380, 580), 180, swapIcon, new Color(0.3f, 0.8f, 1f), () => Swap());
+            CreateButton(btnContainer, "SWAP", new Vector2(-450, 600), 180, swapIcon, Color.white, () => Swap());
             // Sprint
-            CreateButton(btnContainer, "SPRINT", new Vector2(-580, 480), 180, sprintIcon, Color.green, () => SetSprint(true), () => SetSprint(false));
+            CreateButton(btnContainer, "SPRINT", new Vector2(-650, 450), 180, sprintIcon, Color.white, () => SetSprint(true), () => SetSprint(false));
+
+            // Hide debug labels from asset pack
+            HideDebugLabels();
 
             // 4. STATS (TOP LEFT)
             var stats = new GameObject("Stats", typeof(RectTransform)).GetComponent<RectTransform>();
@@ -129,24 +141,35 @@ namespace TheAlchemistsCrypt.UI
             go.sizeDelta = new Vector2(s, s);
             
             var img = go.GetComponent<Image>();
-            img.color = darkColor;
-            if (btnSprite) img.sprite = btnSprite;
+            img.color = new Color(0, 0, 0, 0.5f); // Semi-transparent black
+            if (circleSprite) img.sprite = circleSprite;
 
             var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             iconGo.SetParent(go, false);
-            iconGo.sizeDelta = go.sizeDelta * 0.6f;
+            iconGo.sizeDelta = go.sizeDelta * 0.55f;
             var iImg = iconGo.GetComponent<Image>();
-            iImg.color = tint;
+            iImg.color = tint; // White as passed
             if (icon) iImg.sprite = icon;
 
             var trigger = go.gameObject.AddComponent<EventTrigger>();
             var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-            down.callback.AddListener((d) => { img.color = tint * 0.5f; onDown?.Invoke(); });
+            down.callback.AddListener((d) => { img.color = new Color(1, 1, 1, 0.3f); onDown?.Invoke(); });
             trigger.triggers.Add(down);
             
             var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-            up.callback.AddListener((d) => { img.color = darkColor; onUp?.Invoke(); });
+            up.callback.AddListener((d) => { img.color = new Color(0, 0, 0, 0.5f); onUp?.Invoke(); });
             trigger.triggers.Add(up);
+        }
+
+        private void HideDebugLabels()
+        {
+            // Find common debug labels in the P_LPSP_UI_Canvas
+            var timescale = GameObject.Find("Timescale");
+            if (timescale) timescale.SetActive(false);
+            var mouseLock = GameObject.Find("Mouse Lock");
+            if (mouseLock) mouseLock.SetActive(false);
+            var tutorial = GameObject.Find("Tutorial");
+            if (tutorial) tutorial.SetActive(false);
         }
 
         private Text CreateStatsText(Transform p, string n, string v, Vector2 pos, Color c)
@@ -167,8 +190,9 @@ namespace TheAlchemistsCrypt.UI
         {
             while (true) {
                 if (j != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) {
-                    // Normalize and fix direction if needed
-                    Vector2 dir = j.Direction;
+                    // Use Horizontal and Vertical directly to avoid any weirdness with Direction property
+                    Vector2 dir = new Vector2(j.Horizontal, j.Vertical);
+                    // If the joystick is behaving inverted, we can fix it here, but let's first ensure it's not a deadzone issue
                     TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetMovement(dir);
                 }
                 yield return null;
@@ -207,8 +231,12 @@ namespace TheAlchemistsCrypt.UI
             if (data.pointerId != pointerId) return;
             // Use pixels directly for more consistent movement across frame rates
             Vector2 delta = data.delta;
-            Vector2 lookVel = delta * sensitivity * 0.15f;
-            TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetLook(lookVel);
+            // Sensitivity check
+            if (Mathf.Abs(delta.x) > 0.01f || Mathf.Abs(delta.y) > 0.01f)
+            {
+                Vector2 lookVel = delta * sensitivity * 0.12f;
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetLook(lookVel);
+            }
         }
 
         public void OnPointerUp(PointerEventData data)

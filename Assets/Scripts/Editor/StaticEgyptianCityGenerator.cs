@@ -58,7 +58,7 @@ namespace TheAlchemistsCrypt.Editor
             
             // Materials
             Material wallMat = CreateLit(new Color(0.92f, 0.85f, 0.7f), 4f, "desert_sand_normal.png");
-            Material floorMat = CreateLit(new Color(0.9f, 0.8f, 0.6f), gridSize * 2, "desert_sand_normal.png");
+            Material floorMat = CreateLit(new Color(0.9f, 0.8f, 0.6f), gridSize * 2); // No normal map for floor to avoid hieroglyphs
             Material woodMat = CreateLit(new Color(0.25f, 0.15f, 0.08f), 1f);
             Material holeMat = CreateLit(new Color(0.05f, 0.03f, 0.01f), 1f);
 
@@ -118,13 +118,14 @@ namespace TheAlchemistsCrypt.Editor
                 if (l) { l.color = new Color(1, 0.95f, 0.85f); l.intensity = 1.3f; }
             }
 
-            // Pyramids Glow Visibility
+            // Pyramids Glow Visibility - CRANKED UP
             var pyramids = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
             foreach (var p in pyramids) {
                 if (p.name.ToLower().Contains("pyramid")) {
+                    p.transform.localScale *= 1.5f; // Scale up for visibility
                     foreach (var r in p.GetComponentsInChildren<Renderer>()) {
                         foreach (var m in r.materials) {
-                            m.SetColor("_EmissionColor", new Color(1f, 0.8f, 0.4f) * 1.5f);
+                            m.SetColor("_EmissionColor", new Color(1f, 0.9f, 0.5f) * 4.0f); // Stronger glow
                             m.EnableKeyword("_EMISSION");
                         }
                     }
@@ -146,16 +147,17 @@ namespace TheAlchemistsCrypt.Editor
             body.transform.localScale = new Vector3(20, height, 20);
             body.GetComponent<Renderer>().sharedMaterial = wall;
 
-            // Recessed Windows
+            // Recessed Windows - Deeper interior feel
             for (int i = 0; i < 4; i++) {
                 float rot = i * 90f;
                 var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 win.transform.SetParent(body.transform);
-                win.transform.localScale = new Vector3(0.18f, 0.22f, 0.1f);
+                win.transform.localScale = new Vector3(0.18f, 0.22f, 0.15f); // Slightly thicker/deeper
                 win.GetComponent<Renderer>().sharedMaterial = hole;
                 DestroyImmediate(win.GetComponent<Collider>());
                 float rad = rot * Mathf.Deg2Rad;
-                win.transform.localPosition = new Vector3(Mathf.Cos(rad) * 0.485f, 0.3f, Mathf.Sin(rad) * 0.485f);
+                // Move further in: 0.45f instead of 0.485f
+                win.transform.localPosition = new Vector3(Mathf.Cos(rad) * 0.45f, 0.3f, Mathf.Sin(rad) * 0.45f);
                 win.transform.localRotation = Quaternion.Euler(0, -rot + 90, 0);
             }
 

@@ -24,12 +24,17 @@ namespace TheAlchemistsCrypt.AI
 
         private void FindPlayer()
         {
+            // Tag search
             var p = GameObject.FindGameObjectWithTag("Player");
             if (p != null) player = p.transform;
             else {
-                // Fallback search
-                var cam = Camera.main;
-                if (cam != null) player = cam.transform;
+                // Component search - More robust
+                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                if (character != null) player = character.transform;
+                else {
+                    var cam = Camera.main;
+                    if (cam != null) player = cam.transform;
+                }
             }
         }
 

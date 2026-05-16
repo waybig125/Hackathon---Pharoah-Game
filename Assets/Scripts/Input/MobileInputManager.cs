@@ -8,6 +8,8 @@ namespace TheAlchemistsCrypt.Input
 
         [Header("Settings")]
         [SerializeField] private float joystickDeadzone = 0.1f;
+        public bool InvertJoystickX = false;
+        public bool InvertJoystickY = false;
         
         // Output values
         public Vector2 MovementInput { get; private set; }
@@ -49,7 +51,11 @@ namespace TheAlchemistsCrypt.Input
             if (input.magnitude < joystickDeadzone)
                 MovementInput = Vector2.zero;
             else
-                MovementInput = input;
+            {
+                float x = InvertJoystickX ? -input.x : input.x;
+                float y = InvertJoystickY ? -input.y : input.y;
+                MovementInput = new Vector2(x, y);
+            }
         }
 
         public void SetLook(Vector2 input)
