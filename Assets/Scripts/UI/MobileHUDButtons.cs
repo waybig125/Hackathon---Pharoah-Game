@@ -71,18 +71,18 @@ namespace TheAlchemistsCrypt.UI
             root.anchorMin = Vector2.zero; root.anchorMax = Vector2.one;
             root.offsetMin = root.offsetMax = Vector2.zero;
 
-            // 1. LOOK ZONE (Strictly Right 70% of screen)
+            // 1. LOOK ZONE (Strictly Right 50% of screen - Zero Overlap)
             var lookZone = new GameObject("LookZone", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             lookZone.SetParent(root, false);
-            lookZone.anchorMin = new Vector2(0.3f, 0f); lookZone.anchorMax = Vector2.one;
+            lookZone.anchorMin = new Vector2(0.5f, 0f); lookZone.anchorMax = Vector2.one;
             lookZone.offsetMin = lookZone.offsetMax = Vector2.zero;
             lookZone.GetComponent<Image>().color = new Color(0, 0, 0, 0.01f);
             lookZone.gameObject.AddComponent<LookSwipeZone>();
 
-            // 2. MOVEMENT ZONE (Strictly Left 30% to avoid overlap)
+            // 2. MOVEMENT ZONE (Strictly Left 50% of screen - Zero Overlap)
             var moveZone = new GameObject("MoveZone", typeof(RectTransform)).GetComponent<RectTransform>();
             moveZone.SetParent(root, false);
-            moveZone.anchorMin = Vector2.zero; moveZone.anchorMax = new Vector2(0.3f, 1f);
+            moveZone.anchorMin = Vector2.zero; moveZone.anchorMax = new Vector2(0.5f, 1f);
             moveZone.offsetMin = moveZone.offsetMax = Vector2.zero;
 
             // Variable Joystick
@@ -216,13 +216,15 @@ namespace TheAlchemistsCrypt.UI
 
     public class LookSwipeZone : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler
     {
-        public float sensitivity = 0.45f;
+        public float sensitivity = 1.2f; // Increased baseline for DPI-scaled input
         private int trackedPointerId = -1;
 
         public void OnPointerDown(PointerEventData data)
         {
             if (trackedPointerId != -1) return;
             trackedPointerId = data.pointerId;
+            // NotifyTouchActive is now a no-op as the Manager polls globally, 
+            // but we keep the call for architecture consistency.
             TheAlchemistsCrypt.Input.MobileInputManager.Instance?.NotifyTouchActive(true);
         }
 
@@ -230,8 +232,12 @@ namespace TheAlchemistsCrypt.UI
         {
             if (data.pointerId != trackedPointerId) return;
 
-            // DPI Scaling: ensure movement is consistent regardless of screen resolution
-            float dpiScale = Screen.dpi > 0 ? (160f / Screen.dpi) : 1f;
+            // DPI Scaling: Normalize pixels to physical distance (Inches) 
+            // baseDpi 160 (Standard MDPI) ensures consistent feel across devices.
+            float baseDpi = 160f;
+            float deviceDpi = Screen.dpi > 0 ? Screen.dpi : baseDpi;
+            float dpiScale = baseDpi / deviceDpi;
+            
             Vector2 delta = data.delta * sensitivity * dpiScale;
 
             if (delta.sqrMagnitude > 0.0001f)
@@ -242,7 +248,7 @@ namespace TheAlchemistsCrypt.UI
         {
             if (data.pointerId == trackedPointerId) {
                 trackedPointerId = -1;
-                TheAlchemistsCrypt.Input.MobileInputManager.Instance?.ConsumeLook(); // Clean reset
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance?.ConsumeLook(); 
                 TheAlchemistsCrypt.Input.MobileInputManager.Instance?.NotifyTouchActive(false);
             }
         }

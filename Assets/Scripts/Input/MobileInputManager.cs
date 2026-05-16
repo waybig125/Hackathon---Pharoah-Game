@@ -53,6 +53,16 @@ namespace TheAlchemistsCrypt.Input
 
         private void Update()
         {
+            // Global check: if there are any touches on the screen, prioritize mobile input
+            // This prevents "desktop bleed" in the editor or on hybrid devices
+            bool touchDetected = UnityEngine.Input.touchCount > 0;
+            
+            // If we are in the editor, we also check if the joystick is being moved
+            #if UNITY_EDITOR
+            if (MovementInput.sqrMagnitude > 0.001f) touchDetected = true;
+            #endif
+            
+            IsTouchActive = touchDetected;
         }
 
         public void SetMovement(Vector2 input)
@@ -85,9 +95,10 @@ namespace TheAlchemistsCrypt.Input
             return temp;
         }
 
+        // Keep NotifyTouchActive for UI zones that want to force the state
         public void NotifyTouchActive(bool active)
         {
-            IsTouchActive = active;
+            // We can combine this with the global count if needed, but the Update loop is more robust
         }
 
         public void SetFiring(bool state)

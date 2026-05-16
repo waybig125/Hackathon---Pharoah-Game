@@ -209,7 +209,9 @@ namespace InfimaGames.LowPolyShooterPack
                 mobileFiring = mob.IsFiring;
                 mobileAiming = mob.IsAiming;
                 mobileRunning = mob.IsSprinting;
-                isTouchActive = mob.IsTouchActive; // New flag from HUD swipe zone
+                
+                // Robust Gating: Use manager's state OR native touch count
+                isTouchActive = mob.IsTouchActive || UnityEngine.Input.touchCount > 0;
                 
                 // Atomic events
                 if (mob.IsSwappingWeapon) {
