@@ -96,10 +96,17 @@ namespace TheAlchemistsCrypt.UI
                 var jRect = joyObj.GetComponent<RectTransform>();
                 jRect.anchorMin = jRect.anchorMax = new Vector2(0.5f, 0.3f);
                 jRect.anchoredPosition = Vector2.zero;
-                jRect.sizeDelta = new Vector2(400, 400); 
+                jRect.sizeDelta = new Vector2(500, 500); // Increased size
                 
                 var j = joyObj.GetComponent<Joystick>();
-                if (j != null) StartCoroutine(JoystickLoop(j));
+                if (j != null) {
+                    // Try to force Variable/Dynamic mode if available via reflection or cast
+                    // VariableJoystick is the common type for this prefab
+                    var vj = j as VariableJoystick;
+                    if (vj != null) vj.SetMode(JoystickType.Dynamic);
+                    
+                    StartCoroutine(JoystickLoop(j));
+                }
             }
 
             // 3. BUTTONS (CLUSTERED BOTTOM RIGHT)
@@ -108,7 +115,8 @@ namespace TheAlchemistsCrypt.UI
             btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0); // BOTTOM RIGHT
             btnContainer.anchoredPosition = Vector2.zero;
 
-            CreateButton(btnContainer, "FIRE", new Vector2(-300, 300), 300, fireIcon, Color.white, () => SetFire(true), () => SetFire(false));
+            // Updated Fire Button with larger size and explicit single-fire handling if needed
+            CreateButton(btnContainer, "FIRE", new Vector2(-300, 300), 320, fireIcon, Color.white, () => SetFire(true), () => SetFire(false));
             CreateButton(btnContainer, "RELOAD", new Vector2(-650, 150), 180, reloadIcon, Color.white, () => Reload());
             CreateButton(btnContainer, "SWAP", new Vector2(-450, 600), 180, swapIcon, Color.white, () => Swap());
             CreateButton(btnContainer, "SPRINT", new Vector2(-650, 450), 180, sprintIcon, Color.white, () => SetSprint(true), () => SetSprint(false));
@@ -137,6 +145,7 @@ namespace TheAlchemistsCrypt.UI
             var img = go.GetComponent<Image>();
             img.color = Color.white; // White button background
             if (circleSprite) img.sprite = circleSprite;
+            img.raycastTarget = true; // Crucial for input
 
             var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             iconGo.SetParent(go, false);
@@ -144,15 +153,21 @@ namespace TheAlchemistsCrypt.UI
             var iImg = iconGo.GetComponent<Image>();
             iImg.color = Color.black; // Black icon
             if (icon) iImg.sprite = icon;
+            iImg.raycastTarget = false; // Don't block parent button
 
-            var trigger = go.gameObject.AddComponent<EventTrigger>();
-            var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-            down.callback.AddListener((d) => { img.color = new Color(0.8f, 0.8f, 0.8f, 1f); onDown?.Invoke(); });
-            trigger.triggers.Add(down);
-            
-            var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-            up.callback.AddListener((d) => { img.color = Color.white; onUp?.Invoke(); });
-            trigger.triggers.Add(up);
+            // Using a dedicated component for better reliability than EventTrigger entries
+            var helper = go.gameObject.AddComponent<ButtonInputHelper>();
+            helper.onDown = () => { img.color = new Color(0.8f, 0.8f, 0.8f, 1f); onDown?.Invoke(); };
+            helper.onUp = () => { img.color = Color.white; onUp?.Invoke(); };
+        }
+
+        // Dedicated helper class to ensure clean pointer events
+        private class ButtonInputHelper : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
+        {
+            public System.Action onDown;
+            public System.Action onUp;
+            public void OnPointerDown(PointerEventData eventData) => onDown?.Invoke();
+            public void OnPointerUp(PointerEventData eventData) => onUp?.Invoke();
         }
 
         private void HideDebugLabels()
