@@ -14,6 +14,7 @@ namespace TheAlchemistsCrypt.Input
         // Output values
         public Vector2 MovementInput { get; private set; }
         public Vector2 LookInput { get; private set; }
+        public bool IsTouchActive { get; private set; } // Track if a finger is on the look zone
         public bool IsFiring { get; private set; }
         public bool WasFiringPressed { get; set; } // Trigger for semi-auto
         public bool IsAiming { get; private set; }
@@ -75,6 +76,11 @@ namespace TheAlchemistsCrypt.Input
         public void ConsumeLook()
         {
             LookInput = Vector2.zero;
+        }
+
+        public void NotifyTouchActive(bool active)
+        {
+            IsTouchActive = active;
         }
 
         public void SetFiring(bool state)

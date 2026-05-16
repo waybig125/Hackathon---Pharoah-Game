@@ -147,6 +147,7 @@ namespace InfimaGames.LowPolyShooterPack
 		/// True if the game cursor is locked! Used when pressing "Escape" to allow developers to more easily access the editor.
 		/// </summary>
 		private bool cursorLocked;
+		private Vector2 cachedMovement;
 
 		#endregion
 
@@ -200,48 +201,53 @@ namespace InfimaGames.LowPolyShooterPack
 		{
             // --- HACKATHON MOBILE & DESKTOP FAIL-SAFE INJECTION ---
             bool mobileFiring = false, mobileAiming = false, mobileRunning = false;
+            bool isTouchActive = false;
+
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
             {
                 var mob = TheAlchemistsCrypt.Input.MobileInputManager.Instance;
                 mobileFiring = mob.IsFiring;
                 mobileAiming = mob.IsAiming;
                 mobileRunning = mob.IsSprinting;
+                isTouchActive = mob.IsTouchActive; // New flag from HUD swipe zone
                 
-                if (mob.IsSwappingWeapon)
-                {
+                // Atomic events
+                if (mob.IsSwappingWeapon) {
                     if (inventory != null) StartCoroutine(Equip(inventory.GetNextIndex()));
                     mob.IsSwappingWeapon = false;
                 }
-
-                if (mob.IsReloading)
-                {
+                if (mob.IsReloading) {
                     if (CanReload()) PlayReloadAnimation();
                     mob.IsReloading = false;
                 }
+
+                // Cache movement once per frame to prevent "double consumption" if multiple things call GetInputMovement
+                cachedMovement = mob.GetMovement();
+            }
+            else {
+                // Fallback to desktop movement if no mobile manager
+                cachedMovement = axisMovement;
+                axisMovement = Vector2.zero;
             }
 
-            // Combine Mobile and Desktop (Editor-friendly)
             holdingButtonFire = mobileFiring;
             holdingButtonAim = mobileAiming;
             holdingButtonRun = mobileRunning;
 
-            if (!Application.isMobilePlatform || Application.isEditor)
+            // Only process Keyboard/Mouse if touch isn't currently controlling the game
+            if (!isTouchActive)
             {
-                if (Mouse.current != null)
-                {
+                if (Mouse.current != null) {
                     if (Mouse.current.leftButton.isPressed) holdingButtonFire = true;
                     if (Mouse.current.rightButton.isPressed) holdingButtonAim = true;
                 }
-                if (Keyboard.current != null)
-                {
+                if (Keyboard.current != null) {
                     if (Keyboard.current.leftShiftKey.isPressed) holdingButtonRun = true;
-                    
                     if (Keyboard.current.rKey.wasPressedThisFrame && CanReload()) PlayReloadAnimation();
                     if (Keyboard.current.qKey.wasPressedThisFrame && inventory != null) 
                         StartCoroutine(Equip(inventory.GetNextIndex()));
                 }
             }
-            // ----------------------------------
 
 			//Match Aim.
 			aiming = holdingButtonAim && CanAim();
@@ -251,35 +257,28 @@ namespace InfimaGames.LowPolyShooterPack
 			//Holding the firing button.
 			if (holdingButtonFire)
 			{
-				//Check.
 				bool isPunching = equippedWeapon.GetComponent<PunchCombat>() != null;
                 bool canFire = CanPlayAnimationFire() && (equippedWeapon.HasAmmunition() || isPunching);
 				if (canFire && (equippedWeapon.IsAutomatic() || isPunching))
 				{
-					//Has fire rate passed.
 					if (Time.time - lastShotTime > 60.0f / (isPunching ? 120.0f : equippedWeapon.GetRateOfFire()))
 						Fire();
 				}
                 else if (canFire && !equippedWeapon.IsAutomatic())
                 {
-                    // Semi-auto logic (Pistol)
                     bool triggerDown = false;
-                    if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+                    if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed)
                     {
-                        if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed)
-                        {
-                            triggerDown = true;
-                            TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed = false; // Consume
-                        }
+                        triggerDown = true;
+                        TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed = false;
                     }
-                    if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame) triggerDown = true;
+                    if (!isTouchActive && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) triggerDown = true;
 
                     if (triggerDown && Time.time - lastShotTime > 60.0f / equippedWeapon.GetRateOfFire())
                         Fire();
                 }
 			}
 
-			//Update Animator.
 			UpdateAnimator();
 		}
 
@@ -324,28 +323,18 @@ namespace InfimaGames.LowPolyShooterPack
 		
 		public override Vector2 GetInputMovement()
 		{
-            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
-            {
-                axisMovement = Vector2.zero; 
-                return TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
-            }
-            
-            // Standard Desktop Logic
-            Vector2 move = axisMovement;
-            axisMovement = Vector2.zero;
-			return move;
+			return cachedMovement;
 		}
 
 		public override Vector2 GetInputLook()
 		{
-            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput.sqrMagnitude > 0.001f)
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
             {
-                Vector2 mobileLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
-                TheAlchemistsCrypt.Input.MobileInputManager.Instance.ConsumeLook();
-                return mobileLook;
+                // Let the mobile manager handle the accumulation/consumption logic
+                return TheAlchemistsCrypt.Input.MobileInputManager.Instance.ConsumeLook();
             }
 
-            // Standard Desktop Logic
+            // Fallback for desktop/editor
             Vector2 look = axisLook;
             axisLook = Vector2.zero;
 			return look;
@@ -360,8 +349,9 @@ namespace InfimaGames.LowPolyShooterPack
 		/// </summary>
 		private void UpdateAnimator()
 		{
-			//Movement Value. This value affects absolute movement. Aiming movement uses this, as opposed to per-axis movement.
-			characterAnimator.SetFloat(HashMovement, Mathf.Clamp01(Mathf.Abs(axisMovement.x) + Mathf.Abs(axisMovement.y)), dampTimeLocomotion, Time.deltaTime);
+			// Use cachedMovement to avoid the "double consumption" bug
+			float movementMagnitude = Mathf.Clamp01(Mathf.Abs(cachedMovement.x) + Mathf.Abs(cachedMovement.y));
+			characterAnimator.SetFloat(HashMovement, movementMagnitude, dampTimeLocomotion, Time.deltaTime);
 			
 			//Update the aiming value, but use interpolation. This makes sure that things like firing can transition properly.
 			characterAnimator.SetFloat(HashAimingAlpha, Convert.ToSingle(aiming), 0.25f / 1.0f * dampTimeAiming, Time.deltaTime);
@@ -495,6 +485,7 @@ namespace InfimaGames.LowPolyShooterPack
 		/// <param name="value">Value.</param>
 		public void OnMove(InputValue value)
 		{
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) return;
 			//Save the movement input.
 			axisMovement = value.Get<Vector2>();
 		}
@@ -505,6 +496,7 @@ namespace InfimaGames.LowPolyShooterPack
 		/// <param name="value">Value.</param>
 		public void OnLook(InputValue value)
 		{
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) return;
 			//Save the look input.
 			axisLook = value.Get<Vector2>();
 		}
