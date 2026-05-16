@@ -67,15 +67,22 @@ namespace TheAlchemistsCrypt.Input
             }
         }
 
+        public Vector2 GetMovement()
+        {
+            return MovementInput;
+        }
+
         public void SetLook(Vector2 input)
         {
             // Accumulate input so it's not lost between frames
             LookInput += input;
         }
 
-        public void ConsumeLook()
+        public Vector2 ConsumeLook()
         {
+            Vector2 temp = LookInput;
             LookInput = Vector2.zero;
+            return temp;
         }
 
         public void NotifyTouchActive(bool active)
