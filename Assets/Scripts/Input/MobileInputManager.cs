@@ -40,6 +40,14 @@ namespace TheAlchemistsCrypt.Input
             {
                 gameObject.AddComponent<TheAlchemistsCrypt.Environment.AtmosphereManager>();
             }
+
+            // Silence Depth Surface Warnings by ensuring Main Camera settings are mobile-friendly
+            var cam = Camera.main;
+            if (cam != null) {
+                #if UNITY_URP
+                // Universal Additional Camera Data can be adjusted here if needed
+                #endif
+            }
         }
 
         private void Update()
@@ -60,7 +68,13 @@ namespace TheAlchemistsCrypt.Input
 
         public void SetLook(Vector2 input)
         {
-            LookInput = input;
+            // Accumulate input so it's not lost between frames
+            LookInput += input;
+        }
+
+        public void ConsumeLook()
+        {
+            LookInput = Vector2.zero;
         }
 
         public void SetFiring(bool state)

@@ -7,15 +7,13 @@ namespace TheAlchemistsCrypt.Editor
 {
     public class StaticEgyptianCityGenerator : EditorWindow
     {
+        [MenuItem("Egyptian/Generator V4")]
         [MenuItem("Tools/Generate Egyptian City (V4 - Final)")]
         public static void ShowWindow() => GetWindow<StaticEgyptianCityGenerator>("Egyptian City V4.2");
 
         private int seed = 999;
         private int gridSize = 12;
         private string rootName = "EgyptianCity_V4_Final";
-
-        [MenuItem("Egyptian/Generator V4")]
-        public static void ShowWindow() => GetWindow<StaticEgyptianCityGenerator>("Egyptian City V4");
 
         [MenuItem("Egyptian/Regenerate City")]
         public static void QuickRegen() {

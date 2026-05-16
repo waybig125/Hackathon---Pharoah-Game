@@ -324,53 +324,26 @@ namespace InfimaGames.LowPolyShooterPack
 		
 		public override Vector2 GetInputMovement()
 		{
-            Vector2 move = axisMovement;
-            
-            // Desktop fallback
-            if (!Application.isMobilePlatform && move.sqrMagnitude < 0.01f) {
-                float h = 0, v = 0;
-                if (Keyboard.current != null) {
-                    if (Keyboard.current.wKey.isPressed) v += 1;
-                    if (Keyboard.current.sKey.isPressed) v -= 1;
-                    if (Keyboard.current.aKey.isPressed) h -= 1;
-                    if (Keyboard.current.dKey.isPressed) h += 1;
-                }
-                if (Mathf.Abs(h) > 0 || Mathf.Abs(v) > 0) move = new Vector2(h, v).normalized;
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+            {
+                // On mobile, we MUST prioritize the joystick and ignore keyboard axisMovement
+                // to prevent "stuck" inputs.
+                axisMovement = Vector2.zero; 
+                return TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
             }
-
-            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) {
-                var m = TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
-                if (m.sqrMagnitude > 0.001f) {
-                    move = m;
-                    axisMovement = Vector2.zero; // Clear keyboard state if joystick is moving
-                } else {
-                    // Force zero movement if we have a mobile manager but no stick input, to avoid stuck keyboard keys
-                    move = Vector2.zero; 
-                }
-            }
-            
-            // Sync axisMovement for Animator!
-            axisMovement = move;
-            
-			return move;
+			return base.GetInputMovement();
 		}
+
 		public override Vector2 GetInputLook()
 		{
-            Vector2 look = axisLook;
-            axisLook = Vector2.zero;
-            
-            // Desktop fallback
-            if (!Application.isMobilePlatform && look.sqrMagnitude < 0.001f) {
-                if (Mouse.current != null) {
-                    look = Mouse.current.delta.ReadValue() * 0.05f; 
-                }
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput.sqrMagnitude > 0.001f)
+            {
+                // Accumulate/Consume pattern for smooth swipe
+                Vector2 mobileLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.ConsumeLook();
+                return mobileLook;
             }
-            
-            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) {
-                look += TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
-                TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetLook(Vector2.zero);
-            }
-			return look;
+			return base.GetInputLook();
 		}
 
 		#endregion
