@@ -16,6 +16,7 @@ namespace TheAlchemistsCrypt.UI
         private Sprite reloadIcon;
         private Sprite fireIcon;
         private Sprite swapIcon;
+        private Sprite sprintIcon;
 
         private Text healthText;
         private Text ammoText;
@@ -30,11 +31,11 @@ namespace TheAlchemistsCrypt.UI
 
         private void LoadSprites()
         {
-            // Use Resources or fallback to simple primitives if sprites missing
             btnSprite = Resources.Load<Sprite>("UI/Button"); 
-            reloadIcon = Resources.Load<Sprite>("UI/Reload");
-            fireIcon = Resources.Load<Sprite>("UI/Fire");
-            swapIcon = Resources.Load<Sprite>("UI/Swap");
+            reloadIcon = Resources.Load<Sprite>("UI/Icons/Inspiration/reload");
+            fireIcon = Resources.Load<Sprite>("UI/Icons/icon_attack");
+            swapIcon = Resources.Load<Sprite>("UI/Icons/icon_swap");
+            sprintIcon = Resources.Load<Sprite>("UI/Icons/icon_sprint");
         }
 
         private void SetupCanvas()
@@ -105,6 +106,8 @@ namespace TheAlchemistsCrypt.UI
             CreateButton(btnContainer, "RELOAD", new Vector2(-580, 180), 180, reloadIcon, goldColor, () => Reload());
             // Swap
             CreateButton(btnContainer, "SWAP", new Vector2(-380, 580), 180, swapIcon, new Color(0.3f, 0.8f, 1f), () => Swap());
+            // Sprint
+            CreateButton(btnContainer, "SPRINT", new Vector2(-580, 480), 180, sprintIcon, Color.green, () => SetSprint(true), () => SetSprint(false));
 
             // 4. STATS (TOP LEFT)
             var stats = new GameObject("Stats", typeof(RectTransform)).GetComponent<RectTransform>();
@@ -113,7 +116,6 @@ namespace TheAlchemistsCrypt.UI
             stats.anchoredPosition = new Vector2(100, -100);
 
             healthText = CreateStatsText(stats, "Health", "100", Vector2.zero, new Color(1, 0.4f, 0.4f));
-            ammoText = CreateStatsText(stats, "Ammo", "30 / 90", new Vector2(0, -70), goldColor);
 
             // Ensure look zone is below buttons for raycasting
             lookZone.SetAsFirstSibling();
@@ -174,6 +176,7 @@ namespace TheAlchemistsCrypt.UI
         }
 
         private void SetFire(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetFiring(s);
+        private void SetSprint(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetSprinting(s);
         private void Reload() {
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
                 TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsReloading = true;
@@ -202,9 +205,9 @@ namespace TheAlchemistsCrypt.UI
         public void OnDrag(PointerEventData data)
         {
             if (data.pointerId != pointerId) return;
-            float dpiScale = Screen.dpi > 0 ? (160f / Screen.dpi) : 1f;
-            Vector2 delta = data.delta / Time.deltaTime;
-            Vector2 lookVel = delta * sensitivity * dpiScale * 0.006f;
+            // Use pixels directly for more consistent movement across frame rates
+            Vector2 delta = data.delta;
+            Vector2 lookVel = delta * sensitivity * 0.15f;
             TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetLook(lookVel);
         }
 

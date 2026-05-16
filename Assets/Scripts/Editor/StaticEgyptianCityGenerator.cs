@@ -58,12 +58,11 @@ namespace TheAlchemistsCrypt.Editor
             
             // Materials
             Material wallMat = CreateLit(new Color(0.92f, 0.85f, 0.7f), 4f, "desert_sand_normal.png");
-            Material floorMat = CreateLit(new Color(0.85f, 0.75f, 0.5f), 10f, "desert_sand_normal.png"); // Will be updated with normal maps below
+            Material floorMat = CreateLit(new Color(0.9f, 0.8f, 0.6f), gridSize * 2, "desert_sand_normal.png");
             Material woodMat = CreateLit(new Color(0.25f, 0.15f, 0.08f), 1f);
             Material holeMat = CreateLit(new Color(0.05f, 0.03f, 0.01f), 1f);
 
             SetupEnvironment();
-            ApplyFloorTextures(floorMat);
 
             // Ground Plane
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
