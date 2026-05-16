@@ -62,7 +62,6 @@ namespace TheAlchemistsCrypt.Editor
             Material woodMat = CreateLit(new Color(0.25f, 0.15f, 0.08f), 1f);
             Material holeMat = CreateLit(new Color(0.05f, 0.03f, 0.01f), 1f);
 
-            ApplyFloorTextures(floorMat);
             SetupEnvironment();
 
             // Ground Plane
@@ -133,16 +132,6 @@ namespace TheAlchemistsCrypt.Editor
             }
         }
 
-        private void ApplyFloorTextures(Material floor)
-        {
-            var sandNormal = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EgyptianAssets/desert_sand_normal.png");
-            var egyptNormal = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/Textures/EgyptianNormalMap.png");
-            
-            if (sandNormal != null) floor.SetTexture("_BumpMap", sandNormal);
-            floor.EnableKeyword("_NORMALMAP");
-            // If we want both, we'd need a custom shader or a layered material, 
-            // for now we'll favor the sand normal and set a repeating tile.
-        }
 
         private void BuildHouse(Transform parent, Vector3 pos, Material wall, Material wood, Material hole, GameObject crate, GameObject barrel)
         {
