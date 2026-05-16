@@ -62,6 +62,7 @@ namespace TheAlchemistsCrypt.Editor
             Material woodMat = CreateLit(new Color(0.25f, 0.15f, 0.08f), 1f);
             Material holeMat = CreateLit(new Color(0.05f, 0.03f, 0.01f), 1f);
 
+            ApplyFloorTextures(floorMat);
             SetupEnvironment();
 
             // Ground Plane
