@@ -28,10 +28,14 @@ namespace TheAlchemistsCrypt.Editor
             if (old != null) Undo.DestroyObjectImmediate(old);
             
             // AGGRESSIVE PURGE OF CONFLICTING OBJECTS
-            foreach (var go in GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include)) {
-                if (go.name.Contains("Player_Copy") || go.name.Contains("MobileHUD") || go.name.Contains("P_LPSP_UI_Canvas")) {
-                    DestroyImmediate(go);
-                }
+            var all = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
+            foreach (var go in all) {
+                if (go == null) continue; // Skip if already destroyed
+                try {
+                    if (go.name.Contains("Player_Copy") || go.name.Contains("MobileHUD") || go.name.Contains("P_LPSP_UI_Canvas")) {
+                        DestroyImmediate(go);
+                    }
+                } catch { /* Ignore destroyed access */ }
             }
         }
 
@@ -90,7 +94,15 @@ namespace TheAlchemistsCrypt.Editor
                 currentX += block + streetX;
             }
 
-            root.AddComponent<NavMeshSurface>().BuildNavMesh();
+            var surface = root.AddComponent<NavMeshSurface>();
+            surface.collectObjects = CollectObjects.Children;
+            surface.useGeometry = NavMeshCollectGeometry.RenderMeshes;
+            // Optimize for large cities
+            var settings = surface.GetBuildSettings();
+            settings.agentRadius = 0.5f;
+            settings.cellSize = 0.2f; // Increased from default to reduce tiles
+            surface.BuildNavMesh();
+
             FixPlayerAndWeapons();
             StaticBatchingUtility.Combine(root);
         }
@@ -216,7 +228,9 @@ namespace TheAlchemistsCrypt.Editor
                     if (idx >= 3) { t.gameObject.SetActive(false); continue; }
                 }
                 foreach (var r in t.GetComponentsInChildren<Renderer>()) {
-                    foreach (var m in r.materials) {
+                    var sharedMats = r.sharedMaterials;
+                    foreach (var m in sharedMats) {
+                        if (m == null) continue;
                         m.SetColor("_EmissionColor", colors[idx % 3] * 4f);
                         m.EnableKeyword("_EMISSION");
                         m.color = colors[idx % 3] * 0.5f;
