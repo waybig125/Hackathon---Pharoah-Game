@@ -9,10 +9,6 @@ namespace TheAlchemistsCrypt.UI
     {
         public static MobileHUDButtons Instance { get; private set; }
 
-        private Color goldColor = new Color(1f, 0.85f, 0.4f);
-        private Color darkColor = new Color(0.05f, 0.05f, 0.05f, 0.85f);
-        
-        private Sprite circleSprite;
         private Sprite reloadIcon;
         private Sprite fireIcon;
         private Sprite swapIcon;
@@ -20,30 +16,171 @@ namespace TheAlchemistsCrypt.UI
 
         private Text healthText;
         private Text ammoText;
+        private Text weaponText;
+
+        // Cached procedural sprites to avoid recreation GC pressure
+        private Sprite obsidianSprite;
+        private Sprite goldGradientSprite;
+        private Sprite joystickRingSprite;
+        private Sprite joystickKnobSprite;
 
         private void Awake()
         {
             Instance = this;
             LoadSprites();
+            GenerateProceduralSprites();
             SetupCanvas();
             BuildHUD();
         }
 
         private void LoadSprites()
         {
-            // Use built-in knob for circle or try to find a resource
-            circleSprite = Resources.Load<Sprite>("UI/Circle"); 
-            #if UNITY_EDITOR
-            if (circleSprite == null) circleSprite = UnityEditor.AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
-            #endif
-
             reloadIcon = Resources.Load<Sprite>("UI/Icons/Inspiration/reload");
-            // User requested Assets/Resources/UI/Icons/icon_crouch.png for fire
-            fireIcon = Resources.Load<Sprite>("UI/Icons/icon_crouch");
+            
+            // Try loading bullet.png as requested by user
+            fireIcon = Resources.Load<Sprite>("UI/Icons/Inspiration/bullet");
+            if (fireIcon == null) fireIcon = Resources.Load<Sprite>("UI/Icons/icon_crouch");
             if (fireIcon == null) fireIcon = Resources.Load<Sprite>("UI/Icons/icon_attack");
             
             swapIcon = Resources.Load<Sprite>("UI/Icons/icon_swap");
             sprintIcon = Resources.Load<Sprite>("UI/Icons/icon_sprint");
+        }
+
+        private void GenerateProceduralSprites()
+        {
+            obsidianSprite = CreateObsidianSprite();
+            goldGradientSprite = CreateGoldenGradientSprite();
+            joystickRingSprite = CreateRingSprite();
+            joystickKnobSprite = CreateKnobSprite();
+        }
+
+        private Sprite CreateObsidianSprite()
+        {
+            int width = 128;
+            int height = 128;
+            Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            for (int y = 0; y < height; y++)
+            {
+                float t = (float)y / height;
+                Color obsColor = Color.Lerp(new Color(0.08f, 0.08f, 0.08f, 0.95f), new Color(0.2f, 0.2f, 0.2f, 0.95f), t);
+                for (int x = 0; x < width; x++)
+                {
+                    float dx = (float)(x - width / 2) / (width / 2);
+                    float dy = (float)(y - height / 2) / (height / 2);
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (dist <= 1f)
+                    {
+                        float alpha = Mathf.Clamp01((1f - dist) * 10f);
+                        tex.SetPixel(x, y, new Color(obsColor.r, obsColor.g, obsColor.b, obsColor.a * alpha));
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateGoldenGradientSprite()
+        {
+            int width = 128;
+            int height = 128;
+            Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            for (int y = 0; y < height; y++)
+            {
+                float t = (float)y / height;
+                Color goldColor = Color.Lerp(new Color(0.85f, 0.6f, 0.1f, 0.95f), new Color(1f, 0.85f, 0.3f, 0.95f), t);
+                for (int x = 0; x < width; x++)
+                {
+                    float dx = (float)(x - width / 2) / (width / 2);
+                    float dy = (float)(y - height / 2) / (height / 2);
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (dist <= 1f)
+                    {
+                        float alpha = Mathf.Clamp01((1f - dist) * 10f);
+                        tex.SetPixel(x, y, new Color(goldColor.r, goldColor.g, goldColor.b, goldColor.a * alpha));
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateRingSprite()
+        {
+            int width = 256;
+            int height = 256;
+            Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    float dx = (float)(x - width / 2) / (width / 2);
+                    float dy = (float)(y - height / 2) / (height / 2);
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    
+                    if (dist >= 0.85f && dist <= 1f)
+                    {
+                        float alpha = 1f;
+                        if (dist > 0.95f) alpha = (1f - dist) / 0.05f;
+                        else if (dist < 0.9f) alpha = (dist - 0.85f) / 0.05f;
+                        
+                        tex.SetPixel(x, y, new Color(0.95f, 0.8f, 0.2f, alpha * 0.45f));
+                    }
+                    else if (dist < 0.85f)
+                    {
+                        tex.SetPixel(x, y, new Color(0.05f, 0.05f, 0.05f, 0.15f));
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateKnobSprite()
+        {
+            int width = 128;
+            int height = 128;
+            Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            for (int y = 0; y < height; y++)
+            {
+                float t = (float)y / height;
+                Color goldColor = Color.Lerp(new Color(0.95f, 0.8f, 0.2f, 0.95f), new Color(1f, 0.95f, 0.6f, 0.95f), t);
+                for (int x = 0; x < width; x++)
+                {
+                    float dx = (float)(x - width / 2) / (width / 2);
+                    float dy = (float)(y - height / 2) / (height / 2);
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (dist <= 1f)
+                    {
+                        float alpha = Mathf.Clamp01((1f - dist) * 10f);
+                        if (dist >= 0.4f && dist <= 0.5f)
+                        {
+                            tex.SetPixel(x, y, new Color(0.6f, 0.45f, 0.1f, alpha * 0.95f));
+                        }
+                        else
+                        {
+                            tex.SetPixel(x, y, new Color(goldColor.r, goldColor.g, goldColor.b, goldColor.a * alpha));
+                        }
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
         }
 
         private void SetupCanvas()
@@ -85,43 +222,38 @@ namespace TheAlchemistsCrypt.UI
             moveZone.anchorMin = Vector2.zero; moveZone.anchorMax = new Vector2(0.5f, 1f);
             moveZone.offsetMin = moveZone.offsetMax = Vector2.zero;
 
-            // --- NEW INPUT SYSTEM NATIVE JOYSTICK UI GENERATION ---
-            // Create the Joystick Background visual container
+            // --- NATIVE JOYSTICK UI GENERATION (DOUBLE SCALED) ---
             var joystickBg = new GameObject("NativeJoystick_Bg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             joystickBg.SetParent(moveZone, false);
-            joystickBg.anchorMin = joystickBg.anchorMax = new Vector2(0.5f, 0.3f); // Centered in the left zone
+            joystickBg.anchorMin = joystickBg.anchorMax = new Vector2(0.5f, 0.35f); 
             joystickBg.anchoredPosition = Vector2.zero;
-            joystickBg.sizeDelta = new Vector2(300, 300); // Scaled appropriately for mobile screens
+            joystickBg.sizeDelta = new Vector2(500, 500); 
 
             var bgImage = joystickBg.GetComponent<Image>();
-            bgImage.color = new Color(1f, 1f, 1f, 0.2f); // Subdued translucent background
-            if (circleSprite != null) bgImage.sprite = circleSprite;
+            bgImage.color = Color.white;
+            if (joystickRingSprite != null) bgImage.sprite = joystickRingSprite;
 
-            // Create the moving Joystick Handle/Knob container (acts as touch target)
             var joystickHandle = new GameObject("HandleTarget", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             joystickHandle.SetParent(joystickBg, false);
             joystickHandle.anchoredPosition = Vector2.zero;
-            joystickHandle.sizeDelta = new Vector2(300, 300); // Identical to background for large touch target!
+            joystickHandle.sizeDelta = new Vector2(500, 500); 
 
-            // Make the handle target image completely transparent but raycast-active
             var targetImage = joystickHandle.GetComponent<Image>();
             targetImage.color = new Color(0, 0, 0, 0); 
             targetImage.raycastTarget = true;
 
-            // Create the visible Knob child
             var knobVisual = new GameObject("KnobVisual", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             knobVisual.SetParent(joystickHandle, false);
             knobVisual.anchoredPosition = Vector2.zero;
-            knobVisual.sizeDelta = new Vector2(100, 100); // Smaller inner visual knob
+            knobVisual.sizeDelta = new Vector2(180, 180); 
 
             var visualImage = knobVisual.GetComponent<Image>();
-            visualImage.color = new Color(1f, 0.85f, 0.4f, 0.8f); // Gold tone accent matching your HUD theme
-            visualImage.raycastTarget = false; // Knob visual doesn't block Raycasts
-            if (circleSprite != null) visualImage.sprite = circleSprite;
+            visualImage.color = Color.white;
+            visualImage.raycastTarget = false;
+            if (joystickKnobSprite != null) visualImage.sprite = joystickKnobSprite;
 
-            // Add the crucial On-Screen Stick component to the HandleTarget
             var onScreenStick = joystickHandle.gameObject.AddComponent<UnityEngine.InputSystem.OnScreen.OnScreenStick>();
-            onScreenStick.movementRange = 120f; // Max dragging radius boundary in pixels
+            onScreenStick.movementRange = 200f; 
             onScreenStick.controlPath = "<Gamepad>/leftStick"; 
 
             // 3. BUTTONS (CLUSTERED BOTTOM RIGHT)
@@ -130,10 +262,10 @@ namespace TheAlchemistsCrypt.UI
             btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0); // BOTTOM RIGHT
             btnContainer.anchoredPosition = Vector2.zero;
 
-            CreateButton(btnContainer, "FIRE", new Vector2(-300, 300), 320, fireIcon, Color.white, () => SetFire(true), () => SetFire(false));
-            CreateButton(btnContainer, "RELOAD", new Vector2(-650, 150), 180, reloadIcon, Color.white, () => Reload());
-            CreateButton(btnContainer, "SWAP", new Vector2(-450, 600), 180, swapIcon, Color.white, () => Swap());
-            CreateButton(btnContainer, "SPRINT", new Vector2(-650, 450), 180, sprintIcon, Color.white, () => SetSprint(true), () => SetSprint(false));
+            CreateButton(btnContainer, "FIRE", new Vector2(-300, 300), 320, fireIcon, true, () => SetFire(true), () => SetFire(false));
+            CreateButton(btnContainer, "RELOAD", new Vector2(-650, 150), 180, reloadIcon, false, () => Reload());
+            CreateButton(btnContainer, "SWAP", new Vector2(-450, 600), 180, swapIcon, false, () => Swap());
+            CreateButton(btnContainer, "SPRINT", new Vector2(-650, 450), 180, sprintIcon, false, () => SetSprint(true), () => SetSprint(false));
 
             HideDebugLabels();
 
@@ -144,12 +276,13 @@ namespace TheAlchemistsCrypt.UI
             stats.anchoredPosition = new Vector2(100, -100);
 
             healthText = CreateStatsText(stats, "Health", "100", Vector2.zero, new Color(1, 0.4f, 0.4f));
+            weaponText = CreateStatsText(stats, "Weapon", "NONE", new Vector2(0, -70), new Color(1f, 0.85f, 0.4f));
 
             // Ensure look zone is BEHIND buttons so it doesn't intercept clicks
             lookZone.SetAsFirstSibling();
         }
 
-        private void CreateButton(Transform p, string n, Vector2 pos, float s, Sprite icon, Color tint, System.Action onDown, System.Action onUp = null)
+        private void CreateButton(Transform p, string n, Vector2 pos, float s, Sprite icon, bool isFire, System.Action onDown, System.Action onUp = null)
         {
             var go = new GameObject(n, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             go.SetParent(p, false);
@@ -157,25 +290,32 @@ namespace TheAlchemistsCrypt.UI
             go.sizeDelta = new Vector2(s, s);
             
             var img = go.GetComponent<Image>();
-            img.color = Color.white; // White button background
-            if (circleSprite) img.sprite = circleSprite;
-            img.raycastTarget = true; // Crucial for input
+            img.sprite = isFire ? obsidianSprite : goldGradientSprite;
+            img.color = Color.white;
+            img.raycastTarget = true;
 
             var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             iconGo.SetParent(go, false);
             iconGo.sizeDelta = go.sizeDelta * 0.55f;
             var iImg = iconGo.GetComponent<Image>();
-            iImg.color = Color.black; // Black icon
+            
+            iImg.color = isFire ? Color.white : Color.black; 
             if (icon) iImg.sprite = icon;
-            iImg.raycastTarget = false; // Don't block parent button
+            iImg.raycastTarget = false;
 
-            // Using a dedicated component for better reliability than EventTrigger entries
             var helper = go.gameObject.AddComponent<ButtonInputHelper>();
-            helper.onDown = () => { img.color = new Color(0.8f, 0.8f, 0.8f, 1f); onDown?.Invoke(); };
-            helper.onUp = () => { img.color = Color.white; onUp?.Invoke(); };
+            helper.onDown = () => {
+                go.localScale = new Vector3(0.9f, 0.9f, 1f); 
+                img.color = isFire ? new Color(0.7f, 0.7f, 0.7f, 1f) : new Color(0.8f, 0.8f, 0.8f, 1f);
+                onDown?.Invoke();
+            };
+            helper.onUp = () => {
+                go.localScale = new Vector3(1f, 1f, 1f);
+                img.color = Color.white;
+                onUp?.Invoke();
+            };
         }
 
-        // Dedicated helper class to ensure clean pointer events
         private class ButtonInputHelper : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
         {
             public System.Action onDown;
@@ -186,14 +326,12 @@ namespace TheAlchemistsCrypt.UI
 
         private void HideDebugLabels()
         {
-            // Find common debug labels in the P_LPSP_UI_Canvas and children
             string[] names = { "Text Timescale", "Text Cursor Lock", "Text Tutorial", "Text Tutorial Text", "Text Tutorial Prompt", "Version Text", "Mouse Lock" };
             foreach (var n in names)
             {
                 var label = GameObject.Find(n);
                 if (label != null) label.SetActive(false);
                 
-                // Fallback: search by partial name in all objects
                 var all = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
                 foreach(var go in all) {
                     if (go.name.Contains(n)) go.SetActive(false);
@@ -215,6 +353,57 @@ namespace TheAlchemistsCrypt.UI
             return t;
         }
 
+        private void Update()
+        {
+            // 1. Update active weapon indicator and Ammo
+            var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+            if (character != null)
+            {
+                var weapon = character.GetEquippedWeapon();
+                if (weapon != null)
+                {
+                    int currentAmmo = weapon.GetAmmunitionCurrent();
+                    int totalAmmo = weapon.GetAmmunitionTotal();
+                    UpdateAmmo(currentAmmo, totalAmmo);
+
+                    string weaponName = "PUNCH";
+                    
+                    var focus = character.GetComponentInChildren<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+                    if (focus != null)
+                    {
+                        weaponName = focus.CurrentMode.ToString().ToUpper();
+                    }
+                    else if (weapon.name.Contains("Sulfur") || weapon.name.Contains("sulfur"))
+                    {
+                        weaponName = "SULFUR";
+                    }
+                    else if (weapon.name.Contains("Mercury") || weapon.name.Contains("mercury"))
+                    {
+                        weaponName = "MERCURY";
+                    }
+                    else if (weapon.name.Contains("Salt") || weapon.name.Contains("salt"))
+                    {
+                        weaponName = "SALT";
+                    }
+                    else
+                    {
+                        weaponName = weapon.name.Replace("(Clone)", "").Trim().ToUpper();
+                    }
+
+                    if (weaponText != null)
+                    {
+                        weaponText.text = $"WEAPON: {weaponName}";
+                    }
+                }
+            }
+
+            // 2. Update health
+            var health = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Player.PlayerHealth>();
+            if (health != null)
+            {
+                UpdateHealth(health.currentHealth);
+            }
+        }
 
         private void SetFire(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetFiring(s);
         private void SetSprint(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetSprinting(s);
@@ -233,15 +422,13 @@ namespace TheAlchemistsCrypt.UI
 
     public class LookSwipeZone : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler
     {
-        public float sensitivity = 1.2f; // Increased baseline for DPI-scaled input
+        public float sensitivity = 0.25f; 
         private int trackedPointerId = -1;
 
         public void OnPointerDown(PointerEventData data)
         {
             if (trackedPointerId != -1) return;
             trackedPointerId = data.pointerId;
-            // NotifyTouchActive is now a no-op as the Manager polls globally, 
-            // but we keep the call for architecture consistency.
             TheAlchemistsCrypt.Input.MobileInputManager.Instance?.NotifyTouchActive(true);
         }
 
@@ -249,8 +436,6 @@ namespace TheAlchemistsCrypt.UI
         {
             if (data.pointerId != trackedPointerId) return;
 
-            // DPI Scaling: Normalize pixels to physical distance (Inches) 
-            // baseDpi 160 (Standard MDPI) ensures consistent feel across devices.
             float baseDpi = 160f;
             float deviceDpi = Screen.dpi > 0 ? Screen.dpi : baseDpi;
             float dpiScale = baseDpi / deviceDpi;

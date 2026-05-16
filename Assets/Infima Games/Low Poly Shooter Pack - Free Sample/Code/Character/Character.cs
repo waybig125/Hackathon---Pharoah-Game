@@ -313,6 +313,8 @@ namespace InfimaGames.LowPolyShooterPack
 
 		public override Camera GetCameraWorld() => cameraWorld;
 
+		public WeaponBehaviour GetEquippedWeapon() => equippedWeapon;
+
 		public override InventoryBehaviour GetInventory() => inventory;
 		
 		public override bool IsCrosshairVisible() => !aiming && !holstered;

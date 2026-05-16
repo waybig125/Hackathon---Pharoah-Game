@@ -62,19 +62,115 @@ namespace TheAlchemistsCrypt.Editor
             if (walk != null && !HasState(rootStateMachine, "Walk")) rootStateMachine.AddState("Walk").motion = walk;
             if (attack != null && !HasState(rootStateMachine, "Attack")) rootStateMachine.AddState("Attack").motion = attack;
 
-            // 2. Apply to scene mummies
-            string[] names = { "Mummy_Base_Test", "Mummy_PBR_Test", "Mummy_Shaded_Test" };
-            foreach (var n in names) {
-                var go = GameObject.Find(n);
-                if (go != null) {
-                    Undo.RecordObject(go.transform, "Scale Mummies");
-                    go.transform.localScale = new Vector3(100, 100, 100);
-                    var anim = go.GetComponent<Animator>();
-                    if (anim == null) anim = go.AddComponent<Animator>();
-                    anim.runtimeAnimatorController = controller;
+            // 2. PURGE all old scene mummies to satisfy user request
+            var allObjects = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
+            foreach (var go in allObjects) {
+                if (go != null && (go.name.ToLower().StartsWith("mummy") || go.name.ToLower().Contains("_test"))) {
+                    DestroyImmediate(go);
                 }
             }
-            Debug.Log("Mummy Setup Complete! Scales set to 100, Animator Controller updated with Idle, Walk, and Attack.");
+
+            // 3. Find Player and Spawn three active, scaled mummies + three showcase mummies close to the player
+            var player = GameObject.FindGameObjectWithTag("Player");
+            if (player == null) {
+                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                if (character != null) player = character.gameObject;
+            }
+
+            Vector3 spawnCenter = player != null ? player.transform.position : Vector3.zero;
+
+            string[] fbxPaths = {
+                "Assets/Mummy_Assets/base.fbx",
+                "Assets/Mummy_Assets/base_basic_pbr.fbx",
+                "Assets/Mummy_Assets/base_basic_shaded.fbx"
+            };
+            
+            // --- SPAWN THREE ACTIVE AI MUMMIES (AT 12 UNITS DISTANCE) ---
+            string[] activeNames = { "Mummy_Base_Active", "Mummy_PBR_Active", "Mummy_Shaded_Active" };
+            for (int i = 0; i < fbxPaths.Length; i++) {
+                var modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPaths[i]);
+                if (modelPrefab == null) {
+                    Debug.LogWarning($"Could not find model at path: {fbxPaths[i]}");
+                    continue;
+                }
+
+                float angle = i * (360f / fbxPaths.Length) * Mathf.Deg2Rad;
+                Vector3 spawnPos = spawnCenter + new Vector3(Mathf.Cos(angle) * 12f, 0.5f, Mathf.Sin(angle) * 12f);
+                
+                UnityEngine.AI.NavMeshHit hit;
+                if (UnityEngine.AI.NavMesh.SamplePosition(spawnPos, out hit, 15f, UnityEngine.AI.NavMesh.AllAreas)) {
+                    spawnPos = hit.position;
+                }
+
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(modelPrefab);
+                go.name = activeNames[i];
+                go.transform.position = spawnPos;
+                go.transform.localScale = new Vector3(250f, 250f, 250f);
+
+                var anim = go.GetComponent<Animator>();
+                if (anim == null) anim = go.AddComponent<Animator>();
+                anim.runtimeAnimatorController = controller;
+
+                var agent = go.GetComponent<UnityEngine.AI.NavMeshAgent>();
+                if (agent == null) agent = go.AddComponent<UnityEngine.AI.NavMeshAgent>();
+                agent.speed = 3.8f;
+                agent.stoppingDistance = 2.5f;
+
+                var col = go.GetComponent<CapsuleCollider>();
+                if (col == null) col = go.AddComponent<CapsuleCollider>();
+                col.center = new Vector3(0, 0.0036f, 0); 
+                col.height = 0.0072f;
+                col.radius = 0.0016f;
+
+                var rb = go.GetComponent<Rigidbody>();
+                if (rb == null) rb = go.AddComponent<Rigidbody>();
+                rb.isKinematic = true;
+
+                var ai = go.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>();
+                if (ai == null) ai = go.AddComponent<TheAlchemistsCrypt.AI.ZombieAI>();
+
+                Undo.RegisterCreatedObjectUndo(go, $"Spawn {activeNames[i]}");
+            }
+
+            // --- SPAWN THREE SHOWCASE STATIC MUMMIES (AT 6 UNITS DISTANCE - SAFE FOR INSPECTION) ---
+            string[] showcaseNames = { "Mummy_Base_Showcase", "Mummy_PBR_Showcase", "Mummy_Shaded_Showcase" };
+            for (int i = 0; i < fbxPaths.Length; i++) {
+                var modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPaths[i]);
+                if (modelPrefab == null) continue;
+
+                // Position offset so they don't block the player path directly but stand ready for visual test
+                float angle = (i * (360f / fbxPaths.Length) + 60f) * Mathf.Deg2Rad;
+                Vector3 spawnPos = spawnCenter + new Vector3(Mathf.Cos(angle) * 6f, 0.5f, Mathf.Sin(angle) * 6f);
+                
+                UnityEngine.AI.NavMeshHit hit;
+                if (UnityEngine.AI.NavMesh.SamplePosition(spawnPos, out hit, 15f, UnityEngine.AI.NavMesh.AllAreas)) {
+                    spawnPos = hit.position;
+                }
+
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(modelPrefab);
+                go.name = showcaseNames[i];
+                go.transform.position = spawnPos;
+                go.transform.localScale = new Vector3(250f, 250f, 250f);
+
+                var anim = go.GetComponent<Animator>();
+                if (anim == null) anim = go.AddComponent<Animator>();
+                anim.runtimeAnimatorController = controller;
+
+                // Add standard colliders so we don't fall through the floor, but NO ZombieAI script!
+                var col = go.GetComponent<CapsuleCollider>();
+                if (col == null) col = go.AddComponent<CapsuleCollider>();
+                col.center = new Vector3(0, 0.0036f, 0); 
+                col.height = 0.0072f;
+                col.radius = 0.0016f;
+
+                var rb = go.GetComponent<Rigidbody>();
+                if (rb == null) rb = go.AddComponent<Rigidbody>();
+                rb.isKinematic = true;
+
+                Undo.RegisterCreatedObjectUndo(go, $"Spawn {showcaseNames[i]}");
+            }
+
+            Debug.Log("Mummy Setup Complete! Purged old. 3 active AI mummies and 3 static showcase mummies spawned close to player spawn.");
         }
 
         private bool HasState(UnityEditor.Animations.AnimatorStateMachine sm, string n) {
@@ -90,9 +186,9 @@ namespace TheAlchemistsCrypt.Editor
             // AGGRESSIVE PURGE OF CONFLICTING OBJECTS
             var all = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
             foreach (var go in all) {
-                if (go == null) continue; // Skip if already destroyed
+                if (go == null) continue; 
                 try {
-                    if (go.name.Contains("Player_Copy") || go.name.Contains("MobileHUD") || go.name.Contains("P_LPSP_UI_Canvas")) {
+                    if (go.name.Contains("Player_Copy") || go.name.Contains("MobileHUD") || go.name.Contains("P_LPSP_UI_Canvas") || go.name.ToLower().StartsWith("mummy")) {
                         DestroyImmediate(go);
                     }
                 } catch { /* Ignore destroyed access */ }
@@ -112,13 +208,12 @@ namespace TheAlchemistsCrypt.Editor
                 AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/realistic_hd_date_palm_2178.glb"),
                 AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/realistic_hd_date_palm_378.glb")
             };
-            var zombie = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/TestZombie.prefab");
             var crate = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/crate.glb");
             var barrel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/barrel.glb");
             
             // Materials
             Material wallMat = CreateLit(new Color(0.92f, 0.85f, 0.7f), 4f, "desert_sand_normal.png");
-            Material floorMat = CreateLit(new Color(0.9f, 0.8f, 0.6f), gridSize * 2); // No normal map for floor to avoid hieroglyphs
+            Material floorMat = CreateLit(new Color(0.9f, 0.8f, 0.6f), gridSize * 2); 
             Material woodMat = CreateLit(new Color(0.25f, 0.15f, 0.08f), 1f);
             Material holeMat = CreateLit(new Color(0.05f, 0.03f, 0.01f), 1f);
 
@@ -145,7 +240,10 @@ namespace TheAlchemistsCrypt.Editor
                             BuildHouse(root.transform, pos, wallMat, woodMat, holeMat, crate, barrel);
                         } else {
                             PlacePlaza(root.transform, pos, trees);
-                            if (Random.value > 0.9f && zombie) SpawnZombie(zombie, root.transform, pos);
+                            // Clean up robotic/zombie enemy spawning, spawning beautiful themed active mummies instead!
+                            if (Random.value > 0.92f) {
+                                SpawnMummyAI(root, pos);
+                            }
                         }
                     }
                     currentZ += block + streetZ;
@@ -156,13 +254,53 @@ namespace TheAlchemistsCrypt.Editor
             var surface = root.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.Children;
             surface.useGeometry = UnityEngine.AI.NavMeshCollectGeometry.RenderMeshes;
-            // Optimize for large cities
             surface.overrideVoxelSize = true;
             surface.voxelSize = 0.2f; 
             surface.BuildNavMesh();
 
             FixPlayerAndWeapons();
             StaticBatchingUtility.Combine(root);
+        }
+
+        private void SpawnMummyAI(GameObject parent, Vector3 pos)
+        {
+            string[] fbxPaths = {
+                "Assets/Mummy_Assets/base.fbx",
+                "Assets/Mummy_Assets/base_basic_pbr.fbx",
+                "Assets/Mummy_Assets/base_basic_shaded.fbx"
+            };
+            string path = fbxPaths[Random.Range(0, fbxPaths.Length)];
+            var modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (modelPrefab == null) return;
+
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(modelPrefab, parent.transform);
+            go.name = "Mummy_Enemy";
+            go.transform.position = pos + Vector3.up;
+            go.transform.localScale = new Vector3(250f, 250f, 250f);
+
+            var anim = go.GetComponent<Animator>();
+            if (anim == null) anim = go.AddComponent<Animator>();
+            string controllerPath = "Assets/Mummy_Assets/MummyTestController.controller";
+            var controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(controllerPath);
+            if (controller != null) anim.runtimeAnimatorController = controller;
+
+            var agent = go.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (agent == null) agent = go.AddComponent<UnityEngine.AI.NavMeshAgent>();
+            agent.speed = 3.8f;
+            agent.stoppingDistance = 2.5f;
+
+            var col = go.GetComponent<CapsuleCollider>();
+            if (col == null) col = go.AddComponent<CapsuleCollider>();
+            col.center = new Vector3(0, 0.0036f, 0); 
+            col.height = 0.0072f;
+            col.radius = 0.0016f;
+
+            var rb = go.GetComponent<Rigidbody>();
+            if (rb == null) rb = go.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+
+            var ai = go.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>();
+            if (ai == null) ai = go.AddComponent<TheAlchemistsCrypt.AI.ZombieAI>();
         }
 
         private void SetupEnvironment()
@@ -178,21 +316,19 @@ namespace TheAlchemistsCrypt.Editor
                 if (l) { l.color = new Color(1, 0.95f, 0.85f); l.intensity = 1.3f; }
             }
 
-            // Pyramids Glow Visibility - CRANKED UP
             var pyramids = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
             foreach (var p in pyramids) {
                 if (p.name.ToLower().Contains("pyramid")) {
-                    p.transform.localScale *= 1.5f; // Scale up for visibility
+                    p.transform.localScale *= 1.5f; 
                     foreach (var r in p.GetComponentsInChildren<Renderer>()) {
                         foreach (var m in r.materials) {
-                            m.SetColor("_EmissionColor", new Color(1f, 0.9f, 0.5f) * 4.0f); // Stronger glow
+                            m.SetColor("_EmissionColor", new Color(1f, 0.9f, 0.5f) * 4.0f); 
                             m.EnableKeyword("_EMISSION");
                         }
                     }
                 }
             }
         }
-
 
         private void BuildHouse(Transform parent, Vector3 pos, Material wall, Material wood, Material hole, GameObject crate, GameObject barrel)
         {
@@ -207,28 +343,24 @@ namespace TheAlchemistsCrypt.Editor
             body.transform.localScale = new Vector3(20, height, 20);
             body.GetComponent<Renderer>().sharedMaterial = wall;
 
-            // Recessed Windows - Deeper interior feel
             for (int i = 0; i < 4; i++) {
                 float rot = i * 90f;
                 var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 win.transform.SetParent(body.transform);
-                win.transform.localScale = new Vector3(0.18f, 0.22f, 0.15f); // Slightly thicker/deeper
+                win.transform.localScale = new Vector3(0.18f, 0.22f, 0.15f); 
                 win.GetComponent<Renderer>().sharedMaterial = hole;
                 DestroyImmediate(win.GetComponent<Collider>());
                 float rad = rot * Mathf.Deg2Rad;
-                // Move further in: 0.45f instead of 0.485f
                 win.transform.localPosition = new Vector3(Mathf.Cos(rad) * 0.45f, 0.3f, Mathf.Sin(rad) * 0.45f);
                 win.transform.localRotation = Quaternion.Euler(0, -rot + 90, 0);
             }
 
-            // Door
             var door = GameObject.CreatePrimitive(PrimitiveType.Cube);
             door.transform.SetParent(h.transform);
             door.transform.localPosition = new Vector3(0, 4, 10.1f);
             door.transform.localScale = new Vector3(6, 8, 0.2f);
             door.GetComponent<Renderer>().sharedMaterial = wood;
 
-            // Props
             if (Random.value > 0.5f) {
                 if (crate) InstantiateProp(crate, pos + new Vector3(12, 0, 8), h.transform);
                 if (barrel) InstantiateProp(barrel, pos + new Vector3(12, 0, 11), h.transform);
@@ -252,14 +384,6 @@ namespace TheAlchemistsCrypt.Editor
                 var t = (GameObject)PrefabUtility.InstantiatePrefab(trees[Random.Range(0, trees.Length)], p.transform);
                 t.transform.localScale = Vector3.one * 8f; t.transform.rotation = Quaternion.Euler(-90, 0, 0);
             }
-        }
-
-        private void SpawnZombie(GameObject prefab, Transform parent, Vector3 pos)
-        {
-            var z = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-            z.transform.position = pos + Vector3.up; z.SetActive(true);
-            if (z.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>() == null)
-                z.AddComponent<TheAlchemistsCrypt.AI.ZombieAI>();
         }
 
         private void FixPlayerAndWeapons()
