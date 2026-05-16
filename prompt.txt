@@ -1,10 +1,4 @@
-### Files to provide:
-1. Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Code/Character/Character.cs
-2. Assets/Scripts/UI/MobileHUDButtons.cs
-3. Assets/Scripts/Input/MobileInputManager.cs
-4. Assets/Joystick Pack/Scripts/Base/Joystick.cs
-
-### Prompt:
+### PROMPT INSTRUCTIONS ###
 I am building a mobile FPS in Unity using the 'Low Poly Shooter Pack' by Infima Games. I have implemented a Mobile HUD with a Joystick for movement and a Swipe Zone for camera 'look' control.
 
 **Current Issues:**
@@ -13,3 +7,1260 @@ I am building a mobile FPS in Unity using the 'Low Poly Shooter Pack' by Infima 
 3. I need to ensure that when a touch is active, all desktop/keyboard inputs are completely ignored to prevent drift and erratic behavior.
 
 Please analyze these files and provide a clean, production-ready refactor for 'Character.cs' and 'MobileHUDButtons.cs' that guarantees smooth movement and look transitions on mobile devices.
+
+### FILE CONTENTS ###
+
+--- FILE: Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Code/Character/Character.cs ---
+// Copyright 2021, Infima Games. All Rights Reserved.
+
+using System;
+using UnityEngine;
+using System.Collections;
+using UnityEngine.InputSystem;
+
+namespace InfimaGames.LowPolyShooterPack
+{
+	/// <summary>
+	/// Main Character Component. This component handles the most important functions of the character, and interfaces
+	/// with basically every part of the asset, it is the hub where it all converges.
+	/// </summary>
+	[RequireComponent(typeof(CharacterKinematics))]
+	public sealed class Character : CharacterBehaviour
+	{
+		#region FIELDS SERIALIZED
+
+		[Header("Inventory")]
+		
+		[Tooltip("Inventory.")]
+		[SerializeField]
+		private InventoryBehaviour inventory;
+
+		[Header("Cameras")]
+
+		[Tooltip("Normal Camera.")]
+		[SerializeField]
+		private Camera cameraWorld;
+
+		[Header("Animation")]
+
+		[Tooltip("Determines how smooth the locomotion blendspace is.")]
+		[SerializeField]
+		private float dampTimeLocomotion = 0.15f;
+
+		[Tooltip("How smoothly we play aiming transitions. Beware that this affects lots of things!")]
+		[SerializeField]
+		private float dampTimeAiming = 0.3f;
+		
+		[Header("Animation Procedural")]
+		
+		[Tooltip("Character Animator.")]
+		[SerializeField]
+		private Animator characterAnimator;
+
+		#endregion
+
+		#region FIELDS
+
+		/// <summary>
+		/// True if the character is aiming.
+		/// </summary>
+		private bool aiming;
+		/// <summary>
+		/// True if the character is running.
+		/// </summary>
+		private bool running;
+		/// <summary>
+		/// True if the character has its weapon holstered.
+		/// </summary>
+		private bool holstered;
+		
+		/// <summary>
+		/// Last Time.time at which we shot.
+		/// </summary>
+		private float lastShotTime;
+		
+		/// <summary>
+		/// Overlay Layer Index. Useful for playing things like firing animations.
+		/// </summary>
+		private int layerOverlay;
+		/// <summary>
+		/// Holster Layer Index. Used to play holster animations.
+		/// </summary>
+		private int layerHolster;
+		/// <summary>
+		/// Actions Layer Index. Used to play actions like reloading.
+		/// </summary>
+		private int layerActions;
+
+		/// <summary>
+		/// Character Kinematics. Handles all the IK stuff.
+		/// </summary>
+		private CharacterKinematics characterKinematics;
+		
+		/// <summary>
+		/// The currently equipped weapon.
+		/// </summary>
+		private WeaponBehaviour equippedWeapon;
+		/// <summary>
+		/// The equipped weapon's attachment manager.
+		/// </summary>
+		private WeaponAttachmentManagerBehaviour weaponAttachmentManager;
+		
+		/// <summary>
+		/// The scope equipped on the character's weapon.
+		/// </summary>
+		private ScopeBehaviour equippedWeaponScope;
+		/// <summary>
+		/// The magazine equipped on the character's weapon.
+		/// </summary>
+		private MagazineBehaviour equippedWeaponMagazine;
+		
+		/// <summary>
+		/// True if the character is reloading.
+		/// </summary>
+		private bool reloading;
+		
+		/// <summary>
+		/// True if the character is inspecting its weapon.
+		/// </summary>
+		private bool inspecting;
+
+		/// <summary>
+		/// True if the character is in the middle of holstering a weapon.
+		/// </summary>
+		private bool holstering;
+
+		/// <summary>
+		/// Movement Axis Values.
+		/// </summary>
+		private Vector2 axisMovement;
+		/// <summary>
+		/// Look Axis Values.
+		/// </summary>
+		private Vector2 axisLook;
+		/// <summary>
+		/// True if the player is holding the aiming button.
+		/// </summary>
+		private bool holdingButtonAim;
+		/// <summary>
+		/// True if the player is holding the running button.
+		/// </summary>
+		private bool holdingButtonRun;
+		/// <summary>
+		/// True if the player is holding the firing button.
+		/// </summary>
+		private bool holdingButtonFire;
+
+		/// <summary>
+		/// If true, the tutorial text should be visible on screen.
+		/// </summary>
+		private bool tutorialTextVisible;
+
+		/// <summary>
+		/// True if the game cursor is locked! Used when pressing "Escape" to allow developers to more easily access the editor.
+		/// </summary>
+		private bool cursorLocked;
+
+		#endregion
+
+		#region CONSTANTS
+
+		/// <summary>
+		/// Aiming Alpha Value.
+		/// </summary>
+		private static readonly int HashAimingAlpha = Animator.StringToHash("Aiming");
+
+		/// <summary>
+		/// Hashed "Movement".
+		/// </summary>
+		private static readonly int HashMovement = Animator.StringToHash("Movement");
+
+		#endregion
+
+		#region UNITY
+
+		protected override void Awake()
+		{
+			#region Lock Cursor
+
+			//Always make sure that our cursor is locked when the game starts!
+			cursorLocked = true;
+			//Update the cursor's state.
+			UpdateCursorState();
+
+			#endregion
+
+			//Cache the CharacterKinematics component.
+			characterKinematics = GetComponent<CharacterKinematics>();
+
+			//Initialize Inventory.
+			inventory.Init();
+
+			//Refresh!
+			RefreshWeaponSetup();
+		}
+		protected override void Start()
+		{
+			//Cache a reference to the holster layer's index.
+			layerHolster = characterAnimator.GetLayerIndex("Layer Holster");
+			//Cache a reference to the action layer's index.
+			layerActions = characterAnimator.GetLayerIndex("Layer Actions");
+			//Cache a reference to the overlay layer's index.
+			layerOverlay = characterAnimator.GetLayerIndex("Layer Overlay");
+		}
+
+		protected override void Update()
+		{
+            // --- HACKATHON MOBILE & DESKTOP FAIL-SAFE INJECTION ---
+            bool mobileFiring = false, mobileAiming = false, mobileRunning = false;
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+            {
+                var mob = TheAlchemistsCrypt.Input.MobileInputManager.Instance;
+                mobileFiring = mob.IsFiring;
+                mobileAiming = mob.IsAiming;
+                mobileRunning = mob.IsSprinting;
+                
+                if (mob.IsSwappingWeapon)
+                {
+                    if (inventory != null) StartCoroutine(Equip(inventory.GetNextIndex()));
+                    mob.IsSwappingWeapon = false;
+                }
+
+                if (mob.IsReloading)
+                {
+                    if (CanReload()) PlayReloadAnimation();
+                    mob.IsReloading = false;
+                }
+            }
+
+            // Combine Mobile and Desktop (Editor-friendly)
+            holdingButtonFire = mobileFiring;
+            holdingButtonAim = mobileAiming;
+            holdingButtonRun = mobileRunning;
+
+            if (!Application.isMobilePlatform || Application.isEditor)
+            {
+                if (Mouse.current != null)
+                {
+                    if (Mouse.current.leftButton.isPressed) holdingButtonFire = true;
+                    if (Mouse.current.rightButton.isPressed) holdingButtonAim = true;
+                }
+                if (Keyboard.current != null)
+                {
+                    if (Keyboard.current.leftShiftKey.isPressed) holdingButtonRun = true;
+                    
+                    if (Keyboard.current.rKey.wasPressedThisFrame && CanReload()) PlayReloadAnimation();
+                    if (Keyboard.current.qKey.wasPressedThisFrame && inventory != null) 
+                        StartCoroutine(Equip(inventory.GetNextIndex()));
+                }
+            }
+            // ----------------------------------
+
+			//Match Aim.
+			aiming = holdingButtonAim && CanAim();
+			//Match Run.
+			running = holdingButtonRun && CanRun();
+
+			//Holding the firing button.
+			if (holdingButtonFire)
+			{
+				//Check.
+				bool isPunching = equippedWeapon.GetComponent<PunchCombat>() != null;
+                bool canFire = CanPlayAnimationFire() && (equippedWeapon.HasAmmunition() || isPunching);
+				if (canFire && (equippedWeapon.IsAutomatic() || isPunching))
+				{
+					//Has fire rate passed.
+					if (Time.time - lastShotTime > 60.0f / (isPunching ? 120.0f : equippedWeapon.GetRateOfFire()))
+						Fire();
+				}
+                else if (canFire && !equippedWeapon.IsAutomatic())
+                {
+                    // Semi-auto logic (Pistol)
+                    bool triggerDown = false;
+                    if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+                    {
+                        if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed)
+                        {
+                            triggerDown = true;
+                            TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed = false; // Consume
+                        }
+                    }
+                    if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame) triggerDown = true;
+
+                    if (triggerDown && Time.time - lastShotTime > 60.0f / equippedWeapon.GetRateOfFire())
+                        Fire();
+                }
+			}
+
+			//Update Animator.
+			UpdateAnimator();
+		}
+
+		protected override void LateUpdate()
+		{
+			//We need a weapon for this!
+			if (equippedWeapon == null)
+				return;
+
+			//Weapons without a scope should not be a thing! Ironsights are a scope too!
+			if (equippedWeaponScope == null)
+				return;
+			
+			//Make sure that we have a kinematics component!
+			if(characterKinematics != null)
+			{
+				//Compute.
+				characterKinematics.Compute();
+			}
+		}
+		
+		#endregion
+
+		#region GETTERS
+
+		public override Camera GetCameraWorld() => cameraWorld;
+
+		public override InventoryBehaviour GetInventory() => inventory;
+		
+		public override bool IsCrosshairVisible() => !aiming && !holstered;
+		public override bool IsRunning() 
+		{
+			if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSprinting)
+				return true;
+			return running;
+		}
+		
+		public override bool IsAiming() => aiming;
+		public override bool IsCursorLocked() => cursorLocked;
+		
+		public override bool IsTutorialTextVisible() => tutorialTextVisible;
+		
+		public override Vector2 GetInputMovement()
+		{
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+            {
+                axisMovement = Vector2.zero; 
+                return TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
+            }
+            
+            // Standard Desktop Logic
+            Vector2 move = axisMovement;
+            axisMovement = Vector2.zero;
+			return move;
+		}
+
+		public override Vector2 GetInputLook()
+		{
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput.sqrMagnitude > 0.001f)
+            {
+                Vector2 mobileLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.ConsumeLook();
+                return mobileLook;
+            }
+
+            // Standard Desktop Logic
+            Vector2 look = axisLook;
+            axisLook = Vector2.zero;
+			return look;
+		}
+
+		#endregion
+
+		#region METHODS
+
+		/// <summary>
+		/// Updates all the animator properties for this frame.
+		/// </summary>
+		private void UpdateAnimator()
+		{
+			//Movement Value. This value affects absolute movement. Aiming movement uses this, as opposed to per-axis movement.
+			characterAnimator.SetFloat(HashMovement, Mathf.Clamp01(Mathf.Abs(axisMovement.x) + Mathf.Abs(axisMovement.y)), dampTimeLocomotion, Time.deltaTime);
+			
+			//Update the aiming value, but use interpolation. This makes sure that things like firing can transition properly.
+			characterAnimator.SetFloat(HashAimingAlpha, Convert.ToSingle(aiming), 0.25f / 1.0f * dampTimeAiming, Time.deltaTime);
+
+			//Update Animator Aiming.
+			const string boolNameAim = "Aim";
+			characterAnimator.SetBool(boolNameAim, aiming);
+			
+			//Update Animator Running.
+			const string boolNameRun = "Running";
+			characterAnimator.SetBool(boolNameRun, running);
+		}
+		
+		/// <summary>
+		/// Plays the inspect animation.
+		/// </summary>
+		private void Inspect()
+		{
+			//State.
+			inspecting = true;
+			//Play.
+			characterAnimator.CrossFade("Inspect", 0.0f, layerActions, 0);
+		}
+		
+		/// <summary>
+		/// Fires the character's weapon.
+		/// </summary>
+		private void Fire()
+		{
+			//Save the shot time, so we can calculate the fire rate correctly.
+			lastShotTime = Time.time;
+			
+			// --- HACKATHON PUNCH INJECTION ---
+			var punch = equippedWeapon.GetComponent<PunchCombat>();
+			if (punch != null)
+			{
+				punch.Punch();
+			}
+			else
+			{
+				//Fire the weapon! Make sure that we also pass the scope's spread multiplier if we're aiming.
+				equippedWeapon.Fire();
+			}
+			// ----------------------------------
+
+			//Play firing animation.
+			const string stateName = "Fire";
+			characterAnimator.CrossFade(stateName, 0.05f, layerOverlay, 0);
+		}
+
+		private void PlayReloadAnimation()
+		{
+			#region Animation
+
+			//Get the name of the animation state to play, which depends on weapon settings, and ammunition!
+			string stateName = equippedWeapon.HasAmmunition() ? "Reload" : "Reload Empty";
+			//Play the animation state!
+			characterAnimator.Play(stateName, layerActions, 0.0f);
+
+			//Set.
+			reloading = true;
+
+			#endregion
+
+			//Reload.
+			equippedWeapon.Reload();
+		}
+
+		/// <summary>
+		/// Equip Weapon Coroutine.
+		/// </summary>
+		private IEnumerator Equip(int index = 0)
+		{
+			//Only if we're not holstered, holster. If we are already, we don't need to wait.
+			if(!holstered)
+			{
+				//Holster.
+				SetHolstered(holstering = true);
+				//Wait.
+				yield return new WaitUntil(() => holstering == false);
+			}
+			//Unholster. We do this just in case we were holstered.
+			SetHolstered(false);
+			//Play Unholster Animation.
+			characterAnimator.Play("Unholster", layerHolster, 0);
+			
+			//Equip The New Weapon.
+			inventory.Equip(index);
+			//Refresh.
+			RefreshWeaponSetup();
+		}
+
+		/// <summary>
+		/// Refresh all weapon things to make sure we're all set up!
+		/// </summary>
+		private void RefreshWeaponSetup()
+		{
+			//Make sure we have a weapon. We don't want errors!
+			if ((equippedWeapon = inventory.GetEquipped()) == null)
+				return;
+			
+			//Update Animator Controller. We do this to update all animations to a specific weapon's set.
+			characterAnimator.runtimeAnimatorController = equippedWeapon.GetAnimatorController();
+			
+			//Cache the weapon attachment manager.
+			weaponAttachmentManager = equippedWeapon.GetAttachmentManager();
+			//Cache the scope.
+			equippedWeaponScope = weaponAttachmentManager.GetEquippedScope();
+			//Cache the magazine.
+			equippedWeaponMagazine = weaponAttachmentManager.GetEquippedMagazine();
+		}
+
+		/// <summary>
+		/// Updates the cursor state based on the value of cursorLocked.
+		/// </summary>
+		private void UpdateCursorState()
+		{
+			//Update lock state.
+			Cursor.lockState = cursorLocked ? CursorLockMode.Locked : CursorLockMode.None;
+			//Update visible state.
+			Cursor.visible = !cursorLocked;
+		}
+
+		#endregion
+
+		#region INPUT
+
+		/// <summary>
+		/// OnMove.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnMove(InputValue value)
+		{
+			//Save the movement input.
+			axisMovement = value.Get<Vector2>();
+		}
+
+		/// <summary>
+		/// OnLook.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnLook(InputValue value)
+		{
+			//Save the look input.
+			axisLook = value.Get<Vector2>();
+		}
+
+		/// <summary>
+		/// OnJump.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnJump(InputValue value)
+		{
+			//Don't jump if we're running.
+			if (running)
+				return;
+			
+			// Set the jumping state in the MobileInputManager so Movement.cs can process it
+			if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+			{
+				TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetJumping(value.isPressed);
+			}
+		}
+
+		/// <summary>
+		/// OnInventoryNext.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnInventoryNext(InputValue value)
+		{
+			//Next weapon!
+			StartCoroutine(Equip(inventory.GetNextIndex()));
+		}
+
+		/// <summary>
+		/// OnInventoryPrevious.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnInventoryPrevious(InputValue value)
+		{
+			//Previous weapon!
+			StartCoroutine(Equip(inventory.GetLastIndex()));
+		}
+
+		/// <summary>
+		/// OnHolster.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnHolster(InputValue value)
+		{
+			//Set holstered!
+			SetHolstered(!holstered);
+		}
+
+		/// <summary>
+		/// OnAim.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnAim(InputValue value)
+		{
+			//Hold.
+			holdingButtonAim = value.isPressed;
+		}
+
+		/// <summary>
+		/// OnFire.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnFire(InputValue value)
+		{
+			//Hold.
+			holdingButtonFire = value.isPressed;
+
+			//Check.
+			if (holdingButtonFire && CanPlayAnimationFire())
+			{
+				//Fire!
+				if(!equippedWeapon.IsAutomatic())
+					Fire();
+			}
+		}
+
+		/// <summary>
+		/// OnRun.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnRun(InputValue value)
+		{
+			//Hold.
+			holdingButtonRun = value.isPressed;
+		}
+
+		/// <summary>
+		/// OnReload.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnReload(InputValue value)
+		{
+			//Reload.
+			if (CanReload())
+				PlayReloadAnimation();
+		}
+
+		/// <summary>
+		/// OnInspect.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnInspect(InputValue value)
+		{
+			//Inspect.
+			if (CanInspect())
+				Inspect();
+		}
+
+		/// <summary>
+		/// OnLockCursor.
+		/// </summary>
+		/// <param name="value">Value.</param>
+		public void OnLockCursor(InputValue value)
+		{
+			//Flip the value!
+			cursorLocked = !cursorLocked;
+			//Update the cursor's state.
+			UpdateCursorState();
+		}
+
+		#endregion
+
+		#region ANIMATION
+
+		public override void EjectCasing()
+		{
+			//Eject casings.
+			if(equippedWeapon != null)
+				equippedWeapon.EjectCasing();
+		}
+
+		public override void FillAmmunition(int amount)
+		{
+			//Fill ammunition.
+			if(equippedWeapon != null)
+				equippedWeapon.FillAmmunition(amount);
+		}
+
+		public override void SetActiveMagazine(int active)
+		{
+			//Set active magazine.
+		}
+
+		public override void AnimationEndedReload()
+		{
+			//Reload finish.
+			reloading = false;
+		}
+
+		public override void AnimationEndedInspect()
+		{
+			//Inspect finish.
+			inspecting = false;
+		}
+
+		public override void AnimationEndedHolster()
+		{
+			//Holster finish.
+			holstering = false;
+		}
+
+		#endregion
+
+		#region HELPER METHODS
+
+		/// <summary>
+		/// Sets the value of holstered.
+		/// </summary>
+		private void SetHolstered(bool value = true)
+		{
+			//Set value.
+			holstered = value;
+			
+			//Update Animator.
+			const string boolName = "Holstered";
+			characterAnimator.SetBool(boolName, holstered);
+		}
+
+		/// <summary>
+		/// Returns true if the character can aim.
+		/// </summary>
+		private bool CanAim() => !reloading && !inspecting && !holstered && !holstering;
+		/// <summary>
+		/// Returns true if the character can run.
+		/// </summary>
+		private bool CanRun()
+        {
+            Vector2 move = GetInputMovement();
+            // Allow sprinting if there's any significant movement, even diagonal
+            return move.magnitude > 0.1f && move.y > -0.1f && !aiming && !inspecting && !reloading && !holstered && !holstering;
+        }
+
+		/// <summary>
+		/// Returns true if the character can inspect its weapon.
+		/// </summary>
+		private bool CanInspect() => !reloading && !inspecting && !aiming && !holstered && !holstering;
+		/// <summary>
+		/// Returns true if the character can reload its weapon.
+		/// </summary>
+		private bool CanReload() => !reloading && !inspecting && !aiming && !holstered && !holstering && (equippedWeapon != null && !equippedWeapon.IsFull());
+
+		/// <summary>
+		/// Returns true if the character can play the fire animation.
+		/// </summary>
+		private bool CanPlayAnimationFire() => !reloading && !inspecting && !holstered && !holstering;
+
+		#endregion
+	}
+}
+
+--- END OF FILE ---
+
+--- FILE: Assets/Scripts/UI/MobileHUDButtons.cs ---
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using System.Collections;
+
+namespace TheAlchemistsCrypt.UI
+{
+    public class MobileHUDButtons : MonoBehaviour
+    {
+        public static MobileHUDButtons Instance { get; private set; }
+
+        private Color goldColor = new Color(1f, 0.85f, 0.4f);
+        private Color darkColor = new Color(0.05f, 0.05f, 0.05f, 0.85f);
+        
+        private Sprite circleSprite;
+        private Sprite reloadIcon;
+        private Sprite fireIcon;
+        private Sprite swapIcon;
+        private Sprite sprintIcon;
+
+        private Text healthText;
+        private Text ammoText;
+
+        private void Awake()
+        {
+            Instance = this;
+            LoadSprites();
+            SetupCanvas();
+            BuildHUD();
+        }
+
+        private void LoadSprites()
+        {
+            // Use built-in knob for circle or try to find a resource
+            circleSprite = Resources.Load<Sprite>("UI/Circle"); 
+            #if UNITY_EDITOR
+            if (circleSprite == null) circleSprite = UnityEditor.AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+            #endif
+
+            reloadIcon = Resources.Load<Sprite>("UI/Icons/Inspiration/reload");
+            // User requested Assets/Resources/UI/Icons/icon_crouch.png for fire
+            fireIcon = Resources.Load<Sprite>("UI/Icons/icon_crouch");
+            if (fireIcon == null) fireIcon = Resources.Load<Sprite>("UI/Icons/icon_attack");
+            
+            swapIcon = Resources.Load<Sprite>("UI/Icons/icon_swap");
+            sprintIcon = Resources.Load<Sprite>("UI/Icons/icon_sprint");
+        }
+
+        private void SetupCanvas()
+        {
+            var canvas = GetComponent<Canvas>();
+            if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 999;
+            
+            var scaler = GetComponent<CanvasScaler>();
+            if (scaler == null) scaler = gameObject.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            if (GetComponent<GraphicRaycaster>() == null) gameObject.AddComponent<GraphicRaycaster>();
+        }
+
+        public void BuildHUD()
+        {
+            foreach (Transform t in transform) Destroy(t.gameObject);
+
+            var root = new GameObject("HUD_Root", typeof(RectTransform)).GetComponent<RectTransform>();
+            root.SetParent(transform, false);
+            root.anchorMin = Vector2.zero; root.anchorMax = Vector2.one;
+            root.offsetMin = root.offsetMax = Vector2.zero;
+
+            // 1. LOOK ZONE (Fullscreen but lower priority than buttons)
+            var lookZone = new GameObject("LookZone", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            lookZone.SetParent(root, false);
+            lookZone.anchorMin = new Vector2(0.5f, 0f); lookZone.anchorMax = Vector2.one;
+            lookZone.offsetMin = lookZone.offsetMax = Vector2.zero;
+            lookZone.GetComponent<Image>().color = new Color(0, 0, 0, 0.01f);
+            lookZone.gameObject.AddComponent<LookSwipeZone>();
+
+            // 2. MOVEMENT ZONE
+            var moveZone = new GameObject("MoveZone", typeof(RectTransform)).GetComponent<RectTransform>();
+            moveZone.SetParent(root, false);
+            moveZone.anchorMin = Vector2.zero; moveZone.anchorMax = new Vector2(0.5f, 1f);
+            moveZone.offsetMin = moveZone.offsetMax = Vector2.zero;
+
+            // Variable Joystick
+            var joyPrefab = Resources.Load<GameObject>("Joystick Pack/Prefabs/Variable Joystick");
+            #if UNITY_EDITOR
+            if (joyPrefab == null) joyPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Joystick Pack/Prefabs/Variable Joystick.prefab");
+            #endif
+
+            if (joyPrefab != null) {
+                var joyObj = Instantiate(joyPrefab, moveZone);
+                var jRect = joyObj.GetComponent<RectTransform>();
+                jRect.anchorMin = jRect.anchorMax = new Vector2(0.3f, 0.3f);
+                jRect.anchoredPosition = Vector2.zero;
+                jRect.sizeDelta = new Vector2(450, 450); // Bigger joystick
+                
+                var j = joyObj.GetComponent<Joystick>();
+                if (j != null) StartCoroutine(JoystickLoop(j));
+            }
+
+            // 3. BUTTONS (CLUSTERED BOTTOM RIGHT)
+            var btnContainer = new GameObject("ButtonContainer", typeof(RectTransform)).GetComponent<RectTransform>();
+            btnContainer.SetParent(root, false);
+            btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0); // BOTTOM RIGHT
+            btnContainer.anchoredPosition = Vector2.zero;
+
+            // Use white icons on black semi-transparent circular buttons
+            // Fire (Main)
+            CreateButton(btnContainer, "FIRE", new Vector2(-300, 300), 300, fireIcon, Color.white, () => SetFire(true), () => SetFire(false));
+            // Reload
+            CreateButton(btnContainer, "RELOAD", new Vector2(-650, 150), 180, reloadIcon, Color.white, () => Reload());
+            // Swap
+            CreateButton(btnContainer, "SWAP", new Vector2(-450, 600), 180, swapIcon, Color.white, () => Swap());
+            // Sprint
+            CreateButton(btnContainer, "SPRINT", new Vector2(-650, 450), 180, sprintIcon, Color.white, () => SetSprint(true), () => SetSprint(false));
+
+            // Hide debug labels from asset pack
+            HideDebugLabels();
+
+            // 4. STATS (TOP LEFT)
+            var stats = new GameObject("Stats", typeof(RectTransform)).GetComponent<RectTransform>();
+            stats.SetParent(root, false);
+            stats.anchorMin = stats.anchorMax = new Vector2(0, 1);
+            stats.anchoredPosition = new Vector2(100, -100);
+
+            healthText = CreateStatsText(stats, "Health", "100", Vector2.zero, new Color(1, 0.4f, 0.4f));
+
+            // Ensure look zone is below buttons for raycasting
+            lookZone.SetAsFirstSibling();
+        }
+
+        private void CreateButton(Transform p, string n, Vector2 pos, float s, Sprite icon, Color tint, System.Action onDown, System.Action onUp = null)
+        {
+            var go = new GameObject(n, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            go.SetParent(p, false);
+            go.anchoredPosition = pos;
+            go.sizeDelta = new Vector2(s, s);
+            
+            var img = go.GetComponent<Image>();
+            img.color = Color.white; // White button background
+            if (circleSprite) img.sprite = circleSprite;
+
+            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            iconGo.SetParent(go, false);
+            iconGo.sizeDelta = go.sizeDelta * 0.55f;
+            var iImg = iconGo.GetComponent<Image>();
+            iImg.color = Color.black; // Black icon
+            if (icon) iImg.sprite = icon;
+
+            var trigger = go.gameObject.AddComponent<EventTrigger>();
+            var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+            down.callback.AddListener((d) => { img.color = new Color(0.8f, 0.8f, 0.8f, 1f); onDown?.Invoke(); });
+            trigger.triggers.Add(down);
+            
+            var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+            up.callback.AddListener((d) => { img.color = Color.white; onUp?.Invoke(); });
+            trigger.triggers.Add(up);
+        }
+
+        private void HideDebugLabels()
+        {
+            // Find common debug labels in the P_LPSP_UI_Canvas and children
+            string[] names = { "Text Timescale", "Text Cursor Lock", "Text Tutorial", "Text Tutorial Text", "Text Tutorial Prompt", "Version Text", "Mouse Lock" };
+            foreach (var n in names)
+            {
+                var label = GameObject.Find(n);
+                if (label != null) label.SetActive(false);
+                
+                // Fallback: search by partial name in all objects
+                var all = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
+                foreach(var go in all) {
+                    if (go.name.Contains(n)) go.SetActive(false);
+                }
+            }
+        }
+
+        private Text CreateStatsText(Transform p, string n, string v, Vector2 pos, Color c)
+        {
+            var go = new GameObject(n, typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            go.SetParent(p, false);
+            go.anchorMin = go.anchorMax = new Vector2(0, 1);
+            go.pivot = new Vector2(0, 1); go.anchoredPosition = pos;
+            go.sizeDelta = new Vector2(500, 60);
+            var t = go.GetComponent<Text>();
+            t.text = $"{n.ToUpper()}: {v}";
+            t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            t.fontSize = 45; t.fontStyle = FontStyle.Bold; t.color = c;
+            return t;
+        }
+
+        private IEnumerator JoystickLoop(Joystick j)
+        {
+            while (true) {
+                if (j != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) {
+                    // Use Horizontal and Vertical directly to avoid any weirdness with Direction property
+                    Vector2 dir = new Vector2(j.Horizontal, j.Vertical);
+                    // If the joystick is behaving inverted, we can fix it here, but let's first ensure it's not a deadzone issue
+                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetMovement(dir);
+                }
+                yield return null;
+            }
+        }
+
+        private void SetFire(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetFiring(s);
+        private void SetSprint(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetSprinting(s);
+        private void Reload() {
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsReloading = true;
+        }
+        private void Swap() {
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon = true;
+        }
+
+        public void UpdateHealth(float h) { if (healthText) healthText.text = $"HEALTH: {Mathf.CeilToInt(h)}"; }
+        public void UpdateAmmo(int c, int t) { if (ammoText) ammoText.text = $"AMMO: {c} / {t}"; }
+    }
+
+    public class LookSwipeZone : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler
+    {
+        private int pointerId = -1;
+        public float sensitivity = 3.5f; // Buffed for smoother swipe
+
+        public void OnPointerDown(PointerEventData data)
+        {
+            // Allow swiping on the right 70% of the screen to avoid joystick conflict
+            if (pointerId == -1 && data.position.x >= Screen.width * 0.3f) {
+                pointerId = data.pointerId;
+            }
+        }
+
+        public void OnDrag(PointerEventData data)
+        {
+            if (data.pointerId != pointerId) return;
+            // Use pixels directly for more consistent movement across frame rates
+            Vector2 delta = data.delta;
+            // Sensitivity check
+            if (Mathf.Abs(delta.x) > 0.01f || Mathf.Abs(delta.y) > 0.01f)
+            {
+                Vector2 lookVel = delta * sensitivity * 0.12f;
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetLook(lookVel);
+            }
+        }
+
+        public void OnPointerUp(PointerEventData data)
+        {
+            if (data.pointerId == pointerId) {
+                pointerId = -1;
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetLook(Vector2.zero);
+            }
+        }
+    }
+}
+
+--- END OF FILE ---
+
+--- FILE: Assets/Scripts/Input/MobileInputManager.cs ---
+using UnityEngine;
+
+namespace TheAlchemistsCrypt.Input
+{
+    public class MobileInputManager : MonoBehaviour
+    {
+        public static MobileInputManager Instance;
+
+        [Header("Settings")]
+        [SerializeField] private float joystickDeadzone = 0.1f;
+        public bool InvertJoystickX = false;
+        public bool InvertJoystickY = false;
+        
+        // Output values
+        public Vector2 MovementInput { get; private set; }
+        public Vector2 LookInput { get; private set; }
+        public bool IsFiring { get; private set; }
+        public bool WasFiringPressed { get; set; } // Trigger for semi-auto
+        public bool IsAiming { get; private set; }
+        public bool IsJumping { get; set; }
+        public bool IsJumpHeld { get; private set; }
+        public float JumpStartTime { get; private set; }
+        public bool IsCrouching { get; set; }
+        public bool IsSprinting { get; set; }
+        public bool IsSwappingWeapon { get; set; }
+        public bool IsReloading { get; set; }
+
+        private void Awake()
+        {
+            Instance = this;
+            
+            // Auto-attach MobileHUDButtons
+            if (gameObject.GetComponent<TheAlchemistsCrypt.UI.MobileHUDButtons>() == null)
+            {
+                gameObject.AddComponent<TheAlchemistsCrypt.UI.MobileHUDButtons>();
+            }
+
+            // Auto-attach AtmosphereManager
+            if (gameObject.GetComponent<TheAlchemistsCrypt.Environment.AtmosphereManager>() == null)
+            {
+                gameObject.AddComponent<TheAlchemistsCrypt.Environment.AtmosphereManager>();
+            }
+
+            // Silence Depth Surface Warnings by ensuring Main Camera settings are mobile-friendly
+            var cam = Camera.main;
+            if (cam != null) {
+                #if UNITY_URP
+                // Universal Additional Camera Data can be adjusted here if needed
+                #endif
+            }
+        }
+
+        private void Update()
+        {
+        }
+
+        public void SetMovement(Vector2 input)
+        {
+            if (input.magnitude < joystickDeadzone)
+                MovementInput = Vector2.zero;
+            else
+            {
+                float x = InvertJoystickX ? -input.x : input.x;
+                float y = InvertJoystickY ? -input.y : input.y;
+                MovementInput = new Vector2(x, y);
+            }
+        }
+
+        public void SetLook(Vector2 input)
+        {
+            // Accumulate input so it's not lost between frames
+            LookInput += input;
+        }
+
+        public void ConsumeLook()
+        {
+            LookInput = Vector2.zero;
+        }
+
+        public void SetFiring(bool state)
+        {
+            if (state && !IsFiring) WasFiringPressed = true;
+            IsFiring = state;
+        }
+
+        public void SetAiming(bool state)
+        {
+            IsAiming = state;
+        }
+
+        public void SetJumping(bool state)
+        {
+            IsJumping = state;
+            IsJumpHeld = state;
+            if (state) JumpStartTime = Time.time;
+        }
+
+        public void SetCrouching(bool state)
+        {
+            IsCrouching = state;
+        }
+
+        public void SetSprinting(bool state)
+        {
+            IsSprinting = state;
+        }
+
+        public void SetSwappingWeapon()
+        {
+            IsSwappingWeapon = true;
+        }
+    }
+}
+
+--- END OF FILE ---
+
+--- FILE: Assets/Joystick Pack/Scripts/Base/Joystick.cs ---
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.EventSystems;
+
+public class Joystick : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
+{
+    public float Horizontal { get { return (snapX) ? SnapFloat(input.x, AxisOptions.Horizontal) : input.x; } }
+    public float Vertical { get { return (snapY) ? SnapFloat(input.y, AxisOptions.Vertical) : input.y; } }
+    public Vector2 Direction { get { return new Vector2(Horizontal, Vertical); } }
+
+    public float HandleRange
+    {
+        get { return handleRange; }
+        set { handleRange = Mathf.Abs(value); }
+    }
+
+    public float DeadZone
+    {
+        get { return deadZone; }
+        set { deadZone = Mathf.Abs(value); }
+    }
+
+    public AxisOptions AxisOptions { get { return AxisOptions; } set { axisOptions = value; } }
+    public bool SnapX { get { return snapX; } set { snapX = value; } }
+    public bool SnapY { get { return snapY; } set { snapY = value; } }
+
+    [SerializeField] private float handleRange = 1;
+    [SerializeField] private float deadZone = 0;
+    [SerializeField] private AxisOptions axisOptions = AxisOptions.Both;
+    [SerializeField] private bool snapX = false;
+    [SerializeField] private bool snapY = false;
+
+    [SerializeField] protected RectTransform background = null;
+    [SerializeField] private RectTransform handle = null;
+    private RectTransform baseRect = null;
+
+    private Canvas canvas;
+    private Camera cam;
+
+    private Vector2 input = Vector2.zero;
+
+    protected virtual void Start()
+    {
+        HandleRange = handleRange;
+        DeadZone = deadZone;
+        baseRect = GetComponent<RectTransform>();
+        canvas = GetComponentInParent<Canvas>();
+        if (canvas == null)
+            Debug.LogError("The Joystick is not placed inside a canvas");
+
+        Vector2 center = new Vector2(0.5f, 0.5f);
+        background.pivot = center;
+        handle.anchorMin = center;
+        handle.anchorMax = center;
+        handle.pivot = center;
+        handle.anchoredPosition = Vector2.zero;
+    }
+
+    public virtual void OnPointerDown(PointerEventData eventData)
+    {
+        OnDrag(eventData);
+    }
+
+    public void OnDrag(PointerEventData eventData)
+    {
+        cam = null;
+        if (canvas.renderMode == RenderMode.ScreenSpaceCamera)
+            cam = canvas.worldCamera;
+
+        Vector2 position = RectTransformUtility.WorldToScreenPoint(cam, background.position);
+        Vector2 radius = background.sizeDelta / 2;
+        input = (eventData.position - position) / (radius * canvas.scaleFactor);
+        FormatInput();
+        HandleInput(input.magnitude, input.normalized, radius, cam);
+        handle.anchoredPosition = input * radius * handleRange;
+    }
+
+    protected virtual void HandleInput(float magnitude, Vector2 normalised, Vector2 radius, Camera cam)
+    {
+        if (magnitude > deadZone)
+        {
+            if (magnitude > 1)
+                input = normalised;
+        }
+        else
+            input = Vector2.zero;
+    }
+
+    private void FormatInput()
+    {
+        if (axisOptions == AxisOptions.Horizontal)
+            input = new Vector2(input.x, 0f);
+        else if (axisOptions == AxisOptions.Vertical)
+            input = new Vector2(0f, input.y);
+    }
+
+    private float SnapFloat(float value, AxisOptions snapAxis)
+    {
+        if (value == 0)
+            return value;
+
+        if (axisOptions == AxisOptions.Both)
+        {
+            float angle = Vector2.Angle(input, Vector2.up);
+            if (snapAxis == AxisOptions.Horizontal)
+            {
+                if (angle < 22.5f || angle > 157.5f)
+                    return 0;
+                else
+                    return (value > 0) ? 1 : -1;
+            }
+            else if (snapAxis == AxisOptions.Vertical)
+            {
+                if (angle > 67.5f && angle < 112.5f)
+                    return 0;
+                else
+                    return (value > 0) ? 1 : -1;
+            }
+            return value;
+        }
+        else
+        {
+            if (value > 0)
+                return 1;
+            if (value < 0)
+                return -1;
+        }
+        return 0;
+    }
+
+    public virtual void OnPointerUp(PointerEventData eventData)
+    {
+        input = Vector2.zero;
+        handle.anchoredPosition = Vector2.zero;
+    }
+
+    protected Vector2 ScreenPointToAnchoredPosition(Vector2 screenPosition)
+    {
+        Vector2 localPoint = Vector2.zero;
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(baseRect, screenPosition, cam, out localPoint))
+        {
+            Vector2 pivotOffset = baseRect.pivot * baseRect.sizeDelta;
+            return localPoint - (background.anchorMax * baseRect.sizeDelta) + pivotOffset;
+        }
+        return Vector2.zero;
+    }
+}
+
+public enum AxisOptions { Both, Horizontal, Vertical }
+--- END OF FILE ---
+
