@@ -25,8 +25,61 @@ namespace TheAlchemistsCrypt.Editor
         {
             EditorGUILayout.HelpBox("V4.2 POLISHED: Glow Pyramids, Multi-Layered Floor, Purged Duplicates.", MessageType.Info);
             seed = EditorGUILayout.IntField("Seed", seed);
-            if (GUILayout.Button("▶ GENERATE POLISHED CITY", GUILayout.Height(50))) GeneratePolishedCity();
+            if (GUILayout.Button("▶ GENERATE POLISHED CITY", GUILayout.Height(40))) GeneratePolishedCity();
+            
+            EditorGUILayout.Space();
+            GUI.backgroundColor = Color.cyan;
+            if (GUILayout.Button("🧟 SETUP MUMMY ANIMATIONS & SCALES", GUILayout.Height(40))) SetupMummyAnimations();
+            GUI.backgroundColor = Color.white;
+            
             if (GUILayout.Button("🗑 CLEANUP", GUILayout.Height(30))) Purge();
+        }
+
+        private void SetupMummyAnimations()
+        {
+            // 1. Create/Update Controller
+            string controllerPath = "Assets/Mummy_Assets/MummyTestController.controller";
+            var controller = AssetDatabase.LoadAssetAtPath<UnityEditor.Animations.AnimatorController>(controllerPath);
+            if (controller == null) {
+                controller = UnityEditor.Animations.AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
+            }
+
+            var rootStateMachine = controller.layers[0].stateMachine;
+
+            // Helper to get clips
+            System.Func<string, AnimationClip> getClip = (p) => {
+                var assets = AssetDatabase.LoadAllAssetsAtPath(p);
+                foreach (var a in assets) if (a is AnimationClip && a.name.Contains("mixamo.com")) return (AnimationClip)a;
+                return null;
+            };
+
+            // Add states if they don't exist
+            var idle = getClip("Assets/Mummy_Assets/mummy_idle.fbx");
+            var walk = getClip("Assets/Mummy_Assets/mummy_walk.fbx");
+            var attack = getClip("Assets/Mummy_Assets/mummy_attack.fbx");
+
+            if (idle != null && !HasState(rootStateMachine, "Idle")) rootStateMachine.AddState("Idle").motion = idle;
+            if (walk != null && !HasState(rootStateMachine, "Walk")) rootStateMachine.AddState("Walk").motion = walk;
+            if (attack != null && !HasState(rootStateMachine, "Attack")) rootStateMachine.AddState("Attack").motion = attack;
+
+            // 2. Apply to scene mummies
+            string[] names = { "Mummy_Base_Test", "Mummy_PBR_Test", "Mummy_Shaded_Test" };
+            foreach (var n in names) {
+                var go = GameObject.Find(n);
+                if (go != null) {
+                    Undo.RecordObject(go.transform, "Scale Mummies");
+                    go.transform.localScale = new Vector3(100, 100, 100);
+                    var anim = go.GetComponent<Animator>();
+                    if (anim == null) anim = go.AddComponent<Animator>();
+                    anim.runtimeAnimatorController = controller;
+                }
+            }
+            Debug.Log("Mummy Setup Complete! Scales set to 100, Animator Controller updated with Idle, Walk, and Attack.");
+        }
+
+        private bool HasState(UnityEditor.Animations.AnimatorStateMachine sm, string n) {
+            foreach (var s in sm.states) if (s.state.name == n) return true;
+            return false;
         }
 
         private void Purge()

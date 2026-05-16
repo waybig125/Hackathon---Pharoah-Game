@@ -101,7 +101,10 @@ namespace TheAlchemistsCrypt.UI
                 var j = joyObj.GetComponent<Joystick>();
                 if (j != null) {
                     var vj = j as VariableJoystick;
-                    if (vj != null) vj.SetMode(JoystickType.Fixed); // Fixed stays visible
+                    if (vj != null) {
+                        vj.joystickType = JoystickType.Fixed;
+                        vj.SetMode(JoystickType.Fixed);
+                    }
                     
                     StartCoroutine(JoystickLoop(j));
                 }

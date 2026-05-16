@@ -1,16 +1,417 @@
-### PROMPT INSTRUCTIONS ###
-I am building a mobile FPS in Unity using the 'Low Poly Shooter Pack' by Infima Games. I have implemented a Mobile HUD with a Joystick for movement and a Swipe Zone for camera 'look' control.
+using UnityEngine;
 
-**Current Issues:**
-1. The Joystick movement often feels 'stuck' or unresponsive on mobile, likely due to conflicts with the package's internal input processing.
-2. The Swipe Zone camera movement stutters. We are using an accumulation pattern in 'MobileInputManager.cs' where 'LookInput += delta', and it is consumed by 'Character.cs' during 'GetInputLook'.
-3. I need to ensure that when a touch is active, all desktop/keyboard inputs are completely ignored to prevent drift and erratic behavior.
+namespace TheAlchemistsCrypt.Input
+{
+    public class MobileInputManager : MonoBehaviour
+    {
+        public static MobileInputManager Instance;
 
-Please analyze these files and provide a clean, production-ready refactor for 'Character.cs' and 'MobileHUDButtons.cs' that guarantees smooth movement and look transitions on mobile devices.
+        [Header("Settings")]
+        [SerializeField] private float joystickDeadzone = 0.1f;
+        public bool InvertJoystickX = false;
+        public bool InvertJoystickY = false;
+        
+        // Output values
+        public Vector2 MovementInput { get; private set; }
+        public Vector2 LookInput { get; private set; }
+        public bool IsTouchActive { get; private set; } // Track if a finger is on the look zone
+        public bool IsFiring { get; private set; }
+        public bool WasFiringPressed { get; set; } // Trigger for semi-auto
+        public bool IsAiming { get; private set; }
+        public bool IsJumping { get; set; }
+        public bool IsJumpHeld { get; private set; }
+        public float JumpStartTime { get; private set; }
+        public bool IsCrouching { get; set; }
+        public bool IsSprinting { get; set; }
+        public bool IsSwappingWeapon { get; set; }
+        public bool IsReloading { get; set; }
 
-### FILE CONTENTS ###
+        private void Awake()
+        {
+            Instance = this;
+            
+            // Auto-attach MobileHUDButtons
+            if (gameObject.GetComponent<TheAlchemistsCrypt.UI.MobileHUDButtons>() == null)
+            {
+                gameObject.AddComponent<TheAlchemistsCrypt.UI.MobileHUDButtons>();
+            }
 
---- FILE: Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Code/Character/Character.cs ---
+            // Auto-attach AtmosphereManager
+            if (gameObject.GetComponent<TheAlchemistsCrypt.Environment.AtmosphereManager>() == null)
+            {
+                gameObject.AddComponent<TheAlchemistsCrypt.Environment.AtmosphereManager>();
+            }
+
+            // Silence Depth Surface Warnings by ensuring Main Camera settings are mobile-friendly
+            var cam = Camera.main;
+            if (cam != null) {
+                #if UNITY_URP
+                // Universal Additional Camera Data can be adjusted here if needed
+                #endif
+            }
+        }
+
+        private void Update()
+        {
+            // Global check: if there are any touches on the screen, prioritize mobile input
+            // This prevents "desktop bleed" in the editor or on hybrid devices
+            bool touchDetected = UnityEngine.Input.touchCount > 0;
+            
+            // If we are in the editor, we also check if the joystick is being moved
+            #if UNITY_EDITOR
+            if (MovementInput.sqrMagnitude > 0.001f) touchDetected = true;
+            #endif
+            
+            IsTouchActive = touchDetected;
+        }
+
+        public void SetMovement(Vector2 input)
+        {
+            if (input.magnitude < joystickDeadzone)
+                MovementInput = Vector2.zero;
+            else
+            {
+                float x = InvertJoystickX ? -input.x : input.x;
+                float y = InvertJoystickY ? -input.y : input.y;
+                MovementInput = new Vector2(x, y);
+            }
+        }
+
+        public Vector2 GetMovement()
+        {
+            return MovementInput;
+        }
+
+        public void SetLook(Vector2 input)
+        {
+            // Accumulate input so it's not lost between frames
+            LookInput += input;
+        }
+
+        public Vector2 ConsumeLook()
+        {
+            Vector2 temp = LookInput;
+            LookInput = Vector2.zero;
+            return temp;
+        }
+
+        // Keep NotifyTouchActive for UI zones that want to force the state
+        public void NotifyTouchActive(bool active)
+        {
+            // We can combine this with the global count if needed, but the Update loop is more robust
+        }
+
+        public void SetFiring(bool state)
+        {
+            if (state && !IsFiring) WasFiringPressed = true;
+            IsFiring = state;
+        }
+
+        public void SetAiming(bool state)
+        {
+            IsAiming = state;
+        }
+
+        public void SetJumping(bool state)
+        {
+            IsJumping = state;
+            IsJumpHeld = state;
+            if (state) JumpStartTime = Time.time;
+        }
+
+        public void SetCrouching(bool state)
+        {
+            IsCrouching = state;
+        }
+
+        public void SetSprinting(bool state)
+        {
+            IsSprinting = state;
+        }
+
+        public void SetSwappingWeapon()
+        {
+            IsSwappingWeapon = true;
+        }
+    }
+}
+
+
+
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using System.Collections;
+
+namespace TheAlchemistsCrypt.UI
+{
+    public class MobileHUDButtons : MonoBehaviour
+    {
+        public static MobileHUDButtons Instance { get; private set; }
+
+        private Color goldColor = new Color(1f, 0.85f, 0.4f);
+        private Color darkColor = new Color(0.05f, 0.05f, 0.05f, 0.85f);
+        
+        private Sprite circleSprite;
+        private Sprite reloadIcon;
+        private Sprite fireIcon;
+        private Sprite swapIcon;
+        private Sprite sprintIcon;
+
+        private Text healthText;
+        private Text ammoText;
+
+        private void Awake()
+        {
+            Instance = this;
+            LoadSprites();
+            SetupCanvas();
+            BuildHUD();
+        }
+
+        private void LoadSprites()
+        {
+            // Use built-in knob for circle or try to find a resource
+            circleSprite = Resources.Load<Sprite>("UI/Circle"); 
+            #if UNITY_EDITOR
+            if (circleSprite == null) circleSprite = UnityEditor.AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+            #endif
+
+            reloadIcon = Resources.Load<Sprite>("UI/Icons/Inspiration/reload");
+            // User requested Assets/Resources/UI/Icons/icon_crouch.png for fire
+            fireIcon = Resources.Load<Sprite>("UI/Icons/icon_crouch");
+            if (fireIcon == null) fireIcon = Resources.Load<Sprite>("UI/Icons/icon_attack");
+            
+            swapIcon = Resources.Load<Sprite>("UI/Icons/icon_swap");
+            sprintIcon = Resources.Load<Sprite>("UI/Icons/icon_sprint");
+        }
+
+        private void SetupCanvas()
+        {
+            var canvas = GetComponent<Canvas>();
+            if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 999;
+            
+            var scaler = GetComponent<CanvasScaler>();
+            if (scaler == null) scaler = gameObject.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            if (GetComponent<GraphicRaycaster>() == null) gameObject.AddComponent<GraphicRaycaster>();
+        }
+
+        public void BuildHUD()
+        {
+            foreach (Transform t in transform) Destroy(t.gameObject);
+
+            var root = new GameObject("HUD_Root", typeof(RectTransform)).GetComponent<RectTransform>();
+            root.SetParent(transform, false);
+            root.anchorMin = Vector2.zero; root.anchorMax = Vector2.one;
+            root.offsetMin = root.offsetMax = Vector2.zero;
+
+            // 1. LOOK ZONE (Strictly Right 50% of screen - Zero Overlap)
+            var lookZone = new GameObject("LookZone", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            lookZone.SetParent(root, false);
+            lookZone.anchorMin = new Vector2(0.5f, 0f); lookZone.anchorMax = Vector2.one;
+            lookZone.offsetMin = lookZone.offsetMax = Vector2.zero;
+            lookZone.GetComponent<Image>().color = new Color(0, 0, 0, 0.01f);
+            lookZone.gameObject.AddComponent<LookSwipeZone>();
+
+            // 2. MOVEMENT ZONE (Strictly Left 50% of screen - Zero Overlap)
+            var moveZone = new GameObject("MoveZone", typeof(RectTransform)).GetComponent<RectTransform>();
+            moveZone.SetParent(root, false);
+            moveZone.anchorMin = Vector2.zero; moveZone.anchorMax = new Vector2(0.5f, 1f);
+            moveZone.offsetMin = moveZone.offsetMax = Vector2.zero;
+
+            // Variable Joystick
+            var joyPrefab = Resources.Load<GameObject>("Joystick Pack/Prefabs/Variable Joystick");
+#if UNITY_EDITOR
+            if (joyPrefab == null) joyPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Joystick Pack/Prefabs/Variable Joystick.prefab");
+#endif
+
+            if (joyPrefab != null) {
+                var joyObj = Instantiate(joyPrefab, moveZone);
+                var jRect = joyObj.GetComponent<RectTransform>();
+                jRect.anchorMin = jRect.anchorMax = new Vector2(0.5f, 0.3f);
+                jRect.anchoredPosition = Vector2.zero;
+                jRect.sizeDelta = new Vector2(500, 500); 
+                
+                var j = joyObj.GetComponent<Joystick>();
+                if (j != null) {
+                    var vj = j as VariableJoystick;
+                    if (vj != null) {
+                        vj.joystickType = JoystickType.Fixed;
+                        vj.SetMode(JoystickType.Fixed);
+                    }
+                    
+                    StartCoroutine(JoystickLoop(j));
+                }
+            }
+
+            // 3. BUTTONS (CLUSTERED BOTTOM RIGHT)
+            var btnContainer = new GameObject("ButtonContainer", typeof(RectTransform)).GetComponent<RectTransform>();
+            btnContainer.SetParent(root, false);
+            btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0); // BOTTOM RIGHT
+            btnContainer.anchoredPosition = Vector2.zero;
+
+            CreateButton(btnContainer, "FIRE", new Vector2(-300, 300), 320, fireIcon, Color.white, () => SetFire(true), () => SetFire(false));
+            CreateButton(btnContainer, "RELOAD", new Vector2(-650, 150), 180, reloadIcon, Color.white, () => Reload());
+            CreateButton(btnContainer, "SWAP", new Vector2(-450, 600), 180, swapIcon, Color.white, () => Swap());
+            CreateButton(btnContainer, "SPRINT", new Vector2(-650, 450), 180, sprintIcon, Color.white, () => SetSprint(true), () => SetSprint(false));
+
+            HideDebugLabels();
+
+            // 4. STATS (TOP LEFT)
+            var stats = new GameObject("Stats", typeof(RectTransform)).GetComponent<RectTransform>();
+            stats.SetParent(root, false);
+            stats.anchorMin = stats.anchorMax = new Vector2(0, 1);
+            stats.anchoredPosition = new Vector2(100, -100);
+
+            healthText = CreateStatsText(stats, "Health", "100", Vector2.zero, new Color(1, 0.4f, 0.4f));
+
+            // Ensure look zone is ABOVE move zone and other background elements for raycasting
+            lookZone.SetAsLastSibling();
+        }
+
+        private void CreateButton(Transform p, string n, Vector2 pos, float s, Sprite icon, Color tint, System.Action onDown, System.Action onUp = null)
+        {
+            var go = new GameObject(n, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            go.SetParent(p, false);
+            go.anchoredPosition = pos;
+            go.sizeDelta = new Vector2(s, s);
+            
+            var img = go.GetComponent<Image>();
+            img.color = Color.white; // White button background
+            if (circleSprite) img.sprite = circleSprite;
+            img.raycastTarget = true; // Crucial for input
+
+            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            iconGo.SetParent(go, false);
+            iconGo.sizeDelta = go.sizeDelta * 0.55f;
+            var iImg = iconGo.GetComponent<Image>();
+            iImg.color = Color.black; // Black icon
+            if (icon) iImg.sprite = icon;
+            iImg.raycastTarget = false; // Don't block parent button
+
+            // Using a dedicated component for better reliability than EventTrigger entries
+            var helper = go.gameObject.AddComponent<ButtonInputHelper>();
+            helper.onDown = () => { img.color = new Color(0.8f, 0.8f, 0.8f, 1f); onDown?.Invoke(); };
+            helper.onUp = () => { img.color = Color.white; onUp?.Invoke(); };
+        }
+
+        // Dedicated helper class to ensure clean pointer events
+        private class ButtonInputHelper : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
+        {
+            public System.Action onDown;
+            public System.Action onUp;
+            public void OnPointerDown(PointerEventData eventData) => onDown?.Invoke();
+            public void OnPointerUp(PointerEventData eventData) => onUp?.Invoke();
+        }
+
+        private void HideDebugLabels()
+        {
+            // Find common debug labels in the P_LPSP_UI_Canvas and children
+            string[] names = { "Text Timescale", "Text Cursor Lock", "Text Tutorial", "Text Tutorial Text", "Text Tutorial Prompt", "Version Text", "Mouse Lock" };
+            foreach (var n in names)
+            {
+                var label = GameObject.Find(n);
+                if (label != null) label.SetActive(false);
+                
+                // Fallback: search by partial name in all objects
+                var all = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
+                foreach(var go in all) {
+                    if (go.name.Contains(n)) go.SetActive(false);
+                }
+            }
+        }
+
+        private Text CreateStatsText(Transform p, string n, string v, Vector2 pos, Color c)
+        {
+            var go = new GameObject(n, typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            go.SetParent(p, false);
+            go.anchorMin = go.anchorMax = new Vector2(0, 1);
+            go.pivot = new Vector2(0, 1); go.anchoredPosition = pos;
+            go.sizeDelta = new Vector2(500, 60);
+            var t = go.GetComponent<Text>();
+            t.text = $"{n.ToUpper()}: {v}";
+            t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            t.fontSize = 45; t.fontStyle = FontStyle.Bold; t.color = c;
+            return t;
+        }
+
+        private IEnumerator JoystickLoop(Joystick j)
+        {
+            while (true) {
+                if (j != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) {
+                    // Use Horizontal and Vertical directly to avoid any weirdness with Direction property
+                    Vector2 dir = new Vector2(j.Horizontal, j.Vertical);
+                    // If the joystick is behaving inverted, we can fix it here, but let's first ensure it's not a deadzone issue
+                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetMovement(dir);
+                }
+                yield return null;
+            }
+        }
+
+        private void SetFire(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetFiring(s);
+        private void SetSprint(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetSprinting(s);
+        private void Reload() {
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsReloading = true;
+        }
+        private void Swap() {
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon = true;
+        }
+
+        public void UpdateHealth(float h) { if (healthText) healthText.text = $"HEALTH: {Mathf.CeilToInt(h)}"; }
+        public void UpdateAmmo(int c, int t) { if (ammoText) ammoText.text = $"AMMO: {c} / {t}"; }
+    }
+
+    public class LookSwipeZone : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler
+    {
+        public float sensitivity = 1.2f; // Increased baseline for DPI-scaled input
+        private int trackedPointerId = -1;
+
+        public void OnPointerDown(PointerEventData data)
+        {
+            if (trackedPointerId != -1) return;
+            trackedPointerId = data.pointerId;
+            // NotifyTouchActive is now a no-op as the Manager polls globally, 
+            // but we keep the call for architecture consistency.
+            TheAlchemistsCrypt.Input.MobileInputManager.Instance?.NotifyTouchActive(true);
+        }
+
+        public void OnDrag(PointerEventData data)
+        {
+            if (data.pointerId != trackedPointerId) return;
+
+            // DPI Scaling: Normalize pixels to physical distance (Inches) 
+            // baseDpi 160 (Standard MDPI) ensures consistent feel across devices.
+            float baseDpi = 160f;
+            float deviceDpi = Screen.dpi > 0 ? Screen.dpi : baseDpi;
+            float dpiScale = baseDpi / deviceDpi;
+            
+            Vector2 delta = data.delta * sensitivity * dpiScale;
+
+            if (delta.sqrMagnitude > 0.0001f)
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetLook(delta);
+        }
+
+        public void OnPointerUp(PointerEventData data)
+        {
+            if (data.pointerId == trackedPointerId) {
+                trackedPointerId = -1;
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance?.ConsumeLook(); 
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance?.NotifyTouchActive(false);
+            }
+        }
+    }
+}
+
+
+
 // Copyright 2021, Infima Games. All Rights Reserved.
 
 using System;
@@ -160,6 +561,7 @@ namespace InfimaGames.LowPolyShooterPack
 		/// True if the game cursor is locked! Used when pressing "Escape" to allow developers to more easily access the editor.
 		/// </summary>
 		private bool cursorLocked;
+		private Vector2 cachedMovement;
 
 		#endregion
 
@@ -213,6 +615,8 @@ namespace InfimaGames.LowPolyShooterPack
 		{
             // --- HACKATHON MOBILE & DESKTOP FAIL-SAFE INJECTION ---
             bool mobileFiring = false, mobileAiming = false, mobileRunning = false;
+            bool isTouchActive = false;
+
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
             {
                 var mob = TheAlchemistsCrypt.Input.MobileInputManager.Instance;
@@ -220,41 +624,46 @@ namespace InfimaGames.LowPolyShooterPack
                 mobileAiming = mob.IsAiming;
                 mobileRunning = mob.IsSprinting;
                 
-                if (mob.IsSwappingWeapon)
-                {
+                // Robust Gating: Use manager's state OR native touch count
+                isTouchActive = mob.IsTouchActive || UnityEngine.Input.touchCount > 0;
+                
+                // Atomic events
+                if (mob.IsSwappingWeapon) {
                     if (inventory != null) StartCoroutine(Equip(inventory.GetNextIndex()));
                     mob.IsSwappingWeapon = false;
                 }
-
-                if (mob.IsReloading)
-                {
+                if (mob.IsReloading) {
                     if (CanReload()) PlayReloadAnimation();
                     mob.IsReloading = false;
                 }
+
+                // Cache movement once per frame to prevent "double consumption" if multiple things call GetInputMovement
+                cachedMovement = mob.GetMovement();
+            }
+            else {
+                // Fallback to desktop movement if no mobile manager
+                cachedMovement = axisMovement;
+                axisMovement = Vector2.zero;
             }
 
-            // Combine Mobile and Desktop (Editor-friendly)
             holdingButtonFire = mobileFiring;
             holdingButtonAim = mobileAiming;
             holdingButtonRun = mobileRunning;
 
-            if (!Application.isMobilePlatform || Application.isEditor)
+            // Only process Keyboard/Mouse if touch isn't currently controlling the game
+            if (!isTouchActive)
             {
-                if (Mouse.current != null)
-                {
+                if (Mouse.current != null) {
                     if (Mouse.current.leftButton.isPressed) holdingButtonFire = true;
                     if (Mouse.current.rightButton.isPressed) holdingButtonAim = true;
                 }
-                if (Keyboard.current != null)
-                {
+                if (Keyboard.current != null) {
                     if (Keyboard.current.leftShiftKey.isPressed) holdingButtonRun = true;
-                    
                     if (Keyboard.current.rKey.wasPressedThisFrame && CanReload()) PlayReloadAnimation();
                     if (Keyboard.current.qKey.wasPressedThisFrame && inventory != null) 
                         StartCoroutine(Equip(inventory.GetNextIndex()));
                 }
             }
-            // ----------------------------------
 
 			//Match Aim.
 			aiming = holdingButtonAim && CanAim();
@@ -264,35 +673,33 @@ namespace InfimaGames.LowPolyShooterPack
 			//Holding the firing button.
 			if (holdingButtonFire)
 			{
-				//Check.
 				bool isPunching = equippedWeapon.GetComponent<PunchCombat>() != null;
                 bool canFire = CanPlayAnimationFire() && (equippedWeapon.HasAmmunition() || isPunching);
 				if (canFire && (equippedWeapon.IsAutomatic() || isPunching))
 				{
-					//Has fire rate passed.
 					if (Time.time - lastShotTime > 60.0f / (isPunching ? 120.0f : equippedWeapon.GetRateOfFire()))
 						Fire();
 				}
                 else if (canFire && !equippedWeapon.IsAutomatic())
                 {
-                    // Semi-auto logic (Pistol)
                     bool triggerDown = false;
-                    if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+                    if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed)
                     {
-                        if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed)
+                        // Stricter semi-auto gate: ensure enough time has passed since last shot
+                        float minInterval = 60.0f / equippedWeapon.GetRateOfFire();
+                        if (Time.time - lastShotTime > minInterval)
                         {
                             triggerDown = true;
-                            TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed = false; // Consume
+                            TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed = false;
                         }
                     }
-                    if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame) triggerDown = true;
+                    if (!isTouchActive && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) triggerDown = true;
 
-                    if (triggerDown && Time.time - lastShotTime > 60.0f / equippedWeapon.GetRateOfFire())
+                    if (triggerDown)
                         Fire();
                 }
 			}
 
-			//Update Animator.
 			UpdateAnimator();
 		}
 
@@ -337,28 +744,18 @@ namespace InfimaGames.LowPolyShooterPack
 		
 		public override Vector2 GetInputMovement()
 		{
-            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
-            {
-                axisMovement = Vector2.zero; 
-                return TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
-            }
-            
-            // Standard Desktop Logic
-            Vector2 move = axisMovement;
-            axisMovement = Vector2.zero;
-			return move;
+			return cachedMovement;
 		}
 
 		public override Vector2 GetInputLook()
 		{
-            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput.sqrMagnitude > 0.001f)
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
             {
-                Vector2 mobileLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
-                TheAlchemistsCrypt.Input.MobileInputManager.Instance.ConsumeLook();
-                return mobileLook;
+                // Let the mobile manager handle the accumulation/consumption logic
+                return TheAlchemistsCrypt.Input.MobileInputManager.Instance.ConsumeLook();
             }
 
-            // Standard Desktop Logic
+            // Fallback for desktop/editor
             Vector2 look = axisLook;
             axisLook = Vector2.zero;
 			return look;
@@ -373,8 +770,9 @@ namespace InfimaGames.LowPolyShooterPack
 		/// </summary>
 		private void UpdateAnimator()
 		{
-			//Movement Value. This value affects absolute movement. Aiming movement uses this, as opposed to per-axis movement.
-			characterAnimator.SetFloat(HashMovement, Mathf.Clamp01(Mathf.Abs(axisMovement.x) + Mathf.Abs(axisMovement.y)), dampTimeLocomotion, Time.deltaTime);
+			// Use cachedMovement to avoid the "double consumption" bug
+			float movementMagnitude = Mathf.Clamp01(Mathf.Abs(cachedMovement.x) + Mathf.Abs(cachedMovement.y));
+			characterAnimator.SetFloat(HashMovement, movementMagnitude, dampTimeLocomotion, Time.deltaTime);
 			
 			//Update the aiming value, but use interpolation. This makes sure that things like firing can transition properly.
 			characterAnimator.SetFloat(HashAimingAlpha, Convert.ToSingle(aiming), 0.25f / 1.0f * dampTimeAiming, Time.deltaTime);
@@ -508,6 +906,7 @@ namespace InfimaGames.LowPolyShooterPack
 		/// <param name="value">Value.</param>
 		public void OnMove(InputValue value)
 		{
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) return;
 			//Save the movement input.
 			axisMovement = value.Get<Vector2>();
 		}
@@ -518,6 +917,7 @@ namespace InfimaGames.LowPolyShooterPack
 		/// <param name="value">Value.</param>
 		public void OnLook(InputValue value)
 		{
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) return;
 			//Save the look input.
 			axisLook = value.Get<Vector2>();
 		}
@@ -731,536 +1131,230 @@ namespace InfimaGames.LowPolyShooterPack
 	}
 }
 
---- END OF FILE ---
 
---- FILE: Assets/Scripts/UI/MobileHUDButtons.cs ---
+
+// Copyright 2021, Infima Games. All Rights Reserved.
+
 using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.EventSystems;
-using System.Collections;
 
-namespace TheAlchemistsCrypt.UI
+namespace InfimaGames.LowPolyShooterPack
 {
-    public class MobileHUDButtons : MonoBehaviour
+    /// <summary>
+    /// Camera Look. Handles the rotation of the camera.
+    /// </summary>
+    public class CameraLook : MonoBehaviour
     {
-        public static MobileHUDButtons Instance { get; private set; }
-
-        private Color goldColor = new Color(1f, 0.85f, 0.4f);
-        private Color darkColor = new Color(0.05f, 0.05f, 0.05f, 0.85f);
+        #region FIELDS SERIALIZED
         
-        private Sprite circleSprite;
-        private Sprite reloadIcon;
-        private Sprite fireIcon;
-        private Sprite swapIcon;
-        private Sprite sprintIcon;
-
-        private Text healthText;
-        private Text ammoText;
-
-        private void Awake()
-        {
-            Instance = this;
-            LoadSprites();
-            SetupCanvas();
-            BuildHUD();
-        }
-
-        private void LoadSprites()
-        {
-            // Use built-in knob for circle or try to find a resource
-            circleSprite = Resources.Load<Sprite>("UI/Circle"); 
-            #if UNITY_EDITOR
-            if (circleSprite == null) circleSprite = UnityEditor.AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
-            #endif
-
-            reloadIcon = Resources.Load<Sprite>("UI/Icons/Inspiration/reload");
-            // User requested Assets/Resources/UI/Icons/icon_crouch.png for fire
-            fireIcon = Resources.Load<Sprite>("UI/Icons/icon_crouch");
-            if (fireIcon == null) fireIcon = Resources.Load<Sprite>("UI/Icons/icon_attack");
-            
-            swapIcon = Resources.Load<Sprite>("UI/Icons/icon_swap");
-            sprintIcon = Resources.Load<Sprite>("UI/Icons/icon_sprint");
-        }
-
-        private void SetupCanvas()
-        {
-            var canvas = GetComponent<Canvas>();
-            if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 999;
-            
-            var scaler = GetComponent<CanvasScaler>();
-            if (scaler == null) scaler = gameObject.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.matchWidthOrHeight = 0.5f;
-
-            if (GetComponent<GraphicRaycaster>() == null) gameObject.AddComponent<GraphicRaycaster>();
-        }
-
-        public void BuildHUD()
-        {
-            foreach (Transform t in transform) Destroy(t.gameObject);
-
-            var root = new GameObject("HUD_Root", typeof(RectTransform)).GetComponent<RectTransform>();
-            root.SetParent(transform, false);
-            root.anchorMin = Vector2.zero; root.anchorMax = Vector2.one;
-            root.offsetMin = root.offsetMax = Vector2.zero;
-
-            // 1. LOOK ZONE (Fullscreen but lower priority than buttons)
-            var lookZone = new GameObject("LookZone", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            lookZone.SetParent(root, false);
-            lookZone.anchorMin = new Vector2(0.5f, 0f); lookZone.anchorMax = Vector2.one;
-            lookZone.offsetMin = lookZone.offsetMax = Vector2.zero;
-            lookZone.GetComponent<Image>().color = new Color(0, 0, 0, 0.01f);
-            lookZone.gameObject.AddComponent<LookSwipeZone>();
-
-            // 2. MOVEMENT ZONE
-            var moveZone = new GameObject("MoveZone", typeof(RectTransform)).GetComponent<RectTransform>();
-            moveZone.SetParent(root, false);
-            moveZone.anchorMin = Vector2.zero; moveZone.anchorMax = new Vector2(0.5f, 1f);
-            moveZone.offsetMin = moveZone.offsetMax = Vector2.zero;
-
-            // Variable Joystick
-            var joyPrefab = Resources.Load<GameObject>("Joystick Pack/Prefabs/Variable Joystick");
-            #if UNITY_EDITOR
-            if (joyPrefab == null) joyPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Joystick Pack/Prefabs/Variable Joystick.prefab");
-            #endif
-
-            if (joyPrefab != null) {
-                var joyObj = Instantiate(joyPrefab, moveZone);
-                var jRect = joyObj.GetComponent<RectTransform>();
-                jRect.anchorMin = jRect.anchorMax = new Vector2(0.3f, 0.3f);
-                jRect.anchoredPosition = Vector2.zero;
-                jRect.sizeDelta = new Vector2(450, 450); // Bigger joystick
-                
-                var j = joyObj.GetComponent<Joystick>();
-                if (j != null) StartCoroutine(JoystickLoop(j));
-            }
-
-            // 3. BUTTONS (CLUSTERED BOTTOM RIGHT)
-            var btnContainer = new GameObject("ButtonContainer", typeof(RectTransform)).GetComponent<RectTransform>();
-            btnContainer.SetParent(root, false);
-            btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0); // BOTTOM RIGHT
-            btnContainer.anchoredPosition = Vector2.zero;
-
-            // Use white icons on black semi-transparent circular buttons
-            // Fire (Main)
-            CreateButton(btnContainer, "FIRE", new Vector2(-300, 300), 300, fireIcon, Color.white, () => SetFire(true), () => SetFire(false));
-            // Reload
-            CreateButton(btnContainer, "RELOAD", new Vector2(-650, 150), 180, reloadIcon, Color.white, () => Reload());
-            // Swap
-            CreateButton(btnContainer, "SWAP", new Vector2(-450, 600), 180, swapIcon, Color.white, () => Swap());
-            // Sprint
-            CreateButton(btnContainer, "SPRINT", new Vector2(-650, 450), 180, sprintIcon, Color.white, () => SetSprint(true), () => SetSprint(false));
-
-            // Hide debug labels from asset pack
-            HideDebugLabels();
-
-            // 4. STATS (TOP LEFT)
-            var stats = new GameObject("Stats", typeof(RectTransform)).GetComponent<RectTransform>();
-            stats.SetParent(root, false);
-            stats.anchorMin = stats.anchorMax = new Vector2(0, 1);
-            stats.anchoredPosition = new Vector2(100, -100);
-
-            healthText = CreateStatsText(stats, "Health", "100", Vector2.zero, new Color(1, 0.4f, 0.4f));
-
-            // Ensure look zone is below buttons for raycasting
-            lookZone.SetAsFirstSibling();
-        }
-
-        private void CreateButton(Transform p, string n, Vector2 pos, float s, Sprite icon, Color tint, System.Action onDown, System.Action onUp = null)
-        {
-            var go = new GameObject(n, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            go.SetParent(p, false);
-            go.anchoredPosition = pos;
-            go.sizeDelta = new Vector2(s, s);
-            
-            var img = go.GetComponent<Image>();
-            img.color = Color.white; // White button background
-            if (circleSprite) img.sprite = circleSprite;
-
-            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            iconGo.SetParent(go, false);
-            iconGo.sizeDelta = go.sizeDelta * 0.55f;
-            var iImg = iconGo.GetComponent<Image>();
-            iImg.color = Color.black; // Black icon
-            if (icon) iImg.sprite = icon;
-
-            var trigger = go.gameObject.AddComponent<EventTrigger>();
-            var down = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-            down.callback.AddListener((d) => { img.color = new Color(0.8f, 0.8f, 0.8f, 1f); onDown?.Invoke(); });
-            trigger.triggers.Add(down);
-            
-            var up = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-            up.callback.AddListener((d) => { img.color = Color.white; onUp?.Invoke(); });
-            trigger.triggers.Add(up);
-        }
-
-        private void HideDebugLabels()
-        {
-            // Find common debug labels in the P_LPSP_UI_Canvas and children
-            string[] names = { "Text Timescale", "Text Cursor Lock", "Text Tutorial", "Text Tutorial Text", "Text Tutorial Prompt", "Version Text", "Mouse Lock" };
-            foreach (var n in names)
-            {
-                var label = GameObject.Find(n);
-                if (label != null) label.SetActive(false);
-                
-                // Fallback: search by partial name in all objects
-                var all = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
-                foreach(var go in all) {
-                    if (go.name.Contains(n)) go.SetActive(false);
-                }
-            }
-        }
-
-        private Text CreateStatsText(Transform p, string n, string v, Vector2 pos, Color c)
-        {
-            var go = new GameObject(n, typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            go.SetParent(p, false);
-            go.anchorMin = go.anchorMax = new Vector2(0, 1);
-            go.pivot = new Vector2(0, 1); go.anchoredPosition = pos;
-            go.sizeDelta = new Vector2(500, 60);
-            var t = go.GetComponent<Text>();
-            t.text = $"{n.ToUpper()}: {v}";
-            t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            t.fontSize = 45; t.fontStyle = FontStyle.Bold; t.color = c;
-            return t;
-        }
-
-        private IEnumerator JoystickLoop(Joystick j)
-        {
-            while (true) {
-                if (j != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) {
-                    // Use Horizontal and Vertical directly to avoid any weirdness with Direction property
-                    Vector2 dir = new Vector2(j.Horizontal, j.Vertical);
-                    // If the joystick is behaving inverted, we can fix it here, but let's first ensure it's not a deadzone issue
-                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetMovement(dir);
-                }
-                yield return null;
-            }
-        }
-
-        private void SetFire(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetFiring(s);
-        private void SetSprint(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetSprinting(s);
-        private void Reload() {
-            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
-                TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsReloading = true;
-        }
-        private void Swap() {
-            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
-                TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon = true;
-        }
-
-        public void UpdateHealth(float h) { if (healthText) healthText.text = $"HEALTH: {Mathf.CeilToInt(h)}"; }
-        public void UpdateAmmo(int c, int t) { if (ammoText) ammoText.text = $"AMMO: {c} / {t}"; }
-    }
-
-    public class LookSwipeZone : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler
-    {
-        private int pointerId = -1;
-        public float sensitivity = 3.5f; // Buffed for smoother swipe
-
-        public void OnPointerDown(PointerEventData data)
-        {
-            // Allow swiping on the right 70% of the screen to avoid joystick conflict
-            if (pointerId == -1 && data.position.x >= Screen.width * 0.3f) {
-                pointerId = data.pointerId;
-            }
-        }
-
-        public void OnDrag(PointerEventData data)
-        {
-            if (data.pointerId != pointerId) return;
-            // Use pixels directly for more consistent movement across frame rates
-            Vector2 delta = data.delta;
-            // Sensitivity check
-            if (Mathf.Abs(delta.x) > 0.01f || Mathf.Abs(delta.y) > 0.01f)
-            {
-                Vector2 lookVel = delta * sensitivity * 0.12f;
-                TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetLook(lookVel);
-            }
-        }
-
-        public void OnPointerUp(PointerEventData data)
-        {
-            if (data.pointerId == pointerId) {
-                pointerId = -1;
-                TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetLook(Vector2.zero);
-            }
-        }
-    }
-}
-
---- END OF FILE ---
-
---- FILE: Assets/Scripts/Input/MobileInputManager.cs ---
-using UnityEngine;
-
-namespace TheAlchemistsCrypt.Input
-{
-    public class MobileInputManager : MonoBehaviour
-    {
-        public static MobileInputManager Instance;
-
         [Header("Settings")]
-        [SerializeField] private float joystickDeadzone = 0.1f;
-        public bool InvertJoystickX = false;
-        public bool InvertJoystickY = false;
         
-        // Output values
-        public Vector2 MovementInput { get; private set; }
-        public Vector2 LookInput { get; private set; }
-        public bool IsFiring { get; private set; }
-        public bool WasFiringPressed { get; set; } // Trigger for semi-auto
-        public bool IsAiming { get; private set; }
-        public bool IsJumping { get; set; }
-        public bool IsJumpHeld { get; private set; }
-        public float JumpStartTime { get; private set; }
-        public bool IsCrouching { get; set; }
-        public bool IsSprinting { get; set; }
-        public bool IsSwappingWeapon { get; set; }
-        public bool IsReloading { get; set; }
+        [Tooltip("Sensitivity when looking around.")]
+        [SerializeField]
+        private Vector2 sensitivity = new Vector2(1600, 1600);
+
+        [Tooltip("Minimum and maximum up/down rotation angle the camera can have.")]
+        [SerializeField]
+        private Vector2 yClamp = new Vector2(-60, 60);
+
+        [Tooltip("Should the look rotation be interpolated?")]
+        [SerializeField]
+        private bool smooth;
+
+        [Tooltip("The speed at which the look rotation is interpolated.")]
+        [SerializeField]
+        private float interpolationSpeed = 25.0f;
+        
+        #endregion
+        
+        #region FIELDS
+        
+        /// <summary>
+        /// Player Character.
+        /// </summary>
+        private CharacterBehaviour playerCharacter;
+        /// <summary>
+        /// The player character's rigidbody component.
+        /// </summary>
+        private Rigidbody playerCharacterRigidbody;
+
+        /// <summary>
+        /// The player character's rotation.
+        /// </summary>
+        private Quaternion rotationCharacter;
+        /// <summary>
+        /// The camera's rotation.
+        /// </summary>
+        private Quaternion rotationCamera;
+
+        #endregion
+        
+        #region UNITY
 
         private void Awake()
         {
-            Instance = this;
+            //Get Player Character.
+            playerCharacter = ServiceLocator.Current.Get<IGameModeService>().GetPlayerCharacter();
+            //Cache the rigidbody.
+            playerCharacterRigidbody = playerCharacter.GetComponent<Rigidbody>();
+        }
+        private void Start()
+        {
+            // Ultra-precise sensitivity for better playability
+            sensitivity = new Vector2(40, 40); 
+
+            //Cache the character's initial rotation.
+            rotationCharacter = playerCharacter.transform.localRotation;
+            //Cache the camera's initial rotation.
+            rotationCamera = transform.localRotation;
+        }
+        private void LateUpdate()
+        {
+            //Frame Input. The Input to add this frame!
+            Vector2 frameInput = playerCharacter.GetInputLook();
             
-            // Auto-attach MobileHUDButtons
-            if (gameObject.GetComponent<TheAlchemistsCrypt.UI.MobileHUDButtons>() == null)
+            // Fail-safe for Desktop Mouse Delta
+            if (frameInput.sqrMagnitude < 0.001f && !Application.isMobilePlatform)
             {
-                gameObject.AddComponent<TheAlchemistsCrypt.UI.MobileHUDButtons>();
+                if (UnityEngine.InputSystem.Mouse.current != null)
+                {
+                    frameInput = UnityEngine.InputSystem.Mouse.current.delta.ReadValue() * 0.05f;
+                }
             }
 
-            // Auto-attach AtmosphereManager
-            if (gameObject.GetComponent<TheAlchemistsCrypt.Environment.AtmosphereManager>() == null)
+            // On desktop, we might still want to ignore input if cursor isn't locked,
+            // but for mobile we always want it. 
+            // We can check if it's mobile input by seeing if MobileInputManager was involved,
+            // but for now let's just allow it if we have any input.
+            if (!playerCharacter.IsCursorLocked() && frameInput == Vector2.zero)
+                frameInput = default;
+            //Sensitivity.
+            frameInput *= sensitivity;
+
+            //Yaw.
+            Quaternion rotationYaw = Quaternion.Euler(0.0f, frameInput.x, 0.0f);
+            //Pitch.
+            Quaternion rotationPitch = Quaternion.Euler(-frameInput.y, 0.0f, 0.0f);
+            
+            //Save rotation. We use this for smooth rotation.
+            rotationCamera *= rotationPitch;
+            rotationCharacter *= rotationYaw;
+            
+            //Local Rotation.
+            Quaternion localRotation = transform.localRotation;
+
+            //Smooth.
+            if (smooth)
             {
-                gameObject.AddComponent<TheAlchemistsCrypt.Environment.AtmosphereManager>();
+                //Interpolate local rotation.
+                localRotation = Quaternion.Slerp(localRotation, rotationCamera, Time.deltaTime * interpolationSpeed);
+                //Interpolate character rotation.
+                playerCharacterRigidbody.MoveRotation(Quaternion.Slerp(playerCharacterRigidbody.rotation, rotationCharacter, Time.deltaTime * interpolationSpeed));
             }
-
-            // Silence Depth Surface Warnings by ensuring Main Camera settings are mobile-friendly
-            var cam = Camera.main;
-            if (cam != null) {
-                #if UNITY_URP
-                // Universal Additional Camera Data can be adjusted here if needed
-                #endif
-            }
-        }
-
-        private void Update()
-        {
-        }
-
-        public void SetMovement(Vector2 input)
-        {
-            if (input.magnitude < joystickDeadzone)
-                MovementInput = Vector2.zero;
             else
             {
-                float x = InvertJoystickX ? -input.x : input.x;
-                float y = InvertJoystickY ? -input.y : input.y;
-                MovementInput = new Vector2(x, y);
+                //Rotate local.
+                localRotation *= rotationPitch;
+                //Clamp.
+                localRotation = Clamp(localRotation);
+
+                //Rotate character.
+                playerCharacterRigidbody.MoveRotation(playerCharacterRigidbody.rotation * rotationYaw);
             }
+            
+            //Set.
+            transform.localRotation = localRotation;
         }
 
-        public void SetLook(Vector2 input)
+        #endregion
+
+        #region FUNCTIONS
+
+        /// <summary>
+        /// Clamps the pitch of a quaternion according to our clamps.
+        /// </summary>
+        private Quaternion Clamp(Quaternion rotation)
         {
-            // Accumulate input so it's not lost between frames
-            LookInput += input;
+            rotation.x /= rotation.w;
+            rotation.y /= rotation.w;
+            rotation.z /= rotation.w;
+            rotation.w = 1.0f;
+
+            //Pitch.
+            float pitch = 2.0f * Mathf.Rad2Deg * Mathf.Atan(rotation.x);
+
+            //Clamp.
+            pitch = Mathf.Clamp(pitch, yClamp.x, yClamp.y);
+            rotation.x = Mathf.Tan(0.5f * Mathf.Deg2Rad * pitch);
+
+            //Return.
+            return rotation;
         }
 
-        public void ConsumeLook()
-        {
-            LookInput = Vector2.zero;
-        }
-
-        public void SetFiring(bool state)
-        {
-            if (state && !IsFiring) WasFiringPressed = true;
-            IsFiring = state;
-        }
-
-        public void SetAiming(bool state)
-        {
-            IsAiming = state;
-        }
-
-        public void SetJumping(bool state)
-        {
-            IsJumping = state;
-            IsJumpHeld = state;
-            if (state) JumpStartTime = Time.time;
-        }
-
-        public void SetCrouching(bool state)
-        {
-            IsCrouching = state;
-        }
-
-        public void SetSprinting(bool state)
-        {
-            IsSprinting = state;
-        }
-
-        public void SetSwappingWeapon()
-        {
-            IsSwappingWeapon = true;
-        }
+        #endregion
     }
 }
 
---- END OF FILE ---
 
---- FILE: Assets/Joystick Pack/Scripts/Base/Joystick.cs ---
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class Joystick : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
+public class VariableJoystick : Joystick
 {
-    public float Horizontal { get { return (snapX) ? SnapFloat(input.x, AxisOptions.Horizontal) : input.x; } }
-    public float Vertical { get { return (snapY) ? SnapFloat(input.y, AxisOptions.Vertical) : input.y; } }
-    public Vector2 Direction { get { return new Vector2(Horizontal, Vertical); } }
+    public float MoveThreshold { get { return moveThreshold; } set { moveThreshold = Mathf.Abs(value); } }
 
-    public float HandleRange
+    [SerializeField] private float moveThreshold = 1;
+    public JoystickType joystickType = JoystickType.Fixed;
+
+    private Vector2 fixedPosition = Vector2.zero;
+
+    public void SetMode(JoystickType joystickType)
     {
-        get { return handleRange; }
-        set { handleRange = Mathf.Abs(value); }
-    }
-
-    public float DeadZone
-    {
-        get { return deadZone; }
-        set { deadZone = Mathf.Abs(value); }
-    }
-
-    public AxisOptions AxisOptions { get { return AxisOptions; } set { axisOptions = value; } }
-    public bool SnapX { get { return snapX; } set { snapX = value; } }
-    public bool SnapY { get { return snapY; } set { snapY = value; } }
-
-    [SerializeField] private float handleRange = 1;
-    [SerializeField] private float deadZone = 0;
-    [SerializeField] private AxisOptions axisOptions = AxisOptions.Both;
-    [SerializeField] private bool snapX = false;
-    [SerializeField] private bool snapY = false;
-
-    [SerializeField] protected RectTransform background = null;
-    [SerializeField] private RectTransform handle = null;
-    private RectTransform baseRect = null;
-
-    private Canvas canvas;
-    private Camera cam;
-
-    private Vector2 input = Vector2.zero;
-
-    protected virtual void Start()
-    {
-        HandleRange = handleRange;
-        DeadZone = deadZone;
-        baseRect = GetComponent<RectTransform>();
-        canvas = GetComponentInParent<Canvas>();
-        if (canvas == null)
-            Debug.LogError("The Joystick is not placed inside a canvas");
-
-        Vector2 center = new Vector2(0.5f, 0.5f);
-        background.pivot = center;
-        handle.anchorMin = center;
-        handle.anchorMax = center;
-        handle.pivot = center;
-        handle.anchoredPosition = Vector2.zero;
-    }
-
-    public virtual void OnPointerDown(PointerEventData eventData)
-    {
-        OnDrag(eventData);
-    }
-
-    public void OnDrag(PointerEventData eventData)
-    {
-        cam = null;
-        if (canvas.renderMode == RenderMode.ScreenSpaceCamera)
-            cam = canvas.worldCamera;
-
-        Vector2 position = RectTransformUtility.WorldToScreenPoint(cam, background.position);
-        Vector2 radius = background.sizeDelta / 2;
-        input = (eventData.position - position) / (radius * canvas.scaleFactor);
-        FormatInput();
-        HandleInput(input.magnitude, input.normalized, radius, cam);
-        handle.anchoredPosition = input * radius * handleRange;
-    }
-
-    protected virtual void HandleInput(float magnitude, Vector2 normalised, Vector2 radius, Camera cam)
-    {
-        if (magnitude > deadZone)
+        this.joystickType = joystickType;
+        if(joystickType == JoystickType.Fixed)
         {
-            if (magnitude > 1)
-                input = normalised;
+            background.anchoredPosition = fixedPosition;
+            background.gameObject.SetActive(true);
         }
         else
-            input = Vector2.zero;
+            background.gameObject.SetActive(false);
     }
 
-    private void FormatInput()
+    protected override void Start()
     {
-        if (axisOptions == AxisOptions.Horizontal)
-            input = new Vector2(input.x, 0f);
-        else if (axisOptions == AxisOptions.Vertical)
-            input = new Vector2(0f, input.y);
+        base.Start();
+        fixedPosition = background.anchoredPosition;
+        SetMode(joystickType);
     }
 
-    private float SnapFloat(float value, AxisOptions snapAxis)
+    public override void OnPointerDown(PointerEventData eventData)
     {
-        if (value == 0)
-            return value;
-
-        if (axisOptions == AxisOptions.Both)
+        if(joystickType != JoystickType.Fixed)
         {
-            float angle = Vector2.Angle(input, Vector2.up);
-            if (snapAxis == AxisOptions.Horizontal)
-            {
-                if (angle < 22.5f || angle > 157.5f)
-                    return 0;
-                else
-                    return (value > 0) ? 1 : -1;
-            }
-            else if (snapAxis == AxisOptions.Vertical)
-            {
-                if (angle > 67.5f && angle < 112.5f)
-                    return 0;
-                else
-                    return (value > 0) ? 1 : -1;
-            }
-            return value;
+            background.anchoredPosition = ScreenPointToAnchoredPosition(eventData.position);
+            background.gameObject.SetActive(true);
         }
-        else
-        {
-            if (value > 0)
-                return 1;
-            if (value < 0)
-                return -1;
-        }
-        return 0;
+        base.OnPointerDown(eventData);
     }
 
-    public virtual void OnPointerUp(PointerEventData eventData)
+    public override void OnPointerUp(PointerEventData eventData)
     {
-        input = Vector2.zero;
-        handle.anchoredPosition = Vector2.zero;
+        if(joystickType != JoystickType.Fixed)
+            background.gameObject.SetActive(false);
+
+        base.OnPointerUp(eventData);
     }
 
-    protected Vector2 ScreenPointToAnchoredPosition(Vector2 screenPosition)
+    protected override void HandleInput(float magnitude, Vector2 normalised, Vector2 radius, Camera cam)
     {
-        Vector2 localPoint = Vector2.zero;
-        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(baseRect, screenPosition, cam, out localPoint))
+        if (joystickType == JoystickType.Dynamic && magnitude > moveThreshold)
         {
-            Vector2 pivotOffset = baseRect.pivot * baseRect.sizeDelta;
-            return localPoint - (background.anchorMax * baseRect.sizeDelta) + pivotOffset;
+            Vector2 difference = normalised * (magnitude - moveThreshold) * radius;
+            background.anchoredPosition += difference;
         }
-        return Vector2.zero;
+        base.HandleInput(magnitude, normalised, radius, cam);
     }
 }
 
-public enum AxisOptions { Both, Horizontal, Vertical }
---- END OF FILE ---
-
+public enum JoystickType { Fixed, Floating, Dynamic }
