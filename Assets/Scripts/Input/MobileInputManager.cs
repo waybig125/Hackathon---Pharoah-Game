@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace TheAlchemistsCrypt.Input
 {
@@ -10,6 +11,8 @@ namespace TheAlchemistsCrypt.Input
         [SerializeField] private float joystickDeadzone = 0.1f;
         public bool InvertJoystickX = false;
         public bool InvertJoystickY = false;
+        
+        private InputAction moveAction;
         
         // Output values
         public Vector2 MovementInput { get; private set; }
@@ -29,6 +32,9 @@ namespace TheAlchemistsCrypt.Input
         private void Awake()
         {
             Instance = this;
+            
+            // New Input System: Bind to Gamepad left stick (simulated by OnScreenStick)
+            moveAction = new InputAction(type: InputActionType.Value, binding: "<Gamepad>/leftStick");
             
             // Auto-attach MobileHUDButtons
             if (gameObject.GetComponent<TheAlchemistsCrypt.UI.MobileHUDButtons>() == null)
@@ -51,13 +57,18 @@ namespace TheAlchemistsCrypt.Input
             }
         }
 
+        private void OnEnable() => moveAction?.Enable();
+        private void OnDisable() => moveAction?.Disable();
+
         private void Update()
         {
+            // Update movement from our native stick simulation
+            if (moveAction != null)
+                SetMovement(moveAction.ReadValue<Vector2>());
+
             // Global check: if there are any touches on the screen, prioritize mobile input
-            // This prevents "desktop bleed" in the editor or on hybrid devices
             bool touchDetected = UnityEngine.Input.touchCount > 0;
             
-            // If we are in the editor, we also check if the joystick is being moved
             #if UNITY_EDITOR
             if (MovementInput.sqrMagnitude > 0.001f) touchDetected = true;
             #endif

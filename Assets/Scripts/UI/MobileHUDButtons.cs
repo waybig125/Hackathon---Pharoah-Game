@@ -85,30 +85,44 @@ namespace TheAlchemistsCrypt.UI
             moveZone.anchorMin = Vector2.zero; moveZone.anchorMax = new Vector2(0.5f, 1f);
             moveZone.offsetMin = moveZone.offsetMax = Vector2.zero;
 
-            // Variable Joystick
-            var joyPrefab = Resources.Load<GameObject>("Joystick Pack/Prefabs/Variable Joystick");
-#if UNITY_EDITOR
-            if (joyPrefab == null) joyPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Joystick Pack/Prefabs/Variable Joystick.prefab");
-#endif
+            // --- NEW INPUT SYSTEM NATIVE JOYSTICK UI GENERATION ---
+            // Create the Joystick Background visual container
+            var joystickBg = new GameObject("NativeJoystick_Bg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            joystickBg.SetParent(moveZone, false);
+            joystickBg.anchorMin = joystickBg.anchorMax = new Vector2(0.5f, 0.3f); // Centered in the left zone
+            joystickBg.anchoredPosition = Vector2.zero;
+            joystickBg.sizeDelta = new Vector2(300, 300); // Scaled appropriately for mobile screens
 
-            if (joyPrefab != null) {
-                var joyObj = Instantiate(joyPrefab, moveZone);
-                var jRect = joyObj.GetComponent<RectTransform>();
-                jRect.anchorMin = jRect.anchorMax = new Vector2(0.5f, 0.3f);
-                jRect.anchoredPosition = Vector2.zero;
-                jRect.sizeDelta = new Vector2(500, 500); 
-                
-                var j = joyObj.GetComponent<Joystick>();
-                if (j != null) {
-                    var vj = j as VariableJoystick;
-                    if (vj != null) {
-                        vj.joystickType = JoystickType.Fixed;
-                        vj.SetMode(JoystickType.Fixed);
-                    }
-                    
-                    StartCoroutine(JoystickLoop(j));
-                }
-            }
+            var bgImage = joystickBg.GetComponent<Image>();
+            bgImage.color = new Color(1f, 1f, 1f, 0.2f); // Subdued translucent background
+            if (circleSprite != null) bgImage.sprite = circleSprite;
+
+            // Create the moving Joystick Handle/Knob container (acts as touch target)
+            var joystickHandle = new GameObject("HandleTarget", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            joystickHandle.SetParent(joystickBg, false);
+            joystickHandle.anchoredPosition = Vector2.zero;
+            joystickHandle.sizeDelta = new Vector2(300, 300); // Identical to background for large touch target!
+
+            // Make the handle target image completely transparent but raycast-active
+            var targetImage = joystickHandle.GetComponent<Image>();
+            targetImage.color = new Color(0, 0, 0, 0); 
+            targetImage.raycastTarget = true;
+
+            // Create the visible Knob child
+            var knobVisual = new GameObject("KnobVisual", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            knobVisual.SetParent(joystickHandle, false);
+            knobVisual.anchoredPosition = Vector2.zero;
+            knobVisual.sizeDelta = new Vector2(100, 100); // Smaller inner visual knob
+
+            var visualImage = knobVisual.GetComponent<Image>();
+            visualImage.color = new Color(1f, 0.85f, 0.4f, 0.8f); // Gold tone accent matching your HUD theme
+            visualImage.raycastTarget = false; // Knob visual doesn't block Raycasts
+            if (circleSprite != null) visualImage.sprite = circleSprite;
+
+            // Add the crucial On-Screen Stick component to the HandleTarget
+            var onScreenStick = joystickHandle.gameObject.AddComponent<UnityEngine.InputSystem.OnScreen.OnScreenStick>();
+            onScreenStick.movementRange = 120f; // Max dragging radius boundary in pixels
+            onScreenStick.controlPath = "<Gamepad>/leftStick"; 
 
             // 3. BUTTONS (CLUSTERED BOTTOM RIGHT)
             var btnContainer = new GameObject("ButtonContainer", typeof(RectTransform)).GetComponent<RectTransform>();
@@ -131,8 +145,8 @@ namespace TheAlchemistsCrypt.UI
 
             healthText = CreateStatsText(stats, "Health", "100", Vector2.zero, new Color(1, 0.4f, 0.4f));
 
-            // Ensure look zone is ABOVE move zone and other background elements for raycasting
-            lookZone.SetAsLastSibling();
+            // Ensure look zone is BEHIND buttons so it doesn't intercept clicks
+            lookZone.SetAsFirstSibling();
         }
 
         private void CreateButton(Transform p, string n, Vector2 pos, float s, Sprite icon, Color tint, System.Action onDown, System.Action onUp = null)
@@ -201,18 +215,6 @@ namespace TheAlchemistsCrypt.UI
             return t;
         }
 
-        private IEnumerator JoystickLoop(Joystick j)
-        {
-            while (true) {
-                if (j != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) {
-                    // Use Horizontal and Vertical directly to avoid any weirdness with Direction property
-                    Vector2 dir = new Vector2(j.Horizontal, j.Vertical);
-                    // If the joystick is behaving inverted, we can fix it here, but let's first ensure it's not a deadzone issue
-                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetMovement(dir);
-                }
-                yield return null;
-            }
-        }
 
         private void SetFire(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetFiring(s);
         private void SetSprint(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetSprinting(s);
