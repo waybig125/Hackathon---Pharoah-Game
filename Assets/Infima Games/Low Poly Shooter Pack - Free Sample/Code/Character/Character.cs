@@ -198,42 +198,42 @@ namespace InfimaGames.LowPolyShooterPack
 
 		protected override void Update()
 		{
-            // --- HACKATHON MOBILE INJECTION ---
+            // --- HACKATHON MOBILE & DESKTOP FAIL-SAFE INJECTION ---
+            bool mobileFiring = false, mobileAiming = false, mobileRunning = false;
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
             {
-                var mobileMove = TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
-                if (mobileMove != Vector2.zero) axisMovement = mobileMove;
+                var mob = TheAlchemistsCrypt.Input.MobileInputManager.Instance;
+                mobileFiring = mob.IsFiring;
+                mobileAiming = mob.IsAiming;
+                mobileRunning = mob.IsSprinting;
                 
-                var mobileLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
-                if (mobileLook != Vector2.zero)
+                if (mob.IsSwappingWeapon)
                 {
-                    // Accumulate look input, it will be consumed by GetInputLook
-                    axisLook += mobileLook;
-                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetLook(Vector2.zero);
+                    if (inventory != null) StartCoroutine(Equip(inventory.GetNextIndex()));
+                    mob.IsSwappingWeapon = false;
                 }
-                
-                // Set explicit button states from mobile if applicable
-                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsFiring) holdingButtonFire = true;
-                else if (Application.isMobilePlatform) holdingButtonFire = false;
+            }
 
-                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsAiming) holdingButtonAim = true;
-                else if (Application.isMobilePlatform) holdingButtonAim = false;
+            // Combine Mobile and Desktop (Editor-friendly)
+            holdingButtonFire = mobileFiring;
+            holdingButtonAim = mobileAiming;
+            holdingButtonRun = mobileRunning;
 
-                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSprinting) holdingButtonRun = true;
-                else if (Application.isMobilePlatform) holdingButtonRun = false;
-                
-                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon)
+            if (!Application.isMobilePlatform || Application.isEditor)
+            {
+                if (Mouse.current != null)
                 {
-                    if (inventory != null)
-                    {
-                        int nextIndex = inventory.GetNextIndex();
-                        StartCoroutine(Equip(nextIndex));
-                    }
-                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon = false;
+                    if (Mouse.current.leftButton.isPressed) holdingButtonFire = true;
+                    if (Mouse.current.rightButton.isPressed) holdingButtonAim = true;
                 }
-                
-                if (Application.isMobilePlatform)
-                    cursorLocked = true; 
+                if (Keyboard.current != null)
+                {
+                    if (Keyboard.current.leftShiftKey.isPressed) holdingButtonRun = true;
+                    
+                    if (Keyboard.current.rKey.wasPressedThisFrame && CanReload()) PlayReloadAnimation();
+                    if (Keyboard.current.qKey.wasPressedThisFrame && inventory != null) 
+                        StartCoroutine(Equip(inventory.GetNextIndex()));
+                }
             }
             // ----------------------------------
 
@@ -247,12 +247,30 @@ namespace InfimaGames.LowPolyShooterPack
 			{
 				//Check.
 				bool isPunching = equippedWeapon.GetComponent<PunchCombat>() != null;
-				if (CanPlayAnimationFire() && (equippedWeapon.HasAmmunition() || isPunching) && (equippedWeapon.IsAutomatic() || isPunching))
+                bool canFire = CanPlayAnimationFire() && (equippedWeapon.HasAmmunition() || isPunching);
+				if (canFire && (equippedWeapon.IsAutomatic() || isPunching))
 				{
 					//Has fire rate passed.
 					if (Time.time - lastShotTime > 60.0f / (isPunching ? 120.0f : equippedWeapon.GetRateOfFire()))
 						Fire();
-				}	
+				}
+                else if (canFire && !equippedWeapon.IsAutomatic())
+                {
+                    // Semi-auto logic (Pistol)
+                    bool triggerDown = false;
+                    if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+                    {
+                        if (TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed)
+                        {
+                            triggerDown = true;
+                            TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed = false; // Consume
+                        }
+                    }
+                    if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame) triggerDown = true;
+
+                    if (triggerDown && Time.time - lastShotTime > 60.0f / equippedWeapon.GetRateOfFire())
+                        Fire();
+                }
 			}
 
 			//Update Animator.
@@ -300,13 +318,42 @@ namespace InfimaGames.LowPolyShooterPack
 		
 		public override Vector2 GetInputMovement()
 		{
-			return axisMovement;
+            Vector2 move = axisMovement;
+            
+            // Desktop fallback
+            if (!Application.isMobilePlatform && move.sqrMagnitude < 0.01f) {
+                float h = 0, v = 0;
+                if (Keyboard.current != null) {
+                    if (Keyboard.current.wKey.isPressed) v += 1;
+                    if (Keyboard.current.sKey.isPressed) v -= 1;
+                    if (Keyboard.current.aKey.isPressed) h -= 1;
+                    if (Keyboard.current.dKey.isPressed) h += 1;
+                }
+                if (Mathf.Abs(h) > 0 || Mathf.Abs(v) > 0) move = new Vector2(h, v).normalized;
+            }
+
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) {
+                var m = TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
+                if (m.sqrMagnitude > 0.001f) move = m;
+            }
+			return move;
 		}
 		public override Vector2 GetInputLook()
 		{
             Vector2 look = axisLook;
-            // Consume look input for this frame
             axisLook = Vector2.zero;
+            
+            // Desktop fallback
+            if (!Application.isMobilePlatform && look.sqrMagnitude < 0.001f) {
+                if (Mouse.current != null) {
+                    look = Mouse.current.delta.ReadValue() * 0.05f; 
+                }
+            }
+            
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) {
+                look += TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.SetLook(Vector2.zero);
+            }
 			return look;
 		}
 
@@ -652,7 +699,11 @@ namespace InfimaGames.LowPolyShooterPack
 		/// <summary>
 		/// Returns true if the character can run.
 		/// </summary>
-		private bool CanRun() => (axisMovement.y > 0 || Math.Abs(axisMovement.x) > 0) && !aiming && !inspecting && !reloading && !holstered && !holstering;
+		private bool CanRun()
+        {
+            Vector2 move = GetInputMovement();
+            return move.y > 0.1f && !aiming && !inspecting && !reloading && !holstered && !holstering;
+        }
 
 		/// <summary>
 		/// Returns true if the character can inspect its weapon.

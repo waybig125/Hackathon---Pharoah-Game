@@ -6,15 +6,15 @@ namespace TheAlchemistsCrypt.Environment
     {
         [Header("Fog Settings")]
         public bool enableFog = true;
-        // Darker, more dusky Egyptian Night color (Dusty Blue/Gray/Sand)
-        public Color fogColor = new Color(0.12f, 0.11f, 0.15f, 1f);
-        public float fogDensity = 0.02f; 
+        // Mystic Egyptian Orange Fog
+        public Color fogColor = new Color(0.45f, 0.25f, 0.05f, 1f);
+        public float fogDensity = 0.012f; 
         public FogMode fogMode = FogMode.ExponentialSquared;
 
         [Header("Lighting Settings")]
-        public Color ambientLight = new Color(0.15f, 0.15f, 0.2f); // Darker blueish ambient
-        public Color sunColor = new Color(0.6f, 0.5f, 0.4f, 1.0f); // Dimmer, warmer "moonlight"
-        public float sunIntensity = 0.8f; 
+        public Color ambientLight = new Color(0.25f, 0.22f, 0.28f); 
+        public Color sunColor = new Color(0.8f, 0.6f, 0.4f, 1.0f); 
+        public float sunIntensity = 1.0f; 
 
         private void Start()
         {
@@ -28,11 +28,11 @@ namespace TheAlchemistsCrypt.Environment
             RenderSettings.fogDensity = fogDensity;
             RenderSettings.fogMode = fogMode;
 
-            // Apply solid color to camera to blend sky with fog perfectly
-            if (Camera.main != null)
+            // Force cameras to Solid Color yellowish clear to fix Pink issue
+            foreach (var cam in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include))
             {
-                Camera.main.clearFlags = CameraClearFlags.SolidColor;
-                Camera.main.backgroundColor = fogColor;
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = fogColor;
             }
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;

@@ -6,7 +6,7 @@ namespace TheAlchemistsCrypt.Player
     public class PlayerController : MonoBehaviour
     {
         [Header("Movement Settings")]
-        [SerializeField] private float moveSpeed = 5f;
+        [SerializeField] private float moveSpeed = 12f;
         [SerializeField] private float lookSensitivity = 2f;
 
         [Header("References")]
@@ -19,7 +19,6 @@ namespace TheAlchemistsCrypt.Player
         {
             rb = GetComponent<Rigidbody>();
             
-            // Lock cursor if on desktop
             if (!Application.isMobilePlatform)
             {
                 Cursor.lockState = CursorLockMode.Locked;
@@ -43,7 +42,7 @@ namespace TheAlchemistsCrypt.Player
             Vector3 moveDirection = (transform.forward * input.y + transform.right * input.x).normalized;
             
             Vector3 targetVelocity = moveDirection * moveSpeed;
-            targetVelocity.y = rb.linearVelocity.y; // Maintain gravity
+            targetVelocity.y = rb.linearVelocity.y; 
             
             rb.linearVelocity = targetVelocity;
         }
@@ -51,11 +50,8 @@ namespace TheAlchemistsCrypt.Player
         private void HandleRotation()
         {
             Vector2 lookInput = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
-
-            // Horizontal rotation (Player Body)
             transform.Rotate(Vector3.up * lookInput.x * lookSensitivity);
 
-            // Vertical rotation (Camera)
             verticalLookRotation -= lookInput.y * lookSensitivity;
             verticalLookRotation = Mathf.Clamp(verticalLookRotation, -90f, 90f);
             playerCamera.localEulerAngles = new Vector3(verticalLookRotation, 0, 0);

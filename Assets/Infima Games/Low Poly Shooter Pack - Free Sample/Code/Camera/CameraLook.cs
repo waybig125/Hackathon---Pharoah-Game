@@ -64,8 +64,8 @@ namespace InfimaGames.LowPolyShooterPack
         }
         private void Start()
         {
-            // FORCE SENSITIVITY in code to ensure it's not overridden by low inspector values
-            sensitivity = new Vector2(2800, 2800); 
+            // Ultra-precise sensitivity for better playability
+            sensitivity = new Vector2(40, 40); 
 
             //Cache the character's initial rotation.
             rotationCharacter = playerCharacter.transform.localRotation;
@@ -77,6 +77,15 @@ namespace InfimaGames.LowPolyShooterPack
             //Frame Input. The Input to add this frame!
             Vector2 frameInput = playerCharacter.GetInputLook();
             
+            // Fail-safe for Desktop Mouse Delta
+            if (frameInput.sqrMagnitude < 0.001f && !Application.isMobilePlatform)
+            {
+                if (UnityEngine.InputSystem.Mouse.current != null)
+                {
+                    frameInput = UnityEngine.InputSystem.Mouse.current.delta.ReadValue() * 0.05f;
+                }
+            }
+
             // On desktop, we might still want to ignore input if cursor isn't locked,
             // but for mobile we always want it. 
             // We can check if it's mobile input by seeing if MobileInputManager was involved,

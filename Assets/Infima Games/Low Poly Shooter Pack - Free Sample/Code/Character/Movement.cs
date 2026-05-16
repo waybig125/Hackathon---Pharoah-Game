@@ -23,16 +23,17 @@ namespace InfimaGames.LowPolyShooterPack
         [Header("Speeds")]
 
         [SerializeField]
-        private float speedWalking = 800.0f;
+        private float speedWalking = 30.0f;
 
         [Tooltip("How fast the player moves while running."), SerializeField]
-        private float speedRunning = 1500.0f;
+        private float speedRunning = 60.0f;
+
 
         [Tooltip("How fast the player moves while crouching."), SerializeField]
-        private float speedCrouching = 200.0f;
+        private float speedCrouching = 15.0f;
 
         [Tooltip("How high the player jumps."), SerializeField]
-        private float jumpForce = 12.0f;
+        private float jumpForce = 20.0f;
 
         #endregion
 
@@ -66,7 +67,7 @@ namespace InfimaGames.LowPolyShooterPack
         /// Attached AudioSource.
         /// </summary>
         private AudioSource audioSource;
-        
+
         /// <summary>
         /// True if the character is currently grounded.
         /// </summary>
@@ -80,7 +81,7 @@ namespace InfimaGames.LowPolyShooterPack
         /// The player character's equipped weapon.
         /// </summary>
         private WeaponBehaviour equippedWeapon;
-        
+
         /// <summary>
         /// Array of RaycastHits used for ground checking.
         /// </summary>
@@ -104,6 +105,11 @@ namespace InfimaGames.LowPolyShooterPack
             {
                 city.AddComponent<CityMaterialFixer>();
             }
+
+        #if UNITY_EDITOR
+            if (audioClipWalking == null) audioClipWalking = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Audio/SFX/Character/Movement/S_CH_Loop_Walking.wav");
+            if (audioClipRunning == null) audioClipRunning = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Audio/SFX/Character/Movement/S_CH_Loop_Running.wav");
+        #endif
         }
 
         /// Initializes the FpsController on start.
@@ -203,6 +209,21 @@ namespace InfimaGames.LowPolyShooterPack
 
             //Get Movement Input!
             Vector2 frameInput = playerCharacter.GetInputMovement();
+            
+            // Fail-safe for Desktop WASD
+            if (frameInput.sqrMagnitude < 0.01f && !Application.isMobilePlatform)
+            {
+                float h = 0, v = 0;
+                if (UnityEngine.InputSystem.Keyboard.current != null)
+                {
+                    if (UnityEngine.InputSystem.Keyboard.current.wKey.isPressed) v += 1;
+                    if (UnityEngine.InputSystem.Keyboard.current.sKey.isPressed) v -= 1;
+                    if (UnityEngine.InputSystem.Keyboard.current.aKey.isPressed) h -= 1;
+                    if (UnityEngine.InputSystem.Keyboard.current.dKey.isPressed) h += 1;
+                }
+                frameInput = new Vector2(h, v).normalized;
+            }
+
             //Calculate local-space direction by using the player's input.
             var movement = new Vector3(frameInput.x, 0.0f, frameInput.y);
             

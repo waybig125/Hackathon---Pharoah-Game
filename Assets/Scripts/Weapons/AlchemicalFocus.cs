@@ -37,6 +37,15 @@ namespace TheAlchemistsCrypt.Weapons
 
         private void HandleModeSwitch()
         {
+            // Mobile Swap Logic
+            if (MobileInputManager.Instance.IsSwappingWeapon)
+            {
+                int next = ((int)currentMode + 1) % 3;
+                currentMode = (FireMode)next;
+                MobileInputManager.Instance.IsSwappingWeapon = false; // Reset the trigger
+                Debug.Log($"Mobile: Switched to {currentMode}");
+            }
+
             // Simple keyboard switch for desktop testing
             if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha1)) currentMode = FireMode.Sulfur;
             if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha2)) currentMode = FireMode.Mercury;

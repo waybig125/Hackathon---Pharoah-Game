@@ -13,6 +13,7 @@ namespace TheAlchemistsCrypt.Input
         public Vector2 MovementInput { get; private set; }
         public Vector2 LookInput { get; private set; }
         public bool IsFiring { get; private set; }
+        public bool WasFiringPressed { get; set; } // Trigger for semi-auto
         public bool IsAiming { get; private set; }
         public bool IsJumping { get; set; }
         public bool IsJumpHeld { get; private set; }
@@ -57,6 +58,7 @@ namespace TheAlchemistsCrypt.Input
 
         public void SetFiring(bool state)
         {
+            if (state && !IsFiring) WasFiringPressed = true;
             IsFiring = state;
         }
 
