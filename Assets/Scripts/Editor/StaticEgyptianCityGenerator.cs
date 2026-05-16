@@ -7,40 +7,33 @@ namespace TheAlchemistsCrypt.Editor
 {
     public class StaticEgyptianCityGenerator : EditorWindow
     {
-        [MenuItem("Tools/Generate Egyptian City (Static)")]
+        [MenuItem("Tools/Generate Egyptian City (V3 - Final)")]
         public static void ShowWindow() =>
-            GetWindow<StaticEgyptianCityGenerator>("Static Egyptian City");
+            GetWindow<StaticEgyptianCityGenerator>("Egyptian City V3");
 
-        private int seed = 42;
-        private int gridSize = 14;
-        private float houseDensity = 0.85f;
-        private bool bakeNavMesh = true;
-        private string rootName = "EgyptianCity_Static";
-        
+        private int seed = 777;
+        private int gridSize = 12;
+        private float streetWidth = 18f; // WIDER STREETS
         private float blockSize = 24f;
-        private float streetWidth = 12f;
+        private float houseDensity = 0.8f;
+        
+        private string rootName = "EgyptianCity_V3";
 
         private void OnGUI()
         {
-            EditorGUILayout.HelpBox("Deterministic Mobile Egyptian Horror City Builder. Optimized for High-Fidelity.", MessageType.Info);
-
-            seed = EditorGUILayout.IntField("Random Seed", seed);
-            gridSize = EditorGUILayout.IntSlider("Grid Size", gridSize, 5, 25);
-            houseDensity = EditorGUILayout.Slider("House Density", houseDensity, 0.1f, 1.0f);
-            bakeNavMesh = EditorGUILayout.Toggle("Bake NavMesh", bakeNavMesh);
+            EditorGUILayout.HelpBox("High-Fidelity Egyptian Horror Environment. Fixed Grounding, Windows, Doors, and AI.", MessageType.Info);
+            seed = EditorGUILayout.IntField("Seed", seed);
+            gridSize = EditorGUILayout.IntSlider("Grid Size", gridSize, 5, 20);
+            streetWidth = EditorGUILayout.Slider("Street Width", streetWidth, 10, 30);
             
-            if (GUILayout.Button("▶  Generate Optimized City", GUILayout.Height(44)))
-                GenerateCity();
-
-            if (GUILayout.Button("🗑  Cleanup City", GUILayout.Height(30)))
-                Purge();
+            if (GUILayout.Button("▶ GENERATE FINAL CITY", GUILayout.Height(50))) GenerateCity();
+            if (GUILayout.Button("🗑 CLEANUP", GUILayout.Height(30))) Purge();
         }
 
         private void Purge()
         {
             var old = GameObject.Find(rootName);
             if (old != null) Undo.DestroyObjectImmediate(old);
-            Debug.Log("City purged.");
         }
 
         private void GenerateCity()
@@ -49,255 +42,244 @@ namespace TheAlchemistsCrypt.Editor
             Purge();
 
             var root = new GameObject(rootName);
-            Undo.RegisterCreatedObjectUndo(root, "Generate City");
-            root.isStatic = true; 
+            Undo.RegisterCreatedObjectUndo(root, "Gen City");
+            root.isStatic = true;
             root.AddComponent<TheAlchemistsCrypt.Environment.AmbientHorrorSFX>();
 
-            // Load Assets
-            var t1 = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/realistic_hd_date_palm_2178.glb");
-            var t2 = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/realistic_hd_date_palm_378.glb");
-            var t3 = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/realistic_hd_date_palm_4778.glb");
+            // Asset Loading
+            var trees = new GameObject[] {
+                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/realistic_hd_date_palm_2178.glb"),
+                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/realistic_hd_date_palm_378.glb"),
+                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/realistic_hd_date_palm_4778.glb")
+            };
             var pillar = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_pillar_column.glb"); 
             var zombie = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/TestZombie.prefab");
             var crate = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/crate.glb");
             var barrel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/barrel.glb");
             
-            // Textures
             Texture2D wallN = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EgyptianAssets/desert_sand_normal.png");
             Texture2D floorN1 = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EgyptianAssets/desert_sand_normal.png");
             Texture2D floorN2 = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/Textures/EgyptianNormalMap.png");
-            
-            Material wallMat = CreateURPLitMaterial(new Color(0.9f, 0.82f, 0.68f), wallN, 2f);
-            Material floorMat = CreateLayeredFloorMaterial(new Color(0.85f, 0.78f, 0.65f), floorN1, floorN2);
-            Material woodMat = CreateURPLitMaterial(new Color(0.38f, 0.25f, 0.12f), null, 1f);
-            Material blackMat = CreateURPLitMaterial(Color.black, null, 1f);
 
-            SetAtmosphere();
+            Material wallMat = CreateLit(new Color(0.88f, 0.8f, 0.65f), wallN, 2f);
+            Material floorMat = CreateLayeredFloor(new Color(0.85f, 0.78f, 0.65f), floorN1, floorN2);
+            Material woodMat = CreateLit(new Color(0.35f, 0.22f, 0.12f), null, 1f); // Dark Brown
+            Material darkWindowMat = CreateLit(new Color(0.15f, 0.1f, 0.05f), null, 1f); // Recessed Window
+            Material emissiveWindow = CreateLit(Color.black, null, 1f, true);
+
+            SetupLighting();
 
             float totalSize = gridSize * (blockSize + streetWidth);
             
-            // Solid Floor
+            // GROUND
             var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            floor.name = "DesertFloor_Solid";
+            floor.name = "SOLID_GROUND";
             floor.transform.SetParent(root.transform);
             floor.transform.localScale = new Vector3(totalSize / 5f, 1f, totalSize / 5f);
             floor.GetComponent<Renderer>().sharedMaterial = floorMat;
             floor.isStatic = true;
 
-            // Pyramids
-            GenerateBetterPyramid(root, new Vector3(-totalSize * 1.6f, -15f, totalSize * 1.6f), 450f, wallMat, false);
-            GenerateBetterPyramid(root, new Vector3(totalSize * 2f, -15f, -totalSize * 2.2f), 650f, wallMat, false);
-            GenerateBetterPyramid(root, new Vector3(0, -15f, totalSize * 2.8f), 850f, wallMat, true);
+            // PYRAMIDS (Visible)
+            CreatePyramid(root, new Vector3(-totalSize, -10, totalSize), 400f, wallMat, new Color(0.8f, 0.4f, 1f));
+            CreatePyramid(root, new Vector3(totalSize, -10, -totalSize), 500f, wallMat, new Color(1f, 0.5f, 0f));
 
             float start = -totalSize * 0.5f + blockSize * 0.5f;
-            for (int x = 0; x < gridSize; x++)
-            {
-                for (int z = 0; z < gridSize; z++)
-                {
+            for (int x = 0; x < gridSize; x++) {
+                for (int z = 0; z < gridSize; z++) {
                     float px = start + x * (blockSize + streetWidth);
                     float pz = start + z * (blockSize + streetWidth);
                     var pos = new Vector3(px, 0, pz);
 
-                    if (Vector3.Distance(pos, Vector3.zero) < 60f) continue;
+                    if (Vector3.Distance(pos, Vector3.zero) < 50f) continue;
 
-                    int pattern = (x * 7 + z * 3 + seed) % 10;
-                    if (pattern > houseDensity * 10) {
-                        PlaceOpenPlotFancy(root.transform, pos, t1, t2, t3, pillar, crate, barrel, pattern);
-                        if (pattern == 9 && zombie) SpawnZombie(zombie, root.transform, pos);
+                    int rand = Random.Range(0, 100);
+                    if (rand > houseDensity * 100) {
+                        PlacePlaza(root.transform, pos, trees, pillar, crate, barrel);
+                        if (rand > 95 && zombie) SpawnZombie(zombie, root.transform, pos);
                         continue;
                     }
 
-                    PlaceComplexHouseDetailed(root.transform, pos, wallMat, woodMat, blackMat, crate, barrel, pattern);
+                    PlaceDetailedHouse(root.transform, pos, wallMat, woodMat, darkWindowMat, emissiveWindow, crate, barrel);
                 }
             }
 
-            if (bakeNavMesh) {
-                var surface = root.AddComponent<NavMeshSurface>();
-                surface.collectObjects = CollectObjects.Children;
-                surface.BuildNavMesh();
-            }
+            // NAVMESH
+            var surface = root.AddComponent<NavMeshSurface>();
+            surface.collectObjects = CollectObjects.Children;
+            surface.BuildNavMesh();
+
+            TintWeapons();
 
             StaticBatchingUtility.Combine(root);
-            Debug.Log("Optimized Egyptian City Generated.");
+            Debug.Log("Egyptian City V3 Generated Successfully.");
         }
 
-        private static void SetAtmosphere()
+        private void SetupLighting()
         {
-            Color fogCol = new Color(0.72f, 0.52f, 0.18f, 1f);
             RenderSettings.fog = true;
-            RenderSettings.fogColor = fogCol; RenderSettings.fogDensity = 0.01f;
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.42f, 0.38f, 0.32f);
-
-            foreach (var cam in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include)) {
-                cam.clearFlags = CameraClearFlags.SolidColor;
-                cam.backgroundColor = fogCol;
-            }
-        }
-
-        private static void GenerateBetterPyramid(GameObject root, Vector3 pos, float size, Material mat, bool horror)
-        {
-            GameObject pyr = new GameObject(horror ? "HorrorPyramid" : "Pyramid");
-            pyr.transform.SetParent(root.transform);
-            pyr.transform.position = pos;
-
-            int steps = 6;
-            float height = size * 0.8f;
-            float stepH = height / steps;
-            for (int i = 0; i < steps; i++) {
-                float s = size * (1f - (float)i / steps);
-                var step = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                step.transform.SetParent(pyr.transform);
-                step.transform.localPosition = new Vector3(0, i * stepH + stepH/2f, 0);
-                step.transform.localScale = new Vector3(s, stepH, s);
-                step.GetComponent<Renderer>().sharedMaterial = mat;
-                DestroyImmediate(step.GetComponent<Collider>());
-            }
-
-            if (horror) {
-                var l = new GameObject("PeakLight").AddComponent<Light>();
-                l.transform.SetParent(pyr.transform);
-                l.transform.localPosition = new Vector3(0, height + 15f, 0);
-                l.type = LightType.Point; l.color = new Color(0.7f, 0.1f, 1f);
-                l.intensity = 80f; l.range = 400f;
-            }
-        }
-
-        private static void PlaceOpenPlotFancy(Transform parent, Vector3 pos, GameObject t1, GameObject t2, GameObject t3, GameObject pillar, GameObject crate, GameObject barrel, int pattern)
-        {
-            GameObject plot = new GameObject("OpenPlot");
-            plot.transform.SetParent(parent); plot.transform.position = pos;
-
-            if (pattern % 3 == 0 && pillar) {
-                var p = (GameObject)PrefabUtility.InstantiatePrefab(pillar, plot.transform);
-                p.transform.rotation = Quaternion.Euler(-90, pattern * 10, 0);
-                p.transform.localScale = Vector3.one * 0.6f;
-            } else {
-                GameObject prefab = (pattern % 2 == 0) ? t1 : (pattern % 5 == 0 ? t3 : t2);
-                if (prefab) {
-                    var t = (GameObject)PrefabUtility.InstantiatePrefab(prefab, plot.transform);
-                    t.transform.rotation = Quaternion.Euler(-90, pattern * 15, 0);
-                    t.transform.localScale = Vector3.one * 5.5f;
-                }
-            }
+            RenderSettings.fogColor = new Color(0.7f, 0.5f, 0.2f);
+            RenderSettings.fogDensity = 0.005f; // LESS FOG
+            RenderSettings.fogStartDistance = 50f;
+            RenderSettings.fogEndDistance = 800f;
             
-            // Extra Props
-            for (int i = 0; i < 3; i++) {
-                if ((pattern + i) % 2 == 0 && crate) {
-                    var c = (GameObject)PrefabUtility.InstantiatePrefab(crate, plot.transform);
-                    c.transform.localPosition = new Vector3(Random.Range(-5, 5), 0, Random.Range(-5, 5));
-                    c.transform.localScale = Vector3.one * 0.2f;
-                }
-            }
+            RenderSettings.ambientLight = new Color(0.35f, 0.32f, 0.28f);
         }
 
-        private static void PlaceComplexHouseDetailed(Transform parent, Vector3 pos, Material wall, Material wood, Material black, GameObject crate, GameObject barrel, int pattern)
+        private void CreatePyramid(GameObject root, Vector3 pos, float size, Material mat, Color glow)
         {
-            var house = new GameObject("House_Complex");
+            var p = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            p.name = "GreatPyramid";
+            p.transform.SetParent(root.transform);
+            p.transform.position = pos + Vector3.up * (size * 0.4f);
+            p.transform.localScale = new Vector3(size, size * 0.8f, size);
+            p.transform.rotation = Quaternion.Euler(0, 45, 0);
+            p.GetComponent<Renderer>().sharedMaterial = mat;
+            
+            var l = new GameObject("PyramidLight").AddComponent<Light>();
+            l.transform.SetParent(p.transform); l.transform.localPosition = Vector3.up * 0.6f;
+            l.type = LightType.Point; l.color = glow; l.intensity = 500f; l.range = 1000f;
+        }
+
+        private void PlaceDetailedHouse(Transform parent, Vector3 pos, Material wall, Material wood, Material darkWin, Material emissiveWin, GameObject crate, GameObject barrel)
+        {
+            var house = new GameObject("House");
             house.transform.SetParent(parent); house.transform.position = pos;
             house.isStatic = true;
 
-            int mods = (pattern % 2) + 1;
-            float h = 15f + (pattern % 3) * 3f;
-            Color windowCol = (pattern % 3 == 0) ? new Color(1f, 0.4f, 0.1f) : // Sulfur Red/Orange
-                             (pattern % 3 == 1) ? new Color(0.2f, 0.8f, 1f) : // Mercury Aqua
-                             Color.white; // Salt White
+            float h = Random.Range(15, 25);
+            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            body.transform.SetParent(house.transform);
+            body.transform.localPosition = new Vector3(0, h/2, 0);
+            body.transform.localScale = new Vector3(20, h, 20);
+            body.GetComponent<Renderer>().sharedMaterial = wall;
+            DestroyImmediate(body.GetComponent<Collider>());
 
-            for (int i = 0; i < mods; i++) {
-                var mod = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                mod.transform.SetParent(house.transform);
-                mod.transform.localPosition = new Vector3((i - (mods-1)*0.5f)*12f, h/2f, 0);
-                mod.transform.localScale = new Vector3(20f, h, 20f);
-                mod.GetComponent<Renderer>().sharedMaterial = wall;
-                DestroyImmediate(mod.GetComponent<Collider>());
-                AddWindowsAndGlows(mod.transform, black, windowCol);
-            }
+            // DOOR
+            var door = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            door.name = "Door";
+            door.transform.SetParent(house.transform);
+            door.transform.localPosition = new Vector3(0, 4, 10.05f);
+            door.transform.localScale = new Vector3(5, 8, 0.2f);
+            door.GetComponent<Renderer>().sharedMaterial = wood;
 
-            if (pattern % 4 == 0) {
-                var top = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                top.transform.SetParent(house.transform);
-                top.transform.localPosition = new Vector3(0, h + 6f, 0);
-                top.transform.localScale = new Vector3(14f, 12f, 14f);
-                top.GetComponent<Renderer>().sharedMaterial = wall;
-                DestroyImmediate(top.GetComponent<Collider>());
-            }
+            // WINDOWS (Recessed Holes)
+            AddRecessedWindows(body.transform, darkWin, emissiveWin);
 
-            if (h > 20f) CreateLadder(house.transform, h, wood);
-
-            // House Props
-            if (crate) {
-                var c = (GameObject)PrefabUtility.InstantiatePrefab(crate, house.transform);
-                c.transform.localPosition = new Vector3(12f, 0.5f, 5f); c.transform.localScale = Vector3.one * 0.22f;
-            }
-            if (barrel) {
-                var b = (GameObject)PrefabUtility.InstantiatePrefab(barrel, house.transform);
-                b.transform.localPosition = new Vector3(-12f, 0.5f, -5f); b.transform.localScale = Vector3.one * 0.22f;
+            // PROPS (Outside in the yard)
+            if (Random.value > 0.4f) {
+                var propPos = pos + new Vector3(14, 0, 8);
+                if (Random.value > 0.5f && crate) InstantiateProp(crate, propPos, house.transform);
+                else if (barrel) InstantiateProp(barrel, propPos, house.transform);
             }
 
             var bc = house.AddComponent<BoxCollider>();
-            bc.center = new Vector3(0, h * 0.5f, 0); bc.size = new Vector3(30f, h * 2f, 30f);
+            bc.center = new Vector3(0, h/2, 0); bc.size = new Vector3(22, h, 22);
         }
 
-        private static void AddWindowsAndGlows(Transform mod, Material black, Color glow) {
+        private void AddRecessedWindows(Transform body, Material dark, Material emissive)
+        {
             for (int i = 0; i < 4; i++) {
-                var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                win.transform.SetParent(mod);
-                win.transform.localScale = new Vector3(0.18f, 0.25f, 0.18f);
-                win.GetComponent<Renderer>().sharedMaterial = black;
-                DestroyImmediate(win.GetComponent<Collider>());
                 float angle = i * 90f;
-                win.transform.localPosition = new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad) * 0.505f, 0.3f, Mathf.Sin(angle * Mathf.Deg2Rad) * 0.505f);
+                var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                win.transform.SetParent(body);
+                win.transform.localScale = new Vector2(0.2f, 0.25f);
+                win.transform.localScale = new Vector3(0.25f, 0.25f, 0.1f);
+                
+                bool isOpen = Random.value > 0.7f;
+                win.GetComponent<Renderer>().sharedMaterial = isOpen ? emissive : dark;
+                DestroyImmediate(win.GetComponent<Collider>());
 
-                var l = new GameObject("WinLight").AddComponent<Light>();
-                l.transform.SetParent(win.transform); l.transform.localPosition = Vector3.zero;
-                l.type = LightType.Point; l.color = glow; l.intensity = 2.5f; l.range = 7f;
+                float rad = angle * Mathf.Deg2Rad;
+                win.transform.localPosition = new Vector3(Mathf.Cos(rad) * 0.501f, 0.2f, Mathf.Sin(rad) * 0.501f);
+                win.transform.localRotation = Quaternion.Euler(0, -angle + 90, 0);
+
+                if (isOpen) {
+                    var l = new GameObject("Glow").AddComponent<Light>();
+                    l.transform.SetParent(win.transform); l.transform.localPosition = Vector3.zero;
+                    l.type = LightType.Point; l.intensity = 1.5f; l.range = 5f;
+                    l.color = (Random.value > 0.6f) ? new Color(1, 0.5f, 0) : new Color(0, 0.8f, 1);
+                }
             }
         }
 
-        private static void CreateLadder(Transform parent, float h, Material mat) {
-            var ladder = new GameObject("Ladder");
-            ladder.transform.SetParent(parent); ladder.transform.localPosition = new Vector3(10.2f, 0, 4f);
-            for (int i = 0; i < (int)h; i++) {
-                var rung = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                rung.transform.SetParent(ladder.transform);
-                rung.transform.localPosition = new Vector3(0, i + 0.5f, 0);
-                rung.transform.localScale = new Vector3(0.2f, 0.15f, 2.5f);
-                rung.GetComponent<Renderer>().sharedMaterial = mat;
-                DestroyImmediate(rung.GetComponent<Collider>());
+        private void InstantiateProp(GameObject prefab, Vector3 pos, Transform parent)
+        {
+            var count = Random.Range(1, 3);
+            for (int i = 0; i < count; i++) {
+                var p = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+                p.transform.position = pos + new Vector3(i * 1.5f, 0, 0);
+                p.transform.localScale = Vector3.one * 0.25f;
+                p.transform.rotation = Quaternion.Euler(-90, Random.Range(0, 360), 0);
+                
+                // Add Physics
+                var rb = p.AddComponent<Rigidbody>();
+                rb.mass = 20f; rb.drag = 1f; rb.angularDrag = 1f;
+                var coll = p.GetComponent<Collider>();
+                if (coll == null) p.AddComponent<MeshCollider>().convex = true;
             }
         }
 
-        private static void SpawnZombie(GameObject prefab, Transform parent, Vector3 pos) {
+        private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject pillar, GameObject crate, GameObject barrel)
+        {
+            var plaza = new GameObject("Plaza");
+            plaza.transform.SetParent(parent); plaza.transform.position = pos;
+            
+            if (trees.Length > 0 && Random.value > 0.3f) {
+                var t = (GameObject)PrefabUtility.InstantiatePrefab(trees[Random.Range(0, trees.Length)], plaza.transform);
+                t.transform.localScale = Vector3.one * 6f;
+                t.transform.rotation = Quaternion.Euler(-90, 0, 0);
+            } else if (pillar) {
+                var p = (GameObject)PrefabUtility.InstantiatePrefab(pillar, plaza.transform);
+                p.transform.localScale = Vector3.one * 0.7f;
+                p.transform.rotation = Quaternion.Euler(-90, 0, 0);
+            }
+        }
+
+        private void SpawnZombie(GameObject prefab, Transform parent, Vector3 pos)
+        {
             var z = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-            z.transform.position = pos + Vector3.up; z.SetActive(true);
+            z.transform.position = pos + Vector3.up;
+            z.SetActive(true);
+            if (z.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>() == null)
+                z.AddComponent<TheAlchemistsCrypt.AI.ZombieAI>();
         }
 
-        private static Material CreateURPLitMaterial(Color color, Texture2D normal, float tiling) {
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Lit"));
-            mat.color = color;
-            if (normal) { mat.SetTexture("_BumpMap", normal); mat.EnableKeyword("_NORMALMAP"); }
-            mat.mainTextureScale = new Vector2(tiling, tiling);
-            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0f);
+        private void TintWeapons()
+        {
+            var inv = GameObject.FindObjectOfType<InfimaGames.LowPolyShooterPack.Inventory>();
+            if (inv == null) return;
+
+            // Sulfur (Red), Salt (White), Mercury (Aqua)
+            Color[] colors = { new Color(1, 0.4f, 0), Color.white, new Color(0, 0.8f, 1) };
+            int i = 0;
+            foreach (Transform t in inv.transform) {
+                var renderers = t.GetComponentsInChildren<Renderer>();
+                Color c = colors[i % colors.Length];
+                foreach (var r in renderers) {
+                    foreach (var m in r.sharedMaterials) {
+                        m.SetColor("_EmissionColor", c * 2f);
+                        m.EnableKeyword("_EMISSION");
+                    }
+                }
+                i++;
+            }
+        }
+
+        private Material CreateLit(Color c, Texture2D n, float tile, bool emissive = false) {
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            mat.color = c;
+            if (n) { mat.SetTexture("_BumpMap", n); mat.EnableKeyword("_NORMALMAP"); }
+            if (emissive) { mat.SetColor("_EmissionColor", new Color(0.8f, 0.4f, 0) * 2f); mat.EnableKeyword("_EMISSION"); }
+            mat.mainTextureScale = new Vector2(tile, tile);
             return mat;
         }
 
-        private static Material CreateLayeredFloorMaterial(Color color, Texture2D sandN, Texture2D egyptN) {
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Lit"));
-            mat.color = color;
-            // Primary normal: Egyptian Hieroglyphics (Low strength)
-            if (egyptN) { 
-                mat.SetTexture("_BumpMap", egyptN); 
-                mat.EnableKeyword("_NORMALMAP");
-                mat.SetFloat("_BumpScale", 0.35f); // Submerged in sand
-            }
-            // Detail normal: Sand ripples
-            if (sandN) {
-                mat.SetTexture("_DetailNormalMap", sandN);
-                mat.EnableKeyword("_DETAIL_MULX2");
-                mat.SetFloat("_DetailNormalMapScale", 1.0f);
-            }
-            mat.mainTextureScale = new Vector2(150, 150);
-            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0f);
+        private Material CreateLayeredFloor(Color c, Texture2D sN, Texture2D eN) {
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            mat.color = c;
+            if (eN) { mat.SetTexture("_BumpMap", eN); mat.EnableKeyword("_NORMALMAP"); mat.SetFloat("_BumpScale", 0.35f); }
+            if (sN) { mat.SetTexture("_DetailNormalMap", sN); mat.EnableKeyword("_DETAIL_MULX2"); mat.SetFloat("_DetailNormalMapScale", 1.2f); }
+            mat.mainTextureScale = new Vector2(100, 100);
             return mat;
         }
     }
