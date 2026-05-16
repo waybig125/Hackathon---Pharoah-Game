@@ -48,6 +48,12 @@ namespace TheAlchemistsCrypt.Input
                 gameObject.AddComponent<TheAlchemistsCrypt.Environment.AtmosphereManager>();
             }
 
+            // Auto-attach MummySpawner for clean runtime spawning
+            if (gameObject.GetComponent<TheAlchemistsCrypt.AI.MummySpawner>() == null)
+            {
+                gameObject.AddComponent<TheAlchemistsCrypt.AI.MummySpawner>();
+            }
+
             // Silence Depth Surface Warnings by ensuring Main Camera settings are mobile-friendly
             var cam = Camera.main;
             if (cam != null) {

@@ -7,16 +7,22 @@ namespace TheAlchemistsCrypt.AI
     {
         private NavMeshAgent agent;
         private Transform player;
-        private float attackDistance = 2f;
+        private float attackDistance = 2.5f;
         private float checkInterval = 0.5f;
         private float timer;
+
+        private Animator animator;
+        private string currentAnimState = "";
 
         private void Start()
         {
             agent = GetComponent<NavMeshAgent>();
             if (agent == null) agent = gameObject.AddComponent<NavMeshAgent>();
             
-            agent.speed = 3.5f;
+            animator = GetComponent<Animator>();
+            if (animator == null) animator = GetComponentInChildren<Animator>();
+
+            agent.speed = 4.0f;
             agent.stoppingDistance = attackDistance;
             
             FindPlayer();
@@ -41,6 +47,7 @@ namespace TheAlchemistsCrypt.AI
         private void Update()
         {
             if (player == null) {
+                PlayAnimation("Idle");
                 timer += Time.deltaTime;
                 if (timer >= checkInterval) {
                     FindPlayer();
@@ -51,10 +58,34 @@ namespace TheAlchemistsCrypt.AI
 
             agent.SetDestination(player.position);
 
-            if (Vector3.Distance(transform.position, player.position) <= attackDistance) {
+            float distance = Vector3.Distance(transform.position, player.position);
+            if (distance <= attackDistance) {
+                PlayAnimation("Attack");
                 // Attack logic (Damage Player)
                 var health = player.GetComponentInParent<TheAlchemistsCrypt.Player.PlayerHealth>();
                 if (health != null) health.TakeDamage(10f * Time.deltaTime);
+            }
+            else if (agent.velocity.sqrMagnitude > 0.1f) {
+                PlayAnimation("Walk");
+            }
+            else {
+                PlayAnimation("Idle");
+            }
+        }
+
+        private void LateUpdate()
+        {
+            // Enforce upright rotation: local X must be 270 (or -90) and local Z must be 0
+            // This prevents them from falling face-down or tilting during physics/agent movement
+            Vector3 rot = transform.localEulerAngles;
+            transform.localRotation = Quaternion.Euler(270f, rot.y, 0f);
+        }
+
+        private void PlayAnimation(string stateName)
+        {
+            if (animator != null && currentAnimState != stateName) {
+                currentAnimState = stateName;
+                animator.CrossFadeInFixedTime(stateName, 0.2f);
             }
         }
     }

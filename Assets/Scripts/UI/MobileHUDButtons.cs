@@ -13,6 +13,7 @@ namespace TheAlchemistsCrypt.UI
         private Sprite fireIcon;
         private Sprite swapIcon;
         private Sprite sprintIcon;
+        private Sprite jumpIcon;
 
         private Text healthText;
         private Text ammoText;
@@ -33,25 +34,39 @@ namespace TheAlchemistsCrypt.UI
             BuildHUD();
         }
 
+        private Sprite LoadThemedSprite(string relativePath, string fallbackResourcePath)
+        {
+            Sprite result = null;
+#if UNITY_EDITOR
+            result = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/egypt_themed_icons/" + relativePath);
+#endif
+            if (result == null)
+            {
+                result = Resources.Load<Sprite>(fallbackResourcePath);
+            }
+            return result;
+        }
+
         private void LoadSprites()
         {
-            reloadIcon = Resources.Load<Sprite>("UI/Icons/Inspiration/reload");
+            // Load custom Egypt-themed sprites
+            joystickRingSprite = LoadThemedSprite("joystick_outer.png", "UI/Icons/joystick_ring_fallback");
+            joystickKnobSprite = LoadThemedSprite("joystick_knob.png", "UI/Icons/joystick_knob_fallback");
             
-            // Try loading bullet.png as requested by user
-            fireIcon = Resources.Load<Sprite>("UI/Icons/Inspiration/bullet");
-            if (fireIcon == null) fireIcon = Resources.Load<Sprite>("UI/Icons/icon_crouch");
-            if (fireIcon == null) fireIcon = Resources.Load<Sprite>("UI/Icons/icon_attack");
-            
-            swapIcon = Resources.Load<Sprite>("UI/Icons/icon_swap");
-            sprintIcon = Resources.Load<Sprite>("UI/Icons/icon_sprint");
+            fireIcon = LoadThemedSprite("fire.png", "UI/Icons/Inspiration/bullet");
+            reloadIcon = LoadThemedSprite("reload_ammo.png", "UI/Icons/Inspiration/reload");
+            swapIcon = LoadThemedSprite("swap_weapon.png", "UI/Icons/icon_swap");
+            sprintIcon = LoadThemedSprite("sprint.png", "UI/Icons/icon_sprint");
+            jumpIcon = LoadThemedSprite("jump.png", "UI/Icons/icon_jump");
         }
 
         private void GenerateProceduralSprites()
         {
             obsidianSprite = CreateObsidianSprite();
             goldGradientSprite = CreateGoldenGradientSprite();
-            joystickRingSprite = CreateRingSprite();
-            joystickKnobSprite = CreateKnobSprite();
+            
+            if (joystickRingSprite == null) joystickRingSprite = CreateRingSprite();
+            if (joystickKnobSprite == null) joystickKnobSprite = CreateKnobSprite();
         }
 
         private Sprite CreateObsidianSprite()
@@ -262,10 +277,11 @@ namespace TheAlchemistsCrypt.UI
             btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0); // BOTTOM RIGHT
             btnContainer.anchoredPosition = Vector2.zero;
 
-            CreateButton(btnContainer, "FIRE", new Vector2(-300, 300), 320, fireIcon, true, () => SetFire(true), () => SetFire(false));
-            CreateButton(btnContainer, "RELOAD", new Vector2(-650, 150), 180, reloadIcon, false, () => Reload());
-            CreateButton(btnContainer, "SWAP", new Vector2(-450, 600), 180, swapIcon, false, () => Swap());
-            CreateButton(btnContainer, "SPRINT", new Vector2(-650, 450), 180, sprintIcon, false, () => SetSprint(true), () => SetSprint(false));
+            CreateButton(btnContainer, "FIRE", new Vector2(-300, 300), 320, fireIcon, () => SetFire(true), () => SetFire(false));
+            CreateButton(btnContainer, "RELOAD", new Vector2(-650, 150), 180, reloadIcon, () => Reload());
+            CreateButton(btnContainer, "SWAP", new Vector2(-450, 600), 180, swapIcon, () => Swap());
+            CreateButton(btnContainer, "SPRINT", new Vector2(-650, 450), 180, sprintIcon, () => SetSprint(true), () => SetSprint(false));
+            CreateButton(btnContainer, "JUMP", new Vector2(-150, 600), 180, jumpIcon, () => SetJump(true), () => SetJump(false));
 
             HideDebugLabels();
 
@@ -282,7 +298,7 @@ namespace TheAlchemistsCrypt.UI
             lookZone.SetAsFirstSibling();
         }
 
-        private void CreateButton(Transform p, string n, Vector2 pos, float s, Sprite icon, bool isFire, System.Action onDown, System.Action onUp = null)
+        private void CreateButton(Transform p, string n, Vector2 pos, float s, Sprite icon, System.Action onDown, System.Action onUp = null)
         {
             var go = new GameObject(n, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             go.SetParent(p, false);
@@ -290,28 +306,30 @@ namespace TheAlchemistsCrypt.UI
             go.sizeDelta = new Vector2(s, s);
             
             var img = go.GetComponent<Image>();
-            img.sprite = isFire ? obsidianSprite : goldGradientSprite;
-            img.color = Color.white;
+            img.sprite = null;
+            img.color = new Color(0, 0, 0, 0); // Make parent completely transparent but raycastable
             img.raycastTarget = true;
 
             var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             iconGo.SetParent(go, false);
-            iconGo.sizeDelta = go.sizeDelta * 0.55f;
+            iconGo.anchorMin = Vector2.zero;
+            iconGo.anchorMax = Vector2.one;
+            iconGo.offsetMin = iconGo.offsetMax = Vector2.zero; // Stretch completely to match button size
+
             var iImg = iconGo.GetComponent<Image>();
-            
-            iImg.color = isFire ? Color.white : Color.black; 
-            if (icon) iImg.sprite = icon;
+            iImg.sprite = icon;
+            iImg.color = Color.white; 
             iImg.raycastTarget = false;
 
             var helper = go.gameObject.AddComponent<ButtonInputHelper>();
             helper.onDown = () => {
                 go.localScale = new Vector3(0.9f, 0.9f, 1f); 
-                img.color = isFire ? new Color(0.7f, 0.7f, 0.7f, 1f) : new Color(0.8f, 0.8f, 0.8f, 1f);
+                iImg.color = new Color(0.8f, 0.8f, 0.8f, 1f); // Darken for feedback
                 onDown?.Invoke();
             };
             helper.onUp = () => {
                 go.localScale = new Vector3(1f, 1f, 1f);
-                img.color = Color.white;
+                iImg.color = Color.white;
                 onUp?.Invoke();
             };
         }
@@ -407,6 +425,7 @@ namespace TheAlchemistsCrypt.UI
 
         private void SetFire(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetFiring(s);
         private void SetSprint(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetSprinting(s);
+        private void SetJump(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetJumping(s);
         private void Reload() {
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
                 TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsReloading = true;
