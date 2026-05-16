@@ -1,0 +1,15 @@
+### Files to provide:
+1. Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Code/Character/Character.cs
+2. Assets/Scripts/UI/MobileHUDButtons.cs
+3. Assets/Scripts/Input/MobileInputManager.cs
+4. Assets/Joystick Pack/Scripts/Base/Joystick.cs
+
+### Prompt:
+I am building a mobile FPS in Unity using the 'Low Poly Shooter Pack' by Infima Games. I have implemented a Mobile HUD with a Joystick for movement and a Swipe Zone for camera 'look' control.
+
+**Current Issues:**
+1. The Joystick movement often feels 'stuck' or unresponsive on mobile, likely due to conflicts with the package's internal input processing.
+2. The Swipe Zone camera movement stutters. We are using an accumulation pattern in 'MobileInputManager.cs' where 'LookInput += delta', and it is consumed by 'Character.cs' during 'GetInputLook'.
+3. I need to ensure that when a touch is active, all desktop/keyboard inputs are completely ignored to prevent drift and erratic behavior.
+
+Please analyze these files and provide a clean, production-ready refactor for 'Character.cs' and 'MobileHUDButtons.cs' that guarantees smooth movement and look transitions on mobile devices.

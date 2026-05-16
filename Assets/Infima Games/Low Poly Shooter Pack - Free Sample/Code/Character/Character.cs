@@ -326,24 +326,29 @@ namespace InfimaGames.LowPolyShooterPack
 		{
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
             {
-                // On mobile, we MUST prioritize the joystick and ignore keyboard axisMovement
-                // to prevent "stuck" inputs.
                 axisMovement = Vector2.zero; 
                 return TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput;
             }
-			return base.GetInputMovement();
+            
+            // Standard Desktop Logic
+            Vector2 move = axisMovement;
+            axisMovement = Vector2.zero;
+			return move;
 		}
 
 		public override Vector2 GetInputLook()
 		{
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput.sqrMagnitude > 0.001f)
             {
-                // Accumulate/Consume pattern for smooth swipe
                 Vector2 mobileLook = TheAlchemistsCrypt.Input.MobileInputManager.Instance.LookInput;
                 TheAlchemistsCrypt.Input.MobileInputManager.Instance.ConsumeLook();
                 return mobileLook;
             }
-			return base.GetInputLook();
+
+            // Standard Desktop Logic
+            Vector2 look = axisLook;
+            axisLook = Vector2.zero;
+			return look;
 		}
 
 		#endregion
