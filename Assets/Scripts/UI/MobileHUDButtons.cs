@@ -1,66 +1,74 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.EventSystems;
+using System.Collections;
 
 namespace TheAlchemistsCrypt.UI
 {
     public class MobileHUDButtons : MonoBehaviour
     {
-        private GameObject root;
+        public static MobileHUDButtons Instance { get; private set; }
+
         private Text healthText;
         private Text ammoText;
         private Image damageOverlay;
+        
+        private Color goldColor = new Color(0.9f, 0.75f, 0.2f);
+        private Color darkColor = new Color(0.1f, 0.08f, 0.05f, 0.8f);
 
-        private void Start()
+        private void Awake()
         {
+            Instance = this;
             BuildHUD();
         }
 
         private void BuildHUD()
         {
-            root = new GameObject("MobileHUD_Root");
-            var canvas = root.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 100;
-            
-            var scaler = root.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            root.AddComponent<GraphicRaycaster>();
+            var root = new GameObject("HUD_Root");
+            root.transform.SetParent(transform, false);
+            var rootRect = root.AddComponent<RectTransform>();
+            rootRect.anchorMin = Vector2.zero; rootRect.anchorMax = Vector2.one;
+            rootRect.offsetMin = Vector2.zero; rootRect.offsetMax = Vector2.zero;
 
             // Center Crosshair
             var crosshair = new GameObject("Crosshair");
             crosshair.transform.SetParent(root.transform, false);
             var crossRect = crosshair.AddComponent<RectTransform>();
-            crossRect.sizeDelta = new Vector2(10, 10);
+            crossRect.sizeDelta = new Vector2(12, 12);
             var crossImg = crosshair.AddComponent<Image>();
-            crossImg.color = new Color(1f, 1f, 1f, 0.7f);
+            crossImg.color = new Color(1f, 0.9f, 0.5f, 0.8f);
 
             // Font loading
             Font mainFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
             if (mainFont == null) mainFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-            // Stats Panel (Top Left)
+            // Stats Panel (Top Left) - Premium Egyptian Gold
             var stats = new GameObject("StatsPanel");
             stats.transform.SetParent(root.transform, false);
             var statsRect = stats.AddComponent<RectTransform>();
             statsRect.anchorMin = new Vector2(0, 1); statsRect.anchorMax = new Vector2(0, 1);
-            statsRect.pivot = new Vector2(0, 1); statsRect.anchoredPosition = new Vector2(50, -50);
+            statsRect.pivot = new Vector2(0, 1); statsRect.anchoredPosition = new Vector2(60, -60);
             statsRect.sizeDelta = new Vector2(600, 200);
 
-            healthText = CreateText(stats.transform, "HealthText", "HEALTH: 100", mainFont, new Color(1f, 0.4f, 0.4f), 50, new Vector2(0, 0));
-            ammoText = CreateText(stats.transform, "AmmoText", "AMMO: --", mainFont, new Color(1f, 0.85f, 0.2f), 50, new Vector2(0, -60));
+            healthText = CreateText(stats.transform, "HealthText", "HEALTH: 100", mainFont, new Color(1f, 0.3f, 0.3f), 55, new Vector2(0, 0));
+            ammoText = CreateText(stats.transform, "AmmoText", "AMMO: --", mainFont, goldColor, 55, new Vector2(0, -70));
 
             // Controls
             CreateJoystick(root.transform);
-            CreateActionButton(root.transform, "FireButton", new Vector2(-150, 150), Color.red, () => {
+            
+            // Primary Buttons
+            CreateActionButton(root.transform, "Fire", new Vector2(-180, 180), new Color(0.8f, 0.2f, 0.1f), () => {
                 var input = TheAlchemistsCrypt.Input.MobileInputManager.Instance;
                 if (input != null) input.SetFiring(true);
-            });
-            
-            CreateActionButton(root.transform, "SwapButton", new Vector2(-400, 300), Color.yellow, () => {
+            }, true);
+
+            CreateActionButton(root.transform, "Reload", new Vector2(-180, 420), goldColor, () => {
                 var charSvc = InfimaGames.LowPolyShooterPack.ServiceLocator.Current.Get<InfimaGames.LowPolyShooterPack.IGameModeService>();
                 charSvc?.GetPlayerCharacter()?.GetComponent<InfimaGames.LowPolyShooterPack.Inventory>()?.GetEquipped()?.Reload();
+            });
+
+            CreateActionButton(root.transform, "Switch", new Vector2(-420, 180), new Color(0.2f, 0.6f, 0.9f), () => {
+                var inventory = InfimaGames.LowPolyShooterPack.ServiceLocator.Current.Get<InfimaGames.LowPolyShooterPack.IGameModeService>()?.GetPlayerCharacter()?.GetComponent<InfimaGames.LowPolyShooterPack.Inventory>();
+                if (inventory != null) inventory.Equip(inventory.GetNextIndex());
             });
 
             // Damage Overlay
@@ -85,90 +93,107 @@ namespace TheAlchemistsCrypt.UI
             rect.sizeDelta = new Vector2(500, 80);
             var t = obj.AddComponent<Text>();
             t.font = font; t.fontSize = size; t.color = color; t.alignment = TextAnchor.MiddleLeft;
+            t.fontStyle = FontStyle.Bold;
             var shadow = obj.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0, 0, 0, 0.8f); shadow.effectDistance = new Vector2(2, -2);
+            shadow.effectColor = new Color(0, 0, 0, 0.9f); shadow.effectDistance = new Vector2(3, -3);
             return t;
         }
 
         private void CreateJoystick(Transform parent)
         {
-            var joyRoot = new GameObject("Joystick");
+            var joyRoot = new GameObject("Joystick_Anchor");
             joyRoot.transform.SetParent(parent, false);
             var rect = joyRoot.AddComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0, 0); rect.anchorMax = new Vector2(0, 0);
-            rect.pivot = new Vector2(0, 0); rect.anchoredPosition = new Vector2(200, 200);
-            rect.sizeDelta = new Vector2(300, 300);
-
+            rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.zero;
+            rect.pivot = Vector2.zero; rect.anchoredPosition = new Vector2(150, 150);
+            rect.sizeDelta = new Vector2(350, 350);
+            
+            // Visual circle
             var bg = new GameObject("BG");
             bg.transform.SetParent(joyRoot.transform, false);
-            var bgRect = bg.AddComponent<RectTransform>();
-            bgRect.sizeDelta = new Vector2(300, 300);
             var bgImg = bg.AddComponent<Image>();
-            bgImg.color = new Color(1, 1, 1, 0.2f);
-
+            bgImg.color = darkColor;
+            var bgRect = bg.GetComponent<RectTransform>();
+            bgRect.sizeDelta = new Vector2(350, 350);
+            
+            // Handle
             var handle = new GameObject("Handle");
             handle.transform.SetParent(bg.transform, false);
-            var hRect = handle.AddComponent<RectTransform>();
-            hRect.sizeDelta = new Vector2(120, 120);
             var hImg = handle.AddComponent<Image>();
-            hImg.color = new Color(1, 1, 1, 0.5f);
-
-            var trigger = bg.AddComponent<EventTrigger>();
-            AddTrigger(trigger, EventTriggerType.Drag, (e) => OnDrag((PointerEventData)e, bgRect, hRect));
-            AddTrigger(trigger, EventTriggerType.PointerUp, (e) => {
-                hRect.anchoredPosition = Vector2.zero;
-                TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetMovement(Vector2.zero);
-            });
+            hImg.color = goldColor;
+            var hRect = handle.GetComponent<RectTransform>();
+            hRect.sizeDelta = new Vector2(120, 120);
         }
 
-        private void OnDrag(PointerEventData eventData, RectTransform bg, RectTransform handle)
+        private void CreateActionButton(Transform parent, string label, Vector2 pos, Color color, System.Action onClick, bool isBig = false)
         {
-            Vector2 pos = Vector2.zero;
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(bg, eventData.position, eventData.pressEventCamera, out pos)) {
-                float radius = bg.sizeDelta.x * 0.5f;
-                pos = Vector2.ClampMagnitude(pos, radius);
-                handle.anchoredPosition = pos;
-                TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetMovement(pos / radius);
-            }
-        }
+            var btnObj = new GameObject(label);
+            btnObj.transform.SetParent(parent, false);
+            var rect = btnObj.AddComponent<RectTransform>();
+            rect.anchorMin = Vector2.one; rect.anchorMax = Vector2.one;
+            rect.anchoredPosition = pos;
+            float size = isBig ? 220f : 160f;
+            rect.sizeDelta = new Vector2(size, size);
 
-        private void CreateActionButton(Transform parent, string name, Vector2 pos, Color color, System.Action onClick)
-        {
-            var btn = new GameObject(name);
-            btn.transform.SetParent(parent, false);
-            var rect = btn.AddComponent<RectTransform>();
-            rect.anchorMin = new Vector2(1, 0); rect.anchorMax = new Vector2(1, 0);
-            rect.pivot = new Vector2(1, 0); rect.anchoredPosition = pos;
-            rect.sizeDelta = new Vector2(200, 200);
-            var img = btn.AddComponent<Image>();
-            img.color = new Color(color.r, color.g, color.b, 0.4f);
-            var trigger = btn.AddComponent<EventTrigger>();
-            AddTrigger(trigger, EventTriggerType.PointerDown, (e) => onClick());
-            AddTrigger(trigger, EventTriggerType.PointerUp, (e) => {
-                if (name == "FireButton") TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetFiring(false);
-            });
-        }
-
-        private void AddTrigger(EventTrigger trigger, EventTriggerType type, System.Action<BaseEventData> callback)
-        {
-            var entry = new EventTrigger.Entry { eventID = type };
-            entry.callback.AddListener((e) => callback(e));
-            trigger.triggers.Add(entry);
-        }
-
-        private void Update()
-        {
-            if (root == null) return;
-            var charSvc = InfimaGames.LowPolyShooterPack.ServiceLocator.Current.Get<InfimaGames.LowPolyShooterPack.IGameModeService>();
-            var character = charSvc?.GetPlayerCharacter();
+            var img = btnObj.AddComponent<Image>();
+            img.color = darkColor;
             
-            if (character != null) {
-                var healthComp = character.GetComponent<TheAlchemistsCrypt.Player.PlayerHealth>();
-                if (healthComp != null) healthText.text = $"HEALTH: {Mathf.CeilToInt(healthComp.currentHealth)}";
-                
-                var weapon = character.GetComponent<InfimaGames.LowPolyShooterPack.Inventory>()?.GetEquipped();
-                if (weapon != null) ammoText.text = $"AMMO: {weapon.GetAmmunitionCurrent()} / {weapon.GetAmmunitionTotal()}";
+            // Border
+            var border = new GameObject("Border");
+            border.transform.SetParent(btnObj.transform, false);
+            var bImg = border.AddComponent<Image>();
+            bImg.color = color;
+            var bRect = border.GetComponent<RectTransform>();
+            bRect.anchorMin = Vector2.zero; bRect.anchorMax = Vector2.one;
+            bRect.offsetMin = new Vector2(-4, -4); bRect.offsetMax = new Vector2(4, 4);
+            border.transform.SetAsFirstSibling();
+
+            var btn = btnObj.AddComponent<Button>();
+            btn.onClick.AddListener(() => onClick?.Invoke());
+
+            var lblObj = new GameObject("Label");
+            lblObj.transform.SetParent(btnObj.transform, false);
+            var lblT = lblObj.AddComponent<Text>();
+            lblT.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            lblT.text = label.ToUpper();
+            lblT.color = goldColor;
+            lblT.fontSize = isBig ? 40 : 30;
+            lblT.alignment = TextAnchor.MiddleCenter;
+            lblObj.GetComponent<RectTransform>().sizeDelta = rect.sizeDelta;
+        }
+
+        public void UpdateHealth(float health)
+        {
+            if (healthText != null) healthText.text = $"HEALTH: {Mathf.CeilToInt(health)}";
+            if (health < 30) StartCoroutine(FlashHealth());
+        }
+
+        public void UpdateAmmo(int current, int total)
+        {
+            if (ammoText != null) ammoText.text = $"AMMO: {current} / {total}";
+        }
+
+        public void TriggerDamage()
+        {
+            if (damageOverlay != null) StartCoroutine(DamageFlashRoutine());
+        }
+
+        private IEnumerator DamageFlashRoutine()
+        {
+            damageOverlay.color = new Color(1f, 0f, 0f, 0.4f);
+            float t = 0;
+            while (t < 1f) {
+                t += Time.deltaTime * 2f;
+                damageOverlay.color = new Color(1f, 0f, 0f, Mathf.Lerp(0.4f, 0f, t));
+                yield return null;
             }
+        }
+
+        private IEnumerator FlashHealth()
+        {
+            healthText.color = Color.white;
+            yield return new WaitForSeconds(0.2f);
+            healthText.color = new Color(1f, 0.3f, 0.3f);
         }
     }
 }
