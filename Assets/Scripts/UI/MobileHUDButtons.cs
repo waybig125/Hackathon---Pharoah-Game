@@ -96,14 +96,12 @@ namespace TheAlchemistsCrypt.UI
                 var jRect = joyObj.GetComponent<RectTransform>();
                 jRect.anchorMin = jRect.anchorMax = new Vector2(0.5f, 0.3f);
                 jRect.anchoredPosition = Vector2.zero;
-                jRect.sizeDelta = new Vector2(500, 500); // Increased size
+                jRect.sizeDelta = new Vector2(500, 500); 
                 
                 var j = joyObj.GetComponent<Joystick>();
                 if (j != null) {
-                    // Try to force Variable/Dynamic mode if available via reflection or cast
-                    // VariableJoystick is the common type for this prefab
                     var vj = j as VariableJoystick;
-                    if (vj != null) vj.SetMode(JoystickType.Dynamic);
+                    if (vj != null) vj.SetMode(JoystickType.Fixed); // Fixed stays visible
                     
                     StartCoroutine(JoystickLoop(j));
                 }
@@ -115,7 +113,6 @@ namespace TheAlchemistsCrypt.UI
             btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0); // BOTTOM RIGHT
             btnContainer.anchoredPosition = Vector2.zero;
 
-            // Updated Fire Button with larger size and explicit single-fire handling if needed
             CreateButton(btnContainer, "FIRE", new Vector2(-300, 300), 320, fireIcon, Color.white, () => SetFire(true), () => SetFire(false));
             CreateButton(btnContainer, "RELOAD", new Vector2(-650, 150), 180, reloadIcon, Color.white, () => Reload());
             CreateButton(btnContainer, "SWAP", new Vector2(-450, 600), 180, swapIcon, Color.white, () => Swap());
@@ -131,8 +128,8 @@ namespace TheAlchemistsCrypt.UI
 
             healthText = CreateStatsText(stats, "Health", "100", Vector2.zero, new Color(1, 0.4f, 0.4f));
 
-            // Ensure look zone is below buttons for raycasting
-            lookZone.SetAsFirstSibling();
+            // Ensure look zone is ABOVE move zone and other background elements for raycasting
+            lookZone.SetAsLastSibling();
         }
 
         private void CreateButton(Transform p, string n, Vector2 pos, float s, Sprite icon, Color tint, System.Action onDown, System.Action onUp = null)

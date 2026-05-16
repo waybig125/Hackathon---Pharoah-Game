@@ -138,26 +138,6 @@ namespace TheAlchemistsCrypt.Editor
                     }
                 }
             }
-
-            // Spawn Mummies for testing
-            SpawnTestMummies();
-        }
-
-        private void SpawnTestMummies()
-        {
-            string[] styles = { "base_basic_pbr.fbx", "base_basic_shaded.fbx", "mummy_base.fbx" };
-            Vector3 startPos = new Vector3(10, 0, 10); // Near spawn
-            for (int i = 0; i < styles.Length; i++)
-            {
-                var fbx = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Mummy_Assets/" + styles[i]);
-                if (fbx != null)
-                {
-                    var m = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
-                    m.name = "Mummy_Test_" + i;
-                    m.transform.position = startPos + new Vector3(i * 3, 0, 0);
-                    m.transform.rotation = Quaternion.Euler(0, 180, 0);
-                }
-            }
         }
 
 

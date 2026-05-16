@@ -271,12 +271,17 @@ namespace InfimaGames.LowPolyShooterPack
                     bool triggerDown = false;
                     if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed)
                     {
-                        triggerDown = true;
-                        TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed = false;
+                        // Stricter semi-auto gate: ensure enough time has passed since last shot
+                        float minInterval = 60.0f / equippedWeapon.GetRateOfFire();
+                        if (Time.time - lastShotTime > minInterval)
+                        {
+                            triggerDown = true;
+                            TheAlchemistsCrypt.Input.MobileInputManager.Instance.WasFiringPressed = false;
+                        }
                     }
                     if (!isTouchActive && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) triggerDown = true;
 
-                    if (triggerDown && Time.time - lastShotTime > 60.0f / equippedWeapon.GetRateOfFire())
+                    if (triggerDown)
                         Fire();
                 }
 			}
