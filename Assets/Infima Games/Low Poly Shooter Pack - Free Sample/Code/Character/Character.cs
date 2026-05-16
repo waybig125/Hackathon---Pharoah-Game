@@ -212,6 +212,12 @@ namespace InfimaGames.LowPolyShooterPack
                     if (inventory != null) StartCoroutine(Equip(inventory.GetNextIndex()));
                     mob.IsSwappingWeapon = false;
                 }
+
+                if (mob.IsReloading)
+                {
+                    if (CanReload()) PlayReloadAnimation();
+                    mob.IsReloading = false;
+                }
             }
 
             // Combine Mobile and Desktop (Editor-friendly)

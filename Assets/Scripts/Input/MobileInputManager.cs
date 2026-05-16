@@ -21,6 +21,7 @@ namespace TheAlchemistsCrypt.Input
         public bool IsCrouching { get; set; }
         public bool IsSprinting { get; set; }
         public bool IsSwappingWeapon { get; set; }
+        public bool IsReloading { get; set; }
 
         private void Awake()
         {
