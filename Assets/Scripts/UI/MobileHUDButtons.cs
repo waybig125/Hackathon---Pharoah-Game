@@ -312,6 +312,54 @@ namespace TheAlchemistsCrypt.UI
             return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
         }
 
+        private Sprite CreateSettingsMedallionSprite(int w, int h)
+        {
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float dx = (float)(x - w / 2) / (w / 2);
+                    float dy = (float)(y - h / 2) / (h / 2);
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    
+                    if (dist <= 1.0f)
+                    {
+                        float angle = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
+                        float gearTeeth = Mathf.Sin(angle * 8 * Mathf.Deg2Rad); // 8-tooth gear pattern
+                        
+                        Color medallionCol = new Color(0.95f, 0.8f, 0.2f, 0.95f); // Rich gold
+                        if (dist > 0.85f && gearTeeth > 0.1f)
+                        {
+                            tex.SetPixel(x, y, medallionCol);
+                        }
+                        else if (dist <= 0.85f && dist > 0.75f)
+                        {
+                            tex.SetPixel(x, y, new Color(0.6f, 0.45f, 0.1f, 0.95f)); // Darker gold ring border
+                        }
+                        else if (dist <= 0.75f && dist > 0.25f)
+                        {
+                            tex.SetPixel(x, y, new Color(0.08f, 0.08f, 0.08f, 0.9f)); // Obsidian core
+                        }
+                        else if (dist <= 0.25f)
+                        {
+                            tex.SetPixel(x, y, medallionCol); // Gold center pin
+                        }
+                        else
+                        {
+                            tex.SetPixel(x, y, Color.clear);
+                        }
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+        }
+
         private void SetupCanvas()
         {
             var canvas = GetComponent<Canvas>();
@@ -326,6 +374,13 @@ namespace TheAlchemistsCrypt.UI
             scaler.matchWidthOrHeight = 0.5f;
 
             if (GetComponent<GraphicRaycaster>() == null) gameObject.AddComponent<GraphicRaycaster>();
+
+            // Auto-inject missing EventSystem if not present in the scene
+            if (UnityEngine.EventSystems.EventSystem.current == null)
+            {
+                var eventSystemGo = new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem), typeof(UnityEngine.EventSystems.StandaloneInputModule));
+                Debug.Log("MobileHUDButtons: Auto-spawned EventSystem for interactive UI!");
+            }
         }
 
         public void BuildHUD()
@@ -354,9 +409,9 @@ namespace TheAlchemistsCrypt.UI
             // --- NATIVE JOYSTICK UI GENERATION (SCALED DOWN FOR SWIPE SPACE) ---
             var joystickBg = new GameObject("NativeJoystick_Bg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             joystickBg.SetParent(moveZone, false);
-            joystickBg.anchorMin = joystickBg.anchorMax = new Vector2(0.35f, 0.3f); 
+            joystickBg.anchorMin = joystickBg.anchorMax = new Vector2(0.3f, 0.3f); 
             joystickBg.anchoredPosition = Vector2.zero;
-            joystickBg.sizeDelta = new Vector2(300, 300); 
+            joystickBg.sizeDelta = new Vector2(220, 220); 
 
             var bgImage = joystickBg.GetComponent<Image>();
             bgImage.color = Color.white;
@@ -365,7 +420,7 @@ namespace TheAlchemistsCrypt.UI
             var joystickHandle = new GameObject("HandleTarget", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             joystickHandle.SetParent(joystickBg, false);
             joystickHandle.anchoredPosition = Vector2.zero;
-            joystickHandle.sizeDelta = new Vector2(300, 300); 
+            joystickHandle.sizeDelta = new Vector2(220, 220); 
 
             var targetImage = joystickHandle.GetComponent<Image>();
             targetImage.color = new Color(0, 0, 0, 0); 
@@ -374,7 +429,7 @@ namespace TheAlchemistsCrypt.UI
             var knobVisual = new GameObject("KnobVisual", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             knobVisual.SetParent(joystickHandle, false);
             knobVisual.anchoredPosition = Vector2.zero;
-            knobVisual.sizeDelta = new Vector2(110, 110); 
+            knobVisual.sizeDelta = new Vector2(80, 80); 
 
             var visualImage = knobVisual.GetComponent<Image>();
             visualImage.color = Color.white;
@@ -382,7 +437,7 @@ namespace TheAlchemistsCrypt.UI
             if (joystickKnobSprite != null) visualImage.sprite = joystickKnobSprite;
 
             var onScreenStick = joystickHandle.gameObject.AddComponent<UnityEngine.InputSystem.OnScreen.OnScreenStick>();
-            onScreenStick.movementRange = 100f; 
+            onScreenStick.movementRange = 70f; 
             onScreenStick.controlPath = "<Gamepad>/leftStick"; 
 
             // 3. BUTTONS (CLUSTERED AND SCALED DOWN FOR SWIPE SPACE)
@@ -391,11 +446,11 @@ namespace TheAlchemistsCrypt.UI
             btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0); // BOTTOM RIGHT
             btnContainer.anchoredPosition = Vector2.zero;
 
-            CreateButton(btnContainer, "FIRE", new Vector2(-180, 180), 200, fireIcon, () => SetFire(true), () => SetFire(false));
-            CreateButton(btnContainer, "RELOAD", new Vector2(-380, 90), 120, reloadIcon, () => Reload());
-            CreateButton(btnContainer, "SWAP", new Vector2(-270, 360), 120, swapIcon, () => Swap());
-            CreateSprintButton(btnContainer, new Vector2(-380, 270), 120);
-            CreateButton(btnContainer, "JUMP", new Vector2(-90, 360), 120, jumpIcon, () => SetJump(true), () => SetJump(false));
+            CreateButton(btnContainer, "FIRE", new Vector2(-150, 150), 160, fireIcon, () => SetFire(true), () => SetFire(false));
+            CreateButton(btnContainer, "RELOAD", new Vector2(-310, 80), 96, reloadIcon, () => Reload());
+            CreateButton(btnContainer, "SWAP", new Vector2(-230, 300), 96, swapIcon, () => Swap());
+            CreateSprintButton(btnContainer, new Vector2(-310, 220), 96);
+            CreateButton(btnContainer, "JUMP", new Vector2(-80, 300), 96, jumpIcon, () => SetJump(true), () => SetJump(false));
 
             HideDebugLabels();
 
@@ -409,48 +464,63 @@ namespace TheAlchemistsCrypt.UI
                 }
             }
 
-            HideDebugLabels();
-
-            // 4. CUSTOM BOTTOM LEFT PROGRESS BARS (OBSIDIAN CARD WITH GOLD BORDER)
-            var statsPanel = new GameObject("CustomStatsPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            statsPanel.SetParent(root, false);
-            statsPanel.anchorMin = statsPanel.anchorMax = new Vector2(0, 0); // BOTTOM LEFT
-            statsPanel.anchoredPosition = new Vector2(40, 40);
-            statsPanel.sizeDelta = new Vector2(460, 140);
+            // 4. CUSTOM TOP LEFT HEALTH PANEL (OBSIDIAN CARD WITH GOLD BORDER)
+            var healthPanel = new GameObject("CustomHealthPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            healthPanel.SetParent(root, false);
+            healthPanel.anchorMin = healthPanel.anchorMax = new Vector2(0, 1); // TOP LEFT
+            healthPanel.anchoredPosition = new Vector2(40, -40);
+            healthPanel.sizeDelta = new Vector2(360, 70);
             
-            var statsImg = statsPanel.GetComponent<Image>();
-            statsImg.sprite = obsidianSprite; // Black obsidian background
-            statsImg.color = Color.white;
+            var healthPanelImg = healthPanel.GetComponent<Image>();
+            healthPanelImg.sprite = obsidianSprite;
+            healthPanelImg.color = Color.white;
             
-            // Gold border
-            var statsBorder = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            statsBorder.SetParent(statsPanel, false);
-            statsBorder.anchorMin = Vector2.zero; statsBorder.anchorMax = Vector2.one;
-            statsBorder.offsetMin = statsBorder.offsetMax = Vector2.zero;
-            var borderImg = statsBorder.GetComponent<Image>();
-            borderImg.sprite = CreateBorderSprite(460, 140, 4, new Color(0.95f, 0.8f, 0.2f, 0.9f));
-            borderImg.color = Color.white;
+            var healthPanelBorder = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            healthPanelBorder.SetParent(healthPanel, false);
+            healthPanelBorder.anchorMin = Vector2.zero; healthPanelBorder.anchorMax = Vector2.one;
+            healthPanelBorder.offsetMin = healthPanelBorder.offsetMax = Vector2.zero;
+            var healthBorderImg = healthPanelBorder.GetComponent<Image>();
+            healthBorderImg.sprite = CreateBorderSprite(360, 70, 3, new Color(0.95f, 0.8f, 0.2f, 0.9f));
+            healthBorderImg.color = Color.white;
             
             // Health Bar Label
             var healthLabel = new GameObject("HealthLabel", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
-            healthLabel.rectTransform.SetParent(statsPanel, false);
-            healthLabel.rectTransform.anchorMin = healthLabel.rectTransform.anchorMax = new Vector2(0, 1);
-            healthLabel.rectTransform.anchoredPosition = new Vector2(25, -25);
-            healthLabel.rectTransform.sizeDelta = new Vector2(100, 30);
+            healthLabel.rectTransform.SetParent(healthPanel, false);
+            healthLabel.rectTransform.anchorMin = healthLabel.rectTransform.anchorMax = new Vector2(0, 0.5f);
+            healthLabel.rectTransform.pivot = new Vector2(0, 0.5f);
+            healthLabel.rectTransform.anchoredPosition = new Vector2(20, 0);
+            healthLabel.rectTransform.sizeDelta = new Vector2(85, 30);
             healthLabel.text = "VITALITY";
             healthLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            healthLabel.fontSize = 16;
+            healthLabel.fontSize = 13;
             healthLabel.fontStyle = FontStyle.Bold;
             healthLabel.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); // Gold
+            healthLabel.alignment = TextAnchor.MiddleLeft;
+
+            // Health Text Display inside Card
+            var healthTxtGo = new GameObject("HealthText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            healthTxtGo.SetParent(healthPanel, false);
+            healthTxtGo.anchorMin = healthTxtGo.anchorMax = new Vector2(0, 0.5f);
+            healthTxtGo.pivot = new Vector2(0, 0.5f);
+            healthTxtGo.anchoredPosition = new Vector2(110, 0);
+            healthTxtGo.sizeDelta = new Vector2(50, 30);
+            healthText = healthTxtGo.GetComponent<Text>();
+            healthText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            healthText.fontSize = 18;
+            healthText.fontStyle = FontStyle.Bold;
+            healthText.alignment = TextAnchor.MiddleCenter;
+            healthText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            healthText.text = "100";
 
             // Health Bar Background
             var healthBarBg = new GameObject("HealthBarBg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            healthBarBg.SetParent(statsPanel, false);
-            healthBarBg.anchorMin = healthBarBg.anchorMax = new Vector2(0.5f, 1);
-            healthBarBg.anchoredPosition = new Vector2(10, -25);
-            healthBarBg.sizeDelta = new Vector2(220, 24);
+            healthBarBg.SetParent(healthPanel, false);
+            healthBarBg.anchorMin = healthBarBg.anchorMax = new Vector2(0, 0.5f);
+            healthBarBg.pivot = new Vector2(0, 0.5f);
+            healthBarBg.anchoredPosition = new Vector2(170, 0);
+            healthBarBg.sizeDelta = new Vector2(170, 20);
             var hbBgImg = healthBarBg.GetComponent<Image>();
-            hbBgImg.sprite = CreateSolidBarSprite(220, 24, new Color(0.05f, 0.05f, 0.05f, 0.6f)); // Deep dark fill
+            hbBgImg.sprite = CreateSolidBarSprite(170, 20, new Color(0.05f, 0.05f, 0.05f, 0.6f)); // Deep dark fill
             
             // Health Bar Fill
             var healthBarFillGo = new GameObject("HealthBarFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
@@ -459,47 +529,70 @@ namespace TheAlchemistsCrypt.UI
             healthBarFillGo.anchorMax = new Vector2(0, 0.5f);
             healthBarFillGo.pivot = new Vector2(0, 0.5f);
             healthBarFillGo.anchoredPosition = Vector2.zero;
-            healthBarFillGo.sizeDelta = new Vector2(220, 24);
+            healthBarFillGo.sizeDelta = new Vector2(170, 20);
             healthBarFill = healthBarFillGo.GetComponent<Image>();
-            healthBarFill.sprite = CreateHealthBarFillSprite(220, 24);
+            healthBarFill.sprite = CreateHealthBarFillSprite(170, 20);
             healthBarFill.type = Image.Type.Filled;
             healthBarFill.fillMethod = Image.FillMethod.Horizontal;
             healthBarFill.fillAmount = 1f;
 
-            // Health Text Display inside Card
-            var healthTxtGo = new GameObject("HealthText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            healthTxtGo.SetParent(statsPanel, false);
-            healthTxtGo.anchorMin = healthTxtGo.anchorMax = new Vector2(1, 1);
-            healthTxtGo.anchoredPosition = new Vector2(-20, -25);
-            healthTxtGo.sizeDelta = new Vector2(80, 30);
-            healthText = healthTxtGo.GetComponent<Text>();
-            healthText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            healthText.fontSize = 20;
-            healthText.fontStyle = FontStyle.Bold;
-            healthText.alignment = TextAnchor.MiddleRight;
-            healthText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
-            healthText.text = "100";
-
+            // 4b. CUSTOM BOTTOM LEFT AMMO PANEL (OBSIDIAN CARD WITH GOLD BORDER)
+            var ammoPanel = new GameObject("CustomAmmoPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            ammoPanel.SetParent(root, false);
+            ammoPanel.anchorMin = ammoPanel.anchorMax = new Vector2(0, 0); // BOTTOM LEFT
+            ammoPanel.anchoredPosition = new Vector2(40, 40);
+            ammoPanel.sizeDelta = new Vector2(360, 70);
+            
+            var ammoPanelImg = ammoPanel.GetComponent<Image>();
+            ammoPanelImg.sprite = obsidianSprite;
+            ammoPanelImg.color = Color.white;
+            
+            var ammoPanelBorder = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            ammoPanelBorder.SetParent(ammoPanel, false);
+            ammoPanelBorder.anchorMin = Vector2.zero; ammoPanelBorder.anchorMax = Vector2.one;
+            ammoPanelBorder.offsetMin = ammoPanelBorder.offsetMax = Vector2.zero;
+            var ammoBorderImg = ammoPanelBorder.GetComponent<Image>();
+            ammoBorderImg.sprite = CreateBorderSprite(360, 70, 3, new Color(0.95f, 0.8f, 0.2f, 0.9f));
+            ammoBorderImg.color = Color.white;
+            
             // Ammo Bar Label
             var ammoLabel = new GameObject("AmmoLabel", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
-            ammoLabel.rectTransform.SetParent(statsPanel, false);
-            ammoLabel.rectTransform.anchorMin = ammoLabel.rectTransform.anchorMax = new Vector2(0, 1);
-            ammoLabel.rectTransform.anchoredPosition = new Vector2(25, -80);
-            ammoLabel.rectTransform.sizeDelta = new Vector2(100, 30);
+            ammoLabel.rectTransform.SetParent(ammoPanel, false);
+            ammoLabel.rectTransform.anchorMin = ammoLabel.rectTransform.anchorMax = new Vector2(0, 0.5f);
+            ammoLabel.rectTransform.pivot = new Vector2(0, 0.5f);
+            ammoLabel.rectTransform.anchoredPosition = new Vector2(20, 0);
+            ammoLabel.rectTransform.sizeDelta = new Vector2(85, 30);
             ammoLabel.text = "ESSENCE";
             ammoLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            ammoLabel.fontSize = 16;
+            ammoLabel.fontSize = 13;
             ammoLabel.fontStyle = FontStyle.Bold;
             ammoLabel.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); // Gold
+            ammoLabel.alignment = TextAnchor.MiddleLeft;
+
+            // Ammo Text Display inside Card
+            var ammoTxtGo = new GameObject("AmmoText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            ammoTxtGo.SetParent(ammoPanel, false);
+            ammoTxtGo.anchorMin = ammoTxtGo.anchorMax = new Vector2(0, 0.5f);
+            ammoTxtGo.pivot = new Vector2(0, 0.5f);
+            ammoTxtGo.anchoredPosition = new Vector2(110, 0);
+            ammoTxtGo.sizeDelta = new Vector2(50, 30);
+            ammoText = ammoTxtGo.GetComponent<Text>();
+            ammoText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            ammoText.fontSize = 18;
+            ammoText.fontStyle = FontStyle.Bold;
+            ammoText.alignment = TextAnchor.MiddleCenter;
+            ammoText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            ammoText.text = "0 / 0";
 
             // Ammo Bar Background
             var ammoBarBg = new GameObject("AmmoBarBg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            ammoBarBg.SetParent(statsPanel, false);
-            ammoBarBg.anchorMin = ammoBarBg.anchorMax = new Vector2(0.5f, 1);
-            ammoBarBg.anchoredPosition = new Vector2(10, -80);
-            ammoBarBg.sizeDelta = new Vector2(220, 24);
+            ammoBarBg.SetParent(ammoPanel, false);
+            ammoBarBg.anchorMin = ammoBarBg.anchorMax = new Vector2(0, 0.5f);
+            ammoBarBg.pivot = new Vector2(0, 0.5f);
+            ammoBarBg.anchoredPosition = new Vector2(170, 0);
+            ammoBarBg.sizeDelta = new Vector2(170, 20);
             var abBgImg = ammoBarBg.GetComponent<Image>();
-            abBgImg.sprite = CreateSolidBarSprite(220, 24, new Color(0.05f, 0.05f, 0.05f, 0.6f)); // Deep dark fill
+            abBgImg.sprite = CreateSolidBarSprite(170, 20, new Color(0.05f, 0.05f, 0.05f, 0.6f)); // Deep dark fill
 
             // Ammo Bar Fill
             var ammoBarFillGo = new GameObject("AmmoBarFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
@@ -508,86 +601,51 @@ namespace TheAlchemistsCrypt.UI
             ammoBarFillGo.anchorMax = new Vector2(0, 0.5f);
             ammoBarFillGo.pivot = new Vector2(0, 0.5f);
             ammoBarFillGo.anchoredPosition = Vector2.zero;
-            ammoBarFillGo.sizeDelta = new Vector2(220, 24);
+            ammoBarFillGo.sizeDelta = new Vector2(170, 20);
             ammoBarFill = ammoBarFillGo.GetComponent<Image>();
             ammoBarFill.sprite = punchBarSprite;
             ammoBarFill.type = Image.Type.Filled;
             ammoBarFill.fillMethod = Image.FillMethod.Horizontal;
             ammoBarFill.fillAmount = 1f;
-
-            // Ammo Text Display inside Card
-            var ammoTxtGo = new GameObject("AmmoText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            ammoTxtGo.SetParent(statsPanel, false);
-            ammoTxtGo.anchorMin = ammoTxtGo.anchorMax = new Vector2(1, 1);
-            ammoTxtGo.anchoredPosition = new Vector2(-20, -80);
-            ammoTxtGo.sizeDelta = new Vector2(80, 30);
-            ammoText = ammoTxtGo.GetComponent<Text>();
-            ammoText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            ammoText.fontSize = 20;
-            ammoText.fontStyle = FontStyle.Bold;
-            ammoText.alignment = TextAnchor.MiddleRight;
-            ammoText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
-            ammoText.text = "0 / 0";
             
-            // Element/Weapon Label
+            // Element/Weapon Label (Mini overlay on top of Ammo panel)
             var weaponTxtGo = new GameObject("WeaponText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            weaponTxtGo.SetParent(statsPanel, false);
-            weaponTxtGo.anchorMin = weaponTxtGo.anchorMax = new Vector2(0.5f, 0);
-            weaponTxtGo.anchoredPosition = new Vector2(0, 15);
-            weaponTxtGo.sizeDelta = new Vector2(300, 20);
+            weaponTxtGo.SetParent(ammoPanel, false);
+            weaponTxtGo.anchorMin = weaponTxtGo.anchorMax = new Vector2(0.5f, 1);
+            weaponTxtGo.anchoredPosition = new Vector2(0, -5);
+            weaponTxtGo.sizeDelta = new Vector2(200, 16);
             weaponText = weaponTxtGo.GetComponent<Text>();
             weaponText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            weaponText.fontSize = 12;
+            weaponText.fontSize = 10;
             weaponText.fontStyle = FontStyle.Normal;
             weaponText.alignment = TextAnchor.MiddleCenter;
             weaponText.color = new Color(1f, 0.85f, 0.4f, 0.8f);
             weaponText.text = "FOCUS: PUNCH";
 
-            // 5. SETTINGS MEDALLION BUTTON (TOP RIGHT)
+            // 5. SPOOKY MINIMAP & COMPASS (TOP RIGHT - layered on HUD root)
+            var minimapGo = new GameObject("MinimapCanvasContainer", typeof(RectTransform), typeof(MinimapUI));
+            minimapGo.transform.SetParent(root, false);
+
+            // 6. SETTINGS MEDALLION BUTTON (TOP RIGHT)
             var settingsBtnGo = new GameObject("SettingsButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             settingsBtnGo.SetParent(root, false);
             settingsBtnGo.anchorMin = settingsBtnGo.anchorMax = new Vector2(1, 1); // TOP RIGHT
             settingsBtnGo.anchoredPosition = new Vector2(-60, -60);
-            settingsBtnGo.sizeDelta = new Vector2(80, 80);
+            settingsBtnGo.sizeDelta = new Vector2(70, 70);
             
-            var settingsBtnImg = settingsBtnGo.GetComponent<Image>();
-            settingsBtnImg.sprite = CreateSolidCircleSprite(80, new Color(0.95f, 0.8f, 0.2f, 0.95f)); // Gold medallion base
-            settingsBtnImg.color = Color.white;
-            settingsBtnImg.raycastTarget = true;
+            var settingsImg = settingsBtnGo.GetComponent<Image>();
+            settingsImg.sprite = CreateSettingsMedallionSprite(70, 70);
+            settingsImg.color = Color.white;
+            settingsImg.raycastTarget = true;
             
-            var innerMedallion = new GameObject("InnerMedallion", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            innerMedallion.SetParent(settingsBtnGo, false);
-            innerMedallion.anchorMin = Vector2.zero; innerMedallion.anchorMax = Vector2.one;
-            innerMedallion.offsetMin = innerMedallion.offsetMax = new Vector2(6, 6);
-            var innerMedallionImg = innerMedallion.GetComponent<Image>();
-            innerMedallionImg.sprite = CreateSolidCircleSprite(68, new Color(0.05f, 0.05f, 0.05f, 0.8f)); // Deep dark inner
-            innerMedallionImg.color = Color.white;
-            innerMedallionImg.raycastTarget = false;
-
-            var gearTextGo = new GameObject("GearText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            gearTextGo.SetParent(settingsBtnGo, false);
-            gearTextGo.anchorMin = Vector2.zero; gearTextGo.anchorMax = Vector2.one;
-            gearTextGo.offsetMin = gearTextGo.offsetMax = Vector2.zero;
-            var gearText = gearTextGo.GetComponent<Text>();
-            gearText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            gearText.fontSize = 32;
-            gearText.fontStyle = FontStyle.Bold;
-            gearText.alignment = TextAnchor.MiddleCenter;
-            gearText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); // Golden icon text
-            gearText.text = "⚙"; // Unicode gear icon
-            gearText.raycastTarget = false;
-            
-            var settingsHelper = settingsBtnGo.gameObject.AddComponent<ButtonInputHelper>();
-            settingsHelper.onDown = () => {
+            var sHelper = settingsBtnGo.gameObject.AddComponent<ButtonInputHelper>();
+            sHelper.onDown = () => {
                 settingsBtnGo.localScale = new Vector3(0.9f, 0.9f, 1f);
+            };
+            sHelper.onUp = () => {
+                settingsBtnGo.localScale = new Vector3(1f, 1f, 1f);
                 OpenSettingsModal(root);
             };
-            settingsHelper.onUp = () => {
-                settingsBtnGo.localScale = new Vector3(1f, 1f, 1f);
-            };
-
-            // Ensure look zone is BEHIND buttons so it doesn't intercept clicks
-            lookZone.SetAsFirstSibling();
         }
 
         private void CreateButton(Transform p, string n, Vector2 pos, float s, Sprite icon, System.Action onDown, System.Action onUp = null)
@@ -1030,6 +1088,7 @@ namespace TheAlchemistsCrypt.UI
         
         public void UpdateAmmo(int c, int t) {
             if (ammoText) ammoText.text = $"{c} / {t}";
+            if (ammoBarFill && t > 0) ammoBarFill.fillAmount = Mathf.Clamp01((float)c / t);
         }
     }
 
