@@ -16,12 +16,12 @@ namespace TheAlchemistsCrypt.AI
             if (GameObject.Find("Mummy_Base_Active") != null) return;
 
             string[] fbxPaths = {
-                "Assets/Mummy_Assets/base.fbx",
-                "Assets/Mummy_Assets/base_basic_pbr.fbx",
-                "Assets/Mummy_Assets/base_basic_shaded.fbx"
+                "Assets/Mummy_Assets/mummy_base.fbx",
+                "Assets/Mummy_Assets/mummy_base.fbx",
+                "Assets/Mummy_Assets/mummy_base.fbx"
             };
 
-            string[] names = { "Mummy_Base_Active", "Mummy_PBR_Active", "Mummy_Shaded_Active" };
+            string[] names = { "Mummy_Alpha", "Mummy_Beta", "Mummy_Gamma" };
 
             // Find player or camera
             var player = GameObject.FindGameObjectWithTag("Player");
@@ -56,7 +56,7 @@ namespace TheAlchemistsCrypt.AI
                 GameObject go = Instantiate(prefab);
                 go.name = names[i];
                 go.transform.position = spawnPos;
-                go.transform.localScale = new Vector3(250f, 250f, 250f);
+                go.transform.localScale = Vector3.one;
 
                 var anim = go.GetComponent<Animator>();
                 if (anim == null) anim = go.AddComponent<Animator>();
@@ -81,9 +81,9 @@ namespace TheAlchemistsCrypt.AI
 
                 var col = go.GetComponent<CapsuleCollider>();
                 if (col == null) col = go.AddComponent<CapsuleCollider>();
-                col.center = new Vector3(0, 0.0036f, 0); 
-                col.height = 0.0072f;
-                col.radius = 0.0016f;
+                col.center = new Vector3(0, 1.0f, 0); 
+                col.height = 2.0f;
+                col.radius = 0.4f;
 
                 var rb = go.GetComponent<Rigidbody>();
                 if (rb == null) rb = go.AddComponent<Rigidbody>();

@@ -25,6 +25,11 @@ namespace TheAlchemistsCrypt.UI
         private Sprite joystickRingSprite;
         private Sprite joystickKnobSprite;
 
+        // Sprint Toggle references
+        private bool sprintToggleState = false;
+        private Image sprintIconImage;
+        private Image sprintShadowImage;
+
         private void Awake()
         {
             Instance = this;
@@ -234,12 +239,12 @@ namespace TheAlchemistsCrypt.UI
             moveZone.anchorMin = Vector2.zero; moveZone.anchorMax = new Vector2(0.5f, 1f);
             moveZone.offsetMin = moveZone.offsetMax = Vector2.zero;
 
-            // --- NATIVE JOYSTICK UI GENERATION (DOUBLE SCALED) ---
+            // --- NATIVE JOYSTICK UI GENERATION (SCALED DOWN FOR SWIPE SPACE) ---
             var joystickBg = new GameObject("NativeJoystick_Bg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             joystickBg.SetParent(moveZone, false);
-            joystickBg.anchorMin = joystickBg.anchorMax = new Vector2(0.5f, 0.35f); 
+            joystickBg.anchorMin = joystickBg.anchorMax = new Vector2(0.35f, 0.3f); 
             joystickBg.anchoredPosition = Vector2.zero;
-            joystickBg.sizeDelta = new Vector2(500, 500); 
+            joystickBg.sizeDelta = new Vector2(300, 300); 
 
             var bgImage = joystickBg.GetComponent<Image>();
             bgImage.color = Color.white;
@@ -248,7 +253,7 @@ namespace TheAlchemistsCrypt.UI
             var joystickHandle = new GameObject("HandleTarget", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             joystickHandle.SetParent(joystickBg, false);
             joystickHandle.anchoredPosition = Vector2.zero;
-            joystickHandle.sizeDelta = new Vector2(500, 500); 
+            joystickHandle.sizeDelta = new Vector2(300, 300); 
 
             var targetImage = joystickHandle.GetComponent<Image>();
             targetImage.color = new Color(0, 0, 0, 0); 
@@ -257,7 +262,7 @@ namespace TheAlchemistsCrypt.UI
             var knobVisual = new GameObject("KnobVisual", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             knobVisual.SetParent(joystickHandle, false);
             knobVisual.anchoredPosition = Vector2.zero;
-            knobVisual.sizeDelta = new Vector2(180, 180); 
+            knobVisual.sizeDelta = new Vector2(110, 110); 
 
             var visualImage = knobVisual.GetComponent<Image>();
             visualImage.color = Color.white;
@@ -265,20 +270,20 @@ namespace TheAlchemistsCrypt.UI
             if (joystickKnobSprite != null) visualImage.sprite = joystickKnobSprite;
 
             var onScreenStick = joystickHandle.gameObject.AddComponent<UnityEngine.InputSystem.OnScreen.OnScreenStick>();
-            onScreenStick.movementRange = 200f; 
+            onScreenStick.movementRange = 100f; 
             onScreenStick.controlPath = "<Gamepad>/leftStick"; 
 
-            // 3. BUTTONS (CLUSTERED BOTTOM RIGHT)
+            // 3. BUTTONS (CLUSTERED AND SCALED DOWN FOR SWIPE SPACE)
             var btnContainer = new GameObject("ButtonContainer", typeof(RectTransform)).GetComponent<RectTransform>();
             btnContainer.SetParent(root, false);
             btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0); // BOTTOM RIGHT
             btnContainer.anchoredPosition = Vector2.zero;
 
-            CreateButton(btnContainer, "FIRE", new Vector2(-300, 300), 320, fireIcon, () => SetFire(true), () => SetFire(false));
-            CreateButton(btnContainer, "RELOAD", new Vector2(-650, 150), 180, reloadIcon, () => Reload());
-            CreateButton(btnContainer, "SWAP", new Vector2(-450, 600), 180, swapIcon, () => Swap());
-            CreateButton(btnContainer, "SPRINT", new Vector2(-650, 450), 180, sprintIcon, () => SetSprint(true), () => SetSprint(false));
-            CreateButton(btnContainer, "JUMP", new Vector2(-150, 600), 180, jumpIcon, () => SetJump(true), () => SetJump(false));
+            CreateButton(btnContainer, "FIRE", new Vector2(-180, 180), 200, fireIcon, () => SetFire(true), () => SetFire(false));
+            CreateButton(btnContainer, "RELOAD", new Vector2(-380, 90), 120, reloadIcon, () => Reload());
+            CreateButton(btnContainer, "SWAP", new Vector2(-270, 360), 120, swapIcon, () => Swap());
+            CreateSprintButton(btnContainer, new Vector2(-380, 270), 120);
+            CreateButton(btnContainer, "JUMP", new Vector2(-90, 360), 120, jumpIcon, () => SetJump(true), () => SetJump(false));
 
             HideDebugLabels();
 
@@ -329,6 +334,72 @@ namespace TheAlchemistsCrypt.UI
                 iImg.color = Color.white;
                 onUp?.Invoke();
             };
+        }
+
+        private void CreateSprintButton(Transform p, Vector2 pos, float s)
+        {
+            var go = new GameObject("SPRINT", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            go.SetParent(p, false);
+            go.anchoredPosition = pos;
+            go.sizeDelta = new Vector2(s, s);
+            
+            var img = go.GetComponent<Image>();
+            img.sprite = null;
+            img.color = new Color(0, 0, 0, 0); // Transparent but raycastable parent
+            img.raycastTarget = true;
+
+            // 1. SHADOW / GLOW LAYER
+            var shadowGo = new GameObject("Shadow", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            shadowGo.SetParent(go, false);
+            shadowGo.anchorMin = Vector2.zero; shadowGo.anchorMax = Vector2.one;
+            shadowGo.offsetMin = shadowGo.offsetMax = Vector2.zero;
+            sprintShadowImage = shadowGo.GetComponent<Image>();
+            sprintShadowImage.sprite = obsidianSprite; // Start with Obsidian shadow
+            sprintShadowImage.color = Color.white;
+            sprintShadowImage.raycastTarget = false;
+
+            // 2. ICON LAYER
+            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            iconGo.SetParent(go, false);
+            iconGo.anchorMin = Vector2.zero; iconGo.anchorMax = Vector2.one;
+            iconGo.offsetMin = iconGo.offsetMax = Vector2.zero;
+            sprintIconImage = iconGo.GetComponent<Image>();
+            sprintIconImage.sprite = sprintIcon;
+            sprintIconImage.color = new Color(0.8f, 0.8f, 0.8f, 1f); // Dimmed gold icon when off
+            sprintIconImage.raycastTarget = false;
+
+            var helper = go.gameObject.AddComponent<ButtonInputHelper>();
+            helper.onDown = () => {
+                sprintToggleState = !sprintToggleState; // Toggle state on click!
+                
+                // Audio or scale feedback
+                go.localScale = new Vector3(0.9f, 0.9f, 1f);
+                
+                // Update visuals and state
+                UpdateSprintVisuals();
+                SetSprint(sprintToggleState);
+            };
+            helper.onUp = () => {
+                go.localScale = new Vector3(1f, 1f, 1f);
+            };
+        }
+
+        private void UpdateSprintVisuals()
+        {
+            if (sprintShadowImage == null || sprintIconImage == null) return;
+            
+            if (sprintToggleState)
+            {
+                // Active State: Gold glowing background, bright white/gold icon!
+                sprintShadowImage.sprite = goldGradientSprite;
+                sprintIconImage.color = Color.white;
+            }
+            else
+            {
+                // Inactive State: Obsidian dark shadow backing, slightly dimmed icon
+                sprintShadowImage.sprite = obsidianSprite;
+                sprintIconImage.color = new Color(0.8f, 0.8f, 0.8f, 1f);
+            }
         }
 
         private class ButtonInputHelper : MonoBehaviour, IPointerDownHandler, IPointerUpHandler

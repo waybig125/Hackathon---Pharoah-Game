@@ -127,42 +127,39 @@ namespace InfimaGames.LowPolyShooterPack
             audioSource.loop = true;
         }
 
-        /// Checks if the character is on the ground.
-        private void OnCollisionStay()
+        /// Checks if the character is on the ground using robust spherecast.
+        private bool CheckGrounded()
         {
-            //Bounds.
+            if (capsule == null) return false;
             Bounds bounds = capsule.bounds;
-            //Extents.
-            Vector3 extents = bounds.extents;
-            //Radius.
-            float radius = extents.x - 0.01f;
-            
-            //Cast. This checks whether there is indeed ground, or not.
-            Physics.SphereCastNonAlloc(bounds.center, radius, Vector3.down,
-                groundHits, extents.y - radius * 0.5f, ~0, QueryTriggerInteraction.Ignore);
-            
-            //We can ignore the rest if we don't have any proper hits.
-            if (!groundHits.Any(hit => hit.collider != null && hit.collider != capsule)) 
-                return;
-            
-            //Store RaycastHits.
-            for (var i = 0; i < groundHits.Length; i++)
-                groundHits[i] = new RaycastHit();
+            float radius = capsule.radius * 0.9f;
+            // Start spherecast slightly above the capsule bottom to prevent clipping
+            Vector3 origin = bounds.center + Vector3.down * (bounds.extents.y - radius);
+            float maxDistance = 0.15f; 
 
-            //Set grounded. Now we know for sure that we're grounded.
-            grounded = true;
+            int hits = Physics.SphereCastNonAlloc(origin, radius, Vector3.down, groundHits, maxDistance, ~0, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < hits; i++)
+            {
+                if (groundHits[i].collider != null && groundHits[i].collider != capsule)
+                {
+                    // Clean up array
+                    for (int j = 0; j < groundHits.Length; j++) groundHits[j] = new RaycastHit();
+                    return true;
+                }
+            }
+            return false;
         }
-			
+
         protected override void FixedUpdate()
         {
+            // Check grounded status before movement/jumping
+            grounded = CheckGrounded();
+
             //Move.
             MoveCharacter();
             
             //Jump
             ProcessJumping();
-            
-            //Unground.
-            grounded = false;
         }
 
         private void ProcessJumping()

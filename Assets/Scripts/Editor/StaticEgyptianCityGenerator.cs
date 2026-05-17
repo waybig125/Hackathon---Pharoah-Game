@@ -41,6 +41,7 @@ namespace TheAlchemistsCrypt.Editor
                 "Assets/Mummy_Assets/base.fbx",
                 "Assets/Mummy_Assets/base_basic_pbr.fbx",
                 "Assets/Mummy_Assets/base_basic_shaded.fbx",
+                "Assets/Mummy_Assets/mummy_base.fbx",
                 "Assets/Mummy_Assets/mummy_idle.fbx",
                 "Assets/Mummy_Assets/new_Walking.fbx",
                 "Assets/Mummy_Assets/mummy_attack.fbx"
@@ -539,23 +540,25 @@ namespace TheAlchemistsCrypt.Editor
             crater.transform.position = pos;
             crater.isStatic = true;
 
+            float scaleMultiplier = Random.Range(0.6f, 1.8f);
+
             // Low-poly crater depression
             var dep = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             dep.name = "Depression";
             dep.transform.SetParent(crater.transform);
             dep.transform.localPosition = new Vector3(0f, 0.02f, 0f);
-            dep.transform.localScale = new Vector3(8f, 0.05f, 8f);
+            dep.transform.localScale = new Vector3(8f * scaleMultiplier, 0.05f, 8f * scaleMultiplier);
             dep.GetComponent<Renderer>().sharedMaterial = craterMat;
             DestroyImmediate(dep.GetComponent<Collider>());
             dep.isStatic = true;
 
             // Ring of crater sandy debris rocks
             int rockCount = Random.Range(6, 10);
-            float radius = 4.2f;
+            float radius = 4.2f * scaleMultiplier;
             for (int i = 0; i < rockCount; i++) {
                 float angle = (i * 360f / rockCount) + Random.Range(-15f, 15f);
                 float rad = angle * Mathf.Deg2Rad;
-                Vector3 rockPos = new Vector3(Mathf.Cos(rad) * radius, Random.Range(-0.2f, 0.2f), Mathf.Sin(rad) * radius);
+                Vector3 rockPos = new Vector3(Mathf.Cos(rad) * radius, Random.Range(-0.2f * scaleMultiplier, 0.2f * scaleMultiplier), Mathf.Sin(rad) * radius);
                 
                 var rock = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 rock.name = "CraterRock";
@@ -563,9 +566,9 @@ namespace TheAlchemistsCrypt.Editor
                 rock.transform.localPosition = rockPos;
                 
                 rock.transform.localScale = new Vector3(
-                    Random.Range(1.2f, 2.5f), 
-                    Random.Range(0.6f, 1.8f), 
-                    Random.Range(1.2f, 2.5f)
+                    Random.Range(1.2f, 2.5f) * scaleMultiplier, 
+                    Random.Range(0.6f, 1.8f) * scaleMultiplier, 
+                    Random.Range(1.2f, 2.5f) * scaleMultiplier
                 );
                 
                 rock.transform.localRotation = Quaternion.Euler(

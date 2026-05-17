@@ -75,10 +75,10 @@ namespace TheAlchemistsCrypt.AI
 
         private void LateUpdate()
         {
-            // Enforce upright rotation: local X must be 270 (or -90) and local Z must be 0
-            // This prevents them from falling face-down or tilting during physics/agent movement
+            // Enforce upright rotation: local X must be 0 and local Z must be 0
+            // This prevents them from falling or tilting during physics/agent movement
             Vector3 rot = transform.localEulerAngles;
-            transform.localRotation = Quaternion.Euler(270f, rot.y, 0f);
+            transform.localRotation = Quaternion.Euler(0f, rot.y, 0f);
         }
 
         private void PlayAnimation(string stateName)

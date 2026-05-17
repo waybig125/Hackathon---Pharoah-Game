@@ -68,16 +68,50 @@ namespace TheAlchemistsCrypt.Input
 
         private void Update()
         {
-            // Update movement from our native stick simulation
-            if (moveAction != null)
-                SetMovement(moveAction.ReadValue<Vector2>());
+            Vector2 finalMove = Vector2.zero;
 
-            // Global check: if there are any touches on the screen, prioritize mobile input
+            // 1. Read virtual on-screen joystick
+            if (moveAction != null)
+                finalMove = moveAction.ReadValue<Vector2>();
+
+            // 2. Read Keyboard WASD/Arrow keys
+            Vector2 keyboardInput = Vector2.zero;
+            if (UnityEngine.InputSystem.Keyboard.current != null)
+            {
+                var kb = UnityEngine.InputSystem.Keyboard.current;
+                float x = 0;
+                float y = 0;
+                if (kb.wKey.isPressed || kb.upArrowKey.isPressed) y += 1f;
+                if (kb.sKey.isPressed || kb.downArrowKey.isPressed) y -= 1f;
+                if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) x -= 1f;
+                if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) x += 1f;
+                keyboardInput = new Vector2(x, y).normalized;
+            }
+
+            // Fallback to legacy inputs if needed
+            if (keyboardInput.sqrMagnitude < 0.01f)
+            {
+                float x = UnityEngine.Input.GetAxisRaw("Horizontal");
+                float y = UnityEngine.Input.GetAxisRaw("Vertical");
+                if (Mathf.Abs(x) > 0.01f || Mathf.Abs(y) > 0.01f)
+                {
+                    keyboardInput = new Vector2(x, y).normalized;
+                }
+            }
+
+            // 3. Blend inputs gracefully
+            if (keyboardInput.sqrMagnitude > 0.01f)
+            {
+                SetMovement(keyboardInput);
+            }
+            else
+            {
+                SetMovement(finalMove);
+            }
+
+            // 4. Update Touch Active State
             bool touchDetected = UnityEngine.Input.touchCount > 0;
-            
-            #if UNITY_EDITOR
-            if (MovementInput.sqrMagnitude > 0.001f) touchDetected = true;
-            #endif
+            if (finalMove.sqrMagnitude > 0.001f) touchDetected = true;
             
             IsTouchActive = touchDetected;
         }
