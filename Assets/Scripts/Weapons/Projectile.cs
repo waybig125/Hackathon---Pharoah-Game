@@ -41,8 +41,14 @@ namespace TheAlchemistsCrypt.Weapons
 
         private void OnTriggerEnter(Collider other)
         {
-            // TODO: Apply damage and elemental effects to enemies
+            // Apply damage and elemental effects to enemies
             Debug.Log($"Hit {other.name} with {element}");
+            var zombie = other.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>();
+            if (zombie == null) zombie = other.GetComponentInParent<TheAlchemistsCrypt.AI.ZombieAI>();
+            if (zombie != null)
+            {
+                zombie.TakeDamage(35f);
+            }
             Deactivate();
         }
 

@@ -154,11 +154,11 @@ namespace InfimaGames.LowPolyShooterPack
         private bool CheckGrounded()
         {
             if (capsule == null) return false;
-            Bounds bounds = capsule.bounds;
             float radius = capsule.radius * 0.9f;
-            // Start spherecast slightly above the capsule bottom to prevent clipping
-            Vector3 origin = bounds.center + Vector3.down * (bounds.extents.y - radius);
-            float maxDistance = 0.4f; // Increased from 0.15f to reliably reach the ground FloorGround
+            // Use local coordinates to prevent axis-aligned bounding box (AABB) rotation scaling
+            Vector3 localBottom = capsule.center + Vector3.down * (capsule.height * 0.5f - radius);
+            Vector3 origin = transform.TransformPoint(localBottom);
+            float maxDistance = 0.4f; // Reliable ground reach distance
 
             int hits = Physics.SphereCastNonAlloc(origin, radius, Vector3.down, groundHits, maxDistance, ~0, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < hits; i++)
@@ -191,12 +191,18 @@ namespace InfimaGames.LowPolyShooterPack
             bool isDesktopJumping = (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.spaceKey.isPressed)
                 || UnityEngine.Input.GetKey(KeyCode.Space);
             
+            // Consume the jump input immediately so it never triggers unintended auto-jumps later
+            if (isMobileJumping)
+            {
+                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+                {
+                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsJumping = false;
+                }
+            }
+
             if (grounded && (isMobileJumping || isDesktopJumping))
             {
                 rigidBody.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
-                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) {
-                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsJumping = false;
-                }
             }
             
             // Advanced Variable Jump Feature (Hold to jump higher)

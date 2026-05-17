@@ -90,9 +90,17 @@ namespace TheAlchemistsCrypt.UI
             jumpIcon = LoadThemedSprite("jump", "UI/Icons/icon_jump");
 
             healthIconSprite = LoadSpriteFromResources("egyptian_items/health_icon");
+            if (healthIconSprite == null) healthIconSprite = CreateProceduralHealthIconSprite();
+
             sulphurIconSprite = LoadSpriteFromResources("egyptian_items/sulphur");
+            if (sulphurIconSprite == null) sulphurIconSprite = CreateProceduralSulfurSprite();
+
             mercuryIconSprite = LoadSpriteFromResources("egyptian_items/mercury");
+            if (mercuryIconSprite == null) mercuryIconSprite = CreateProceduralMercurySprite();
+
             saltIconSprite = LoadSpriteFromResources("egyptian_items/salt");
+            if (saltIconSprite == null) saltIconSprite = CreateProceduralSaltSprite();
+
             welcomeBgSprite = LoadSpriteFromResources("egyptian_items/GameStartImage");
         }
 
@@ -103,12 +111,6 @@ namespace TheAlchemistsCrypt.UI
             goldGradientSprite = CreateGoldenGradientSprite();
             if (joystickRingSprite == null) joystickRingSprite = CreateRingSprite();
             if (joystickKnobSprite == null) joystickKnobSprite = CreateKnobSprite();
-
-            fireIcon = CreateFireSymbolSprite(128);
-            reloadIcon = CreateReloadSymbolSprite(128);
-            swapIcon = CreateSwapSymbolSprite(128);
-            sprintIcon = CreateSprintSymbolSprite(128);
-            jumpIcon = CreateJumpSymbolSprite(128);
 
             sulfurBarSprite = CreateAlchemicalBarSprite(new Color(0.95f, 0.55f, 0.05f), new Color(1f, 0.85f, 0.1f));
             mercuryBarSprite = CreateAlchemicalBarSprite(new Color(0.1f, 0.5f, 0.8f), new Color(0.4f, 0.9f, 0.95f));
@@ -290,6 +292,224 @@ namespace TheAlchemistsCrypt.UI
             tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
         }
 
+        private Sprite CreateProceduralHealthIconSprite()
+        {
+            int size = 64;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color col = new Color(0.85f, 0.15f, 0.15f, 0.95f); // Beautiful Crimson Red
+            Color bg = new Color(0f, 0f, 0f, 0f);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    tex.SetPixel(x, y, bg);
+                }
+            }
+
+            float cx = size * 0.5f;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - cx;
+
+                    // Oval loop on top (center: cx, size * 0.68f)
+                    float loopY = (y - size * 0.68f) * 0.7f; // scale vertically to make it a bit taller/oval
+                    float distToLoopCenter = Mathf.Sqrt(dx * dx + loopY * loopY);
+                    if (distToLoopCenter >= 8f && distToLoopCenter <= 11f && y >= size * 0.48f)
+                    {
+                        tex.SetPixel(x, y, col);
+                    }
+
+                    // Vertical line of the Cross (from y = size*0.1 to size*0.5)
+                    if (y >= size * 0.1f && y <= size * 0.5f)
+                    {
+                        if (Mathf.Abs(dx) <= 1.5f)
+                        {
+                            tex.SetPixel(x, y, col);
+                        }
+                    }
+
+                    // Horizontal bar of the Cross (at y = size*0.38)
+                    if (y >= size * 0.38f && y <= size * 0.38f + 3f)
+                    {
+                        if (Mathf.Abs(dx) <= size * 0.22f)
+                        {
+                            tex.SetPixel(x, y, col);
+                        }
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateProceduralSulfurSprite()
+        {
+            int size = 64;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color col = new Color(0.95f, 0.55f, 0.05f, 0.95f);
+            Color bg = new Color(0f, 0f, 0f, 0f);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    tex.SetPixel(x, y, bg);
+                }
+            }
+
+            float cx = size * 0.5f;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - cx;
+
+                    // Triangle
+                    if (y >= size * 0.45f && y <= size * 0.85f)
+                    {
+                        float triWidth = (size * 0.85f - y) * 0.5f;
+                        if (Mathf.Abs(dx) <= triWidth && Mathf.Abs(dx) >= triWidth - 3f)
+                        {
+                            tex.SetPixel(x, y, col);
+                        }
+                        if (y >= size * 0.45f && y <= size * 0.45f + 3f && Mathf.Abs(dx) <= (size * 0.85f - y) * 0.5f)
+                        {
+                            tex.SetPixel(x, y, col);
+                        }
+                    }
+
+                    // Vertical line for Cross
+                    if (y >= size * 0.1f && y <= size * 0.45f)
+                    {
+                        if (Mathf.Abs(dx) <= 1.5f)
+                        {
+                            tex.SetPixel(x, y, col);
+                        }
+                    }
+
+                    // Horizontal bar for Cross
+                    if (y >= size * 0.25f && y <= size * 0.25f + 3f)
+                    {
+                        if (Mathf.Abs(dx) <= size * 0.2f)
+                        {
+                            tex.SetPixel(x, y, col);
+                        }
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateProceduralMercurySprite()
+        {
+            int size = 64;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color col = new Color(0.1f, 0.75f, 0.95f, 0.95f);
+            Color bg = new Color(0f, 0f, 0f, 0f);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    tex.SetPixel(x, y, bg);
+                }
+            }
+
+            float cx = size * 0.5f;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - cx;
+
+                    // Central Circle (center: cx, size * 0.45f)
+                    float circleY = y - size * 0.45f;
+                    float distToCircleCenter = Mathf.Sqrt(dx * dx + circleY * circleY);
+                    if (distToCircleCenter >= 9f && distToCircleCenter <= 12f)
+                    {
+                        tex.SetPixel(x, y, col);
+                    }
+
+                    // Horns/Crescent on top (center: cx, size * 0.75f, radius 10, only y <= size * 0.75f)
+                    float crescentY = y - size * 0.75f;
+                    float distToCrescentCenter = Mathf.Sqrt(dx * dx + crescentY * crescentY);
+                    if (distToCrescentCenter >= 9f && distToCrescentCenter <= 12f && y <= size * 0.75f && y >= size * 0.58f)
+                    {
+                        tex.SetPixel(x, y, col);
+                    }
+
+                    // Vertical line for Cross below circle (from y = size*0.1 to size*0.3)
+                    if (y >= size * 0.1f && y <= size * 0.31f)
+                    {
+                        if (Mathf.Abs(dx) <= 1.5f)
+                        {
+                            tex.SetPixel(x, y, col);
+                        }
+                    }
+
+                    // Horizontal bar for Cross (at y = size*0.2)
+                    if (y >= size * 0.2f && y <= size * 0.2f + 3f)
+                    {
+                        if (Mathf.Abs(dx) <= size * 0.15f)
+                        {
+                            tex.SetPixel(x, y, col);
+                        }
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateProceduralSaltSprite()
+        {
+            int size = 64;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color col = new Color(0.95f, 0.95f, 0.95f, 0.95f);
+            Color bg = new Color(0f, 0f, 0f, 0f);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    tex.SetPixel(x, y, bg);
+                }
+            }
+
+            float cx = size * 0.5f;
+            float cy = size * 0.5f;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - cx;
+                    float dy = y - cy;
+
+                    // Circle (radius 18 pixels)
+                    float distToCircleCenter = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (distToCircleCenter >= 15f && distToCircleCenter <= 18f)
+                    {
+                        tex.SetPixel(x, y, col);
+                    }
+
+                    // Horizontal line across the circle (inside the circle)
+                    if (y >= size * 0.5f - 1.5f && y <= size * 0.5f + 1.5f)
+                    {
+                        if (Mathf.Abs(dx) <= 17f)
+                        {
+                            tex.SetPixel(x, y, col);
+                        }
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
         private Sprite CreateProceduralGradientSprite(int w, int h, Color innerColor, Color outerColor)
         {
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
@@ -436,13 +656,30 @@ namespace TheAlchemistsCrypt.UI
 
             var eventSystem = UnityEngine.EventSystems.EventSystem.current;
             if (eventSystem == null) eventSystem = GameObject.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
-            GameObject eventSystemGo = (eventSystem == null) ? new GameObject("EventSystem") : eventSystem.gameObject;
-            if (eventSystem == null) eventSystem = eventSystemGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            GameObject eventSystemGo;
+            if (eventSystem == null)
+            {
+                eventSystemGo = new GameObject("EventSystem");
+                eventSystem = eventSystemGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            }
+            else
+            {
+                eventSystemGo = eventSystem.gameObject;
+            }
+            
+            var legacyModule = eventSystemGo.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+            if (legacyModule != null)
+            {
+                if (Application.isPlaying) Destroy(legacyModule);
+                else DestroyImmediate(legacyModule);
+            }
             
             var modernModule = eventSystemGo.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-            if (modernModule != null) { if (Application.isPlaying) Destroy(modernModule); else DestroyImmediate(modernModule); }
-            
-            if (eventSystemGo.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>() == null) eventSystemGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+            if (modernModule == null)
+            {
+                modernModule = eventSystemGo.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                modernModule.AssignDefaultActions();
+            }
         }
 
         public void BuildHUD()
@@ -495,23 +732,21 @@ namespace TheAlchemistsCrypt.UI
             visualImage.color = Color.white; visualImage.raycastTarget = false;
             if (joystickKnobSprite != null) visualImage.sprite = joystickKnobSprite;
 
-            var dragHandler = joystickHandle.gameObject.AddComponent<JoystickDragHandler>();
-            dragHandler.backgroundRing = joystickBg;
-            dragHandler.knobVisual = knobVisual;
-            dragHandler.movementRange = 180f;
+            var onScreenStick = joystickHandle.gameObject.AddComponent<UnityEngine.InputSystem.OnScreen.OnScreenStick>();
+            onScreenStick.movementRange = 180f; 
+            onScreenStick.controlPath = "<Gamepad>/leftStick"; 
 
-            // --- ACTION BUTTONS (Block styled borderless charcoal slabs with alchemical gold text) ---
+            // --- ACTION BUTTONS (Circular translucent gold themed, identical to fd582c0) ---
             var btnContainer = new GameObject("ButtonContainer", typeof(RectTransform)).GetComponent<RectTransform>();
             btnContainer.SetParent(root, false);
             btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0);
-            btnContainer.anchoredPosition = new Vector2(-50, 50); // Bezel safety
+            btnContainer.anchoredPosition = new Vector2(-50, 50); // Safe bezel padding
 
-            // 2x2 control grid + massive fire button next to it
-            CreateBlockButton(btnContainer, "FIRE", new Vector2(-200, 130), new Vector2(260, 180), fireIcon, () => SetFire(true), () => SetFire(false));
-            CreateBlockButton(btnContainer, "RELOAD", new Vector2(-480, 180), new Vector2(180, 80), reloadIcon, () => Reload());
-            CreateBlockButton(btnContainer, "SWAP", new Vector2(-680, 80), new Vector2(180, 80), swapIcon, () => Swap());
-            CreateSprintBlockButton(btnContainer, new Vector2(-680, 180), new Vector2(180, 80), sprintIcon);
-            CreateBlockButton(btnContainer, "JUMP", new Vector2(-480, 80), new Vector2(180, 80), jumpIcon, () => SetJump(true), () => SetJump(false));
+            CreateButton(btnContainer, "FIRE", new Vector2(-280, 280), 380, fireIcon, () => SetFire(true), () => SetFire(false));
+            CreateButton(btnContainer, "RELOAD", new Vector2(-620, 150), 200, reloadIcon, () => Reload());
+            CreateButton(btnContainer, "SWAP", new Vector2(-480, 520), 200, swapIcon, () => Swap());
+            CreateSprintButton(btnContainer, new Vector2(-680, 350), 200);
+            CreateButton(btnContainer, "JUMP", new Vector2(-150, 580), 220, jumpIcon, () => SetJump(true), () => SetJump(false));
 
             HideDebugLabels();
 
@@ -758,6 +993,48 @@ namespace TheAlchemistsCrypt.UI
             };
         }
 
+        private void CreateButton(Transform parent, string label, Vector2 pos, float diameter, Sprite iconSprite, System.Action onDown, System.Action onUp = null)
+        {
+            var go = new GameObject(label, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            go.SetParent(parent, false); go.anchoredPosition = pos; go.sizeDelta = new Vector2(diameter, diameter);
+            var img = go.GetComponent<Image>(); img.color = new Color(0, 0, 0, 0); img.raycastTarget = true;
+
+            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            iconGo.SetParent(go, false); iconGo.anchorMin = Vector2.zero; iconGo.anchorMax = Vector2.one; iconGo.offsetMin = iconGo.offsetMax = Vector2.zero;
+            var iImg = iconGo.GetComponent<Image>(); iImg.sprite = iconSprite; iImg.color = Color.white; iImg.raycastTarget = false;
+            iImg.preserveAspect = true; 
+
+            var helper = go.gameObject.AddComponent<ButtonInputHelper>();
+            helper.onDown = () => { go.localScale = new Vector3(0.9f, 0.9f, 1f); iImg.color = new Color(0.8f, 0.8f, 0.8f, 1f); onDown?.Invoke(); };
+            helper.onUp = () => { go.localScale = new Vector3(1f, 1f, 1f); iImg.color = Color.white; onUp?.Invoke(); };
+        }
+
+        private void CreateSprintButton(Transform parent, Vector2 pos, float diameter)
+        {
+            var go = new GameObject("SPRINT", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            go.SetParent(parent, false); go.anchoredPosition = pos; go.sizeDelta = new Vector2(diameter, diameter);
+            var img = go.GetComponent<Image>(); img.color = new Color(0, 0, 0, 0); img.raycastTarget = true;
+
+            var shadowGo = new GameObject("Shadow", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            shadowGo.SetParent(go, false); shadowGo.anchorMin = Vector2.zero; shadowGo.anchorMax = Vector2.one; shadowGo.offsetMin = shadowGo.offsetMax = Vector2.zero;
+            sprintShadowImage = shadowGo.GetComponent<Image>(); sprintShadowImage.sprite = obsidianSprite; sprintShadowImage.raycastTarget = false;
+
+            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            iconGo.SetParent(go, false); iconGo.anchorMin = Vector2.zero; iconGo.anchorMax = Vector2.one; iconGo.offsetMin = iconGo.offsetMax = Vector2.zero;
+            sprintIconImage = iconGo.GetComponent<Image>(); sprintIconImage.sprite = sprintIcon; sprintIconImage.raycastTarget = false;
+            sprintIconImage.preserveAspect = true;
+
+            var helper = go.gameObject.AddComponent<ButtonInputHelper>();
+            helper.onDown = () => { sprintToggleState = !sprintToggleState; UpdateSprintVisuals(); SetSprint(sprintToggleState); };
+        }
+
+        private void UpdateSprintVisuals() {
+            if (sprintShadowImage && sprintIconImage) {
+                sprintShadowImage.sprite = sprintToggleState ? goldGradientSprite : obsidianSprite;
+                sprintIconImage.color = sprintToggleState ? Color.white : new Color(0.8f, 0.8f, 0.8f, 1f);
+            }
+        }
+
         private class ButtonInputHelper : MonoBehaviour, IPointerDownHandler, IPointerUpHandler {
             public System.Action onDown; public System.Action onUp;
             public void OnPointerDown(PointerEventData data) => onDown?.Invoke();
@@ -815,10 +1092,20 @@ namespace TheAlchemistsCrypt.UI
             }
 
             var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+            int current = 30;
+            int total = 30;
             if (character != null) {
                 var weapon = character.GetEquippedWeapon();
-                if (weapon != null) UpdateAmmo(weapon.GetAmmunitionCurrent(), weapon.GetAmmunitionTotal());
+                if (weapon != null) {
+                    current = weapon.GetAmmunitionCurrent();
+                    total = weapon.GetAmmunitionTotal();
+                    if (current <= 0) {
+                        current = 30;
+                        total = 30;
+                    }
+                }
             }
+            UpdateAmmo(current, total);
             var health = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Player.PlayerHealth>();
             if (health != null) UpdateHealth(health.currentHealth);
         }

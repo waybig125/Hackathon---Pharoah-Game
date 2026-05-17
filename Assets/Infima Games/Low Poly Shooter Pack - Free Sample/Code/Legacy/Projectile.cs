@@ -56,6 +56,14 @@ public class Projectile : MonoBehaviour {
 		//Ignore collisions with other projectiles.
 		if (collision.gameObject.GetComponent<Projectile>() != null)
 			return;
+
+		// Apply damage to ZombieAI
+		var zombie = collision.gameObject.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>();
+		if (zombie == null) zombie = collision.gameObject.GetComponentInParent<TheAlchemistsCrypt.AI.ZombieAI>();
+		if (zombie != null)
+		{
+			zombie.TakeDamage(25f);
+		}
 		
 		// //Ignore collision if bullet collides with "Player" tag
 		// if (collision.gameObject.CompareTag("Player")) 

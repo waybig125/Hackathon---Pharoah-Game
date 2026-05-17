@@ -87,7 +87,7 @@ namespace InfimaGames.LowPolyShooterPack
 
                 if (playerCharacter == null)
                 {
-                    playerCharacter = FindObjectOfType<CharacterBehaviour>();
+                    playerCharacter = FindAnyObjectByType<CharacterBehaviour>();
                 }
             }
 

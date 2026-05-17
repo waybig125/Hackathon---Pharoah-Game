@@ -21,7 +21,7 @@ public static class EditorAutoLoader
 
         // 3. Load MainGame scene if empty scene active
         var currentScene = EditorSceneManager.GetActiveScene();
-        if (string.IsNullOrEmpty(currentScene.path) || currentScene.name == "SampleScene" || currentScene.name == "Empty" || string.IsNullOrEmpty(currentScene.name))
+        if (currentScene.path != "Assets/Scenes/MainGame.unity")
         {
             Debug.Log("[EditorAutoLoader] Automatically loading the main scene: Assets/Scenes/MainGame.unity");
             EditorSceneManager.OpenScene("Assets/Scenes/MainGame.unity", OpenSceneMode.Single);

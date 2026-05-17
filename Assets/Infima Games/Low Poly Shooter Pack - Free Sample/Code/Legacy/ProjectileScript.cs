@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 
 public class ProjectileScript : MonoBehaviour {
@@ -129,6 +129,14 @@ public class ProjectileScript : MonoBehaviour {
 			return;
 		
 		hasCollided = true;
+
+		// Apply damage to ZombieAI
+		var zombie = collision.gameObject.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>();
+		if (zombie == null) zombie = collision.gameObject.GetComponentInParent<TheAlchemistsCrypt.AI.ZombieAI>();
+		if (zombie != null)
+		{
+			zombie.TakeDamage(25f);
+		}
 
 		//Hide projectile
 		gameObject.GetComponent<MeshRenderer> ().enabled = false;
