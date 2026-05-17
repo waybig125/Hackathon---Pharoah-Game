@@ -258,9 +258,11 @@ namespace TheAlchemistsCrypt.Editor
             surface.voxelSize = 0.2f; 
             surface.BuildNavMesh();
 
-            // Spawn majestic procedural background pyramids (outside city bounds, not affecting NavMesh baking)
-            CreateProceduralPyramid(root, new Vector3(-200f, 0f, 200f), 140f, 90f, wallMat, new Color(1f, 0.85f, 0.4f));
-            CreateProceduralPyramid(root, new Vector3(220f, 0f, -220f), 160f, 100f, wallMat, new Color(1f, 0.5f, 0.2f));
+            // Spawn 4 majestic background pyramids surrounding the city (diagonal boxing outside play area, not affecting NavMesh baking)
+            CreateProceduralPyramid(root, new Vector3(-220f, 0f, 220f), 150f, 95f, wallMat, new Color(1f, 0.85f, 0.4f));  // North-West (golden-yellow glow)
+            CreateProceduralPyramid(root, new Vector3(220f, 0f, -220f), 160f, 100f, wallMat, new Color(1f, 0.5f, 0.2f));  // South-East (warm orange-red glow)
+            CreateProceduralPyramid(root, new Vector3(220f, 0f, 220f), 140f, 85f, wallMat, new Color(0.9f, 0.8f, 1f));     // North-East (mystical soft violet glow)
+            CreateProceduralPyramid(root, new Vector3(-220f, 0f, -220f), 170f, 110f, wallMat, new Color(1f, 0.7f, 0.3f));  // South-West (rich amber glow)
 
             FixPlayerAndWeapons();
             StaticBatchingUtility.Combine(root);
@@ -275,26 +277,13 @@ namespace TheAlchemistsCrypt.Editor
         {
             RenderSettings.fog = true;
             RenderSettings.fogColor = new Color(0.92f, 0.88f, 0.7f); 
-            RenderSettings.fogDensity = 0.0035f;
+            RenderSettings.fogDensity = 0.0022f; // Reduced from 0.0035f so the grand pyramids are beautifully visible
             RenderSettings.ambientLight = new Color(0.45f, 0.42f, 0.38f);
             
             var sun = GameObject.Find("Directional Light");
             if (sun) {
                 var l = sun.GetComponent<Light>();
                 if (l) { l.color = new Color(1, 0.95f, 0.85f); l.intensity = 1.3f; }
-            }
-
-            var pyramids = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
-            foreach (var p in pyramids) {
-                if (p.name.ToLower().Contains("pyramid")) {
-                    p.transform.localScale *= 1.5f; 
-                    foreach (var r in p.GetComponentsInChildren<Renderer>()) {
-                        foreach (var m in r.materials) {
-                            m.SetColor("_EmissionColor", new Color(1f, 0.9f, 0.5f) * 4.0f); 
-                            m.EnableKeyword("_EMISSION");
-                        }
-                    }
-                }
             }
         }
 
@@ -315,66 +304,155 @@ namespace TheAlchemistsCrypt.Editor
             } else {
                 floors = 3;
             }
-            float height = floors * 12f;
 
-            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            body.transform.SetParent(h.transform);
-            body.transform.localPosition = new Vector3(0, height / 2f, 0);
-            body.transform.localScale = new Vector3(20, height, 20);
-            body.GetComponent<Renderer>().sharedMaterial = wall;
-            body.isStatic = true;
+            bool isStepped = (floors > 1) && (Random.value < 0.15f);
 
-            // Window glow state (85% glow)
-            bool isLit = Random.value < 0.85f;
-            Material windowMat = isLit ? litWindowMat : darkWindowMat;
-
-            // Exactly ONE back-side (negative Z) window per floor
-            for (int f = 0; f < floors; f++) {
-                float windowY = (f * 12f) + 6f;
-                var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                win.transform.SetParent(h.transform);
-                win.transform.localScale = new Vector3(3.6f, 2.6f, 0.3f);
-                win.GetComponent<Renderer>().sharedMaterial = windowMat;
-                DestroyImmediate(win.GetComponent<Collider>());
-                
-                win.transform.localPosition = new Vector3(0f, windowY, -10.15f);
-                win.transform.localRotation = Quaternion.Euler(0, 180, 0);
-                win.isStatic = true;
-
-                if (isLit) {
-                    var lightGo = new GameObject("WindowLight");
-                    lightGo.transform.SetParent(win.transform);
-                    lightGo.transform.localPosition = new Vector3(0f, 0f, -0.6f);
-                    var l = lightGo.AddComponent<Light>();
-                    l.type = LightType.Point;
-                    l.color = new Color(1f, 0.75f, 0.3f);
-                    l.range = 8f;
-                    l.intensity = 1.6f;
-                    l.shadows = LightShadows.None; // Maximum fill rate on mobile G91
+            if (isStepped) {
+                // Stepped Tiered Mastaba/Villa House (15% of double/triple floors)
+                float[] floorSizes = new float[floors];
+                if (floors == 2) {
+                    floorSizes[0] = 30f; // Bottom floor is 1.5x wider (30x30)
+                    floorSizes[1] = 20f; // Upper floor is standard (20x20)
+                } else {
+                    floorSizes[0] = 32f; // Bottom floor is wider
+                    floorSizes[1] = 20f; // Middle floor is standard
+                    floorSizes[2] = 12f; // Top floor is narrower
                 }
-            }
 
-            // Spawn wooden trim divider belts between floors
-            for (int f = 1; f < floors; f++) {
-                var trim = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                trim.transform.SetParent(h.transform);
-                trim.transform.localPosition = new Vector3(0f, f * 12f, 0f);
-                trim.transform.localScale = new Vector3(20.4f, 0.8f, 20.4f);
-                trim.GetComponent<Renderer>().sharedMaterial = wood;
-                DestroyImmediate(trim.GetComponent<Collider>());
-                trim.isStatic = true;
-            }
+                // Spawn each floor's body cube
+                for (int f = 0; f < floors; f++) {
+                    float size = floorSizes[f];
+                    var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    body.name = "SteppedBody_Floor_" + f;
+                    body.transform.SetParent(h.transform);
+                    body.transform.localPosition = new Vector3(0, (f * 12f) + 6f, 0);
+                    body.transform.localScale = new Vector3(size, 12f, size);
+                    body.GetComponent<Renderer>().sharedMaterial = wall;
+                    body.isStatic = true;
+                }
 
-            var door = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            door.transform.SetParent(h.transform);
-            door.transform.localPosition = new Vector3(0, 4, 10.1f);
-            door.transform.localScale = new Vector3(6, 8, 0.2f);
-            door.GetComponent<Renderer>().sharedMaterial = wood;
-            door.isStatic = true;
+                // Window glow state (85% glow)
+                bool isLit = Random.value < 0.85f;
+                Material windowMat = isLit ? litWindowMat : darkWindowMat;
 
-            if (Random.value > 0.5f) {
-                if (crate) InstantiateProp(crate, pos + new Vector3(12, 0, 8), h.transform);
-                if (barrel) InstantiateProp(barrel, pos + new Vector3(12, 0, 11), h.transform);
+                // Exactly ONE back-side (negative Z) window per floor (shifted back to each tier's wall)
+                for (int f = 0; f < floors; f++) {
+                    float size = floorSizes[f];
+                    float windowY = (f * 12f) + 6f;
+                    var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    win.transform.SetParent(h.transform);
+                    win.transform.localScale = new Vector3(3.6f, 2.6f, 0.3f);
+                    win.GetComponent<Renderer>().sharedMaterial = windowMat;
+                    DestroyImmediate(win.GetComponent<Collider>());
+                    
+                    win.transform.localPosition = new Vector3(0f, windowY, -(size / 2f) - 0.15f);
+                    win.transform.localRotation = Quaternion.Euler(0, 180, 0);
+                    win.isStatic = true;
+
+                    if (isLit) {
+                        var lightGo = new GameObject("WindowLight");
+                        lightGo.transform.SetParent(win.transform);
+                        lightGo.transform.localPosition = new Vector3(0f, 0f, -0.6f);
+                        var l = lightGo.AddComponent<Light>();
+                        l.type = LightType.Point;
+                        l.color = new Color(1f, 0.75f, 0.3f);
+                        l.range = 8f;
+                        l.intensity = 1.6f;
+                        l.shadows = LightShadows.None;
+                    }
+                }
+
+                // Spawn wooden trim divider belts between floors matching each tier's size
+                for (int f = 1; f < floors; f++) {
+                    float size = floorSizes[f - 1]; // Trim sits on top of the lower floor
+                    var trim = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    trim.transform.SetParent(h.transform);
+                    trim.transform.localPosition = new Vector3(0f, f * 12f, 0f);
+                    trim.transform.localScale = new Vector3(size + 0.4f, 0.8f, size + 0.4f);
+                    trim.GetComponent<Renderer>().sharedMaterial = wood;
+                    DestroyImmediate(trim.GetComponent<Collider>());
+                    trim.isStatic = true;
+                }
+
+                // Door on the front face of bottom floor (positive Z)
+                float bottomSize = floorSizes[0];
+                var door = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                door.transform.SetParent(h.transform);
+                door.transform.localPosition = new Vector3(0, 4, (bottomSize / 2f) + 0.1f);
+                door.transform.localScale = new Vector3(6, 8, 0.2f);
+                door.GetComponent<Renderer>().sharedMaterial = wood;
+                door.isStatic = true;
+
+                // Prop offsets adjusted outward due to wider bottom size
+                if (Random.value > 0.5f) {
+                    float propXOffset = (bottomSize / 2f) + 2f;
+                    if (crate) InstantiateProp(crate, pos + new Vector3(propXOffset, 0, 8), h.transform);
+                    if (barrel) InstantiateProp(barrel, pos + new Vector3(propXOffset, 0, 11), h.transform);
+                }
+
+            } else {
+                // Standard Box House
+                float height = floors * 12f;
+
+                var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                body.transform.SetParent(h.transform);
+                body.transform.localPosition = new Vector3(0, height / 2f, 0);
+                body.transform.localScale = new Vector3(20, height, 20);
+                body.GetComponent<Renderer>().sharedMaterial = wall;
+                body.isStatic = true;
+
+                // Window glow state (85% glow)
+                bool isLit = Random.value < 0.85f;
+                Material windowMat = isLit ? litWindowMat : darkWindowMat;
+
+                // Exactly ONE back-side (negative Z) window per floor
+                for (int f = 0; f < floors; f++) {
+                    float windowY = (f * 12f) + 6f;
+                    var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    win.transform.SetParent(h.transform);
+                    win.transform.localScale = new Vector3(3.6f, 2.6f, 0.3f);
+                    win.GetComponent<Renderer>().sharedMaterial = windowMat;
+                    DestroyImmediate(win.GetComponent<Collider>());
+                    
+                    win.transform.localPosition = new Vector3(0f, windowY, -10.15f);
+                    win.transform.localRotation = Quaternion.Euler(0, 180, 0);
+                    win.isStatic = true;
+
+                    if (isLit) {
+                        var lightGo = new GameObject("WindowLight");
+                        lightGo.transform.SetParent(win.transform);
+                        lightGo.transform.localPosition = new Vector3(0f, 0f, -0.6f);
+                        var l = lightGo.AddComponent<Light>();
+                        l.type = LightType.Point;
+                        l.color = new Color(1f, 0.75f, 0.3f);
+                        l.range = 8f;
+                        l.intensity = 1.6f;
+                        l.shadows = LightShadows.None;
+                    }
+                }
+
+                // Spawn wooden trim divider belts between floors
+                for (int f = 1; f < floors; f++) {
+                    var trim = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    trim.transform.SetParent(h.transform);
+                    trim.transform.localPosition = new Vector3(0f, f * 12f, 0f);
+                    trim.transform.localScale = new Vector3(20.4f, 0.8f, 20.4f);
+                    trim.GetComponent<Renderer>().sharedMaterial = wood;
+                    DestroyImmediate(trim.GetComponent<Collider>());
+                    trim.isStatic = true;
+                }
+
+                var door = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                door.transform.SetParent(h.transform);
+                door.transform.localPosition = new Vector3(0, 4, 10.1f);
+                door.transform.localScale = new Vector3(6, 8, 0.2f);
+                door.GetComponent<Renderer>().sharedMaterial = wood;
+                door.isStatic = true;
+
+                if (Random.value > 0.5f) {
+                    if (crate) InstantiateProp(crate, pos + new Vector3(12, 0, 8), h.transform);
+                    if (barrel) InstantiateProp(barrel, pos + new Vector3(12, 0, 11), h.transform);
+                }
             }
         }
 
@@ -382,10 +460,9 @@ namespace TheAlchemistsCrypt.Editor
         {
             var p = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
             p.transform.localScale = Vector3.one * 0.3f;
-            p.transform.rotation = Quaternion.Euler(-90, 0, 0);
 
             // Align bottom base of prop flush with ground and generate visual bounds collider
-            AlignToGroundAndAddCollider(p, pos);
+            AlignToGroundAndAddCollider(p, pos, Quaternion.Euler(-90, 0, 0), 0f);
 
             var rb = p.AddComponent<Rigidbody>();
             rb.mass = 20f;
@@ -402,9 +479,9 @@ namespace TheAlchemistsCrypt.Editor
             if (trees != null && trees.Length > 0) {
                 var t = (GameObject)PrefabUtility.InstantiatePrefab(trees[Random.Range(0, trees.Length)], p.transform);
                 t.transform.localScale = Vector3.one * 8f; 
-                t.transform.rotation = Quaternion.Euler(-90, 0, 0);
                 
-                AlignToGroundAndAddCollider(t, pos);
+                // Deep-plant trees with -1.8f vertical offset to completely bury roots below floor sandlevel
+                AlignToGroundAndAddCollider(t, pos, Quaternion.Euler(-90, 0, 0), -1.8f);
 
                 t.isStatic = true;
                 foreach (Transform child in t.GetComponentsInChildren<Transform>(true)) {
@@ -446,9 +523,8 @@ namespace TheAlchemistsCrypt.Editor
         {
             var col = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, parent);
             col.transform.localScale = Vector3.one * 3f;
-            col.transform.rotation = Quaternion.Euler(-90, 0, 0);
 
-            AlignToGroundAndAddCollider(col, pos);
+            AlignToGroundAndAddCollider(col, pos, Quaternion.Euler(-90, 0, 0), 0f);
 
             col.isStatic = true;
             foreach (Transform t in col.GetComponentsInChildren<Transform>(true)) {
@@ -541,22 +617,53 @@ namespace TheAlchemistsCrypt.Editor
             return m;
         }
 
-        private void AlignToGroundAndAddCollider(GameObject obj, Vector3 basePos)
+        private void AlignToGroundAndAddCollider(GameObject obj, Vector3 basePos, Quaternion targetRot, float offsetAdjustment)
         {
             obj.transform.position = basePos;
+            obj.transform.rotation = targetRot;
 
-            var renderers = obj.GetComponentsInChildren<Renderer>(true);
-            if (renderers.Length > 0) {
+            var filters = obj.GetComponentsInChildren<MeshFilter>(true);
+            if (filters.Length > 0) {
                 float minY = float.MaxValue;
-                foreach (var r in renderers) {
-                    if (r is ParticleSystemRenderer) continue;
-                    if (r.bounds.min.y < minY) {
-                        minY = r.bounds.min.y;
+                foreach (var filter in filters) {
+                    if (filter.sharedMesh == null) continue;
+                    
+                    Bounds localBounds = filter.sharedMesh.bounds;
+                    Vector3 center = localBounds.center;
+                    Vector3 extents = localBounds.extents;
+                    Vector3[] corners = {
+                        new Vector3(center.x - extents.x, center.y - extents.y, center.z - extents.z),
+                        new Vector3(center.x - extents.x, center.y - extents.y, center.z + extents.z),
+                        new Vector3(center.x - extents.x, center.y + extents.y, center.z - extents.z),
+                        new Vector3(center.x - extents.x, center.y + extents.y, center.z + extents.z),
+                        new Vector3(center.x + extents.x, center.y - extents.y, center.z - extents.z),
+                        new Vector3(center.x + extents.x, center.y - extents.y, center.z + extents.z),
+                        new Vector3(center.x + extents.x, center.y + extents.y, center.z - extents.z),
+                        new Vector3(center.x + extents.x, center.y + extents.y, center.z + extents.z)
+                    };
+                    
+                    foreach (var corner in corners) {
+                        float worldY = filter.transform.TransformPoint(corner).y;
+                        if (worldY < minY) minY = worldY;
                     }
                 }
+
                 if (minY != float.MaxValue) {
-                    float yOffset = basePos.y - minY;
+                    float yOffset = basePos.y - minY + offsetAdjustment;
                     obj.transform.position = new Vector3(basePos.x, basePos.y + yOffset, basePos.z);
+                }
+            } else {
+                var renderers = obj.GetComponentsInChildren<Renderer>(true);
+                if (renderers.Length > 0) {
+                    float minY = float.MaxValue;
+                    foreach (var r in renderers) {
+                        if (r is ParticleSystemRenderer) continue;
+                        if (r.bounds.min.y < minY) minY = r.bounds.min.y;
+                    }
+                    if (minY != float.MaxValue) {
+                        float yOffset = basePos.y - minY + offsetAdjustment;
+                        obj.transform.position = new Vector3(basePos.x, basePos.y + yOffset, basePos.z);
+                    }
                 }
             }
 
@@ -678,7 +785,11 @@ namespace TheAlchemistsCrypt.Editor
             filter.sharedMesh = mesh;
 
             var renderer = pGo.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = mat;
+            var pMat = new Material(mat); // Unique material instance
+            pMat.color = new Color(0.85f, 0.75f, 0.6f); // Sandstone color
+            pMat.SetColor("_EmissionColor", glowColor * 1.5f);
+            pMat.EnableKeyword("_EMISSION");
+            renderer.sharedMaterial = pMat;
 
             pGo.AddComponent<MeshCollider>().sharedMesh = mesh;
 
@@ -690,8 +801,8 @@ namespace TheAlchemistsCrypt.Editor
             var l = lightGo.AddComponent<Light>();
             l.type = LightType.Point;
             l.color = glowColor;
-            l.range = 300f;
-            l.intensity = 15f;
+            l.range = 400f;
+            l.intensity = 20f;
             l.shadows = LightShadows.None;
         }
     }
