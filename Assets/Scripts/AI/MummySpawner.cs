@@ -46,17 +46,17 @@ namespace TheAlchemistsCrypt.AI
                 if (prefab == null) continue;
 
                 float angle = i * (360f / fbxPaths.Length) * Mathf.Deg2Rad;
-                Vector3 spawnPos = spawnCenter + new Vector3(Mathf.Cos(angle) * 15f, 0.5f, Mathf.Sin(angle) * 15f);
+                Vector3 spawnPos = spawnCenter + new Vector3(Mathf.Cos(angle) * 40f, 0.5f, Mathf.Sin(angle) * 40f);
 
                 UnityEngine.AI.NavMeshHit hit;
-                if (UnityEngine.AI.NavMesh.SamplePosition(spawnPos, out hit, 20f, UnityEngine.AI.NavMesh.AllAreas)) {
+                if (UnityEngine.AI.NavMesh.SamplePosition(spawnPos, out hit, 50f, UnityEngine.AI.NavMesh.AllAreas)) {
                     spawnPos = hit.position;
                 }
 
                 GameObject go = Instantiate(prefab);
                 go.name = names[i];
                 go.transform.position = spawnPos;
-                go.transform.localScale = Vector3.one;
+                go.transform.localScale = new Vector3(1.6f, 1.6f, 1.6f);
 
                 var anim = go.GetComponent<Animator>();
                 if (anim == null) anim = go.AddComponent<Animator>();
@@ -77,7 +77,9 @@ namespace TheAlchemistsCrypt.AI
                 var agent = go.GetComponent<UnityEngine.AI.NavMeshAgent>();
                 if (agent == null) agent = go.AddComponent<UnityEngine.AI.NavMeshAgent>();
                 agent.speed = 3.8f;
-                agent.stoppingDistance = 2.5f;
+                agent.stoppingDistance = 3.2f; // Adjusted for 1.6x scale
+                agent.height = 2.0f;
+                agent.radius = 0.4f;
 
                 var col = go.GetComponent<CapsuleCollider>();
                 if (col == null) col = go.AddComponent<CapsuleCollider>();

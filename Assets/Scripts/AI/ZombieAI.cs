@@ -58,6 +58,14 @@ namespace TheAlchemistsCrypt.AI
 
             agent.SetDestination(player.position);
 
+            // Smoothly rotate the zombie to face the player (Y-axis only)
+            Vector3 targetDir = player.position - transform.position;
+            targetDir.y = 0f;
+            if (targetDir.sqrMagnitude > 0.01f) {
+                Quaternion targetRot = Quaternion.LookRotation(targetDir);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 8f);
+            }
+
             float distance = Vector3.Distance(transform.position, player.position);
             if (distance <= attackDistance) {
                 PlayAnimation("Attack");

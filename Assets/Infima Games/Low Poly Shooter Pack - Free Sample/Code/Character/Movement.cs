@@ -112,9 +112,19 @@ namespace InfimaGames.LowPolyShooterPack
         #endif
         }
 
-        /// Initializes the FpsController on start.
         protected override  void Start()
         {
+            // De-parent any environment colliders that were accidentally nested under Player
+            for (int i = transform.childCount - 1; i >= 0; i--)
+            {
+                Transform child = transform.GetChild(i);
+                if (child.name == "GroundPlane" || child.name == "DesertTerrain" || child.name.Contains("Terrain") || child.name.Contains("Plane"))
+                {
+                    child.SetParent(null);
+                    Debug.Log($"Movement: De-parented {child.name} to scene root to prevent player collision locking!");
+                }
+            }
+
             //Rigidbody Setup.
             rigidBody = GetComponent<Rigidbody>();
             rigidBody.constraints = RigidbodyConstraints.FreezeRotation;

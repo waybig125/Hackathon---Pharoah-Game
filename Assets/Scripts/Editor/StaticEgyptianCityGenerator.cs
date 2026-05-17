@@ -384,11 +384,10 @@ namespace TheAlchemistsCrypt.Editor
                 door.GetComponent<Renderer>().sharedMaterial = wood;
                 door.isStatic = true;
 
-                // Prop offsets adjusted outward due to wider bottom size
+                // Prop offsets adjusted outward due to wider bottom size - Spawn beautiful stacked prop clusters instead of scattered props
                 if (Random.value > 0.5f) {
-                    float propXOffset = (bottomSize / 2f) + 2f;
-                    if (crate) InstantiateProp(crate, pos + new Vector3(propXOffset, 0, 8), h.transform);
-                    if (barrel) InstantiateProp(barrel, pos + new Vector3(propXOffset, 0, 11), h.transform);
+                    float propXOffset = (bottomSize / 2f) + 3f;
+                    SpawnStack(pos + new Vector3(propXOffset, 0, 8), h.transform, crate, barrel);
                 }
 
             } else {
@@ -450,9 +449,9 @@ namespace TheAlchemistsCrypt.Editor
                 door.GetComponent<Renderer>().sharedMaterial = wood;
                 door.isStatic = true;
 
+                // Spawn beautiful stacked prop clusters instead of scattered props
                 if (Random.value > 0.5f) {
-                    if (crate) InstantiateProp(crate, pos + new Vector3(12, 0, 8), h.transform);
-                    if (barrel) InstantiateProp(barrel, pos + new Vector3(12, 0, 11), h.transform);
+                    SpawnStack(pos + new Vector3(14, 0, 8), h.transform, crate, barrel);
                 }
             }
         }
@@ -460,14 +459,103 @@ namespace TheAlchemistsCrypt.Editor
         private void InstantiateProp(GameObject prefab, Vector3 pos, Transform parent)
         {
             var p = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-            p.transform.localScale = Vector3.one * 0.3f;
+            p.transform.localScale = Vector3.one * 1.6f;
 
             // Align bottom base of prop flush with ground and generate visual bounds collider
             AlignToGroundAndAddCollider(p, pos, Quaternion.Euler(-90, 0, 0), 0f);
 
-            var rb = p.AddComponent<Rigidbody>();
-            rb.mass = 20f;
-            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            var rb = p.GetComponent<Rigidbody>();
+            if (rb == null) rb = p.AddComponent<Rigidbody>();
+            rb.mass = 50f;
+            rb.isKinematic = true;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+        }
+
+        private void SpawnStack(Vector3 pos, Transform parent, GameObject crate, GameObject barrel)
+        {
+            var stackRoot = new GameObject("PropStack");
+            stackRoot.transform.SetParent(parent);
+            stackRoot.transform.position = pos;
+            stackRoot.isStatic = true;
+
+            float r = Random.value;
+            if (r < 0.4f) {
+                // Crate Pyramid Stack: 3 crates (2 on bottom, 1 on top)
+                float crateSize = 1.6f;
+                // Bottom Left
+                if (crate) {
+                    var c1 = (GameObject)PrefabUtility.InstantiatePrefab(crate, stackRoot.transform);
+                    c1.transform.localScale = Vector3.one * 1.6f;
+                    AlignToGroundAndAddCollider(c1, pos + new Vector3(-crateSize * 0.5f, 0, 0), Quaternion.Euler(-90, 0, 0), 0f);
+                    MakeKinematicProp(c1);
+                }
+                // Bottom Right
+                if (crate) {
+                    var c2 = (GameObject)PrefabUtility.InstantiatePrefab(crate, stackRoot.transform);
+                    c2.transform.localScale = Vector3.one * 1.6f;
+                    AlignToGroundAndAddCollider(c2, pos + new Vector3(crateSize * 0.5f, 0, 0), Quaternion.Euler(-90, 0, 0), 0f);
+                    MakeKinematicProp(c2);
+                }
+                // Top Center
+                if (crate) {
+                    var c3 = (GameObject)PrefabUtility.InstantiatePrefab(crate, stackRoot.transform);
+                    c3.transform.localScale = Vector3.one * 1.6f;
+                    AlignToGroundAndAddCollider(c3, pos + new Vector3(0, crateSize * 1.3f, 0), Quaternion.Euler(-90, 0, 0), 0f);
+                    MakeKinematicProp(c3);
+                }
+            } else if (r < 0.7f) {
+                // Barrel Cluster: 3 barrels arranged in a triangle
+                float barrelSize = 1.4f;
+                if (barrel) {
+                    var b1 = (GameObject)PrefabUtility.InstantiatePrefab(barrel, stackRoot.transform);
+                    b1.transform.localScale = Vector3.one * 1.6f;
+                    AlignToGroundAndAddCollider(b1, pos + new Vector3(-barrelSize * 0.4f, 0, -barrelSize * 0.2f), Quaternion.Euler(-90, 0, 0), 0f);
+                    MakeKinematicProp(b1);
+
+                    var b2 = (GameObject)PrefabUtility.InstantiatePrefab(barrel, stackRoot.transform);
+                    b2.transform.localScale = Vector3.one * 1.6f;
+                    AlignToGroundAndAddCollider(b2, pos + new Vector3(barrelSize * 0.4f, 0, -barrelSize * 0.2f), Quaternion.Euler(-90, 0, 0), 0f);
+                    MakeKinematicProp(b2);
+
+                    var b3 = (GameObject)PrefabUtility.InstantiatePrefab(barrel, stackRoot.transform);
+                    b3.transform.localScale = Vector3.one * 1.6f;
+                    AlignToGroundAndAddCollider(b3, pos + new Vector3(0, 0, barrelSize * 0.5f), Quaternion.Euler(-90, 0, 0), 0f);
+                    MakeKinematicProp(b3);
+                }
+            } else {
+                // Mixed Stack: 2 crates at bottom, 1 barrel on top
+                float crateSize = 1.6f;
+                if (crate) {
+                    var c1 = (GameObject)PrefabUtility.InstantiatePrefab(crate, stackRoot.transform);
+                    c1.transform.localScale = Vector3.one * 1.6f;
+                    AlignToGroundAndAddCollider(c1, pos + new Vector3(-crateSize * 0.5f, 0, 0), Quaternion.Euler(-90, 0, 0), 0f);
+                    MakeKinematicProp(c1);
+
+                    var c2 = (GameObject)PrefabUtility.InstantiatePrefab(crate, stackRoot.transform);
+                    c2.transform.localScale = Vector3.one * 1.6f;
+                    AlignToGroundAndAddCollider(c2, pos + new Vector3(crateSize * 0.5f, 0, 0), Quaternion.Euler(-90, 0, 0), 0f);
+                    MakeKinematicProp(c2);
+                }
+                if (barrel) {
+                    var b1 = (GameObject)PrefabUtility.InstantiatePrefab(barrel, stackRoot.transform);
+                    b1.transform.localScale = Vector3.one * 1.6f;
+                    AlignToGroundAndAddCollider(b1, pos + new Vector3(0, crateSize * 1.3f, 0), Quaternion.Euler(-90, 0, 0), 0f);
+                    MakeKinematicProp(b1);
+                }
+            }
+        }
+
+        private void MakeKinematicProp(GameObject go)
+        {
+            go.isStatic = true;
+            foreach (Transform child in go.GetComponentsInChildren<Transform>(true)) {
+                child.gameObject.isStatic = true;
+            }
+            var rb = go.GetComponent<Rigidbody>();
+            if (rb == null) rb = go.AddComponent<Rigidbody>();
+            rb.mass = 50f;
+            rb.isKinematic = true;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         }
 
         private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab, Material sandMat, Material craterMat)
@@ -553,31 +641,42 @@ namespace TheAlchemistsCrypt.Editor
             dep.isStatic = true;
 
             // Ring of crater sandy debris rocks
-            int rockCount = Random.Range(6, 10);
+            int rockCount = Random.Range(7, 12);
             float radius = 4.2f * scaleMultiplier;
             for (int i = 0; i < rockCount; i++) {
-                float angle = (i * 360f / rockCount) + Random.Range(-15f, 15f);
+                float angle = (i * 360f / rockCount) + Random.Range(-20f, 20f);
                 float rad = angle * Mathf.Deg2Rad;
-                Vector3 rockPos = new Vector3(Mathf.Cos(rad) * radius, Random.Range(-0.2f * scaleMultiplier, 0.2f * scaleMultiplier), Mathf.Sin(rad) * radius);
+                
+                // Add minor noise to radius for jagged, non-circular look
+                float noiseRadius = radius * Random.Range(0.85f, 1.15f);
+                Vector3 rockPos = new Vector3(Mathf.Cos(rad) * noiseRadius, Random.Range(-0.1f * scaleMultiplier, 0.1f * scaleMultiplier), Mathf.Sin(rad) * noiseRadius);
                 
                 var rock = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 rock.name = "CraterRock";
                 rock.transform.SetParent(crater.transform);
                 rock.transform.localPosition = rockPos;
                 
+                // Jagged, highly randomized multi-axis scales
                 rock.transform.localScale = new Vector3(
-                    Random.Range(1.2f, 2.5f) * scaleMultiplier, 
-                    Random.Range(0.6f, 1.8f) * scaleMultiplier, 
-                    Random.Range(1.2f, 2.5f) * scaleMultiplier
+                    Random.Range(1.2f, 3.0f) * scaleMultiplier, 
+                    Random.Range(0.8f, 2.2f) * scaleMultiplier, 
+                    Random.Range(1.2f, 3.0f) * scaleMultiplier
                 );
                 
+                // Fully randomized 3D rotation for a natural debris look
                 rock.transform.localRotation = Quaternion.Euler(
-                    Random.Range(10f, 30f), 
-                    -angle + 90f + Random.Range(-20f, 20f), 
-                    Random.Range(-10f, 10f)
+                    Random.Range(-35f, 35f), 
+                    Random.Range(0f, 360f), 
+                    Random.Range(-35f, 35f)
                 );
                 
                 rock.GetComponent<Renderer>().sharedMaterial = sandMat;
+                
+                var bc = rock.GetComponent<BoxCollider>();
+                if (bc != null) {
+                    bc.size = Vector3.one;
+                }
+                
                 rock.isStatic = true;
             }
         }
@@ -679,50 +778,39 @@ namespace TheAlchemistsCrypt.Editor
                 DestroyImmediate(col);
             }
 
-            var renderers = obj.GetComponentsInChildren<Renderer>(true);
-            if (renderers.Length == 0) {
-                obj.AddComponent<BoxCollider>();
-                return;
-            }
-
-            Vector3 originalPos = obj.transform.position;
-            Quaternion originalRot = obj.transform.rotation;
-            Vector3 originalScale = obj.transform.localScale;
-
-            obj.transform.rotation = Quaternion.identity;
-
-            Bounds bounds = new Bounds(Vector3.zero, Vector3.zero);
-            bool initialized = false;
-
-            foreach (var r in renderers) {
-                if (r is ParticleSystemRenderer) continue;
-
-                Bounds childBounds = r.bounds;
-                Vector3 localCenter = obj.transform.InverseTransformPoint(childBounds.center);
-                Vector3 localExtents = obj.transform.InverseTransformVector(childBounds.extents);
-
-                localExtents.x = Mathf.Abs(localExtents.x);
-                localExtents.y = Mathf.Abs(localExtents.y);
-                localExtents.z = Mathf.Abs(localExtents.z);
-
-                Bounds localChildBounds = new Bounds(localCenter, localExtents * 2f);
-
-                if (!initialized) {
-                    bounds = localChildBounds;
-                    initialized = true;
-                } else {
-                    bounds.Encapsulate(localChildBounds);
+            var filters = obj.GetComponentsInChildren<MeshFilter>(true);
+            if (filters.Length > 0) {
+                foreach (var filter in filters) {
+                    if (filter.sharedMesh == null) continue;
+                    
+                    var mc = filter.gameObject.GetComponent<MeshCollider>();
+                    if (mc == null) mc = filter.gameObject.AddComponent<MeshCollider>();
+                    mc.sharedMesh = filter.sharedMesh;
+                    mc.convex = false; // Static colliders don't need to be convex, which allows perfect concavity!
                 }
-            }
-
-            obj.transform.rotation = originalRot;
-
-            if (initialized) {
-                var box = obj.AddComponent<BoxCollider>();
-                box.center = bounds.center;
-                box.size = bounds.size;
             } else {
-                obj.AddComponent<BoxCollider>();
+                var renderers = obj.GetComponentsInChildren<Renderer>(true);
+                if (renderers.Length > 0) {
+                    var box = obj.AddComponent<BoxCollider>();
+                    // Basic fallback bounding box estimation
+                    Bounds b = new Bounds(Vector3.zero, Vector3.zero);
+                    bool init = false;
+                    foreach (var r in renderers) {
+                        if (r is ParticleSystemRenderer) continue;
+                        if (!init) {
+                            b = r.bounds;
+                            init = true;
+                        } else {
+                            b.Encapsulate(r.bounds);
+                        }
+                    }
+                    if (init) {
+                        box.center = obj.transform.InverseTransformPoint(b.center);
+                        box.size = obj.transform.InverseTransformVector(b.size);
+                    }
+                } else {
+                    obj.AddComponent<BoxCollider>();
+                }
             }
         }
 
