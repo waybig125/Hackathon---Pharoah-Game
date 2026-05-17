@@ -412,14 +412,24 @@ namespace TheAlchemistsCrypt.Editor
                 }
             }
 
-            // Spawn majestic ancient Egyptian columns at the plaza corners
-            if (columnPrefab != null) {
-                Vector3[] offsets = {
-                    new Vector3(-8f, 0f, -8f),
-                    new Vector3(8f, 0f, -8f),
-                    new Vector3(-8f, 0f, 8f),
-                    new Vector3(8f, 0f, 8f)
-                };
+            // Spawn majestic ancient Egyptian columns at some plaza corners (ruins feel)
+            if (columnPrefab != null && Random.value < 0.45f) {
+                Vector3[] offsets;
+                if (Random.value < 0.6f) {
+                    // Spawn 2 columns (diagonal for realistic ruin aesthetics)
+                    offsets = new Vector3[] {
+                        new Vector3(-8f, 0f, -8f),
+                        new Vector3(8f, 0f, 8f)
+                    };
+                } else {
+                    // Spawn 4 columns
+                    offsets = new Vector3[] {
+                        new Vector3(-8f, 0f, -8f),
+                        new Vector3(8f, 0f, -8f),
+                        new Vector3(-8f, 0f, 8f),
+                        new Vector3(8f, 0f, 8f)
+                    };
+                }
                 foreach (var offset in offsets) {
                     SpawnColumn(p.transform, pos + offset, columnPrefab);
                 }
