@@ -19,6 +19,7 @@ namespace TheAlchemistsCrypt.Player
 
         private void Awake()
         {
+            if (maxHealth <= 0f) maxHealth = 100f;
             currentHealth = maxHealth;
         }
 
