@@ -92,6 +92,13 @@ namespace InfimaGames.LowPolyShooterPack
             // but for now let's just allow it if we have any input.
             if (!playerCharacter.IsCursorLocked() && frameInput == Vector2.zero)
                 frameInput = default;
+
+            // Damp touch swipe sensitivity by 10x for ultra-smooth panning on mobile
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsTouchActive)
+            {
+                frameInput *= 0.1f;
+            }
+
             //Sensitivity.
             frameInput *= sensitivity;
 
