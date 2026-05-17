@@ -376,11 +376,36 @@ namespace TheAlchemistsCrypt.UI
             if (GetComponent<GraphicRaycaster>() == null) gameObject.AddComponent<GraphicRaycaster>();
 
             // Auto-inject missing EventSystem if not present in the scene
-            if (UnityEngine.EventSystems.EventSystem.current == null)
+            var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+            if (eventSystem == null)
             {
-                var eventSystemGo = new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem), typeof(UnityEngine.EventSystems.StandaloneInputModule));
-                Debug.Log("MobileHUDButtons: Auto-spawned EventSystem for interactive UI!");
+                eventSystem = GameObject.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
             }
+            GameObject eventSystemGo;
+            if (eventSystem == null)
+            {
+                eventSystemGo = new GameObject("EventSystem");
+                eventSystem = eventSystemGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            }
+            else
+            {
+                eventSystemGo = eventSystem.gameObject;
+            }
+            
+            var legacyModule = eventSystemGo.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+            if (legacyModule != null)
+            {
+                if (Application.isPlaying) Destroy(legacyModule);
+                else DestroyImmediate(legacyModule);
+            }
+            
+            var modernModule = eventSystemGo.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            if (modernModule == null)
+            {
+                modernModule = eventSystemGo.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                modernModule.AssignDefaultActions();
+            }
+            Debug.Log("MobileHUDButtons: Injected modern EventSystem with InputSystemUIInputModule for reliable UI clicks!");
         }
 
         public void BuildHUD()
