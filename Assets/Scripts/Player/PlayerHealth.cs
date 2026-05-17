@@ -252,7 +252,11 @@ namespace TheAlchemistsCrypt.Player
         {
             Font f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             if (f == null) f = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            if (f == null) f = Font.GetDefault();
+            if (f == null)
+            {
+                Font[] fonts = Resources.FindObjectsOfTypeAll<Font>();
+                if (fonts != null && fonts.Length > 0) f = fonts[0];
+            }
             return f;
         }
     }
