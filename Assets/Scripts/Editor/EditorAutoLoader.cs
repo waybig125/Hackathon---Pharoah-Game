@@ -61,55 +61,58 @@ public static class EditorAutoLoader
 
     private static void OptimizeThemedIcons()
     {
-        string folder = "Assets/Resources/egypt_themed_icons";
-        if (!System.IO.Directory.Exists(folder)) return;
-
-        string[] guids = AssetDatabase.FindAssets("t:Texture", new[] { folder });
+        string[] folders = new string[] { "Assets/Resources/egypt_themed_icons", "Assets/Resources/egyptian_items" };
         bool anyChanged = false;
 
-        foreach (string guid in guids)
+        foreach (string folder in folders)
         {
-            string path = AssetDatabase.GUIDToAssetPath(guid);
-            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
-            if (importer != null)
+            if (!System.IO.Directory.Exists(folder)) continue;
+
+            string[] guids = AssetDatabase.FindAssets("t:Texture", new[] { folder });
+            foreach (string guid in guids)
             {
-                bool changed = false;
-                if (importer.textureType != TextureImporterType.Sprite)
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                if (importer != null)
                 {
-                    importer.textureType = TextureImporterType.Sprite;
-                    changed = true;
-                }
-                if (importer.mipmapEnabled)
-                {
-                    importer.mipmapEnabled = false;
-                    changed = true;
-                }
-                if (importer.textureCompression != TextureImporterCompression.Uncompressed)
-                {
-                    importer.textureCompression = TextureImporterCompression.Uncompressed;
-                    changed = true;
-                }
-                if (importer.filterMode != FilterMode.Bilinear)
-                {
-                    importer.filterMode = FilterMode.Bilinear;
-                    changed = true;
-                }
-                if (importer.maxTextureSize != 2048)
-                {
-                    importer.maxTextureSize = 2048;
-                    changed = true;
-                }
-                if (changed)
-                {
-                    importer.SaveAndReimport();
-                    anyChanged = true;
+                    bool changed = false;
+                    if (importer.textureType != TextureImporterType.Sprite)
+                    {
+                        importer.textureType = TextureImporterType.Sprite;
+                        changed = true;
+                    }
+                    if (importer.mipmapEnabled)
+                    {
+                        importer.mipmapEnabled = false;
+                        changed = true;
+                    }
+                    if (importer.textureCompression != TextureImporterCompression.Uncompressed)
+                    {
+                        importer.textureCompression = TextureImporterCompression.Uncompressed;
+                        changed = true;
+                    }
+                    if (importer.filterMode != FilterMode.Bilinear)
+                    {
+                        importer.filterMode = FilterMode.Bilinear;
+                        changed = true;
+                    }
+                    if (importer.maxTextureSize != 2048)
+                    {
+                        importer.maxTextureSize = 2048;
+                        changed = true;
+                    }
+                    if (changed)
+                    {
+                        importer.SaveAndReimport();
+                        anyChanged = true;
+                    }
                 }
             }
         }
 
         if (anyChanged)
         {
-            Debug.Log("[TextureOptimizer] Successfully optimized all Egyptian theme icons to Uncompressed UI Sprites!");
+            Debug.Log("[TextureOptimizer] Successfully optimized all Egyptian theme icons and items to Uncompressed UI Sprites!");
         }
     }
 }
