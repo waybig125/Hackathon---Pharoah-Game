@@ -136,7 +136,7 @@ namespace TheAlchemistsCrypt.UI
 
                 var txt = dirGo.GetComponent<Text>();
                 txt.text = directions[i];
-                txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                txt.font = GetRobustFont();
                 txt.fontSize = 14;
                 txt.fontStyle = FontStyle.Bold;
                 txt.alignment = TextAnchor.MiddleCenter;
@@ -492,6 +492,14 @@ namespace TheAlchemistsCrypt.UI
             }
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+        }
+
+        private Font GetRobustFont()
+        {
+            Font f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (f == null) f = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            if (f == null) f = Font.GetDefault();
+            return f;
         }
 
         #endregion
