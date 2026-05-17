@@ -156,7 +156,7 @@ namespace TheAlchemistsCrypt.Player
             titleGo.sizeDelta = new Vector2(800, 120);
 
             var titleText = titleGo.GetComponent<Text>();
-            titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            titleText.font = GetRobustFont();
             titleText.fontSize = 80;
             titleText.fontStyle = FontStyle.Bold;
             titleText.alignment = TextAnchor.MiddleCenter;
@@ -171,7 +171,7 @@ namespace TheAlchemistsCrypt.Player
             subGo.sizeDelta = new Vector2(800, 50);
 
             var subText = subGo.GetComponent<Text>();
-            subText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            subText.font = GetRobustFont();
             subText.fontSize = 24;
             subText.alignment = TextAnchor.MiddleCenter;
             subText.color = new Color(0.85f, 0.2f, 0.2f, 0.85f); // Crimson
@@ -211,7 +211,7 @@ namespace TheAlchemistsCrypt.Player
             btnTextGo.anchorMin = Vector2.zero; btnTextGo.anchorMax = Vector2.one;
             btnTextGo.offsetMin = btnTextGo.offsetMax = Vector2.zero;
             var btnText = btnTextGo.GetComponent<Text>();
-            btnText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            btnText.font = GetRobustFont();
             btnText.fontSize = 24;
             btnText.fontStyle = FontStyle.Bold;
             btnText.alignment = TextAnchor.MiddleCenter;
@@ -230,9 +230,30 @@ namespace TheAlchemistsCrypt.Player
                 btnGo.localScale = new Vector3(1f, 1f, 1f);
             };
 
+            // Set layer recursively to 5 so it shows on top of cameras
+            SetLayerRecursively(deathCanvasGo, 5);
+
             // Enable cursor so player can click restart on desktop/mobile
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
+        }
+
+        private void SetLayerRecursively(GameObject go, int layer)
+        {
+            if (go == null) return;
+            go.layer = layer;
+            foreach (Transform child in go.transform)
+            {
+                SetLayerRecursively(child.gameObject, layer);
+            }
+        }
+
+        private Font GetRobustFont()
+        {
+            Font f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (f == null) f = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            if (f == null) f = Font.GetDefault();
+            return f;
         }
     }
 
