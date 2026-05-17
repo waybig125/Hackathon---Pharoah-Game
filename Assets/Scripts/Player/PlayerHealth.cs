@@ -119,7 +119,6 @@ namespace TheAlchemistsCrypt.Player
                 Cursor.lockState = CursorLockMode.None;
             }
         }
-        }
 
         private void SetLayerRecursively(GameObject go, int layer)
         {
