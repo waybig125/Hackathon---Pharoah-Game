@@ -20,6 +20,7 @@ namespace TheAlchemistsCrypt.UI
         private Transform playerTransform;
         private RectTransform mapContent;
         private RectTransform minimapFrame;
+        private RectTransform compassRing;
         
         // Icon assets generated procedurally
         private Sprite obsidianSprite;
@@ -67,8 +68,8 @@ namespace TheAlchemistsCrypt.UI
             obsidianSprite = CreateCircleSprite(240, new Color(0.04f, 0.04f, 0.04f, 0.9f));
             goldBorderSprite = CreateRingSprite(240, 6, new Color(0.95f, 0.8f, 0.2f, 0.95f));
             
-            // Player Arrow
-            playerArrowSprite = CreatePlayerArrowSprite(40, 40, new Color(0.95f, 0.8f, 0.2f, 0.95f));
+            // Player Arrow (64x64 for gorgeous detail)
+            playerArrowSprite = CreatePlayerArrowSprite(64, 64, new Color(0.95f, 0.8f, 0.2f, 0.95f));
             
             // Dynamic Indicators
             greenDotSprite = CreateSolidCircleSprite(16, new Color(0.1f, 0.9f, 0.1f, 0.95f)); // Glowing Green Zombie
@@ -113,6 +114,36 @@ namespace TheAlchemistsCrypt.UI
             mapContent.anchoredPosition = Vector2.zero;
             mapContent.sizeDelta = new Vector2(2000, 2000); // Massive coordinate space
 
+            // Compass Ring (rotates, but does not translate)
+            var compassRingGo = new GameObject("CompassRing", typeof(RectTransform));
+            compassRing = compassRingGo.GetComponent<RectTransform>();
+            compassRing.SetParent(maskRect, false);
+            compassRing.anchorMin = compassRing.anchorMax = new Vector2(0.5f, 0.5f);
+            compassRing.anchoredPosition = Vector2.zero;
+            compassRing.sizeDelta = new Vector2(220, 220);
+
+            // Add N, E, S, W text labels
+            string[] directions = { "N", "E", "S", "W" };
+            Vector2[] positions = { new Vector2(0, 85), new Vector2(85, 0), new Vector2(0, -85), new Vector2(-85, 0) };
+            for (int i = 0; i < 4; i++)
+            {
+                var dirGo = new GameObject("Label_" + directions[i], typeof(RectTransform), typeof(Text));
+                var dirRect = dirGo.GetComponent<RectTransform>();
+                dirRect.SetParent(compassRing, false);
+                dirRect.anchorMin = dirRect.anchorMax = new Vector2(0.5f, 0.5f);
+                dirRect.anchoredPosition = positions[i];
+                dirRect.sizeDelta = new Vector2(24, 24);
+
+                var txt = dirGo.GetComponent<Text>();
+                txt.text = directions[i];
+                txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                txt.fontSize = 14;
+                txt.fontStyle = FontStyle.Bold;
+                txt.alignment = TextAnchor.MiddleCenter;
+                txt.color = directions[i] == "N" ? new Color(1f, 0.3f, 0.3f, 0.95f) : new Color(0.95f, 0.8f, 0.2f, 0.9f);
+                txt.raycastTarget = false;
+            }
+
             // Frame Gold Border Ring (layered on top)
             var borderGo = new GameObject("BorderRing", typeof(RectTransform), typeof(Image));
             var borderRect = borderGo.GetComponent<RectTransform>();
@@ -151,7 +182,7 @@ namespace TheAlchemistsCrypt.UI
             currentScale = isZoomedOut ? scaleZoomedOut : scaleNormal;
 
             // 1. Scan for Pyramids and Buildings
-            var allGo = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+            var allGo = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
             foreach (var go in allGo)
             {
                 if (go == null) continue;
@@ -218,6 +249,11 @@ namespace TheAlchemistsCrypt.UI
 
             mapContent.anchoredPosition = new Vector2(-playerPos.x * currentScale, -playerPos.z * currentScale);
             mapContent.localEulerAngles = new Vector3(0, 0, playerRot.y);
+            
+            if (compassRing != null)
+            {
+                compassRing.localEulerAngles = new Vector3(0, 0, playerRot.y);
+            }
 
             // Update dynamic zombie indicators
             UpdateZombieIndicators();
@@ -226,7 +262,7 @@ namespace TheAlchemistsCrypt.UI
         private void UpdateZombieIndicators()
         {
             // Find active zombies
-            var zombies = Object.FindObjectsByType<ZombieAI>(FindObjectsSortMode.None);
+            var zombies = Object.FindObjectsByType<ZombieAI>(FindObjectsInactive.Exclude);
             
             // Match indicator pool
             // 1. Disable all indicators first
@@ -368,12 +404,85 @@ namespace TheAlchemistsCrypt.UI
             {
                 for (int x = 0; x < w; x++)
                 {
-                    // Draw a crisp isosceles arrow pointing UP
-                    float dx = (float)(x - w / 2) / (w / 2);
-                    float dy = (float)y / h;
-                    if (dy >= Mathf.Abs(dx) * 1.5f && dy <= 1f)
+                    float px = (float)(x - w / 2) / (w / 2);
+                    float py = (float)(y - h / 2) / (h / 2);
+                    
+                    float absX = Mathf.Abs(px);
+                    bool insideWings = false;
+                    
+                    float t = (py - -0.8f) / 1.7f; // 0 to 1
+                    float outerWidth = (1f - t) * 0.85f;
+                    float innerNotch = -0.4f + absX * 0.5f;
+                    
+                    if (py < 0.9f && py > -0.8f)
                     {
-                        tex.SetPixel(x, y, col);
+                        if (absX <= outerWidth && py >= innerNotch)
+                        {
+                            insideWings = true;
+                        }
+                    }
+                    
+                    if (insideWings)
+                    {
+                        // Glowing red Ruby gem in the arrow core
+                        float distToRuby = Vector2.Distance(new Vector2(px, py - 0.2f), Vector2.zero);
+                        if (distToRuby <= 0.16f)
+                        {
+                            if (distToRuby >= 0.13f)
+                            {
+                                // Golden bezel frame around the ruby
+                                float shade = 0.6f + 0.4f * Mathf.Clamp01((px + py + 1.2f) / 2.4f);
+                                tex.SetPixel(x, y, new Color(0.95f * shade, 0.8f * shade, 0.2f * shade, 1f));
+                            }
+                            else
+                            {
+                                // Specular-shaded Ruby Gemstone
+                                float rubyShade = 0.5f + 0.5f * Mathf.Clamp01((px + (py - 0.2f) + 0.16f) / 0.32f);
+                                float rubyGlint = Mathf.Pow(Mathf.Clamp01(1.05f - Vector2.Distance(new Vector2(px, py - 0.2f), new Vector2(-0.06f, 0.06f))), 6f);
+                                Color rubyColor = Color.Lerp(new Color(0.4f * rubyShade, 0.02f, 0.05f, 1f), new Color(0.95f * rubyShade, 0.05f, 0.15f, 1f), (py - 0.2f + 0.16f) / 0.32f);
+                                rubyColor += new Color(rubyGlint * 0.8f, rubyGlint * 0.3f, rubyGlint * 0.3f, 0f);
+                                tex.SetPixel(x, y, rubyColor);
+                            }
+                        }
+                        else
+                        {
+                            // Double-check border contour
+                            bool isBorder = (absX > outerWidth - 0.12f) || (py > 0.75f) || (py < innerNotch + 0.12f) || (absX < 0.12f);
+                            
+                            if (isBorder)
+                            {
+                                // Gold border with 3D bevel shading
+                                float shade = 0.6f + 0.4f * Mathf.Clamp01((px + py + 1.2f) / 2.4f);
+                                Color goldColor = new Color(0.95f * shade, 0.8f * shade, 0.2f * shade, 1f);
+                                
+                                float distToEdge = Mathf.Min(
+                                    Mathf.Abs(absX - (outerWidth - 0.12f)),
+                                    Mathf.Abs(py - 0.75f),
+                                    Mathf.Abs(py - (innerNotch + 0.12f)),
+                                    Mathf.Abs(absX - 0.12f)
+                                );
+                                if (distToEdge < 0.04f)
+                                {
+                                    goldColor = Color.Lerp(goldColor, new Color(1f, 0.95f, 0.6f, 1f), 0.5f);
+                                }
+                                tex.SetPixel(x, y, goldColor);
+                            }
+                            else
+                            {
+                                // Deep glittering royal Lapis Lazuli inlay with Pyrite (gold dust) veins
+                                float gemGlint = Mathf.Pow(Mathf.Clamp01(1.1f - Vector2.Distance(new Vector2(px, py), new Vector2(-0.2f, 0.3f))), 7f);
+                                Color lapisColor = Color.Lerp(new Color(0.04f, 0.15f, 0.4f, 0.95f), new Color(0.12f, 0.35f, 0.75f, 0.95f), (py + 1f) / 2f);
+                                lapisColor += new Color(gemGlint * 0.4f, gemGlint * 0.5f, gemGlint * 0.8f, 0f);
+                                
+                                float pyriteVeins = Mathf.Sin(x * 0.9f) * Mathf.Cos(y * 0.9f);
+                                if (pyriteVeins > 0.75f)
+                                {
+                                    lapisColor = Color.Lerp(lapisColor, new Color(0.95f, 0.85f, 0.4f, 0.95f), 0.25f);
+                                }
+                                
+                                tex.SetPixel(x, y, lapisColor);
+                            }
+                        }
                     }
                     else
                     {

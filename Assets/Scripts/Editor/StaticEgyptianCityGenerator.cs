@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEditor;
 using Unity.AI.Navigation;
+using UnityEditor.SceneManagement;
+using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 
 namespace TheAlchemistsCrypt.Editor
@@ -18,7 +20,7 @@ namespace TheAlchemistsCrypt.Editor
         public static void ShowWindow() => GetWindow<StaticEgyptianCityGenerator>("Egyptian City V5.0");
 
         private int seed = 999;
-        private int gridSize = 8; // Reduced for optimized mobile performance (Helio G91 / Mali-G52)
+        private int gridSize = 8; 
         private string rootName = "EgyptianCity_V5_Final";
 
         private void OnGUI()
@@ -36,7 +38,6 @@ namespace TheAlchemistsCrypt.Editor
 
         private void SetupMummyAnimations()
         {
-            // Programmatically configure all Mummy FBXs to Humanoid
             string[] fbxPaths = {
                 "Assets/Mummy_Assets/base.fbx",
                 "Assets/Mummy_Assets/base_basic_pbr.fbx",
@@ -50,40 +51,104 @@ namespace TheAlchemistsCrypt.Editor
                 ConfigureFbxToHumanoid(p);
             }
 
-            // 1. Create/Update Controller
             string controllerPath = "Assets/Mummy_Assets/MummyTestController.controller";
             var controller = AssetDatabase.LoadAssetAtPath<UnityEditor.Animations.AnimatorController>(controllerPath);
             if (controller == null) {
                 controller = UnityEditor.Animations.AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
             }
 
-            var rootStateMachine = controller.layers[0].stateMachine;
+            // Ensure parameters exist
+            bool hasSpeed = false;
+            bool hasAttack = false;
+            foreach (var p in controller.parameters) {
+                if (p.name == "Speed") hasSpeed = true;
+                if (p.name == "Attack") hasAttack = true;
+            }
+            if (!hasSpeed) controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
+            if (!hasAttack) controller.AddParameter("Attack", AnimatorControllerParameterType.Trigger);
 
-            // Helper to get clips
-            System.Func<string, AnimationClip> getClip = (p) => {
-                var assets = AssetDatabase.LoadAllAssetsAtPath(p);
-                foreach (var a in assets) if (a is AnimationClip && a.name.Contains("mixamo.com")) return (AnimationClip)a;
-                return null;
+            var layer = controller.layers[0];
+            var rootStateMachine = layer.stateMachine;
+
+            // Create target folder if missing
+            if (!System.IO.Directory.Exists("Assets/Mummy_Assets")) {
+                System.IO.Directory.CreateDirectory("Assets/Mummy_Assets");
+            }
+
+            System.Func<string, string, AnimationClip> getOrCreateLoopingClip = (fbxPath, animName) => {
+                var assets = AssetDatabase.LoadAllAssetsAtPath(fbxPath);
+                AnimationClip sourceClip = null;
+                foreach (var a in assets) {
+                    if (a is AnimationClip) {
+                        var clip = (AnimationClip)a;
+                        if (clip.name.Contains("__preview__")) continue;
+                        sourceClip = clip;
+                        // Prefer mixamo.com clip if available
+                        if (clip.name.Contains("mixamo.com")) {
+                            sourceClip = clip;
+                            break;
+                        }
+                    }
+                }
+                if (sourceClip == null) {
+                    Debug.LogError($"[AnimGenerator] No AnimationClip found inside FBX: {fbxPath}");
+                    return null;
+                }
+
+                string destPath = "Assets/Mummy_Assets/" + animName + "_loop.anim";
+                AnimationClip destClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(destPath);
+                if (destClip == null) {
+                    destClip = new AnimationClip();
+                    EditorUtility.CopySerialized(sourceClip, destClip);
+                    AssetDatabase.CreateAsset(destClip, destPath);
+                } else {
+                    EditorUtility.CopySerialized(sourceClip, destClip);
+                }
+
+                // Force loop settings on native serialized asset
+                var settings = AnimationUtility.GetAnimationClipSettings(destClip);
+                settings.loopTime = true;
+                settings.loop = true;
+                AnimationUtility.SetAnimationClipSettings(destClip, settings);
+                EditorUtility.SetDirty(destClip);
+                AssetDatabase.SaveAssets();
+
+                return destClip;
             };
 
-            // Add states if they don't exist, assigning the correct humanoid walk clip
-            var idle = getClip("Assets/Mummy_Assets/mummy_idle.fbx");
-            var walk = getClip("Assets/Mummy_Assets/new_Walking.fbx");
-            var attack = getClip("Assets/Mummy_Assets/mummy_attack.fbx");
+            var idleClip = getOrCreateLoopingClip("Assets/Mummy_Assets/mummy_idle.fbx", "mummy_idle");
+            var walkClip = getOrCreateLoopingClip("Assets/Mummy_Assets/new_Walking.fbx", "new_Walking");
+            var attackClip = getOrCreateLoopingClip("Assets/Mummy_Assets/mummy_attack.fbx", "mummy_attack");
 
-            if (idle != null && !HasState(rootStateMachine, "Idle")) rootStateMachine.AddState("Idle").motion = idle;
-            if (walk != null && !HasState(rootStateMachine, "Walk")) {
-                var walkState = rootStateMachine.AddState("Walk");
-                walkState.motion = walk;
-            } else if (walk != null) {
-                // Keep Walk clip updated in case walk clip path changed
-                foreach (var s in rootStateMachine.states) {
-                    if (s.state.name == "Walk") s.state.motion = walk;
-                }
+            // Build/Update States
+            var idleState = GetOrAddState(rootStateMachine, "Idle", idleClip);
+            var walkState = GetOrAddState(rootStateMachine, "Walk", walkClip);
+            var attackState = GetOrAddState(rootStateMachine, "Attack", attackClip);
+
+            // Transitions (Fixes "dragged" movement)
+            if (idleState.transitions.Length == 0) {
+                var t = idleState.AddTransition(walkState);
+                t.AddCondition(UnityEditor.Animations.AnimatorConditionMode.Greater, 0.1f, "Speed");
+                t.hasExitTime = false;
+                t.duration = 0.25f;
             }
-            if (attack != null && !HasState(rootStateMachine, "Attack")) rootStateMachine.AddState("Attack").motion = attack;
+            if (walkState.transitions.Length == 0) {
+                var t = walkState.AddTransition(idleState);
+                t.AddCondition(UnityEditor.Animations.AnimatorConditionMode.Less, 0.1f, "Speed");
+                t.hasExitTime = false;
+                t.duration = 0.25f;
+            }
+            
+            // Global attack transition or from any state
+            bool attackTransExists = false;
+            foreach(var t in rootStateMachine.anyStateTransitions) if(t.destinationState == attackState) attackTransExists = true;
+            if(!attackTransExists) {
+                var t = rootStateMachine.AddAnyStateTransition(attackState);
+                t.AddCondition(UnityEditor.Animations.AnimatorConditionMode.If, 0, "Attack");
+                t.duration = 0.1f;
+            }
 
-            // 2. PURGE all old scene mummies
+            // Cleanup scene instances
             var allObjects = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
             foreach (var go in allObjects) {
                 if (go != null && (go.name.ToLower().StartsWith("mummy") || go.name.ToLower().Contains("_test"))) {
@@ -91,7 +156,17 @@ namespace TheAlchemistsCrypt.Editor
                 }
             }
 
-            Debug.Log("Mummy Animator and Humanoid Rigs Setup Successfully! Cleaned up old scene instances.");
+            Debug.Log("Mummy Animator Setup with Transitions & Looping Attack!");
+        }
+
+        private UnityEditor.Animations.AnimatorState GetOrAddState(UnityEditor.Animations.AnimatorStateMachine sm, string name, AnimationClip clip) {
+            foreach (var s in sm.states) if (s.state.name == name) {
+                s.state.motion = clip;
+                return s.state;
+            }
+            var newState = sm.AddState(name);
+            newState.motion = clip;
+            return newState;
         }
 
         private void ConfigureFbxToHumanoid(string path)
@@ -107,42 +182,48 @@ namespace TheAlchemistsCrypt.Editor
                     importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
                     dirty = true;
                 }
+                
+                // Configure clip loops permanently inside FBX importer settings
+                if (path.Contains("Walking") || path.Contains("attack") || path.Contains("idle")) {
+                    var clips = importer.clipAnimations;
+                    if (clips == null || clips.Length == 0) {
+                        clips = importer.defaultClipAnimations;
+                    }
+                    if (clips != null && clips.Length > 0) {
+                        bool clipDirty = false;
+                        foreach (var c in clips) {
+                            if (!c.loopTime || !c.loop) {
+                                c.loopTime = true;
+                                c.loop = true;
+                                clipDirty = true;
+                            }
+                        }
+                        if (clipDirty) {
+                            importer.clipAnimations = clips;
+                            dirty = true;
+                        }
+                    }
+                }
+
                 if (dirty) {
                     importer.SaveAndReimport();
-                    Debug.Log($"Configured {path} to Humanoid Rig.");
                 }
             }
         }
 
-        private bool HasState(UnityEditor.Animations.AnimatorStateMachine sm, string n) {
-            foreach (var s in sm.states) if (s.state.name == n) return true;
-            return false;
-        }
-
         private void Purge()
         {
-            // AGGRESSIVE PURGE OF CONFLICTING OR STRAGGLED GENERATOR OBJECTS
             var all = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
             foreach (var go in all) {
                 if (go == null) continue; 
-                try {
-                    string lowerName = go.name.ToLower();
-                    if (lowerName.Contains("egyptiancity") ||
-                        lowerName.Contains("desertfloor") ||
-                        lowerName.Contains("floorground") ||
-                        lowerName.Contains("player_copy") || 
-                        lowerName.Contains("mobilehud") || 
-                        lowerName.Contains("p_lpsp_ui_canvas") || 
-                        lowerName.StartsWith("mummy") ||
-                        lowerName.Contains("windowlight") ||
-                        lowerName.Contains("crater") ||
-                        lowerName.Contains("plaza") ||
-                        lowerName.Contains("house") ||
-                        lowerName.Contains("pyramid")) 
-                    {
-                        DestroyImmediate(go);
-                    }
-                } catch { /* Ignore destroyed access */ }
+                string lowerName = go.name.ToLower();
+                if (lowerName.Contains("egyptiancity") || lowerName.Contains("desertfloor") || lowerName.Contains("floorground") ||
+                    lowerName.Contains("player_copy") || lowerName.Contains("mobilehud") || lowerName.Contains("p_lpsp_ui_canvas") || 
+                    lowerName.StartsWith("mummy") || lowerName.Contains("windowlight") || lowerName.Contains("crater") ||
+                    lowerName.Contains("plaza") || lowerName.Contains("house") || lowerName.Contains("pyramid")) 
+                {
+                    DestroyImmediate(go);
+                }
             }
         }
 
@@ -154,71 +235,35 @@ namespace TheAlchemistsCrypt.Editor
             var root = new GameObject(rootName);
             root.isStatic = true;
 
-            // Load Assets
             var trees = new GameObject[] {
                 AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/realistic_hd_date_palm_2178.glb"),
                 AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/realistic_hd_date_palm_378.glb")
             };
             var crate = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/crate.glb");
             var barrel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/barrel.glb");
-
-            // Load Column Prefab
             var columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_column.glb");
-            if (columnPrefab == null) {
-                columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_pillar_column.glb");
-            }
+            if (columnPrefab == null) columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_pillar_column.glb");
             
-            // Generate beautiful desert sand albedo texture on-the-fly
             string sandAlbedoPath = "Assets/EgyptianAssets/desert_sand_albedo.png";
-            if (!System.IO.File.Exists(sandAlbedoPath)) {
-                int size = 512;
-                Texture2D tex = new Texture2D(size, size, TextureFormat.RGB24, true);
-                Color sandColor1 = new Color(0.92f, 0.82f, 0.62f);
-                Color sandColor2 = new Color(0.86f, 0.76f, 0.54f);
-                for (int y = 0; y < size; y++) {
-                    for (int x = 0; x < size; x++) {
-                        float n = Mathf.PerlinNoise(x * 0.08f, y * 0.08f) * 0.8f;
-                        n += Mathf.PerlinNoise(x * 0.3f, y * 0.3f) * 0.2f;
-                        Color c = Color.Lerp(sandColor1, sandColor2, n);
-                        tex.SetPixel(x, y, c);
-                    }
-                }
-                tex.Apply();
-                byte[] bytes = tex.EncodeToPNG();
-                System.IO.File.WriteAllBytes(sandAlbedoPath, bytes);
-                AssetDatabase.ImportAsset(sandAlbedoPath);
-            }
-
-            // Materials
             Material wallMat = CreateLit(new Color(0.92f, 0.85f, 0.7f), 4f, "desert_sand_normal.png");
             Material woodMat = CreateLit(new Color(0.25f, 0.15f, 0.08f), 1f);
             Material holeMat = CreateLit(new Color(0.05f, 0.03f, 0.01f), 1f);
 
-            // Floor Material with albedo and normal map for organic sand dunes
             Material floorMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            floorMat.name = "FloorDesertSand";
             Texture2D sandAlbedo = AssetDatabase.LoadAssetAtPath<Texture2D>(sandAlbedoPath);
-            if (sandAlbedo != null) {
-                floorMat.SetTexture("_BaseMap", sandAlbedo);
-            } else {
-                floorMat.color = new Color(0.9f, 0.8f, 0.6f);
-            }
+            if (sandAlbedo != null) floorMat.SetTexture("_BaseMap", sandAlbedo);
+            else floorMat.color = new Color(0.9f, 0.8f, 0.6f);
             floorMat.mainTextureScale = new Vector2(gridSize * 4f, gridSize * 4f);
 
-            // NO NORMAL MAPS ON THE DESERT FLOOR (Albedo-only sand for pristine mobile performance)
-
-            // Create window glowing materials
             Material litWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             litWindowMat.color = new Color(1f, 0.85f, 0.4f);
             litWindowMat.SetColor("_EmissionColor", new Color(1f, 0.75f, 0.3f) * 6f);
             litWindowMat.EnableKeyword("_EMISSION");
-
             Material darkWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             darkWindowMat.color = new Color(0.1f, 0.08f, 0.05f);
 
             SetupEnvironment();
 
-            // Ground Plane
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "FloorGround";
             ground.transform.SetParent(root.transform);
@@ -226,18 +271,16 @@ namespace TheAlchemistsCrypt.Editor
             ground.GetComponent<Renderer>().sharedMaterial = floorMat;
             ground.isStatic = true;
 
-            // Generate clean grid with zero overlapping cells
             float spacing = 32f;
             float halfSpan = (gridSize * spacing) / 2f;
+            var enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Inspiration-Thirdperson-Controller-Update372022/Assets/Enemy-AI/Prefabs/TestZombie.prefab");
+
             for (int x = 0; x < gridSize; x++) {
                 for (int z = 0; z < gridSize; z++) {
                     float posX = -halfSpan + (x * spacing) + (spacing / 2f);
                     float posZ = -halfSpan + (z * spacing) + (spacing / 2f);
                     Vector3 pos = new Vector3(posX, 0, posZ);
-
-                    // Add a tiny safe offset to look organic but guarantee no overlap
-                    pos.x += Random.Range(-2f, 2f);
-                    pos.z += Random.Range(-2f, 2f);
+                    pos.x += Random.Range(-2f, 2f); pos.z += Random.Range(-2f, 2f);
 
                     if (pos.magnitude > 25f) {
                         if (Random.value < 0.75f) {
@@ -245,9 +288,26 @@ namespace TheAlchemistsCrypt.Editor
                         } else {
                             PlacePlaza(root.transform, pos, trees, columnPrefab, floorMat, holeMat);
                         }
-                    } else {
-                        // Empty spawn plaza at the center of the town
-                        PlacePlaza(root.transform, pos, trees, columnPrefab, floorMat, holeMat);
+                    } else PlacePlaza(root.transform, pos, trees, columnPrefab, floorMat, holeMat);
+
+                    // Spawn Enemies (Fixed visibility and health)
+                    if (enemyPrefab != null && Random.value < 0.15f) {
+                        var e = (GameObject)PrefabUtility.InstantiatePrefab(enemyPrefab, root.transform);
+                        e.transform.position = pos + Vector3.up * 0.5f;
+                        
+                        // Force assign the new animator controller
+                        var anim = e.GetComponent<Animator>();
+                        if (anim == null) anim = e.GetComponentInChildren<Animator>();
+                        if (anim != null) {
+                            var controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Mummy_Assets/MummyTestController.controller");
+                            if (controller != null) anim.runtimeAnimatorController = controller;
+                        }
+
+                        // Set Health to 10 (10x lower than player 100)
+                        var zai = e.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>();
+                        if (zai == null) zai = e.AddComponent<TheAlchemistsCrypt.AI.ZombieAI>();
+                        zai.maxHealth = 10f;
+                        zai.currentHealth = 10f;
                     }
                 }
             }
@@ -255,30 +315,31 @@ namespace TheAlchemistsCrypt.Editor
             var surface = root.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.Children;
             surface.useGeometry = UnityEngine.AI.NavMeshCollectGeometry.RenderMeshes;
-            surface.overrideVoxelSize = true;
-            surface.voxelSize = 0.2f; 
+            surface.overrideVoxelSize = true; surface.voxelSize = 0.2f; 
             surface.BuildNavMesh();
 
-            // Spawn 4 majestic background pyramids surrounding the city (diagonal boxing outside play area, not affecting NavMesh baking)
-            CreateProceduralPyramid(root, new Vector3(-220f, 0f, 220f), 150f, 95f, wallMat, new Color(1f, 0.85f, 0.4f));  // North-West (golden-yellow glow)
-            CreateProceduralPyramid(root, new Vector3(220f, 0f, -220f), 160f, 100f, wallMat, new Color(1f, 0.5f, 0.2f));  // South-East (warm orange-red glow)
-            CreateProceduralPyramid(root, new Vector3(220f, 0f, 220f), 140f, 85f, wallMat, new Color(0.9f, 0.8f, 1f));     // North-East (mystical soft violet glow)
-            CreateProceduralPyramid(root, new Vector3(-220f, 0f, -220f), 170f, 110f, wallMat, new Color(1f, 0.7f, 0.3f));  // South-West (rich amber glow)
+            CreateProceduralPyramid(root, new Vector3(-220f, 0f, 220f), 150f, 95f, wallMat, new Color(1f, 0.85f, 0.4f));
+            CreateProceduralPyramid(root, new Vector3(220f, 0f, -220f), 160f, 100f, wallMat, new Color(1f, 0.5f, 0.2f));
+            CreateProceduralPyramid(root, new Vector3(220f, 0f, 220f), 140f, 85f, wallMat, new Color(0.9f, 0.8f, 1f));
+            CreateProceduralPyramid(root, new Vector3(-220f, 0f, -220f), 170f, 110f, wallMat, new Color(1f, 0.7f, 0.3f));
 
             FixPlayerAndWeapons();
             StaticBatchingUtility.Combine(root);
-            
-            // Auto-setup mummy animations & humanoid scales as a cohesive single-step experience
             SetupMummyAnimations();
+
+            // Mark Scene Dirty to fix persistence issue
+            var activeScene = SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(activeScene);
+            EditorSceneManager.SaveScene(activeScene);
             
-            Debug.Log("Polished Egyptian City V5 Generated Successfully with Elite Mobile Optimizations!");
+            Debug.Log("Polished Egyptian City V5.1 Regenerated and Saved!");
         }
 
         private void SetupEnvironment()
         {
             RenderSettings.fog = true;
             RenderSettings.fogColor = new Color(0.92f, 0.88f, 0.7f); 
-            RenderSettings.fogDensity = 0.0022f; // Reduced from 0.0035f so the grand pyramids are beautifully visible
+            RenderSettings.fogDensity = 0.0022f;
             RenderSettings.ambientLight = new Color(0.45f, 0.42f, 0.38f);
             
             var sun = GameObject.Find("Directional Light");
@@ -290,406 +351,43 @@ namespace TheAlchemistsCrypt.Editor
 
         private void BuildHouse(Transform parent, Vector3 pos, Material wall, Material wood, Material litWindowMat, Material darkWindowMat, GameObject crate, GameObject barrel)
         {
-            var h = new GameObject("House");
-            h.transform.SetParent(parent); 
-            h.transform.position = pos;
-            h.isStatic = true;
+            var h = new GameObject("House"); h.transform.SetParent(parent); h.transform.position = pos; h.isStatic = true;
+            int floors = (Random.value < 0.2f) ? 1 : (Random.value < 0.7f ? 2 : 3);
+            float height = floors * 12f;
+            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            body.transform.SetParent(h.transform); body.transform.localPosition = new Vector3(0, height / 2f, 0); body.transform.localScale = new Vector3(20, height, 20);
+            body.GetComponent<Renderer>().sharedMaterial = wall; body.isStatic = true;
 
-            // Height varying strictly by floors (1 floor: 12m [20%], 2 floors: 24m [50%], 3 floors: 36m [30%])
-            int floors = 2;
-            float rand = Random.value;
-            if (rand < 0.2f) {
-                floors = 1;
-            } else if (rand < 0.7f) {
-                floors = 2;
-            } else {
-                floors = 3;
-            }
-
-            bool isStepped = (floors > 1) && (Random.value < 0.15f);
-
-            if (isStepped) {
-                // Stepped Tiered Mastaba/Villa House (15% of double/triple floors)
-                float[] floorSizes = new float[floors];
-                if (floors == 2) {
-                    floorSizes[0] = 30f; // Bottom floor is 1.5x wider (30x30)
-                    floorSizes[1] = 20f; // Upper floor is standard (20x20)
-                } else {
-                    floorSizes[0] = 32f; // Bottom floor is wider
-                    floorSizes[1] = 20f; // Middle floor is standard
-                    floorSizes[2] = 12f; // Top floor is narrower
-                }
-
-                // Spawn each floor's body cube
-                for (int f = 0; f < floors; f++) {
-                    float size = floorSizes[f];
-                    var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    body.name = "SteppedBody_Floor_" + f;
-                    body.transform.SetParent(h.transform);
-                    body.transform.localPosition = new Vector3(0, (f * 12f) + 6f, 0);
-                    body.transform.localScale = new Vector3(size, 12f, size);
-                    body.GetComponent<Renderer>().sharedMaterial = wall;
-                    body.isStatic = true;
-                }
-
-                // Window glow state (85% glow)
-                bool isLit = Random.value < 0.85f;
-                Material windowMat = isLit ? litWindowMat : darkWindowMat;
-
-                // Exactly ONE back-side (negative Z) window per floor (shifted back to each tier's wall)
-                for (int f = 0; f < floors; f++) {
-                    float size = floorSizes[f];
-                    float windowY = (f * 12f) + 6f;
-                    var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    win.transform.SetParent(h.transform);
-                    win.transform.localScale = new Vector3(3.6f, 2.6f, 0.3f);
-                    win.GetComponent<Renderer>().sharedMaterial = windowMat;
-                    DestroyImmediate(win.GetComponent<Collider>());
-                    
-                    win.transform.localPosition = new Vector3(0f, windowY, -(size / 2f) - 0.15f);
-                    win.transform.localRotation = Quaternion.Euler(0, 180, 0);
-                    win.isStatic = true;
-
-                    if (isLit) {
-                        var lightGo = new GameObject("WindowLight");
-                        lightGo.transform.SetParent(win.transform);
-                        lightGo.transform.localPosition = new Vector3(0f, 0f, -0.6f);
-                        var l = lightGo.AddComponent<Light>();
-                        l.type = LightType.Point;
-                        l.color = new Color(1f, 0.75f, 0.3f);
-                        l.range = 8f;
-                        l.intensity = 1.6f;
-                        l.shadows = LightShadows.None;
-                    }
-                }
-
-                // Spawn wooden trim divider belts between floors matching each tier's size
-                for (int f = 1; f < floors; f++) {
-                    float size = floorSizes[f - 1]; // Trim sits on top of the lower floor
-                    var trim = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    trim.transform.SetParent(h.transform);
-                    trim.transform.localPosition = new Vector3(0f, f * 12f, 0f);
-                    trim.transform.localScale = new Vector3(size + 0.4f, 0.8f, size + 0.4f);
-                    trim.GetComponent<Renderer>().sharedMaterial = wood;
-                    DestroyImmediate(trim.GetComponent<Collider>());
-                    trim.isStatic = true;
-                }
-
-                // Door on the front face of bottom floor (positive Z)
-                float bottomSize = floorSizes[0];
-                var door = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                door.transform.SetParent(h.transform);
-                door.transform.localPosition = new Vector3(0, 4, (bottomSize / 2f) + 0.1f);
-                door.transform.localScale = new Vector3(6, 8, 0.2f);
-                door.GetComponent<Renderer>().sharedMaterial = wood;
-                door.isStatic = true;
-
-                // Prop offsets adjusted outward due to wider bottom size - Spawn beautiful stacked prop clusters instead of scattered props
-                if (Random.value > 0.5f) {
-                    float propXOffset = (bottomSize / 2f) + 3f;
-                    SpawnStack(pos + new Vector3(propXOffset, 0, 8), h.transform, crate, barrel);
-                }
-
-            } else {
-                // Standard Box House
-                float height = floors * 12f;
-
-                var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                body.transform.SetParent(h.transform);
-                body.transform.localPosition = new Vector3(0, height / 2f, 0);
-                body.transform.localScale = new Vector3(20, height, 20);
-                body.GetComponent<Renderer>().sharedMaterial = wall;
-                body.isStatic = true;
-
-                // Window glow state (85% glow)
-                bool isLit = Random.value < 0.85f;
-                Material windowMat = isLit ? litWindowMat : darkWindowMat;
-
-                // Exactly ONE back-side (negative Z) window per floor
-                for (int f = 0; f < floors; f++) {
-                    float windowY = (f * 12f) + 6f;
-                    var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    win.transform.SetParent(h.transform);
-                    win.transform.localScale = new Vector3(3.6f, 2.6f, 0.3f);
-                    win.GetComponent<Renderer>().sharedMaterial = windowMat;
-                    DestroyImmediate(win.GetComponent<Collider>());
-                    
-                    win.transform.localPosition = new Vector3(0f, windowY, -10.15f);
-                    win.transform.localRotation = Quaternion.Euler(0, 180, 0);
-                    win.isStatic = true;
-
-                    if (isLit) {
-                        var lightGo = new GameObject("WindowLight");
-                        lightGo.transform.SetParent(win.transform);
-                        lightGo.transform.localPosition = new Vector3(0f, 0f, -0.6f);
-                        var l = lightGo.AddComponent<Light>();
-                        l.type = LightType.Point;
-                        l.color = new Color(1f, 0.75f, 0.3f);
-                        l.range = 8f;
-                        l.intensity = 1.6f;
-                        l.shadows = LightShadows.None;
-                    }
-                }
-
-                // Spawn wooden trim divider belts between floors
-                for (int f = 1; f < floors; f++) {
-                    var trim = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    trim.transform.SetParent(h.transform);
-                    trim.transform.localPosition = new Vector3(0f, f * 12f, 0f);
-                    trim.transform.localScale = new Vector3(20.4f, 0.8f, 20.4f);
-                    trim.GetComponent<Renderer>().sharedMaterial = wood;
-                    DestroyImmediate(trim.GetComponent<Collider>());
-                    trim.isStatic = true;
-                }
-
-                var door = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                door.transform.SetParent(h.transform);
-                door.transform.localPosition = new Vector3(0, 4, 10.1f);
-                door.transform.localScale = new Vector3(6, 8, 0.2f);
-                door.GetComponent<Renderer>().sharedMaterial = wood;
-                door.isStatic = true;
-
-                // Spawn beautiful stacked prop clusters instead of scattered props
-                if (Random.value > 0.5f) {
-                    SpawnStack(pos + new Vector3(14, 0, 8), h.transform, crate, barrel);
+            Material windowMat = (Random.value < 0.85f) ? litWindowMat : darkWindowMat;
+            for (int f = 0; f < floors; f++) {
+                float windowY = (f * 12f) + 6f;
+                var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                win.transform.SetParent(h.transform); win.transform.localScale = new Vector3(3.6f, 2.6f, 0.3f); win.GetComponent<Renderer>().sharedMaterial = windowMat;
+                DestroyImmediate(win.GetComponent<Collider>());
+                win.transform.localPosition = new Vector3(0f, windowY, -10.15f); win.transform.localRotation = Quaternion.Euler(0, 180, 0); win.isStatic = true;
+                if (windowMat == litWindowMat) {
+                    var lightGo = new GameObject("WindowLight"); lightGo.transform.SetParent(win.transform); lightGo.transform.localPosition = new Vector3(0f, 0f, -0.6f);
+                    var l = lightGo.AddComponent<Light>(); l.type = LightType.Point; l.color = new Color(1f, 0.75f, 0.3f); l.range = 8f; l.intensity = 1.6f;
                 }
             }
-        }
-
-        private void InstantiateProp(GameObject prefab, Vector3 pos, Transform parent)
-        {
-            var p = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-            p.transform.localScale = Vector3.one * 1.6f;
-
-            // Align bottom base of prop flush with ground and generate visual bounds collider
-            AlignToGroundAndAddCollider(p, pos, Quaternion.Euler(-90, 0, 0), 0f);
-
-            var rb = p.GetComponent<Rigidbody>();
-            if (rb == null) rb = p.AddComponent<Rigidbody>();
-            rb.mass = 50f;
-            rb.isKinematic = true;
-            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-        }
-
-        private void SpawnStack(Vector3 pos, Transform parent, GameObject crate, GameObject barrel)
-        {
-            var stackRoot = new GameObject("PropStack");
-            stackRoot.transform.SetParent(parent);
-            stackRoot.transform.position = pos;
-            stackRoot.isStatic = true;
-
-            float r = Random.value;
-            if (r < 0.4f) {
-                // Crate Pyramid Stack: 3 crates (2 on bottom, 1 on top)
-                float crateSize = 1.6f;
-                // Bottom Left
-                if (crate) {
-                    var c1 = (GameObject)PrefabUtility.InstantiatePrefab(crate, stackRoot.transform);
-                    c1.transform.localScale = Vector3.one * 1.6f;
-                    AlignToGroundAndAddCollider(c1, pos + new Vector3(-crateSize * 0.5f, 0, 0), Quaternion.Euler(-90, 0, 0), 0f);
-                    MakeKinematicProp(c1);
-                }
-                // Bottom Right
-                if (crate) {
-                    var c2 = (GameObject)PrefabUtility.InstantiatePrefab(crate, stackRoot.transform);
-                    c2.transform.localScale = Vector3.one * 1.6f;
-                    AlignToGroundAndAddCollider(c2, pos + new Vector3(crateSize * 0.5f, 0, 0), Quaternion.Euler(-90, 0, 0), 0f);
-                    MakeKinematicProp(c2);
-                }
-                // Top Center
-                if (crate) {
-                    var c3 = (GameObject)PrefabUtility.InstantiatePrefab(crate, stackRoot.transform);
-                    c3.transform.localScale = Vector3.one * 1.6f;
-                    AlignToGroundAndAddCollider(c3, pos + new Vector3(0, crateSize * 1.3f, 0), Quaternion.Euler(-90, 0, 0), 0f);
-                    MakeKinematicProp(c3);
-                }
-            } else if (r < 0.7f) {
-                // Barrel Cluster: 3 barrels arranged in a triangle
-                float barrelSize = 1.4f;
-                if (barrel) {
-                    var b1 = (GameObject)PrefabUtility.InstantiatePrefab(barrel, stackRoot.transform);
-                    b1.transform.localScale = Vector3.one * 1.6f;
-                    AlignToGroundAndAddCollider(b1, pos + new Vector3(-barrelSize * 0.4f, 0, -barrelSize * 0.2f), Quaternion.Euler(-90, 0, 0), 0f);
-                    MakeKinematicProp(b1);
-
-                    var b2 = (GameObject)PrefabUtility.InstantiatePrefab(barrel, stackRoot.transform);
-                    b2.transform.localScale = Vector3.one * 1.6f;
-                    AlignToGroundAndAddCollider(b2, pos + new Vector3(barrelSize * 0.4f, 0, -barrelSize * 0.2f), Quaternion.Euler(-90, 0, 0), 0f);
-                    MakeKinematicProp(b2);
-
-                    var b3 = (GameObject)PrefabUtility.InstantiatePrefab(barrel, stackRoot.transform);
-                    b3.transform.localScale = Vector3.one * 1.6f;
-                    AlignToGroundAndAddCollider(b3, pos + new Vector3(0, 0, barrelSize * 0.5f), Quaternion.Euler(-90, 0, 0), 0f);
-                    MakeKinematicProp(b3);
-                }
-            } else {
-                // Mixed Stack: 2 crates at bottom, 1 barrel on top
-                float crateSize = 1.6f;
-                if (crate) {
-                    var c1 = (GameObject)PrefabUtility.InstantiatePrefab(crate, stackRoot.transform);
-                    c1.transform.localScale = Vector3.one * 1.6f;
-                    AlignToGroundAndAddCollider(c1, pos + new Vector3(-crateSize * 0.5f, 0, 0), Quaternion.Euler(-90, 0, 0), 0f);
-                    MakeKinematicProp(c1);
-
-                    var c2 = (GameObject)PrefabUtility.InstantiatePrefab(crate, stackRoot.transform);
-                    c2.transform.localScale = Vector3.one * 1.6f;
-                    AlignToGroundAndAddCollider(c2, pos + new Vector3(crateSize * 0.5f, 0, 0), Quaternion.Euler(-90, 0, 0), 0f);
-                    MakeKinematicProp(c2);
-                }
-                if (barrel) {
-                    var b1 = (GameObject)PrefabUtility.InstantiatePrefab(barrel, stackRoot.transform);
-                    b1.transform.localScale = Vector3.one * 1.6f;
-                    AlignToGroundAndAddCollider(b1, pos + new Vector3(0, crateSize * 1.3f, 0), Quaternion.Euler(-90, 0, 0), 0f);
-                    MakeKinematicProp(b1);
-                }
-            }
-        }
-
-        private void MakeKinematicProp(GameObject go)
-        {
-            go.isStatic = true;
-            foreach (Transform child in go.GetComponentsInChildren<Transform>(true)) {
-                child.gameObject.isStatic = true;
-            }
-            var rb = go.GetComponent<Rigidbody>();
-            if (rb == null) rb = go.AddComponent<Rigidbody>();
-            rb.mass = 50f;
-            rb.isKinematic = true;
-            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+            var door = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            door.transform.SetParent(h.transform); door.transform.localPosition = new Vector3(0, 4, 10.1f); door.transform.localScale = new Vector3(6, 8, 0.2f); door.GetComponent<Renderer>().sharedMaterial = wood; door.isStatic = true;
         }
 
         private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab, Material sandMat, Material craterMat)
         {
-            var p = new GameObject("Plaza");
-            p.transform.SetParent(parent); 
-            p.transform.position = pos;
-            p.isStatic = true;
-
+            var p = new GameObject("Plaza"); p.transform.SetParent(parent); p.transform.position = pos; p.isStatic = true;
             if (trees != null && trees.Length > 0) {
                 var t = (GameObject)PrefabUtility.InstantiatePrefab(trees[Random.Range(0, trees.Length)], p.transform);
-                t.transform.localScale = Vector3.one * 8f; 
-                
-                // Deep-plant trees with -1.8f vertical offset to completely bury roots below floor sandlevel
-                AlignToGroundAndAddCollider(t, pos, Quaternion.Euler(-90, 0, 0), -1.8f);
-
+                t.transform.localScale = Vector3.one * 8f; AlignToGroundAndAddCollider(t, pos, Quaternion.Euler(-90, 0, 0), -1.8f);
                 t.isStatic = true;
-                foreach (Transform child in t.GetComponentsInChildren<Transform>(true)) {
-                    child.gameObject.isStatic = true;
-                }
-            }
-
-            // Spawn majestic ancient Egyptian columns at some plaza corners (ruins feel)
-            if (columnPrefab != null && Random.value < 0.45f) {
-                Vector3[] offsets;
-                if (Random.value < 0.6f) {
-                    // Spawn 2 columns (diagonal for realistic ruin aesthetics)
-                    offsets = new Vector3[] {
-                        new Vector3(-8f, 0f, -8f),
-                        new Vector3(8f, 0f, 8f)
-                    };
-                } else {
-                    // Spawn 4 columns
-                    offsets = new Vector3[] {
-                        new Vector3(-8f, 0f, -8f),
-                        new Vector3(8f, 0f, -8f),
-                        new Vector3(-8f, 0f, 8f),
-                        new Vector3(8f, 0f, 8f)
-                    };
-                }
-                foreach (var offset in offsets) {
-                    SpawnColumn(p.transform, pos + offset, columnPrefab);
-                }
-            }
-
-            // 35% chance to spawn a sand impact crater in the plaza
-            if (Random.value < 0.35f) {
-                Vector3 craterPos = pos + new Vector3(Random.Range(-4f, 4f), 0f, Random.Range(-4f, 4f));
-                BuildCrater(p.transform, craterPos, craterMat, sandMat);
-            }
-        }
-
-        private void SpawnColumn(Transform parent, Vector3 pos, GameObject columnPrefab)
-        {
-            var col = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, parent);
-            col.transform.localScale = Vector3.one * 3f;
-
-            AlignToGroundAndAddCollider(col, pos, Quaternion.Euler(-90, 0, 0), 0f);
-
-            col.isStatic = true;
-            foreach (Transform t in col.GetComponentsInChildren<Transform>(true)) {
-                t.gameObject.isStatic = true;
-            }
-        }
-
-        private void BuildCrater(Transform parent, Vector3 pos, Material craterMat, Material sandMat)
-        {
-            var crater = new GameObject("Crater");
-            crater.transform.SetParent(parent);
-            crater.transform.position = pos;
-            crater.isStatic = true;
-
-            float scaleMultiplier = Random.Range(0.6f, 1.8f);
-
-            // Low-poly crater depression
-            var dep = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            dep.name = "Depression";
-            dep.transform.SetParent(crater.transform);
-            dep.transform.localPosition = new Vector3(0f, 0.02f, 0f);
-            dep.transform.localScale = new Vector3(8f * scaleMultiplier, 0.05f, 8f * scaleMultiplier);
-            dep.GetComponent<Renderer>().sharedMaterial = craterMat;
-            DestroyImmediate(dep.GetComponent<Collider>());
-            dep.isStatic = true;
-
-            // Ring of crater sandy debris rocks
-            int rockCount = Random.Range(7, 12);
-            float radius = 4.2f * scaleMultiplier;
-            for (int i = 0; i < rockCount; i++) {
-                float angle = (i * 360f / rockCount) + Random.Range(-20f, 20f);
-                float rad = angle * Mathf.Deg2Rad;
-                
-                // Add minor noise to radius for jagged, non-circular look
-                float noiseRadius = radius * Random.Range(0.85f, 1.15f);
-                Vector3 rockPos = new Vector3(Mathf.Cos(rad) * noiseRadius, Random.Range(-0.1f * scaleMultiplier, 0.1f * scaleMultiplier), Mathf.Sin(rad) * noiseRadius);
-                
-                var rock = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                rock.name = "CraterRock";
-                rock.transform.SetParent(crater.transform);
-                rock.transform.localPosition = rockPos;
-                
-                // Jagged, highly randomized multi-axis scales
-                rock.transform.localScale = new Vector3(
-                    Random.Range(1.2f, 3.0f) * scaleMultiplier, 
-                    Random.Range(0.8f, 2.2f) * scaleMultiplier, 
-                    Random.Range(1.2f, 3.0f) * scaleMultiplier
-                );
-                
-                // Fully randomized 3D rotation for a natural debris look
-                rock.transform.localRotation = Quaternion.Euler(
-                    Random.Range(-35f, 35f), 
-                    Random.Range(0f, 360f), 
-                    Random.Range(-35f, 35f)
-                );
-                
-                rock.GetComponent<Renderer>().sharedMaterial = sandMat;
-                
-                var bc = rock.GetComponent<BoxCollider>();
-                if (bc != null) {
-                    bc.size = Vector3.one;
-                }
-                
-                rock.isStatic = true;
             }
         }
 
         private void FixPlayerAndWeapons()
         {
-            var p = GameObject.Find("Player");
-            if (p == null) return;
-            p.tag = "Player";
-            
-            var inv = p.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>();
-            if (inv == null) return;
-
+            var p = GameObject.Find("Player"); if (p == null) return; p.tag = "Player";
+            var inv = p.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>(); if (inv == null) return;
             Color[] colors = { new Color(1, 0.4f, 0), Color.white, new Color(0, 0.7f, 1) };
             int idx = 0;
             foreach (Transform t in inv.transform) {
@@ -700,9 +398,7 @@ namespace TheAlchemistsCrypt.Editor
                     var sharedMats = r.sharedMaterials;
                     foreach (var m in sharedMats) {
                         if (m == null) continue;
-                        m.SetColor("_EmissionColor", colors[idx % 3] * 4f);
-                        m.EnableKeyword("_EMISSION");
-                        m.color = colors[idx % 3] * 0.5f;
+                        m.SetColor("_EmissionColor", colors[idx % 3] * 4f); m.EnableKeyword("_EMISSION"); m.color = colors[idx % 3] * 0.5f;
                     }
                 }
                 idx++;
@@ -721,180 +417,40 @@ namespace TheAlchemistsCrypt.Editor
 
         private void AlignToGroundAndAddCollider(GameObject obj, Vector3 basePos, Quaternion targetRot, float offsetAdjustment)
         {
-            obj.transform.position = basePos;
-            obj.transform.rotation = targetRot;
-
-            var filters = obj.GetComponentsInChildren<MeshFilter>(true);
-            if (filters.Length > 0) {
+            obj.transform.position = basePos; obj.transform.rotation = targetRot;
+            var renderers = obj.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length > 0) {
                 float minY = float.MaxValue;
-                foreach (var filter in filters) {
-                    if (filter.sharedMesh == null) continue;
-                    
-                    Bounds localBounds = filter.sharedMesh.bounds;
-                    Vector3 center = localBounds.center;
-                    Vector3 extents = localBounds.extents;
-                    Vector3[] corners = {
-                        new Vector3(center.x - extents.x, center.y - extents.y, center.z - extents.z),
-                        new Vector3(center.x - extents.x, center.y - extents.y, center.z + extents.z),
-                        new Vector3(center.x - extents.x, center.y + extents.y, center.z - extents.z),
-                        new Vector3(center.x - extents.x, center.y + extents.y, center.z + extents.z),
-                        new Vector3(center.x + extents.x, center.y - extents.y, center.z - extents.z),
-                        new Vector3(center.x + extents.x, center.y - extents.y, center.z + extents.z),
-                        new Vector3(center.x + extents.x, center.y + extents.y, center.z - extents.z),
-                        new Vector3(center.x + extents.x, center.y + extents.y, center.z + extents.z)
-                    };
-                    
-                    foreach (var corner in corners) {
-                        float worldY = filter.transform.TransformPoint(corner).y;
-                        if (worldY < minY) minY = worldY;
-                    }
-                }
-
+                foreach (var r in renderers) if (!(r is ParticleSystemRenderer) && r.bounds.min.y < minY) minY = r.bounds.min.y;
                 if (minY != float.MaxValue) {
                     float yOffset = basePos.y - minY + offsetAdjustment;
                     obj.transform.position = new Vector3(basePos.x, basePos.y + yOffset, basePos.z);
                 }
-            } else {
-                var renderers = obj.GetComponentsInChildren<Renderer>(true);
-                if (renderers.Length > 0) {
-                    float minY = float.MaxValue;
-                    foreach (var r in renderers) {
-                        if (r is ParticleSystemRenderer) continue;
-                        if (r.bounds.min.y < minY) minY = r.bounds.min.y;
-                    }
-                    if (minY != float.MaxValue) {
-                        float yOffset = basePos.y - minY + offsetAdjustment;
-                        obj.transform.position = new Vector3(basePos.x, basePos.y + yOffset, basePos.z);
-                    }
-                }
             }
-
-            EnsurePerfectBoxCollider(obj);
-        }
-
-        private void EnsurePerfectBoxCollider(GameObject obj)
-        {
-            foreach (var col in obj.GetComponentsInChildren<Collider>(true)) {
-                DestroyImmediate(col);
-            }
-
+            foreach (var col in obj.GetComponentsInChildren<Collider>(true)) DestroyImmediate(col);
             var filters = obj.GetComponentsInChildren<MeshFilter>(true);
             if (filters.Length > 0) {
                 foreach (var filter in filters) {
                     if (filter.sharedMesh == null) continue;
-                    
-                    var mc = filter.gameObject.GetComponent<MeshCollider>();
-                    if (mc == null) mc = filter.gameObject.AddComponent<MeshCollider>();
-                    mc.sharedMesh = filter.sharedMesh;
-                    mc.convex = false; // Static colliders don't need to be convex, which allows perfect concavity!
+                    var mc = filter.gameObject.AddComponent<MeshCollider>(); mc.sharedMesh = filter.sharedMesh;
                 }
-            } else {
-                var renderers = obj.GetComponentsInChildren<Renderer>(true);
-                if (renderers.Length > 0) {
-                    var box = obj.AddComponent<BoxCollider>();
-                    // Basic fallback bounding box estimation
-                    Bounds b = new Bounds(Vector3.zero, Vector3.zero);
-                    bool init = false;
-                    foreach (var r in renderers) {
-                        if (r is ParticleSystemRenderer) continue;
-                        if (!init) {
-                            b = r.bounds;
-                            init = true;
-                        } else {
-                            b.Encapsulate(r.bounds);
-                        }
-                    }
-                    if (init) {
-                        box.center = obj.transform.InverseTransformPoint(b.center);
-                        box.size = obj.transform.InverseTransformVector(b.size);
-                    }
-                } else {
-                    obj.AddComponent<BoxCollider>();
-                }
-            }
+            } else obj.AddComponent<BoxCollider>();
         }
 
         private void CreateProceduralPyramid(GameObject root, Vector3 pos, float baseSize, float height, Material mat, Color glowColor)
         {
-            var pGo = new GameObject("Pyramid");
-            pGo.transform.SetParent(root.transform);
-            pGo.transform.position = pos;
-            pGo.isStatic = true;
-
-            Mesh mesh = new Mesh();
-            mesh.name = "PyramidMesh";
-
-            float half = baseSize / 2f;
-
-            Vector3[] vertices = new Vector3[18];
-            int[] triangles = new int[18];
-            Vector2[] uvs = new Vector2[18];
-
-            Vector3 apex = new Vector3(0, height, 0);
-            Vector3 fl = new Vector3(-half, 0, -half);
-            Vector3 fr = new Vector3(half, 0, -half);
-            Vector3 br = new Vector3(half, 0, half);
-            Vector3 bl = new Vector3(-half, 0, half);
-
-            // Front Face (fl -> fr -> apex)
-            vertices[0] = fl; vertices[1] = fr; vertices[2] = apex;
-            triangles[0] = 0; triangles[1] = 2; triangles[2] = 1;
-            uvs[0] = new Vector2(0, 0); uvs[1] = new Vector2(1, 0); uvs[2] = new Vector2(0.5f, 1);
-
-            // Right Face (fr -> br -> apex)
-            vertices[3] = fr; vertices[4] = br; vertices[5] = apex;
-            triangles[3] = 3; triangles[4] = 5; triangles[5] = 4;
-            uvs[3] = new Vector2(0, 0); uvs[4] = new Vector2(1, 0); uvs[5] = new Vector2(0.5f, 1);
-
-            // Back Face (br -> bl -> apex)
-            vertices[6] = br; vertices[7] = bl; vertices[8] = apex;
-            triangles[6] = 6; triangles[7] = 8; triangles[8] = 7;
-            uvs[6] = new Vector2(0, 0); uvs[7] = new Vector2(1, 0); uvs[8] = new Vector2(0.5f, 1);
-
-            // Left Face (bl -> fl -> apex)
-            vertices[9] = bl; vertices[10] = fl; vertices[11] = apex;
-            triangles[9] = 9; triangles[10] = 11; triangles[11] = 10;
-            uvs[9] = new Vector2(0, 0); uvs[10] = new Vector2(1, 0); uvs[11] = new Vector2(0.5f, 1);
-
-            // Base Face Tri 1 (bl -> br -> fl)
-            vertices[12] = bl; vertices[13] = br; vertices[14] = fl;
-            triangles[12] = 12; triangles[13] = 14; triangles[14] = 13;
-            uvs[12] = new Vector2(0, 1); uvs[13] = new Vector2(1, 1); uvs[14] = new Vector2(0, 0);
-
-            // Base Face Tri 2 (br -> fr -> fl)
-            vertices[15] = br; vertices[16] = fr; vertices[17] = fl;
-            triangles[15] = 15; triangles[16] = 17; triangles[17] = 16;
-            uvs[15] = new Vector2(1, 1); uvs[16] = new Vector2(1, 0); uvs[17] = new Vector2(0, 0);
-
-            mesh.vertices = vertices;
-            mesh.triangles = triangles;
-            mesh.uv = uvs;
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-
-            var filter = pGo.AddComponent<MeshFilter>();
-            filter.sharedMesh = mesh;
-
-            var renderer = pGo.AddComponent<MeshRenderer>();
-            var pMat = new Material(mat); // Unique material instance
-            pMat.color = new Color(0.85f, 0.75f, 0.6f); // Sandstone color
-            pMat.SetColor("_EmissionColor", glowColor * 1.5f);
-            pMat.EnableKeyword("_EMISSION");
-            renderer.sharedMaterial = pMat;
-
+            var pGo = new GameObject("Pyramid"); pGo.transform.SetParent(root.transform); pGo.transform.position = pos; pGo.isStatic = true;
+            Mesh mesh = new Mesh(); float half = baseSize / 2f;
+            Vector3 apex = new Vector3(0, height, 0); Vector3 fl = new Vector3(-half, 0, -half), fr = new Vector3(half, 0, -half), br = new Vector3(half, 0, half), bl = new Vector3(-half, 0, half);
+            mesh.vertices = new Vector3[] { fl, fr, apex, fr, br, apex, br, bl, apex, bl, fl, apex, bl, br, fl, br, fr, fl };
+            mesh.triangles = new int[] { 0, 2, 1, 3, 5, 4, 6, 8, 7, 9, 11, 10, 12, 14, 13, 15, 17, 16 };
+            mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            var filter = pGo.AddComponent<MeshFilter>(); filter.sharedMesh = mesh;
+            var renderer = pGo.AddComponent<MeshRenderer>(); var pMat = new Material(mat); pMat.color = new Color(0.85f, 0.75f, 0.6f);
+            pMat.SetColor("_EmissionColor", glowColor * 1.5f); pMat.EnableKeyword("_EMISSION"); renderer.sharedMaterial = pMat;
             pGo.AddComponent<MeshCollider>().sharedMesh = mesh;
-
-            pGo.isStatic = true;
-
-            var lightGo = new GameObject("PyramidBeacon");
-            lightGo.transform.SetParent(pGo.transform);
-            lightGo.transform.localPosition = new Vector3(0f, height + 2f, 0f);
-            var l = lightGo.AddComponent<Light>();
-            l.type = LightType.Point;
-            l.color = glowColor;
-            l.range = 400f;
-            l.intensity = 20f;
-            l.shadows = LightShadows.None;
+            var lightGo = new GameObject("PyramidBeacon"); lightGo.transform.SetParent(pGo.transform); lightGo.transform.localPosition = new Vector3(0f, height + 2f, 0f);
+            var l = lightGo.AddComponent<Light>(); l.type = LightType.Point; l.color = glowColor; l.range = 400f; l.intensity = 20f;
         }
     }
 }

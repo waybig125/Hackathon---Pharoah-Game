@@ -14,6 +14,12 @@ namespace TheAlchemistsCrypt.AI
         private Animator animator;
         private string currentAnimState = "";
 
+        [Header("Health Settings")]
+        public float maxHealth = 10f;
+        public float currentHealth = 10f;
+        private bool isDead = false;
+        private float deathTimer = 0f;
+
         private void Start()
         {
             agent = GetComponent<NavMeshAgent>();
@@ -21,10 +27,18 @@ namespace TheAlchemistsCrypt.AI
             
             animator = GetComponent<Animator>();
             if (animator == null) animator = GetComponentInChildren<Animator>();
+            
+            if (animator != null) animator.applyRootMotion = false; // Fix 'dragged' look by disabling root motion
 
-            agent.speed = 4.0f;
+            // Slower speed for realism and Mummy thematic movement
+            agent.speed = 2.2f;
             agent.stoppingDistance = attackDistance;
             
+            // Higher quality avoidance to prevent overlap and clipping
+            agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+            agent.radius = 0.6f;
+            
+            currentHealth = maxHealth;
             FindPlayer();
         }
 
@@ -46,19 +60,22 @@ namespace TheAlchemistsCrypt.AI
 
         private void Update()
         {
-            if (player == null) {
-                PlayAnimation("Idle");
-                timer += Time.deltaTime;
-                if (timer >= checkInterval) {
-                    FindPlayer();
-                    timer = 0;
-                }
+            if (isDead) {
+                deathTimer += Time.deltaTime;
+                if (deathTimer > 1f) transform.position += Vector3.down * 0.6f * Time.deltaTime;
+                if (deathTimer > 4f) Destroy(gameObject);
                 return;
             }
 
-            agent.SetDestination(player.position);
+            if (player == null) {
+                SetAnimSpeed(0f);
+                timer += Time.deltaTime;
+                if (timer >= checkInterval) { FindPlayer(); timer = 0; }
+                return;
+            }
 
-            // Smoothly rotate the zombie to face the player (Y-axis only)
+            if (agent.isActiveAndEnabled) agent.SetDestination(player.position);
+
             Vector3 targetDir = player.position - transform.position;
             targetDir.y = 0f;
             if (targetDir.sqrMagnitude > 0.01f) {
@@ -67,32 +84,106 @@ namespace TheAlchemistsCrypt.AI
             }
 
             float distance = Vector3.Distance(transform.position, player.position);
-            if (distance <= attackDistance) {
-                PlayAnimation("Attack");
-                // Attack logic (Damage Player)
-                var health = player.GetComponentInParent<TheAlchemistsCrypt.Player.PlayerHealth>();
-                if (health != null) health.TakeDamage(10f * Time.deltaTime);
+            float vel = agent.velocity.magnitude;
+            
+            // Set Speed parameter safely only if it exists for automatic transitions
+            if (animator != null && animator.runtimeAnimatorController != null) {
+                try {
+                    if (HasParameter("Speed")) {
+                        animator.SetFloat("Speed", vel);
+                    }
+                } catch (System.Exception) {
+                    // Suppress harmless animator parameter warnings during transitions
+                }
             }
-            else if (agent.velocity.sqrMagnitude > 0.1f) {
+
+            if (vel > 0.1f) {
                 PlayAnimation("Walk");
+                if (animator != null) animator.speed = 1.2f; 
+            }
+            else if (distance <= attackDistance) {
+                PlayAnimation("Attack");
+                if (animator != null) animator.speed = 1.0f;
+                
+                var health = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Player.PlayerHealth>();
+                if (health != null) health.TakeDamage(12f * Time.deltaTime);
             }
             else {
                 PlayAnimation("Idle");
+                if (animator != null) animator.speed = 1.0f;
+            }
+        }
+
+        private bool HasParameter(string paramName)
+        {
+            if (animator == null || animator.runtimeAnimatorController == null) return false;
+            try {
+                foreach (AnimatorControllerParameter param in animator.parameters)
+                {
+                    if (param.name == paramName) return true;
+                }
+            } catch (System.Exception) {}
+            return false;
+        }
+
+        private void SetAnimSpeed(float s)
+        {
+            if (animator != null && animator.runtimeAnimatorController != null) {
+                try {
+                    if (HasParameter("Speed")) animator.SetFloat("Speed", s);
+                } catch (System.Exception) {}
             }
         }
 
         private void LateUpdate()
         {
+            if (isDead) return;
             // Enforce upright rotation: local X must be 0 and local Z must be 0
             // This prevents them from falling or tilting during physics/agent movement
             Vector3 rot = transform.localEulerAngles;
             transform.localRotation = Quaternion.Euler(0f, rot.y, 0f);
         }
 
+        public void TakeDamage(float damage)
+        {
+            if (isDead) return;
+
+            currentHealth -= damage;
+            Debug.Log($"Zombie took {damage} damage. Health: {currentHealth}/{maxHealth}");
+
+            if (currentHealth <= 0f)
+            {
+                Die();
+            }
+        }
+
+        private void Die()
+        {
+            isDead = true;
+            
+            if (agent != null)
+            {
+                agent.enabled = false;
+            }
+
+            // Disable all colliders to allow player and projectiles to pass through
+            var colliders = GetComponents<Collider>();
+            foreach (var c in colliders) c.enabled = false;
+            var childColliders = GetComponentsInChildren<Collider>();
+            foreach (var c in childColliders) c.enabled = false;
+
+            // Attempt to trigger Die/Death animation
+            PlayAnimation("Die");
+            if (animator != null) {
+                animator.speed = 1.0f;
+            }
+        }
+
         private void PlayAnimation(string stateName)
         {
             if (animator != null && currentAnimState != stateName) {
                 currentAnimState = stateName;
+                // Double fallback: some rigs use trigger, some use CrossFade
                 animator.CrossFadeInFixedTime(stateName, 0.2f);
             }
         }
