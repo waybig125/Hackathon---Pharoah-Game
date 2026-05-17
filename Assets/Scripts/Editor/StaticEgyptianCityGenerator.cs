@@ -108,7 +108,6 @@ namespace TheAlchemistsCrypt.Editor
                 // Force loop settings on native serialized asset
                 var settings = AnimationUtility.GetAnimationClipSettings(destClip);
                 settings.loopTime = true;
-                settings.loop = true;
                 AnimationUtility.SetAnimationClipSettings(destClip, settings);
                 EditorUtility.SetDirty(destClip);
                 AssetDatabase.SaveAssets();
