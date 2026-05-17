@@ -36,6 +36,7 @@ namespace TheAlchemistsCrypt.UI
         private Sprite goldGradientSprite;
         private Sprite joystickRingSprite;
         private Sprite joystickKnobSprite;
+        private Sprite settingsIconSprite;
 
         private void Awake()
         {
@@ -63,6 +64,7 @@ namespace TheAlchemistsCrypt.UI
             swapIcon = LoadThemedSprite("swap_weapon", "UI/Icons/icon_swap");
             sprintIcon = LoadThemedSprite("sprint", "UI/Icons/icon_sprint");
             jumpIcon = LoadThemedSprite("jump", "UI/Icons/icon_jump");
+            settingsIconSprite = Resources.Load<Sprite>("egyptian_items/settings_icon");
         }
 
         private void GenerateProceduralSprites()
@@ -337,6 +339,7 @@ namespace TheAlchemistsCrypt.UI
             var healthPanel = new GameObject("CustomHealthPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             healthPanel.SetParent(root, false);
             healthPanel.anchorMin = healthPanel.anchorMax = new Vector2(0, 1);
+            healthPanel.pivot = new Vector2(0f, 1f); // Correct Pivot to Top-Left to prevent clipping
             healthPanel.anchoredPosition = new Vector2(60, -60);
             healthPanel.sizeDelta = new Vector2(400, 80);
             healthPanel.GetComponent<Image>().sprite = obsidianSprite;
@@ -350,7 +353,7 @@ namespace TheAlchemistsCrypt.UI
             healthTxtGo.anchorMin = new Vector2(0, 0.5f); healthTxtGo.anchorMax = new Vector2(1, 0.5f);
             healthTxtGo.anchoredPosition = new Vector2(0, 0);
             healthText = healthTxtGo.GetComponent<Text>();
-            healthText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            healthText.font = GetRobustFont(); // Prevent crashes
             healthText.fontSize = 32; healthText.fontStyle = FontStyle.Bold; healthText.alignment = TextAnchor.MiddleCenter; healthText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
             healthText.text = "100";
 
@@ -358,6 +361,7 @@ namespace TheAlchemistsCrypt.UI
             var ammoPanel = new GameObject("CustomAmmoPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             ammoPanel.SetParent(root, false);
             ammoPanel.anchorMin = ammoPanel.anchorMax = new Vector2(0, 0);
+            ammoPanel.pivot = new Vector2(0f, 0f); // Correct Pivot to Bottom-Left to prevent clipping
             ammoPanel.anchoredPosition = new Vector2(60, 60);
             ammoPanel.sizeDelta = new Vector2(400, 80);
             ammoPanel.GetComponent<Image>().sprite = obsidianSprite;
@@ -371,20 +375,33 @@ namespace TheAlchemistsCrypt.UI
             ammoTxtGo.anchorMin = new Vector2(0, 0.5f); ammoTxtGo.anchorMax = new Vector2(1, 0.5f);
             ammoTxtGo.anchoredPosition = new Vector2(0, 0);
             ammoText = ammoTxtGo.GetComponent<Text>();
-            ammoText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            ammoText.font = GetRobustFont(); // Prevent crashes
             ammoText.fontSize = 32; ammoText.fontStyle = FontStyle.Bold; ammoText.alignment = TextAnchor.MiddleCenter; ammoText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
             ammoText.text = "0 / 0";
 
-            // --- SETTINGS BUTTON (Repositioned to Top-Right corner above minimap for industry standard placement) ---
+            // --- SETTINGS BUTTON (Repositioned to the left of minimap with high-res sprite) ---
             var settingsBtnGo = new GameObject("SettingsButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             settingsBtnGo.SetParent(root, false);
             settingsBtnGo.anchorMin = settingsBtnGo.anchorMax = new Vector2(1, 1);
-            settingsBtnGo.anchoredPosition = new Vector2(-60, -60);
+            settingsBtnGo.pivot = new Vector2(1, 1);
+            settingsBtnGo.anchoredPosition = new Vector2(-320, -70);
             settingsBtnGo.sizeDelta = new Vector2(80, 80);
-            settingsBtnGo.GetComponent<Image>().sprite = CreateSettingsMedallionSprite(80, 80);
+            var settingsImg = settingsBtnGo.GetComponent<Image>();
+            if (settingsIconSprite != null) settingsImg.sprite = settingsIconSprite;
+            else settingsImg.sprite = CreateSettingsMedallionSprite(80, 80);
             
             var sHelper = settingsBtnGo.gameObject.AddComponent<ButtonInputHelper>();
             sHelper.onUp = () => OpenSettingsModal(root);
+
+            // --- TARGETING RETICLE ---
+            var reticleGo = new GameObject("TargetingReticle", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            reticleGo.SetParent(root, false);
+            reticleGo.anchorMin = reticleGo.anchorMax = new Vector2(0.5f, 0.5f);
+            reticleGo.anchoredPosition = Vector2.zero;
+            reticleGo.sizeDelta = new Vector2(80, 80);
+            var reticleImg = reticleGo.GetComponent<Image>();
+            reticleImg.sprite = CreateTargetingReticleSprite(128);
+            reticleImg.raycastTarget = false;
 
             new GameObject("MinimapCanvasContainer", typeof(RectTransform), typeof(MinimapUI)).transform.SetParent(root, false);
         }
@@ -452,10 +469,13 @@ namespace TheAlchemistsCrypt.UI
             // Aggressively disable competing canvases, including clones and weapon UI
             var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include);
             foreach (var c in canvases) {
-                if (c.gameObject.name == "MobileHUD_Root" || (c.gameObject.name == "Canvas" && c.gameObject.GetComponent<MobileHUDButtons>() != null)) continue;
+                if (c.gameObject.name == "MobileHUD_Root" || 
+                    c.gameObject.name == "StartScreenOverlay" || 
+                    c.gameObject.name == "DeathCanvas" || 
+                    (c.gameObject.name == "Canvas" && c.gameObject.GetComponent<MobileHUDButtons>() != null)) continue;
                 string nameLower = c.gameObject.name.ToLower();
                 if (nameLower.Contains("lpsp") || nameLower.Contains("weaponui") || nameLower.Contains("hud") || nameLower.Contains("canvas") || nameLower.Contains("joystick")) {
-                    if (c.gameObject != gameObject && c.gameObject.name != "MobileHUD_Root") {
+                    if (c.gameObject != gameObject && c.gameObject.name != "MobileHUD_Root" && c.gameObject.name != "StartScreenOverlay" && c.gameObject.name != "DeathCanvas") {
                         c.gameObject.SetActive(false);
                     }
                 }
@@ -496,6 +516,241 @@ namespace TheAlchemistsCrypt.UI
 
         public void UpdateHealth(float h) { if (healthText) healthText.text = $"VITALITY: {Mathf.CeilToInt(h)}"; }
         public void UpdateAmmo(int c, int t) { if (ammoText) ammoText.text = $"ESSENCE: {c} / {t}"; }
+
+        public static bool HasStartedGame = false;
+
+        private void Start()
+        {
+            if (!HasStartedGame)
+            {
+                CreateStartScreen();
+            }
+        }
+
+        private void CreateStartScreen()
+        {
+            // Set scale to 0 to pause game
+            Time.timeScale = 0f;
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+
+            // Disable mobile input manager temporarily
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance)
+            {
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = false;
+            }
+
+            // Create Canvas
+            var startCanvasGo = new GameObject("StartScreenOverlay", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+
+            var canvas = startCanvasGo.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 1000;
+
+            var scaler = startCanvasGo.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = 1.0f;
+
+            // Background
+            var bgGo = new GameObject("StartBackground", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            bgGo.SetParent(startCanvasGo.transform, false);
+            bgGo.anchorMin = Vector2.zero; bgGo.anchorMax = Vector2.one;
+            bgGo.offsetMin = bgGo.offsetMax = Vector2.zero;
+            var bgImg = bgGo.GetComponent<Image>();
+            bgImg.sprite = Resources.Load<Sprite>("egyptian_items/GameStartImage");
+            bgImg.color = Color.white;
+            bgImg.preserveAspect = false;
+
+            // Elegant right Obsidian Menu Panel
+            var menuPanelGo = new GameObject("MenuPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            menuPanelGo.SetParent(startCanvasGo.transform, false);
+            menuPanelGo.anchorMin = menuPanelGo.anchorMax = new Vector2(1f, 0.5f);
+            menuPanelGo.anchoredPosition = new Vector2(-280, 0); // Offset to be perfectly readable on right
+            menuPanelGo.sizeDelta = new Vector2(500, 700);
+
+            var menuImg = menuPanelGo.GetComponent<Image>();
+            menuImg.sprite = obsidianSprite;
+
+            var menuBorderGo = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            menuBorderGo.SetParent(menuPanelGo, false);
+            menuBorderGo.anchorMin = Vector2.zero; menuBorderGo.anchorMax = Vector2.one;
+            menuBorderGo.offsetMin = menuBorderGo.offsetMax = Vector2.zero;
+            menuBorderGo.GetComponent<Image>().sprite = CreateBorderSprite(500, 700, 5, new Color(0.95f, 0.8f, 0.2f, 0.95f));
+
+            // Title Text
+            var titleGo = new GameObject("TitleText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            titleGo.SetParent(menuPanelGo, false);
+            titleGo.anchorMin = titleGo.anchorMax = new Vector2(0.5f, 1f);
+            titleGo.anchoredPosition = new Vector2(0, -100);
+            titleGo.sizeDelta = new Vector2(440, 150);
+            var titleTxt = titleGo.GetComponent<Text>();
+            titleTxt.font = GetRobustFont();
+            titleTxt.fontSize = 44;
+            titleTxt.fontStyle = FontStyle.Bold;
+            titleTxt.alignment = TextAnchor.MiddleCenter;
+            titleTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            titleTxt.text = "THE ALCHEMIST'S\nCRYPT";
+
+            // Subtitle
+            var subGo = new GameObject("SubtitleText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            subGo.SetParent(menuPanelGo, false);
+            subGo.anchorMin = subGo.anchorMax = new Vector2(0.5f, 1f);
+            subGo.anchoredPosition = new Vector2(0, -260);
+            subGo.sizeDelta = new Vector2(440, 60);
+            var subTxt = subGo.GetComponent<Text>();
+            subTxt.font = GetRobustFont();
+            subTxt.fontSize = 20;
+            subTxt.fontStyle = FontStyle.Italic;
+            subTxt.alignment = TextAnchor.MiddleCenter;
+            subTxt.color = new Color(0.85f, 0.2f, 0.2f, 0.9f);
+            subTxt.text = "Unravel the Pharaoh's secrets...";
+
+            // START Button
+            var startBtnGo = new GameObject("StartButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            startBtnGo.SetParent(menuPanelGo, false);
+            startBtnGo.anchorMin = startBtnGo.anchorMax = new Vector2(0.5f, 0.5f);
+            startBtnGo.anchoredPosition = new Vector2(0, -60);
+            startBtnGo.sizeDelta = new Vector2(360, 80);
+            var startBtnImg = startBtnGo.GetComponent<Image>();
+            startBtnImg.sprite = goldGradientSprite;
+
+            var startBtnTextGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            startBtnTextGo.SetParent(startBtnGo, false);
+            startBtnTextGo.anchorMin = Vector2.zero; startBtnTextGo.anchorMax = Vector2.one;
+            startBtnTextGo.offsetMin = startBtnTextGo.offsetMax = Vector2.zero;
+            var startBtnTxt = startBtnTextGo.GetComponent<Text>();
+            startBtnTxt.font = GetRobustFont();
+            startBtnTxt.fontSize = 28;
+            startBtnTxt.fontStyle = FontStyle.Bold;
+            startBtnTxt.alignment = TextAnchor.MiddleCenter;
+            startBtnTxt.color = new Color(0.12f, 0.06f, 0f, 0.95f);
+            startBtnTxt.text = "START VOYAGE";
+
+            var startHelper = startBtnGo.gameObject.AddComponent<ButtonInputHelper>();
+            startHelper.onDown = () =>
+            {
+                startBtnGo.localScale = new Vector3(0.95f, 0.95f, 1f);
+            };
+            startHelper.onUp = () =>
+            {
+                startBtnGo.localScale = new Vector3(1f, 1f, 1f);
+                HasStartedGame = true;
+                Time.timeScale = 1f;
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance)
+                {
+                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
+                }
+                Destroy(startCanvasGo);
+            };
+
+            // QUIT Button
+            var quitBtnGo = new GameObject("QuitButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            quitBtnGo.SetParent(menuPanelGo, false);
+            quitBtnGo.anchorMin = quitBtnGo.anchorMax = new Vector2(0.5f, 0.5f);
+            quitBtnGo.anchoredPosition = new Vector2(0, -170);
+            quitBtnGo.sizeDelta = new Vector2(360, 80);
+            var quitBtnImg = quitBtnGo.GetComponent<Image>();
+            quitBtnImg.sprite = obsidianSprite;
+
+            var quitBorderGo = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            quitBorderGo.SetParent(quitBtnGo, false);
+            quitBorderGo.anchorMin = Vector2.zero; quitBorderGo.anchorMax = Vector2.one;
+            quitBorderGo.offsetMin = quitBorderGo.offsetMax = Vector2.zero;
+            quitBorderGo.GetComponent<Image>().sprite = CreateBorderSprite(360, 80, 3, new Color(0.95f, 0.8f, 0.2f, 0.9f));
+
+            var quitBtnTextGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            quitBtnTextGo.SetParent(quitBtnGo, false);
+            quitBtnTextGo.anchorMin = Vector2.zero; quitBtnTextGo.anchorMax = Vector2.one;
+            quitBtnTextGo.offsetMin = quitBtnTextGo.offsetMax = Vector2.zero;
+            var quitBtnTxt = quitBtnTextGo.GetComponent<Text>();
+            quitBtnTxt.font = GetRobustFont();
+            quitBtnTxt.fontSize = 28;
+            quitBtnTxt.fontStyle = FontStyle.Bold;
+            quitBtnTxt.alignment = TextAnchor.MiddleCenter;
+            quitBtnTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            quitBtnTxt.text = "QUIT GAME";
+
+            var quitHelper = quitBtnGo.gameObject.AddComponent<ButtonInputHelper>();
+            quitHelper.onDown = () =>
+            {
+                quitBtnGo.localScale = new Vector3(0.95f, 0.95f, 1f);
+            };
+            quitHelper.onUp = () =>
+            {
+                quitBtnGo.localScale = new Vector3(1f, 1f, 1f);
+                Application.Quit();
+            };
+
+            // Set UI layer
+            SetLayerRecursively(startCanvasGo, 5);
+        }
+
+        private void SetLayerRecursively(GameObject go, int layer)
+        {
+            if (go == null) return;
+            go.layer = layer;
+            foreach (Transform child in go.transform)
+            {
+                SetLayerRecursively(child.gameObject, layer);
+            }
+        }
+
+        private Font GetRobustFont()
+        {
+            Font f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (f == null) f = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            if (f == null) f = Font.GetDefault();
+            return f;
+        }
+
+        private Sprite CreateTargetingReticleSprite(int size)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float half = size * 0.5f;
+            Color gold = new Color(0.95f, 0.8f, 0.2f, 0.9f);
+            Color ruby = new Color(0.85f, 0.1f, 0.1f, 0.95f);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (x - half) / half;
+                    float dy = (y - half) / half;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+
+                    // Concentric outer ring
+                    if (dist >= 0.78f && dist <= 0.82f)
+                    {
+                        tex.SetPixel(x, y, gold);
+                    }
+                    // Inner ring
+                    else if (dist >= 0.38f && dist <= 0.42f)
+                    {
+                        tex.SetPixel(x, y, gold);
+                    }
+                    // Concentric tick marks
+                    else if (dist >= 0.45f && dist <= 0.75f && (Mathf.Abs(dx) < 0.03f || Mathf.Abs(dy) < 0.03f))
+                    {
+                        tex.SetPixel(x, y, gold);
+                    }
+                    // Glowing Ruby Center Point
+                    else if (dist <= 0.08f)
+                    {
+                        float alpha = Mathf.Clamp01((1f - dist / 0.08f) * 2f);
+                        tex.SetPixel(x, y, new Color(ruby.r, ruby.g, ruby.b, ruby.a * alpha));
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
     }
 
     public class LookSwipeZone : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler
