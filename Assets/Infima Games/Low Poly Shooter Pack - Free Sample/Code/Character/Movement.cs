@@ -175,7 +175,8 @@ namespace InfimaGames.LowPolyShooterPack
         private void ProcessJumping()
         {
             bool isMobileJumping = TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsJumping;
-            bool isDesktopJumping = UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.spaceKey.isPressed;
+            bool isDesktopJumping = (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.spaceKey.isPressed)
+                || UnityEngine.Input.GetKey(KeyCode.Space);
             
             if (grounded && (isMobileJumping || isDesktopJumping))
             {
@@ -218,7 +219,7 @@ namespace InfimaGames.LowPolyShooterPack
             Vector2 frameInput = playerCharacter.GetInputMovement();
             
             // Fail-safe for Desktop WASD
-            if (frameInput.sqrMagnitude < 0.01f && !Application.isMobilePlatform)
+            if (frameInput.sqrMagnitude < 0.01f)
             {
                 float h = 0, v = 0;
                 if (UnityEngine.InputSystem.Keyboard.current != null)
@@ -228,7 +229,18 @@ namespace InfimaGames.LowPolyShooterPack
                     if (UnityEngine.InputSystem.Keyboard.current.aKey.isPressed) h -= 1;
                     if (UnityEngine.InputSystem.Keyboard.current.dKey.isPressed) h += 1;
                 }
-                frameInput = new Vector2(h, v).normalized;
+                
+                // Legacy keyboard axis fallback
+                if (Mathf.Abs(h) < 0.01f && Mathf.Abs(v) < 0.01f)
+                {
+                    h = UnityEngine.Input.GetAxisRaw("Horizontal");
+                    v = UnityEngine.Input.GetAxisRaw("Vertical");
+                }
+
+                if (Mathf.Abs(h) > 0.01f || Mathf.Abs(v) > 0.01f)
+                {
+                    frameInput = new Vector2(h, v).normalized;
+                }
             }
 
             //Calculate local-space direction by using the player's input.

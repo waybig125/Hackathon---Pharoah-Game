@@ -19,16 +19,27 @@ namespace TheAlchemistsCrypt.UI
         private Text ammoText;
         private Text weaponText;
 
-        // Cached procedural sprites to avoid recreation GC pressure
-        private Sprite obsidianSprite;
-        private Sprite goldGradientSprite;
-        private Sprite joystickRingSprite;
-        private Sprite joystickKnobSprite;
+        // Dynamic Bar Fills & Alchemical Sprites
+        private Image healthBarFill;
+        private Image ammoBarFill;
+        private Sprite sulfurBarSprite;
+        private Sprite mercuryBarSprite;
+        private Sprite saltBarSprite;
+        private Sprite punchBarSprite;
+
+        // Settings Modal Instance tracking
+        private GameObject settingsModalInstance = null;
 
         // Sprint Toggle references
         private bool sprintToggleState = false;
         private Image sprintIconImage;
         private Image sprintShadowImage;
+
+        // Cached procedural sprites to avoid recreation GC pressure
+        private Sprite obsidianSprite;
+        private Sprite goldGradientSprite;
+        private Sprite joystickRingSprite;
+        private Sprite joystickKnobSprite;
 
         private void Awake()
         {
@@ -69,6 +80,107 @@ namespace TheAlchemistsCrypt.UI
             
             if (joystickRingSprite == null) joystickRingSprite = CreateRingSprite();
             if (joystickKnobSprite == null) joystickKnobSprite = CreateKnobSprite();
+
+            // Dynamic Alchemical bar sprites
+            sulfurBarSprite = CreateAlchemicalBarSprite(new Color(0.95f, 0.55f, 0.05f), new Color(1f, 0.85f, 0.1f)); // Orange to Yellow
+            mercuryBarSprite = CreateAlchemicalBarSprite(new Color(0.1f, 0.5f, 0.8f), new Color(0.4f, 0.9f, 0.95f)); // Cyan to Silver
+            saltBarSprite = CreateAlchemicalBarSprite(new Color(0.9f, 0.7f, 0.2f), new Color(1f, 1f, 1f)); // Amber to White
+            punchBarSprite = CreateAlchemicalBarSprite(new Color(0.4f, 0.02f, 0.02f), new Color(0.8f, 0.05f, 0.05f)); // Dark Crimson to Red
+        }
+
+        private Sprite CreateAlchemicalBarSprite(Color startCol, Color endCol)
+        {
+            int w = 420;
+            int h = 28;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float t = (float)x / w;
+                    Color col = Color.Lerp(startCol, endCol, t);
+                    tex.SetPixel(x, y, new Color(col.r, col.g, col.b, 0.95f));
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateBorderSprite(int w, int h, int thickness, Color borderCol)
+        {
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    if (x < thickness || x >= w - thickness || y < thickness || y >= h - thickness)
+                    {
+                        tex.SetPixel(x, y, borderCol);
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateSolidCircleSprite(int s, Color col)
+        {
+            Texture2D tex = new Texture2D(s, s, TextureFormat.RGBA32, false);
+            for (int y = 0; y < s; y++)
+            {
+                for (int x = 0; x < s; x++)
+                {
+                    float dx = (float)(x - s / 2) / (s / 2);
+                    float dy = (float)(y - s / 2) / (s / 2);
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (dist <= 1f)
+                    {
+                        float alpha = Mathf.Clamp01((1f - dist) * 10f);
+                        tex.SetPixel(x, y, new Color(col.r, col.g, col.b, col.a * alpha));
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateHealthBarFillSprite(int w, int h)
+        {
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float t = (float)x / w;
+                    // Pure Emerald Green to Bright Golden Yellow
+                    Color col = Color.Lerp(new Color(0.05f, 0.85f, 0.25f, 0.95f), new Color(0.95f, 0.85f, 0.05f, 0.95f), t);
+                    tex.SetPixel(x, y, col);
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateSolidBarSprite(int w, int h, Color c)
+        {
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    tex.SetPixel(x, y, c);
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
         }
 
         private Sprite CreateObsidianSprite()
@@ -287,14 +399,192 @@ namespace TheAlchemistsCrypt.UI
 
             HideDebugLabels();
 
-            // 4. STATS (TOP LEFT)
-            var stats = new GameObject("Stats", typeof(RectTransform)).GetComponent<RectTransform>();
-            stats.SetParent(root, false);
-            stats.anchorMin = stats.anchorMax = new Vector2(0, 1);
-            stats.anchoredPosition = new Vector2(100, -100);
+            // Disable default Low Poly Shooter Pack weapon UI panel canvas at runtime
+            var allCanvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+            foreach (var canvas in allCanvases)
+            {
+                if (canvas.gameObject.name.Contains("p_lpsp_ui_canvas") || canvas.gameObject.name.Contains("WeaponUI") || canvas.gameObject.name.Contains("LPSP"))
+                {
+                    canvas.gameObject.SetActive(false);
+                }
+            }
 
-            healthText = CreateStatsText(stats, "Health", "100", Vector2.zero, new Color(1, 0.4f, 0.4f));
-            weaponText = CreateStatsText(stats, "Weapon", "NONE", new Vector2(0, -70), new Color(1f, 0.85f, 0.4f));
+            HideDebugLabels();
+
+            // 4. CUSTOM BOTTOM LEFT PROGRESS BARS (OBSIDIAN CARD WITH GOLD BORDER)
+            var statsPanel = new GameObject("CustomStatsPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            statsPanel.SetParent(root, false);
+            statsPanel.anchorMin = statsPanel.anchorMax = new Vector2(0, 0); // BOTTOM LEFT
+            statsPanel.anchoredPosition = new Vector2(40, 40);
+            statsPanel.sizeDelta = new Vector2(460, 140);
+            
+            var statsImg = statsPanel.GetComponent<Image>();
+            statsImg.sprite = obsidianSprite; // Black obsidian background
+            statsImg.color = Color.white;
+            
+            // Gold border
+            var statsBorder = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            statsBorder.SetParent(statsPanel, false);
+            statsBorder.anchorMin = Vector2.zero; statsBorder.anchorMax = Vector2.one;
+            statsBorder.offsetMin = statsBorder.offsetMax = Vector2.zero;
+            var borderImg = statsBorder.GetComponent<Image>();
+            borderImg.sprite = CreateBorderSprite(460, 140, 4, new Color(0.95f, 0.8f, 0.2f, 0.9f));
+            borderImg.color = Color.white;
+            
+            // Health Bar Label
+            var healthLabel = new GameObject("HealthLabel", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
+            healthLabel.rectTransform.SetParent(statsPanel, false);
+            healthLabel.rectTransform.anchorMin = healthLabel.rectTransform.anchorMax = new Vector2(0, 1);
+            healthLabel.rectTransform.anchoredPosition = new Vector2(25, -25);
+            healthLabel.rectTransform.sizeDelta = new Vector2(100, 30);
+            healthLabel.text = "VITALITY";
+            healthLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            healthLabel.fontSize = 16;
+            healthLabel.fontStyle = FontStyle.Bold;
+            healthLabel.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); // Gold
+
+            // Health Bar Background
+            var healthBarBg = new GameObject("HealthBarBg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            healthBarBg.SetParent(statsPanel, false);
+            healthBarBg.anchorMin = healthBarBg.anchorMax = new Vector2(0.5f, 1);
+            healthBarBg.anchoredPosition = new Vector2(10, -25);
+            healthBarBg.sizeDelta = new Vector2(220, 24);
+            var hbBgImg = healthBarBg.GetComponent<Image>();
+            hbBgImg.sprite = CreateSolidBarSprite(220, 24, new Color(0.05f, 0.05f, 0.05f, 0.6f)); // Deep dark fill
+            
+            // Health Bar Fill
+            var healthBarFillGo = new GameObject("HealthBarFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            healthBarFillGo.SetParent(healthBarBg, false);
+            healthBarFillGo.anchorMin = new Vector2(0, 0.5f);
+            healthBarFillGo.anchorMax = new Vector2(0, 0.5f);
+            healthBarFillGo.pivot = new Vector2(0, 0.5f);
+            healthBarFillGo.anchoredPosition = Vector2.zero;
+            healthBarFillGo.sizeDelta = new Vector2(220, 24);
+            healthBarFill = healthBarFillGo.GetComponent<Image>();
+            healthBarFill.sprite = CreateHealthBarFillSprite(220, 24);
+            healthBarFill.type = Image.Type.Filled;
+            healthBarFill.fillMethod = Image.FillMethod.Horizontal;
+            healthBarFill.fillAmount = 1f;
+
+            // Health Text Display inside Card
+            var healthTxtGo = new GameObject("HealthText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            healthTxtGo.SetParent(statsPanel, false);
+            healthTxtGo.anchorMin = healthTxtGo.anchorMax = new Vector2(1, 1);
+            healthTxtGo.anchoredPosition = new Vector2(-20, -25);
+            healthTxtGo.sizeDelta = new Vector2(80, 30);
+            healthText = healthTxtGo.GetComponent<Text>();
+            healthText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            healthText.fontSize = 20;
+            healthText.fontStyle = FontStyle.Bold;
+            healthText.alignment = TextAnchor.MiddleRight;
+            healthText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            healthText.text = "100";
+
+            // Ammo Bar Label
+            var ammoLabel = new GameObject("AmmoLabel", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
+            ammoLabel.rectTransform.SetParent(statsPanel, false);
+            ammoLabel.rectTransform.anchorMin = ammoLabel.rectTransform.anchorMax = new Vector2(0, 1);
+            ammoLabel.rectTransform.anchoredPosition = new Vector2(25, -80);
+            ammoLabel.rectTransform.sizeDelta = new Vector2(100, 30);
+            ammoLabel.text = "ESSENCE";
+            ammoLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            ammoLabel.fontSize = 16;
+            ammoLabel.fontStyle = FontStyle.Bold;
+            ammoLabel.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); // Gold
+
+            // Ammo Bar Background
+            var ammoBarBg = new GameObject("AmmoBarBg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            ammoBarBg.SetParent(statsPanel, false);
+            ammoBarBg.anchorMin = ammoBarBg.anchorMax = new Vector2(0.5f, 1);
+            ammoBarBg.anchoredPosition = new Vector2(10, -80);
+            ammoBarBg.sizeDelta = new Vector2(220, 24);
+            var abBgImg = ammoBarBg.GetComponent<Image>();
+            abBgImg.sprite = CreateSolidBarSprite(220, 24, new Color(0.05f, 0.05f, 0.05f, 0.6f)); // Deep dark fill
+
+            // Ammo Bar Fill
+            var ammoBarFillGo = new GameObject("AmmoBarFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            ammoBarFillGo.SetParent(ammoBarBg, false);
+            ammoBarFillGo.anchorMin = new Vector2(0, 0.5f);
+            ammoBarFillGo.anchorMax = new Vector2(0, 0.5f);
+            ammoBarFillGo.pivot = new Vector2(0, 0.5f);
+            ammoBarFillGo.anchoredPosition = Vector2.zero;
+            ammoBarFillGo.sizeDelta = new Vector2(220, 24);
+            ammoBarFill = ammoBarFillGo.GetComponent<Image>();
+            ammoBarFill.sprite = punchBarSprite;
+            ammoBarFill.type = Image.Type.Filled;
+            ammoBarFill.fillMethod = Image.FillMethod.Horizontal;
+            ammoBarFill.fillAmount = 1f;
+
+            // Ammo Text Display inside Card
+            var ammoTxtGo = new GameObject("AmmoText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            ammoTxtGo.SetParent(statsPanel, false);
+            ammoTxtGo.anchorMin = ammoTxtGo.anchorMax = new Vector2(1, 1);
+            ammoTxtGo.anchoredPosition = new Vector2(-20, -80);
+            ammoTxtGo.sizeDelta = new Vector2(80, 30);
+            ammoText = ammoTxtGo.GetComponent<Text>();
+            ammoText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            ammoText.fontSize = 20;
+            ammoText.fontStyle = FontStyle.Bold;
+            ammoText.alignment = TextAnchor.MiddleRight;
+            ammoText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            ammoText.text = "0 / 0";
+            
+            // Element/Weapon Label
+            var weaponTxtGo = new GameObject("WeaponText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            weaponTxtGo.SetParent(statsPanel, false);
+            weaponTxtGo.anchorMin = weaponTxtGo.anchorMax = new Vector2(0.5f, 0);
+            weaponTxtGo.anchoredPosition = new Vector2(0, 15);
+            weaponTxtGo.sizeDelta = new Vector2(300, 20);
+            weaponText = weaponTxtGo.GetComponent<Text>();
+            weaponText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            weaponText.fontSize = 12;
+            weaponText.fontStyle = FontStyle.Normal;
+            weaponText.alignment = TextAnchor.MiddleCenter;
+            weaponText.color = new Color(1f, 0.85f, 0.4f, 0.8f);
+            weaponText.text = "FOCUS: PUNCH";
+
+            // 5. SETTINGS MEDALLION BUTTON (TOP RIGHT)
+            var settingsBtnGo = new GameObject("SettingsButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            settingsBtnGo.SetParent(root, false);
+            settingsBtnGo.anchorMin = settingsBtnGo.anchorMax = new Vector2(1, 1); // TOP RIGHT
+            settingsBtnGo.anchoredPosition = new Vector2(-60, -60);
+            settingsBtnGo.sizeDelta = new Vector2(80, 80);
+            
+            var settingsBtnImg = settingsBtnGo.GetComponent<Image>();
+            settingsBtnImg.sprite = CreateSolidCircleSprite(80, new Color(0.95f, 0.8f, 0.2f, 0.95f)); // Gold medallion base
+            settingsBtnImg.color = Color.white;
+            settingsBtnImg.raycastTarget = true;
+            
+            var innerMedallion = new GameObject("InnerMedallion", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            innerMedallion.SetParent(settingsBtnGo, false);
+            innerMedallion.anchorMin = Vector2.zero; innerMedallion.anchorMax = Vector2.one;
+            innerMedallion.offsetMin = innerMedallion.offsetMax = new Vector2(6, 6);
+            var innerMedallionImg = innerMedallion.GetComponent<Image>();
+            innerMedallionImg.sprite = CreateSolidCircleSprite(68, new Color(0.05f, 0.05f, 0.05f, 0.8f)); // Deep dark inner
+            innerMedallionImg.color = Color.white;
+            innerMedallionImg.raycastTarget = false;
+
+            var gearTextGo = new GameObject("GearText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            gearTextGo.SetParent(settingsBtnGo, false);
+            gearTextGo.anchorMin = Vector2.zero; gearTextGo.anchorMax = Vector2.one;
+            gearTextGo.offsetMin = gearTextGo.offsetMax = Vector2.zero;
+            var gearText = gearTextGo.GetComponent<Text>();
+            gearText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            gearText.fontSize = 32;
+            gearText.fontStyle = FontStyle.Bold;
+            gearText.alignment = TextAnchor.MiddleCenter;
+            gearText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); // Golden icon text
+            gearText.text = "⚙"; // Unicode gear icon
+            gearText.raycastTarget = false;
+            
+            var settingsHelper = settingsBtnGo.gameObject.AddComponent<ButtonInputHelper>();
+            settingsHelper.onDown = () => {
+                settingsBtnGo.localScale = new Vector3(0.9f, 0.9f, 1f);
+                OpenSettingsModal(root);
+            };
+            settingsHelper.onUp = () => {
+                settingsBtnGo.localScale = new Vector3(1f, 1f, 1f);
+            };
 
             // Ensure look zone is BEHIND buttons so it doesn't intercept clicks
             lookZone.SetAsFirstSibling();
@@ -410,6 +700,12 @@ namespace TheAlchemistsCrypt.UI
             public void OnPointerUp(PointerEventData eventData) => onUp?.Invoke();
         }
 
+        private class SliderDragHelper : MonoBehaviour, IDragHandler
+        {
+            public System.Action<Vector2> onDrag;
+            public void OnDrag(PointerEventData eventData) => onDrag?.Invoke(eventData.position);
+        }
+
         private void HideDebugLabels()
         {
             string[] names = { "Text Timescale", "Text Cursor Lock", "Text Tutorial", "Text Tutorial Text", "Text Tutorial Prompt", "Version Text", "Mouse Lock" };
@@ -441,6 +737,10 @@ namespace TheAlchemistsCrypt.UI
 
         private void Update()
         {
+            // Keep disabling LPSP UI if it is active
+            var lpsp = GameObject.Find("p_lpsp_ui_canvas");
+            if (lpsp != null && lpsp.activeSelf) lpsp.SetActive(false);
+
             // 1. Update active weapon indicator and Ammo
             var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
             if (character != null)
@@ -451,6 +751,15 @@ namespace TheAlchemistsCrypt.UI
                     int currentAmmo = weapon.GetAmmunitionCurrent();
                     int totalAmmo = weapon.GetAmmunitionTotal();
                     UpdateAmmo(currentAmmo, totalAmmo);
+
+                    // Dynamic ammo bar fill amount
+                    if (ammoBarFill != null)
+                    {
+                        if (totalAmmo > 0)
+                            ammoBarFill.fillAmount = Mathf.Clamp01((float)currentAmmo / (float)totalAmmo);
+                        else
+                            ammoBarFill.fillAmount = 0f;
+                    }
 
                     string weaponName = "PUNCH";
                     
@@ -473,13 +782,44 @@ namespace TheAlchemistsCrypt.UI
                     }
                     else
                     {
-                        weaponName = weapon.name.Replace("(Clone)", "").Trim().ToUpper();
+                        string cleanName = weapon.name.Replace("(Clone)", "").Trim().ToUpper();
+                        if (cleanName.Contains("SULFUR")) weaponName = "SULFUR";
+                        else if (cleanName.Contains("MERCURY")) weaponName = "MERCURY";
+                        else if (cleanName.Contains("SALT")) weaponName = "SALT";
+                        else weaponName = cleanName;
+                    }
+
+                    // Dynamically set Ammo Bar Sprite based on element
+                    if (ammoBarFill != null)
+                    {
+                        if (weaponName == "SULFUR")
+                            ammoBarFill.sprite = sulfurBarSprite;
+                        else if (weaponName == "MERCURY")
+                            ammoBarFill.sprite = mercuryBarSprite;
+                        else if (weaponName == "SALT")
+                            ammoBarFill.sprite = saltBarSprite;
+                        else
+                            ammoBarFill.sprite = punchBarSprite;
                     }
 
                     if (weaponText != null)
                     {
-                        weaponText.text = $"WEAPON: {weaponName}";
+                        weaponText.text = $"FOCUS: {weaponName}";
                     }
+                }
+                else
+                {
+                    // No weapon active -> Punch/Spooky Dark Crimson
+                    if (ammoBarFill != null)
+                    {
+                        ammoBarFill.sprite = punchBarSprite;
+                        ammoBarFill.fillAmount = 0f;
+                    }
+                    if (weaponText != null)
+                    {
+                        weaponText.text = "FOCUS: PUNCH";
+                    }
+                    UpdateAmmo(0, 0);
                 }
             }
 
@@ -503,14 +843,205 @@ namespace TheAlchemistsCrypt.UI
                 TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon = true;
         }
 
-        public void UpdateHealth(float h) { if (healthText) healthText.text = $"HEALTH: {Mathf.CeilToInt(h)}"; }
-        public void UpdateAmmo(int c, int t) { if (ammoText) ammoText.text = $"AMMO: {c} / {t}"; }
+        private void OpenSettingsModal(RectTransform parentCanvas)
+        {
+            if (settingsModalInstance != null) return;
+            
+            // Disable mobile inputs while settings are open
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+            {
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = false;
+            }
+
+            // Create Modal Background (Dimmer overlay)
+            var modalBg = new GameObject("SettingsModal", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            modalBg.SetParent(parentCanvas, false);
+            modalBg.anchorMin = Vector2.zero; modalBg.anchorMax = Vector2.one;
+            modalBg.offsetMin = modalBg.offsetMax = Vector2.zero;
+            
+            var bgImg = modalBg.GetComponent<Image>();
+            bgImg.sprite = null;
+            bgImg.color = new Color(0, 0, 0, 0.75f); // Dim screen beautifully
+            bgImg.raycastTarget = true; // Blocks events underneath
+            
+            settingsModalInstance = modalBg.gameObject;
+            
+            // Settings Dialog Box (Obsidian card with Gold outline)
+            var dialog = new GameObject("Dialog", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            dialog.SetParent(modalBg, false);
+            dialog.anchorMin = dialog.anchorMax = new Vector2(0.5f, 0.5f);
+            dialog.sizeDelta = new Vector2(500, 320);
+            dialog.anchoredPosition = Vector2.zero;
+            
+            var dialImg = dialog.GetComponent<Image>();
+            dialImg.sprite = obsidianSprite;
+            dialImg.color = Color.white;
+            
+            // Gold border
+            var border = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            border.SetParent(dialog, false);
+            border.anchorMin = Vector2.zero; border.anchorMax = Vector2.one;
+            border.offsetMin = border.offsetMax = Vector2.zero;
+            var borderImg = border.GetComponent<Image>();
+            borderImg.sprite = CreateBorderSprite(500, 320, 5, new Color(0.95f, 0.8f, 0.2f, 0.95f));
+            borderImg.color = Color.white;
+            
+            // Title text
+            var title = new GameObject("TitleText", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
+            title.rectTransform.SetParent(dialog, false);
+            title.rectTransform.anchorMin = title.rectTransform.anchorMax = new Vector2(0.5f, 1);
+            title.rectTransform.anchoredPosition = new Vector2(0, -35);
+            title.rectTransform.sizeDelta = new Vector2(400, 40);
+            title.text = "ALCHEMY SETTINGS";
+            title.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            title.fontSize = 28;
+            title.fontStyle = FontStyle.Bold;
+            title.alignment = TextAnchor.MiddleCenter;
+            title.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            
+            // Sensitivity Slider Background
+            var sliderBg = new GameObject("SliderBg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            sliderBg.SetParent(dialog, false);
+            sliderBg.anchorMin = sliderBg.anchorMax = new Vector2(0.5f, 0.5f);
+            sliderBg.anchoredPosition = new Vector2(0, -10);
+            sliderBg.sizeDelta = new Vector2(360, 20);
+            var sliderBgImg = sliderBg.GetComponent<Image>();
+            sliderBgImg.sprite = CreateSolidBarSprite(360, 20, new Color(0.05f, 0.05f, 0.05f, 0.8f));
+            
+            // Gold fill of the slider (representing active level)
+            var sliderFill = new GameObject("SliderFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            sliderFill.SetParent(sliderBg, false);
+            sliderFill.anchorMin = new Vector2(0, 0.5f); sliderFill.anchorMax = new Vector2(0, 0.5f);
+            sliderFill.pivot = new Vector2(0, 0.5f);
+            sliderFill.anchoredPosition = Vector2.zero;
+            sliderFill.sizeDelta = new Vector2(360, 20);
+            var fillImg = sliderFill.GetComponent<Image>();
+            fillImg.sprite = CreateSolidBarSprite(360, 20, new Color(0.95f, 0.8f, 0.2f, 0.9f));
+            fillImg.type = Image.Type.Filled;
+            fillImg.fillAmount = 0.5f;
+            fillImg.fillMethod = Image.FillMethod.Horizontal;
+            
+            // Slider Handle (Golden Medallion Circle)
+            var sliderHandle = new GameObject("SliderHandle", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            sliderHandle.SetParent(sliderBg, false);
+            sliderHandle.anchorMin = sliderHandle.anchorMax = new Vector2(0, 0.5f);
+            sliderHandle.sizeDelta = new Vector2(40, 40);
+            var handleImg = sliderHandle.GetComponent<Image>();
+            handleImg.sprite = CreateSolidCircleSprite(40, new Color(0.95f, 0.8f, 0.2f, 0.95f));
+            handleImg.color = Color.white;
+            handleImg.raycastTarget = true;
+            
+            // Slider value text label
+            var valText = new GameObject("ValueText", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
+            valText.rectTransform.SetParent(dialog, false);
+            valText.rectTransform.anchorMin = valText.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            valText.rectTransform.anchoredPosition = new Vector2(0, 40);
+            valText.rectTransform.sizeDelta = new Vector2(400, 30);
+            valText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            valText.fontSize = 20;
+            valText.fontStyle = FontStyle.Bold;
+            valText.alignment = TextAnchor.MiddleCenter;
+            valText.color = new Color(1f, 0.85f, 0.4f, 0.95f);
+
+            // Drag behavior for Slider
+            float currentSensitivity = PlayerPrefs.GetFloat("MobileSensitivity", 0.04f);
+            float minSens = 0.01f;
+            float maxSens = 0.10f;
+            
+            System.Action<float> updateSliderValue = (sens) => {
+                sens = Mathf.Clamp(sens, minSens, maxSens);
+                PlayerPrefs.SetFloat("MobileSensitivity", sens);
+                PlayerPrefs.Save();
+                
+                // Update LookSwipeZone instances if any
+                var zones = FindObjectsByType<LookSwipeZone>(FindObjectsSortMode.None);
+                foreach (var z in zones) z.sensitivity = sens;
+                
+                float pct = (sens - minSens) / (maxSens - minSens);
+                fillImg.fillAmount = pct;
+                sliderHandle.anchoredPosition = new Vector2(pct * 360f, 0);
+                
+                float mult = sens / 0.025f;
+                valText.text = $"LOOK SENSITIVITY: {mult:F2}x ({sens:F3})";
+            };
+            
+            // Initialize slider visuals
+            updateSliderValue(currentSensitivity);
+            
+            // Wire Drag handler on handle
+            var dragHelper = sliderHandle.gameObject.AddComponent<SliderDragHelper>();
+            dragHelper.onDrag = (pointerPos) => {
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(sliderBg, pointerPos, null, out Vector2 localPt);
+                float pct = Mathf.Clamp01(localPt.x / 360f);
+                float newSens = minSens + pct * (maxSens - minSens);
+                updateSliderValue(newSens);
+            };
+
+            // Close button (Gold outlines)
+            var closeGo = new GameObject("CloseButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            closeGo.SetParent(dialog, false);
+            closeGo.anchorMin = closeGo.anchorMax = new Vector2(0.5f, 0);
+            closeGo.anchoredPosition = new Vector2(0, 45);
+            closeGo.sizeDelta = new Vector2(180, 50);
+            
+            var closeImg = closeGo.GetComponent<Image>();
+            closeImg.sprite = CreateSolidBarSprite(180, 50, new Color(0.05f, 0.05f, 0.05f, 0.8f));
+            closeImg.color = Color.white;
+            closeImg.raycastTarget = true;
+            
+            var closeBorder = new GameObject("CloseBorder", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            closeBorder.SetParent(closeGo, false);
+            closeBorder.anchorMin = Vector2.zero; closeBorder.anchorMax = Vector2.one;
+            closeBorder.offsetMin = closeBorder.offsetMax = Vector2.zero;
+            closeBorder.GetComponent<Image>().sprite = CreateBorderSprite(180, 50, 3, new Color(0.95f, 0.8f, 0.2f, 0.9f));
+            
+            var closeTxt = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
+            closeTxt.rectTransform.SetParent(closeGo, false);
+            closeTxt.rectTransform.anchorMin = closeTxt.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            closeTxt.rectTransform.anchoredPosition = Vector2.zero;
+            closeTxt.rectTransform.sizeDelta = new Vector2(160, 40);
+            closeTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            closeTxt.fontSize = 20;
+            closeTxt.fontStyle = FontStyle.Bold;
+            closeTxt.alignment = TextAnchor.MiddleCenter;
+            closeTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            closeTxt.text = "APPLY";
+            closeTxt.raycastTarget = false;
+            
+            var closeHelper = closeGo.gameObject.AddComponent<ButtonInputHelper>();
+            closeHelper.onDown = () => {
+                closeGo.localScale = new Vector3(0.9f, 0.9f, 1f);
+            };
+            closeHelper.onUp = () => {
+                closeGo.localScale = new Vector3(1f, 1f, 1f);
+                Destroy(modalBg.gameObject);
+                settingsModalInstance = null;
+                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+                {
+                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
+                }
+            };
+        }
+
+        public void UpdateHealth(float h) {
+            if (healthText) healthText.text = $"{Mathf.CeilToInt(h)}";
+            if (healthBarFill) healthBarFill.fillAmount = Mathf.Clamp01(h / 100f);
+        }
+        
+        public void UpdateAmmo(int c, int t) {
+            if (ammoText) ammoText.text = $"{c} / {t}";
+        }
     }
 
     public class LookSwipeZone : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler
     {
-        public float sensitivity = 0.025f; 
+        public float sensitivity = 0.04f; 
         private int trackedPointerId = -1;
+
+        private void Start()
+        {
+            sensitivity = PlayerPrefs.GetFloat("MobileSensitivity", 0.04f);
+        }
 
         public void OnPointerDown(PointerEventData data)
         {
