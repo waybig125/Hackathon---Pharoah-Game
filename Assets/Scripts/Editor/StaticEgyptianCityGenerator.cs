@@ -45,7 +45,8 @@ namespace TheAlchemistsCrypt.Editor
                 "Assets/Mummy_Assets/mummy_base.fbx",
                 "Assets/Mummy_Assets/mummy_idle.fbx",
                 "Assets/Mummy_Assets/new_Walking.fbx",
-                "Assets/Mummy_Assets/mummy_attack.fbx"
+                "Assets/Mummy_Assets/mummy_attack.fbx",
+                "Assets/Mummy_Assets/mummy_death.fbx"
             };
             foreach (var p in fbxPaths) {
                 ConfigureFbxToHumanoid(p);
@@ -75,7 +76,7 @@ namespace TheAlchemistsCrypt.Editor
                 System.IO.Directory.CreateDirectory("Assets/Mummy_Assets");
             }
 
-            System.Func<string, string, AnimationClip> getOrCreateLoopingClip = (fbxPath, animName) => {
+            System.Func<string, string, bool, AnimationClip> getOrCreateClip = (fbxPath, animName, loopTime) => {
                 var assets = AssetDatabase.LoadAllAssetsAtPath(fbxPath);
                 AnimationClip sourceClip = null;
                 foreach (var a in assets) {
@@ -107,7 +108,7 @@ namespace TheAlchemistsCrypt.Editor
 
                 // Force loop settings on native serialized asset
                 var settings = AnimationUtility.GetAnimationClipSettings(destClip);
-                settings.loopTime = true;
+                settings.loopTime = loopTime;
                 AnimationUtility.SetAnimationClipSettings(destClip, settings);
                 EditorUtility.SetDirty(destClip);
                 AssetDatabase.SaveAssets();
@@ -115,14 +116,16 @@ namespace TheAlchemistsCrypt.Editor
                 return destClip;
             };
 
-            var idleClip = getOrCreateLoopingClip("Assets/Mummy_Assets/mummy_idle.fbx", "mummy_idle");
-            var walkClip = getOrCreateLoopingClip("Assets/Mummy_Assets/new_Walking.fbx", "new_Walking");
-            var attackClip = getOrCreateLoopingClip("Assets/Mummy_Assets/mummy_attack.fbx", "mummy_attack");
+            var idleClip = getOrCreateClip("Assets/Mummy_Assets/mummy_idle.fbx", "mummy_idle", true);
+            var walkClip = getOrCreateClip("Assets/Mummy_Assets/new_Walking.fbx", "new_Walking", true);
+            var attackClip = getOrCreateClip("Assets/Mummy_Assets/mummy_attack.fbx", "mummy_attack", true);
+            var deathClip = getOrCreateClip("Assets/Mummy_Assets/mummy_death.fbx", "mummy_death", false);
 
             // Build/Update States
             var idleState = GetOrAddState(rootStateMachine, "Idle", idleClip);
             var walkState = GetOrAddState(rootStateMachine, "Walk", walkClip);
             var attackState = GetOrAddState(rootStateMachine, "Attack", attackClip);
+            var dieState = GetOrAddState(rootStateMachine, "Die", deathClip);
 
             // Transitions (Fixes "dragged" movement)
             if (idleState.transitions.Length == 0) {
