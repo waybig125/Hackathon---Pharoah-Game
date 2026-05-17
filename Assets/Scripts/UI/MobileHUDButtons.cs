@@ -36,10 +36,19 @@ namespace TheAlchemistsCrypt.UI
         private Image sprintShadowImage;
 
         private Sprite obsidianSprite;
+        private Sprite charcoalSprite;
         private Sprite goldGradientSprite;
         private Sprite joystickRingSprite;
         private Sprite joystickKnobSprite;
-        private Sprite settingsIconSprite;
+        
+        private Sprite healthIconSprite;
+        private Sprite sulphurIconSprite;
+        private Sprite mercuryIconSprite;
+        private Sprite saltIconSprite;
+        private Sprite welcomeBgSprite;
+
+        private Image ammoIconImage;
+        private Text sprintButtonText;
 
         private void Awake()
         {
@@ -48,6 +57,18 @@ namespace TheAlchemistsCrypt.UI
             GenerateProceduralSprites();
             SetupCanvas();
             BuildHUD();
+        }
+
+        private Sprite LoadSpriteFromResources(string path)
+        {
+            Sprite s = Resources.Load<Sprite>(path);
+            if (s != null) return s;
+            Texture2D tex = Resources.Load<Texture2D>(path);
+            if (tex != null)
+            {
+                return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+            }
+            return null;
         }
 
         private Sprite LoadThemedSprite(string spriteName, string fallbackResourcePath)
@@ -67,12 +88,18 @@ namespace TheAlchemistsCrypt.UI
             swapIcon = LoadThemedSprite("swap_weapon", "UI/Icons/icon_swap");
             sprintIcon = LoadThemedSprite("sprint", "UI/Icons/icon_sprint");
             jumpIcon = LoadThemedSprite("jump", "UI/Icons/icon_jump");
-            settingsIconSprite = Resources.Load<Sprite>("egyptian_items/settings_icon");
+
+            healthIconSprite = LoadSpriteFromResources("egyptian_items/health_icon");
+            sulphurIconSprite = LoadSpriteFromResources("egyptian_items/sulphur");
+            mercuryIconSprite = LoadSpriteFromResources("egyptian_items/mercury");
+            saltIconSprite = LoadSpriteFromResources("egyptian_items/salt");
+            welcomeBgSprite = LoadSpriteFromResources("egyptian_items/GameStartImage");
         }
 
         private void GenerateProceduralSprites()
         {
             obsidianSprite = CreateObsidianSprite();
+            charcoalSprite = CreateCharcoalSprite(260, 180);
             goldGradientSprite = CreateGoldenGradientSprite();
             if (joystickRingSprite == null) joystickRingSprite = CreateRingSprite();
             if (joystickKnobSprite == null) joystickKnobSprite = CreateKnobSprite();
@@ -205,7 +232,7 @@ namespace TheAlchemistsCrypt.UI
 
         private Sprite CreateRingSprite()
         {
-            int width = 256, height = 256;
+            int width = 512, height = 512;
             Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
@@ -223,7 +250,7 @@ namespace TheAlchemistsCrypt.UI
 
         private Sprite CreateKnobSprite()
         {
-            int width = 128, height = 128;
+            int width = 256, height = 256;
             Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
             for (int y = 0; y < height; y++) {
                 float t = (float)y / height;
@@ -239,6 +266,19 @@ namespace TheAlchemistsCrypt.UI
                 }
             }
             tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateCharcoalSprite(int w, int h)
+        {
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    float grain = UnityEngine.Random.Range(-0.025f, 0.025f);
+                    float val = Mathf.Clamp01(0.12f + grain);
+                    tex.SetPixel(x, y, new Color(val, val, val, 0.96f));
+                }
+            }
+            tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
         }
 
         private Sprite CreateSettingsMedallionSprite(int w, int h)
@@ -343,17 +383,18 @@ namespace TheAlchemistsCrypt.UI
             onScreenStick.movementRange = 180f; 
             onScreenStick.controlPath = "<Gamepad>/leftStick"; 
 
-            // --- ACTION BUTTONS (Scaled & Spaced for ergonomics with Notch Safety Padding) ---
+            // --- ACTION BUTTONS (Block styled borderless charcoal slabs with alchemical gold text) ---
             var btnContainer = new GameObject("ButtonContainer", typeof(RectTransform)).GetComponent<RectTransform>();
             btnContainer.SetParent(root, false);
             btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0);
-            btnContainer.anchoredPosition = new Vector2(-50, 50); // Safe bezel padding
+            btnContainer.anchoredPosition = new Vector2(-50, 50); // Bezel safety
 
-            CreateButton(btnContainer, "FIRE", new Vector2(-280, 280), 380, fireIcon, () => SetFire(true), () => SetFire(false));
-            CreateButton(btnContainer, "RELOAD", new Vector2(-620, 150), 200, reloadIcon, () => Reload());
-            CreateButton(btnContainer, "SWAP", new Vector2(-480, 520), 200, swapIcon, () => Swap());
-            CreateSprintButton(btnContainer, new Vector2(-680, 350), 200);
-            CreateButton(btnContainer, "JUMP", new Vector2(-150, 580), 220, jumpIcon, () => SetJump(true), () => SetJump(false));
+            // 2x2 control grid + massive fire button next to it
+            CreateBlockButton(btnContainer, "FIRE", new Vector2(-200, 130), new Vector2(260, 180), () => SetFire(true), () => SetFire(false));
+            CreateBlockButton(btnContainer, "RELOAD", new Vector2(-480, 180), new Vector2(180, 80), () => Reload());
+            CreateBlockButton(btnContainer, "SWAP", new Vector2(-680, 80), new Vector2(180, 80), () => Swap());
+            CreateSprintBlockButton(btnContainer, new Vector2(-680, 180), new Vector2(180, 80));
+            CreateBlockButton(btnContainer, "JUMP", new Vector2(-480, 80), new Vector2(180, 80), () => SetJump(true), () => SetJump(false));
 
             HideDebugLabels();
 
@@ -362,37 +403,40 @@ namespace TheAlchemistsCrypt.UI
             healthPanel.SetParent(root, false);
             healthPanel.anchorMin = healthPanel.anchorMax = new Vector2(0, 1);
             healthPanel.pivot = new Vector2(0f, 1f);
-            healthPanel.anchoredPosition = new Vector2(80, -80);
+            healthPanel.anchoredPosition = new Vector2(120, -120);
             healthPanel.sizeDelta = new Vector2(400, 85);
-            healthPanel.GetComponent<Image>().sprite = obsidianSprite;
+            healthPanel.GetComponent<Image>().sprite = charcoalSprite;
             
-            var hpBorder = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            hpBorder.SetParent(healthPanel, false); hpBorder.anchorMin = Vector2.zero; hpBorder.anchorMax = Vector2.one; hpBorder.offsetMin = hpBorder.offsetMax = Vector2.zero;
-            hpBorder.GetComponent<Image>().sprite = CreateBorderSprite(400, 85, 4, new Color(0.95f, 0.8f, 0.2f, 0.9f));
-            
+            var hpIconGo = new GameObject("HealthIcon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            hpIconGo.SetParent(healthPanel, false);
+            hpIconGo.anchorMin = hpIconGo.anchorMax = new Vector2(0f, 0.5f);
+            hpIconGo.pivot = new Vector2(0f, 0.5f);
+            hpIconGo.anchoredPosition = new Vector2(15, 0);
+            hpIconGo.sizeDelta = new Vector2(55, 55);
+            var hpIconImg = hpIconGo.GetComponent<Image>();
+            hpIconImg.sprite = healthIconSprite;
+            hpIconImg.preserveAspect = true;
+
             var healthTxtGo = new GameObject("HealthText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             healthTxtGo.SetParent(healthPanel, false);
-            healthTxtGo.anchorMin = new Vector2(0.5f, 1f); healthTxtGo.anchorMax = new Vector2(0.5f, 1f);
-            healthTxtGo.anchoredPosition = new Vector2(0, -22);
-            healthTxtGo.sizeDelta = new Vector2(360, 35);
+            healthTxtGo.sizeDelta = Vector2.zero;
             healthText = healthTxtGo.GetComponent<Text>();
-            healthText.font = GetRobustFont();
-            healthText.fontSize = 24; healthText.fontStyle = FontStyle.Bold; healthText.alignment = TextAnchor.MiddleCenter; healthText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
-            healthText.text = "VITALITY: 100";
+            healthText.text = "";
 
             var hpBgBar = new GameObject("HpBarBg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             hpBgBar.SetParent(healthPanel, false);
-            hpBgBar.anchorMin = hpBgBar.anchorMax = new Vector2(0.5f, 0f);
-            hpBgBar.anchoredPosition = new Vector2(0, 20);
-            hpBgBar.sizeDelta = new Vector2(360, 20);
-            hpBgBar.GetComponent<Image>().sprite = CreateSolidBarSprite(360, 20, new Color(0.05f, 0.05f, 0.05f, 0.95f));
+            hpBgBar.anchorMin = hpBgBar.anchorMax = new Vector2(0f, 0.5f);
+            hpBgBar.pivot = new Vector2(0f, 0.5f);
+            hpBgBar.anchoredPosition = new Vector2(85, 0);
+            hpBgBar.sizeDelta = new Vector2(295, 30);
+            hpBgBar.GetComponent<Image>().sprite = CreateSolidBarSprite(295, 30, new Color(0.04f, 0.04f, 0.04f, 0.8f));
 
             var hpFillGo = new GameObject("HpFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             hpFillGo.SetParent(hpBgBar, false);
             hpFillGo.anchorMin = Vector2.zero; hpFillGo.anchorMax = Vector2.one;
             hpFillGo.offsetMin = hpFillGo.offsetMax = Vector2.zero;
             healthBarFill = hpFillGo.GetComponent<Image>();
-            healthBarFill.sprite = CreateHealthBarFillSprite(360, 20);
+            healthBarFill.sprite = CreateHealthBarFillSprite(295, 30);
             healthBarFill.type = Image.Type.Filled;
             healthBarFill.fillMethod = Image.FillMethod.Horizontal;
             healthBarFill.fillAmount = 1.0f;
@@ -402,49 +446,52 @@ namespace TheAlchemistsCrypt.UI
             ammoPanel.SetParent(root, false);
             ammoPanel.anchorMin = ammoPanel.anchorMax = new Vector2(0, 1);
             ammoPanel.pivot = new Vector2(0f, 1f);
-            ammoPanel.anchoredPosition = new Vector2(80, -180);
+            ammoPanel.anchoredPosition = new Vector2(120, -225);
             ammoPanel.sizeDelta = new Vector2(400, 85);
-            ammoPanel.GetComponent<Image>().sprite = obsidianSprite;
+            ammoPanel.GetComponent<Image>().sprite = charcoalSprite;
             
-            var apBorder = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            apBorder.SetParent(ammoPanel, false); apBorder.anchorMin = Vector2.zero; apBorder.anchorMax = Vector2.one; apBorder.offsetMin = apBorder.offsetMax = Vector2.zero;
-            apBorder.GetComponent<Image>().sprite = CreateBorderSprite(400, 85, 4, new Color(0.95f, 0.8f, 0.2f, 0.9f));
-            
+            var amIconGo = new GameObject("AmmoIcon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            amIconGo.SetParent(ammoPanel, false);
+            amIconGo.anchorMin = amIconGo.anchorMax = new Vector2(0f, 0.5f);
+            amIconGo.pivot = new Vector2(0f, 0.5f);
+            amIconGo.anchoredPosition = new Vector2(15, 0);
+            amIconGo.sizeDelta = new Vector2(55, 55);
+            ammoIconImage = amIconGo.GetComponent<Image>();
+            ammoIconImage.sprite = sulphurIconSprite;
+            ammoIconImage.preserveAspect = true;
+
             var ammoTxtGo = new GameObject("AmmoText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             ammoTxtGo.SetParent(ammoPanel, false);
-            ammoTxtGo.anchorMin = new Vector2(0.5f, 1f); ammoTxtGo.anchorMax = new Vector2(0.5f, 1f);
-            ammoTxtGo.anchoredPosition = new Vector2(0, -22);
-            ammoTxtGo.sizeDelta = new Vector2(360, 35);
+            ammoTxtGo.sizeDelta = Vector2.zero;
             ammoText = ammoTxtGo.GetComponent<Text>();
-            ammoText.font = GetRobustFont();
-            ammoText.fontSize = 24; ammoText.fontStyle = FontStyle.Bold; ammoText.alignment = TextAnchor.MiddleCenter; ammoText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
-            ammoText.text = "ESSENCE: 30 / 90";
+            ammoText.text = "";
 
             var ammoGridGo = new GameObject("AmmoGrid", typeof(RectTransform)).GetComponent<RectTransform>();
             ammoGridGo.SetParent(ammoPanel, false);
-            ammoGridGo.anchorMin = ammoGridGo.anchorMax = new Vector2(0.5f, 0f);
-            ammoGridGo.anchoredPosition = new Vector2(0, 20);
-            ammoGridGo.sizeDelta = new Vector2(360, 20);
+            ammoGridGo.anchorMin = ammoGridGo.anchorMax = new Vector2(0f, 0.5f);
+            ammoGridGo.pivot = new Vector2(0f, 0.5f);
+            ammoGridGo.anchoredPosition = new Vector2(85, 0);
+            ammoGridGo.sizeDelta = new Vector2(295, 30);
 
             ammoTicks.Clear();
-            float tickWidth = 8f;
-            float tickHeight = 20f;
-            float startX = -180f + tickWidth * 0.5f + 2f;
-            float step = (360f - 4f) / 30f;
+            float tickWidth = 6f;
+            float tickHeight = 30f;
+            float spacing = 4f;
             for (int i = 0; i < 30; i++)
             {
                 var tickGo = new GameObject("Tick_" + i, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                 tickGo.SetParent(ammoGridGo, false);
-                tickGo.anchorMin = tickGo.anchorMax = new Vector2(0.5f, 0.5f);
-                tickGo.anchoredPosition = new Vector2(startX + i * step, 0);
+                tickGo.anchorMin = tickGo.anchorMax = new Vector2(0f, 0.5f);
+                tickGo.pivot = new Vector2(0f, 0.5f);
+                tickGo.anchoredPosition = new Vector2(i * (tickWidth + spacing) + tickWidth * 0.5f, 0);
                 tickGo.sizeDelta = new Vector2(tickWidth, tickHeight);
 
                 var img = tickGo.GetComponent<Image>();
-                img.sprite = CreateSolidBarSprite(8, 20, new Color(0.95f, 0.8f, 0.2f, 0.95f));
+                img.sprite = CreateSolidBarSprite((int)tickWidth, (int)tickHeight, new Color(0.04f, 0.04f, 0.04f, 0.8f));
                 ammoTicks.Add(img);
             }
 
-            // --- SETTINGS BUTTON (Repositioned to the left of minimap with high-res sprite) ---
+            // --- SETTINGS BUTTON (Always uses the beautiful procedural medallion gear) ---
             var settingsBtnGo = new GameObject("SettingsButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             settingsBtnGo.SetParent(root, false);
             settingsBtnGo.anchorMin = settingsBtnGo.anchorMax = new Vector2(1, 1);
@@ -452,8 +499,7 @@ namespace TheAlchemistsCrypt.UI
             settingsBtnGo.anchoredPosition = new Vector2(-320, -70);
             settingsBtnGo.sizeDelta = new Vector2(80, 80);
             var settingsImg = settingsBtnGo.GetComponent<Image>();
-            if (settingsIconSprite != null) settingsImg.sprite = settingsIconSprite;
-            else settingsImg.sprite = CreateSettingsMedallionSprite(80, 80);
+            settingsImg.sprite = CreateSettingsMedallionSprite(80, 80);
             
             var sHelper = settingsBtnGo.gameObject.AddComponent<ButtonInputHelper>();
             sHelper.onUp = () => OpenSettingsModal(root);
@@ -471,46 +517,81 @@ namespace TheAlchemistsCrypt.UI
             new GameObject("MinimapCanvasContainer", typeof(RectTransform), typeof(MinimapUI)).transform.SetParent(root, false);
         }
 
-        private void CreateButton(Transform p, string n, Vector2 pos, float s, Sprite icon, System.Action onDown, System.Action onUp = null)
+        private void CreateBlockButton(Transform parent, string label, Vector2 pos, Vector2 size, System.Action onDown, System.Action onUp = null)
         {
-            var go = new GameObject(n, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            go.SetParent(p, false); go.anchoredPosition = pos; go.sizeDelta = new Vector2(s, s);
-            var img = go.GetComponent<Image>(); img.color = new Color(0, 0, 0, 0); img.raycastTarget = true;
+            var go = new GameObject(label, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            go.SetParent(parent, false);
+            go.anchorMin = go.anchorMax = new Vector2(1f, 0f);
+            go.pivot = new Vector2(1f, 0f);
+            go.anchoredPosition = pos;
+            go.sizeDelta = size;
 
-            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            iconGo.SetParent(go, false); iconGo.anchorMin = Vector2.zero; iconGo.anchorMax = Vector2.one; iconGo.offsetMin = iconGo.offsetMax = Vector2.zero;
-            var iImg = iconGo.GetComponent<Image>(); iImg.sprite = icon; iImg.color = Color.white; iImg.raycastTarget = false;
-            iImg.preserveAspect = true; // FIX STRETCHING
+            var img = go.GetComponent<Image>();
+            img.sprite = charcoalSprite;
+            img.raycastTarget = true;
+
+            var txtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            txtGo.SetParent(go, false);
+            txtGo.anchorMin = Vector2.zero;
+            txtGo.anchorMax = Vector2.one;
+            txtGo.offsetMin = txtGo.offsetMax = Vector2.zero;
+
+            var txt = txtGo.GetComponent<Text>();
+            txt.font = GetRobustFont();
+            txt.fontSize = size.y > 100 ? 36 : 22;
+            txt.fontStyle = FontStyle.Bold;
+            txt.alignment = TextAnchor.MiddleCenter;
+            txt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); // Alchemical gold!
+            txt.text = label;
 
             var helper = go.gameObject.AddComponent<ButtonInputHelper>();
-            helper.onDown = () => { go.localScale = new Vector3(0.9f, 0.9f, 1f); iImg.color = new Color(0.8f, 0.8f, 0.8f, 1f); onDown?.Invoke(); };
-            helper.onUp = () => { go.localScale = new Vector3(1f, 1f, 1f); iImg.color = Color.white; onUp?.Invoke(); };
+            helper.onDown = () => {
+                go.localScale = new Vector3(0.95f, 0.95f, 1f);
+                txt.color = new Color(0.8f, 0.65f, 0.1f, 0.95f);
+                onDown?.Invoke();
+            };
+            helper.onUp = () => {
+                go.localScale = new Vector3(1f, 1f, 1f);
+                txt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+                onUp?.Invoke();
+            };
         }
 
-        private void CreateSprintButton(Transform p, Vector2 pos, float s)
+        private void CreateSprintBlockButton(Transform parent, Vector2 pos, Vector2 size)
         {
             var go = new GameObject("SPRINT", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            go.SetParent(p, false); go.anchoredPosition = pos; go.sizeDelta = new Vector2(s, s);
-            var img = go.GetComponent<Image>(); img.color = new Color(0, 0, 0, 0); img.raycastTarget = true;
+            go.SetParent(parent, false);
+            go.anchorMin = go.anchorMax = new Vector2(1f, 0f);
+            go.pivot = new Vector2(1f, 0f);
+            go.anchoredPosition = pos;
+            go.sizeDelta = size;
 
-            var shadowGo = new GameObject("Shadow", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            shadowGo.SetParent(go, false); shadowGo.anchorMin = Vector2.zero; shadowGo.anchorMax = Vector2.one; shadowGo.offsetMin = shadowGo.offsetMax = Vector2.zero;
-            sprintShadowImage = shadowGo.GetComponent<Image>(); sprintShadowImage.sprite = obsidianSprite; sprintShadowImage.raycastTarget = false;
+            var img = go.GetComponent<Image>();
+            img.sprite = charcoalSprite;
+            img.raycastTarget = true;
 
-            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            iconGo.SetParent(go, false); iconGo.anchorMin = Vector2.zero; iconGo.anchorMax = Vector2.one; iconGo.offsetMin = iconGo.offsetMax = Vector2.zero;
-            sprintIconImage = iconGo.GetComponent<Image>(); sprintIconImage.sprite = sprintIcon; sprintIconImage.raycastTarget = false;
-            sprintIconImage.preserveAspect = true;
+            var txtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            txtGo.SetParent(go, false);
+            txtGo.anchorMin = Vector2.zero;
+            txtGo.anchorMax = Vector2.one;
+            txtGo.offsetMin = txtGo.offsetMax = Vector2.zero;
+
+            sprintButtonText = txtGo.GetComponent<Text>();
+            sprintButtonText.font = GetRobustFont();
+            sprintButtonText.fontSize = 22;
+            sprintButtonText.fontStyle = FontStyle.Bold;
+            sprintButtonText.alignment = TextAnchor.MiddleCenter;
+            sprintButtonText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            sprintButtonText.text = "SPRINT: OFF";
 
             var helper = go.gameObject.AddComponent<ButtonInputHelper>();
-            helper.onDown = () => { sprintToggleState = !sprintToggleState; UpdateSprintVisuals(); SetSprint(sprintToggleState); };
-        }
-
-        private void UpdateSprintVisuals() {
-            if (sprintShadowImage && sprintIconImage) {
-                sprintShadowImage.sprite = sprintToggleState ? goldGradientSprite : obsidianSprite;
-                sprintIconImage.color = sprintToggleState ? Color.white : new Color(0.8f, 0.8f, 0.8f, 1f);
-            }
+            helper.onDown = () => {
+                sprintToggleState = !sprintToggleState;
+                sprintButtonText.text = sprintToggleState ? "SPRINT: ON" : "SPRINT: OFF";
+                go.localScale = sprintToggleState ? new Vector3(0.97f, 0.97f, 1f) : new Vector3(1f, 1f, 1f);
+                sprintButtonText.color = sprintToggleState ? new Color(1f, 0.95f, 0.6f, 0.95f) : new Color(0.95f, 0.8f, 0.2f, 0.95f);
+                SetSprint(sprintToggleState);
+            };
         }
 
         private class ButtonInputHelper : MonoBehaviour, IPointerDownHandler, IPointerUpHandler {
@@ -546,6 +627,29 @@ namespace TheAlchemistsCrypt.UI
                 }
             }
 
+            // Update alchemical mode icon in Ammo panel
+            Sprite activeElementIcon = sulphurIconSprite;
+            var focus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+            if (focus != null)
+            {
+                switch (focus.CurrentMode)
+                {
+                    case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Sulfur:
+                        activeElementIcon = sulphurIconSprite;
+                        break;
+                    case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Mercury:
+                        activeElementIcon = mercuryIconSprite;
+                        break;
+                    case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Salt:
+                        activeElementIcon = saltIconSprite;
+                        break;
+                }
+            }
+            if (ammoIconImage != null && activeElementIcon != null)
+            {
+                ammoIconImage.sprite = activeElementIcon;
+            }
+
             var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
             if (character != null) {
                 var weapon = character.GetEquippedWeapon();
@@ -571,34 +675,66 @@ namespace TheAlchemistsCrypt.UI
             
             var dialog = new GameObject("Dialog", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             dialog.SetParent(modalBg, false); dialog.anchorMin = dialog.anchorMax = new Vector2(0.5f, 0.5f); dialog.sizeDelta = new Vector2(600, 400);
-            dialog.GetComponent<Image>().sprite = obsidianSprite;
+            dialog.GetComponent<Image>().sprite = charcoalSprite;
 
             var closeGo = new GameObject("CloseButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             closeGo.SetParent(dialog, false); closeGo.anchorMin = closeGo.anchorMax = new Vector2(0.5f, 0.2f); closeGo.sizeDelta = new Vector2(200, 60);
-            closeGo.GetComponent<Image>().sprite = CreateSolidBarSprite(200, 60, new Color(0.05f, 0.05f, 0.05f, 0.8f));
+            closeGo.GetComponent<Image>().sprite = charcoalSprite;
+            
+            var closeTxtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            closeTxtGo.SetParent(closeGo, false);
+            closeTxtGo.anchorMin = Vector2.zero; closeTxtGo.anchorMax = Vector2.one;
+            closeTxtGo.offsetMin = closeTxtGo.offsetMax = Vector2.zero;
+            var closeTxt = closeTxtGo.GetComponent<Text>();
+            closeTxt.font = GetRobustFont();
+            closeTxt.fontSize = 20;
+            closeTxt.fontStyle = FontStyle.Bold;
+            closeTxt.alignment = TextAnchor.MiddleCenter;
+            closeTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            closeTxt.text = "CLOSE";
+
             closeGo.gameObject.AddComponent<ButtonInputHelper>().onUp = () => { Destroy(modalBg.gameObject); settingsModalInstance = null; if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true; };
         }
 
         public void UpdateHealth(float h)
         {
-            if (healthText) healthText.text = $"VITALITY: {Mathf.CeilToInt(h)}";
+            if (healthText) healthText.text = "";
             if (healthBarFill) healthBarFill.fillAmount = Mathf.Clamp01(h / 100f);
         }
 
         public void UpdateAmmo(int c, int t)
         {
-            if (ammoText) ammoText.text = $"ESSENCE: {c} / {t}";
+            if (ammoText) ammoText.text = "";
+            
+            Color tickColor = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            var focus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+            if (focus != null)
+            {
+                switch (focus.CurrentMode)
+                {
+                    case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Sulfur:
+                        tickColor = new Color(0.95f, 0.55f, 0.05f, 0.95f);
+                        break;
+                    case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Mercury:
+                        tickColor = new Color(0.1f, 0.75f, 0.95f, 0.95f);
+                        break;
+                    case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Salt:
+                        tickColor = new Color(0.95f, 0.95f, 0.95f, 0.95f);
+                        break;
+                }
+            }
+
             for (int i = 0; i < 30; i++)
             {
                 if (i < ammoTicks.Count && ammoTicks[i] != null)
                 {
                     if (i < c)
                     {
-                        ammoTicks[i].color = new Color(0.95f, 0.8f, 0.2f, 0.95f); // Filled Gold
+                        ammoTicks[i].color = tickColor;
                     }
                     else
                     {
-                        ammoTicks[i].color = new Color(0.2f, 0.15f, 0.05f, 0.8f); // Empty dark brown/gold outline
+                        ammoTicks[i].color = new Color(0.04f, 0.04f, 0.04f, 0.8f);
                     }
                 }
             }
@@ -863,9 +999,21 @@ namespace TheAlchemistsCrypt.UI
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance)
                 TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = false;
 
+            // Dedicated Canvas for Death Screen to ensure visibility and interaction above all else
+            var deathCanvasGo = new GameObject("DeathCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            var deathCanvas = deathCanvasGo.GetComponent<Canvas>();
+            deathCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            deathCanvas.sortingOrder = 1100;
+
+            var deathScaler = deathCanvasGo.GetComponent<CanvasScaler>();
+            deathScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            deathScaler.referenceResolution = new Vector2(1920, 1080);
+            deathScaler.matchWidthOrHeight = 1f;
+
+            deathPanelInstance = deathCanvasGo;
+
             var deathPanelGo = new GameObject("DeathPanelOverlay", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            deathPanelInstance = deathPanelGo.gameObject;
-            deathPanelGo.SetParent(transform, false);
+            deathPanelGo.SetParent(deathCanvasGo.transform, false);
             deathPanelGo.anchorMin = Vector2.zero; deathPanelGo.anchorMax = Vector2.one;
             deathPanelGo.offsetMin = deathPanelGo.offsetMax = Vector2.zero;
 
@@ -919,7 +1067,7 @@ namespace TheAlchemistsCrypt.UI
             subText.color = new Color(0.85f, 0.2f, 0.2f, 0.85f); // Crimson
             subText.text = "The Alchemical Crypt claims your essence...";
 
-            // Restart Button
+            // Restart Button (Clean, block-styled, borderless charcoal slab)
             var btnGo = new GameObject("RestartButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             btnGo.SetParent(deathPanelGo, false);
             btnGo.anchorMin = btnGo.anchorMax = new Vector2(0.5f, 0.5f);
@@ -927,15 +1075,7 @@ namespace TheAlchemistsCrypt.UI
             btnGo.sizeDelta = new Vector2(340, 80);
 
             var btnImg = btnGo.GetComponent<Image>();
-            btnImg.sprite = CreateSolidBarSprite(340, 80, new Color(0.06f, 0.02f, 0.02f, 0.85f));
-            
-            var borderGo = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            borderGo.SetParent(btnGo, false);
-            borderGo.anchorMin = Vector2.zero; borderGo.anchorMax = Vector2.one;
-            borderGo.offsetMin = borderGo.offsetMax = Vector2.zero;
-            var borderImg = borderGo.GetComponent<Image>();
-            borderImg.sprite = CreateBorderSprite(340, 80, 4, new Color(0.95f, 0.8f, 0.2f, 0.95f));
-            borderImg.color = Color.white;
+            btnImg.sprite = charcoalSprite;
 
             var btnTextGo = new GameObject("ButtonText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             btnTextGo.SetParent(btnGo, false);
@@ -949,12 +1089,19 @@ namespace TheAlchemistsCrypt.UI
             btnText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); // Spooky gold
             btnText.text = "RESTART VOYAGE";
 
-            // Click listener
-            btnGo.gameObject.AddComponent<ButtonInputHelper>().onUp = () =>
-            {
+            var helper = btnGo.gameObject.AddComponent<ButtonInputHelper>();
+            helper.onDown = () => {
+                btnGo.localScale = new Vector3(0.95f, 0.95f, 1f);
+                btnText.color = new Color(0.8f, 0.65f, 0.1f, 0.95f);
+            };
+            helper.onUp = () => {
+                btnGo.localScale = new Vector3(1f, 1f, 1f);
+                btnText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
                 Time.timeScale = 1f;
                 UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
             };
+
+            SetLayerRecursively(deathCanvasGo, 5);
         }
     }
 
