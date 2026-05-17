@@ -7,37 +7,30 @@ namespace TheAlchemistsCrypt.Editor
 {
     public class StaticEgyptianCityGenerator : EditorWindow
     {
-        [MenuItem("Egyptian/Generator V5")]
-        [MenuItem("Tools/Generate Egyptian City (V5 - Final)")]
+        [MenuItem("Egyptian/Generate & Setup City", false, 1)]
+        public static void QuickRegen() {
+            var g = CreateInstance<StaticEgyptianCityGenerator>();
+            g.Purge(); 
+            g.GeneratePolishedCity();
+        }
+
+        [MenuItem("Egyptian/Open Generator Window", false, 2)]
         public static void ShowWindow() => GetWindow<StaticEgyptianCityGenerator>("Egyptian City V5.0");
 
         private int seed = 999;
         private int gridSize = 8; // Reduced for optimized mobile performance (Helio G91 / Mali-G52)
         private string rootName = "EgyptianCity_V5_Final";
 
-        [MenuItem("Egyptian/Regenerate City V5")]
-        public static void QuickRegen() {
-            var g = CreateInstance<StaticEgyptianCityGenerator>();
-            g.Purge(); g.GeneratePolishedCity();
-        }
-
-        [MenuItem("Egyptian/Setup Mummy Animations")]
-        public static void QuickMummySetup() {
-            var g = CreateInstance<StaticEgyptianCityGenerator>();
-            g.SetupMummyAnimations();
-        }
-
         private void OnGUI()
         {
             EditorGUILayout.HelpBox("V5.0 ELITE MOBILE: stack floors (1-3), wooden trim divider belts, back-side glowing windows, real window PointLights, majestic columns, sandy craters, zero overlap grid.", MessageType.Info);
             seed = EditorGUILayout.IntField("Seed", seed);
-            if (GUILayout.Button("▶ GENERATE POLISHED CITY", GUILayout.Height(40))) GeneratePolishedCity();
+            if (GUILayout.Button("▶ GENERATE & SETUP CITY GAME", GUILayout.Height(40))) {
+                Purge();
+                GeneratePolishedCity();
+            }
             
             EditorGUILayout.Space();
-            GUI.backgroundColor = Color.cyan;
-            if (GUILayout.Button("🧟 SETUP MUMMY ANIMATIONS & SCALES", GUILayout.Height(40))) SetupMummyAnimations();
-            GUI.backgroundColor = Color.white;
-            
             if (GUILayout.Button("🗑 CLEANUP", GUILayout.Height(30))) Purge();
         }
 
@@ -272,6 +265,9 @@ namespace TheAlchemistsCrypt.Editor
             FixPlayerAndWeapons();
             StaticBatchingUtility.Combine(root);
             
+            // Auto-setup mummy animations & humanoid scales as a cohesive single-step experience
+            SetupMummyAnimations();
+            
             Debug.Log("Polished Egyptian City V5 Generated Successfully with Elite Mobile Optimizations!");
         }
 
@@ -440,7 +436,7 @@ namespace TheAlchemistsCrypt.Editor
         {
             var col = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, parent);
             col.transform.localScale = Vector3.one * 3f;
-            col.transform.rotation = Quaternion.identity;
+            col.transform.rotation = Quaternion.Euler(-90, 0, 0);
 
             AlignToGroundAndAddCollider(col, pos);
 
