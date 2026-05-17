@@ -82,10 +82,6 @@ namespace TheAlchemistsCrypt.Player
                 character.enabled = false;
             }
 
-            // Disable MobileHUD_Root so it doesn't overlap
-            var hud = GameObject.Find("MobileHUD_Root");
-            if (hud != null) hud.SetActive(false);
-
             // 2. Cinematic Die Camera Motion (Tilt and Fall)
             Camera mainCam = Camera.main;
             if (mainCam != null)
@@ -111,131 +107,18 @@ namespace TheAlchemistsCrypt.Player
                 }
             }
 
-            // 3. Create a Gorgeous Spooky Death Screen Canvas
-            var deathCanvasGo = new GameObject("DeathCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            var canvas = deathCanvasGo.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 999;
-
-            var scaler = deathCanvasGo.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-
-            // Spooky dark vignette panel background
-            var panelGo = new GameObject("VignettePanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            panelGo.SetParent(deathCanvasGo.transform, false);
-            panelGo.anchorMin = Vector2.zero; panelGo.anchorMax = Vector2.one;
-            panelGo.offsetMin = panelGo.offsetMax = Vector2.zero;
-            
-            var panelImg = panelGo.GetComponent<Image>();
-            
-            // Create a custom procedural dark vignette texture
-            int texSize = 128;
-            var deathTex = new Texture2D(texSize, texSize);
-            for (int y = 0; y < texSize; y++)
+            // 3. Show full-screen Death Panel overlay through MobileHUDButtons
+            if (TheAlchemistsCrypt.UI.MobileHUDButtons.Instance != null)
             {
-                for (int x = 0; x < texSize; x++)
-                {
-                    float u = (x - texSize * 0.5f) / (texSize * 0.5f);
-                    float v = (y - texSize * 0.5f) / (texSize * 0.5f);
-                    float dist = Mathf.Sqrt(u * u + v * v);
-                    float t = Mathf.Clamp01(dist / 1.3f);
-                    Color col = Color.Lerp(new Color(0.05f, 0.01f, 0.01f, 0.8f), new Color(0f, 0f, 0f, 0.98f), t);
-                    deathTex.SetPixel(x, y, col);
-                }
+                TheAlchemistsCrypt.UI.MobileHUDButtons.Instance.ShowDeathScreen();
             }
-            deathTex.Apply();
-            panelImg.sprite = Sprite.Create(deathTex, new Rect(0, 0, texSize, texSize), new Vector2(0.5f, 0.5f));
-            panelImg.color = Color.white;
-
-            // Spooky red mist title
-            var titleGo = new GameObject("Title", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            titleGo.SetParent(panelGo, false);
-            titleGo.anchorMin = titleGo.anchorMax = new Vector2(0.5f, 0.5f);
-            titleGo.anchoredPosition = new Vector2(0, 130);
-            titleGo.sizeDelta = new Vector2(800, 120);
-
-            var titleText = titleGo.GetComponent<Text>();
-            titleText.font = GetRobustFont();
-            titleText.fontSize = 80;
-            titleText.fontStyle = FontStyle.Bold;
-            titleText.alignment = TextAnchor.MiddleCenter;
-            titleText.color = new Color(0.95f, 0.8f, 0.2f, 1f); // Spooky gold
-            titleText.text = "YOU DIED";
-
-            // Subtitle
-            var subGo = new GameObject("Subtitle", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            subGo.SetParent(panelGo, false);
-            subGo.anchorMin = subGo.anchorMax = new Vector2(0.5f, 0.5f);
-            subGo.anchoredPosition = new Vector2(0, 50);
-            subGo.sizeDelta = new Vector2(800, 50);
-
-            var subText = subGo.GetComponent<Text>();
-            subText.font = GetRobustFont();
-            subText.fontSize = 24;
-            subText.alignment = TextAnchor.MiddleCenter;
-            subText.color = new Color(0.85f, 0.2f, 0.2f, 0.85f); // Crimson
-            subText.text = "The Alchemical Crypt claims your essence...";
-
-            // Resurrect Button
-            var btnGo = new GameObject("RestartButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            btnGo.SetParent(panelGo, false);
-            btnGo.anchorMin = btnGo.anchorMax = new Vector2(0.5f, 0.5f);
-            btnGo.anchoredPosition = new Vector2(0, -90);
-            btnGo.sizeDelta = new Vector2(340, 80);
-
-            var btnImg = btnGo.GetComponent<Image>();
-            
-            // Procedural gold button texture
-            var btnTex = new Texture2D(340, 80);
-            for (int y = 0; y < 80; y++)
+            else
             {
-                for (int x = 0; x < 340; x++)
-                {
-                    float borderX = Mathf.Min(x, 340 - x);
-                    float borderY = Mathf.Min(y, 80 - y);
-                    float borderDist = Mathf.Min(borderX, borderY);
-                    
-                    if (borderDist < 4)
-                        btnTex.SetPixel(x, y, new Color(0.95f, 0.8f, 0.2f, 0.95f)); // Gold border
-                    else
-                        btnTex.SetPixel(x, y, new Color(0.06f, 0.02f, 0.02f, 0.85f)); // Deep dark red obsidian
-                }
+                // Fallback: enable cursor so player can at least restart manually
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
             }
-            btnTex.Apply();
-            btnImg.sprite = Sprite.Create(btnTex, new Rect(0, 0, 340, 80), new Vector2(0.5f, 0.5f));
-            btnImg.color = Color.white;
-
-            var btnTextGo = new GameObject("ButtonText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            btnTextGo.SetParent(btnGo, false);
-            btnTextGo.anchorMin = Vector2.zero; btnTextGo.anchorMax = Vector2.one;
-            btnTextGo.offsetMin = btnTextGo.offsetMax = Vector2.zero;
-            var btnText = btnTextGo.GetComponent<Text>();
-            btnText.font = GetRobustFont();
-            btnText.fontSize = 24;
-            btnText.fontStyle = FontStyle.Bold;
-            btnText.alignment = TextAnchor.MiddleCenter;
-            btnText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); // Spooky gold
-            btnText.text = "RESTART VOYAGE";
-
-            // Click listener
-            var buttonHelper = btnGo.gameObject.AddComponent<DeathButtonHelper>();
-            buttonHelper.onDown = () =>
-            {
-                btnGo.localScale = new Vector3(0.95f, 0.95f, 1f);
-                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-            };
-            buttonHelper.onUp = () =>
-            {
-                btnGo.localScale = new Vector3(1f, 1f, 1f);
-            };
-
-            // Set layer recursively to 5 so it shows on top of cameras
-            SetLayerRecursively(deathCanvasGo, 5);
-
-            // Enable cursor so player can click restart on desktop/mobile
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
+        }
         }
 
         private void SetLayerRecursively(GameObject go, int layer)

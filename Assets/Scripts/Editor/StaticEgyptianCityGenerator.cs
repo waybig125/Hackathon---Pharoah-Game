@@ -194,9 +194,8 @@ namespace TheAlchemistsCrypt.Editor
                     if (clips != null && clips.Length > 0) {
                         bool clipDirty = false;
                         foreach (var c in clips) {
-                            if (!c.loopTime || !c.loop) {
+                            if (!c.loopTime) {
                                 c.loopTime = true;
-                                c.loop = true;
                                 clipDirty = true;
                             }
                         }

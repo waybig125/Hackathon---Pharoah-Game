@@ -81,6 +81,11 @@ public static class EditorAutoLoader
                         importer.textureType = TextureImporterType.Sprite;
                         changed = true;
                     }
+                    if (importer.spriteImportMode != SpriteImportMode.Single)
+                    {
+                        importer.spriteImportMode = SpriteImportMode.Single;
+                        changed = true;
+                    }
                     if (importer.mipmapEnabled)
                     {
                         importer.mipmapEnabled = false;
