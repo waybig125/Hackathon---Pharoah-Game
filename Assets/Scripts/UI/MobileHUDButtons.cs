@@ -438,7 +438,7 @@ namespace TheAlchemistsCrypt.UI
 
     public class LookSwipeZone : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler
     {
-        public float sensitivity = 0.25f; 
+        public float sensitivity = 0.025f; 
         private int trackedPointerId = -1;
 
         public void OnPointerDown(PointerEventData data)

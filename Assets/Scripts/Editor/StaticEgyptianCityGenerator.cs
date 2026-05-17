@@ -127,22 +127,24 @@ namespace TheAlchemistsCrypt.Editor
 
         private void Purge()
         {
-            var old = GameObject.Find(rootName);
-            if (old != null) Undo.DestroyObjectImmediate(old);
-            
             // AGGRESSIVE PURGE OF CONFLICTING OR STRAGGLED GENERATOR OBJECTS
             var all = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
             foreach (var go in all) {
                 if (go == null) continue; 
                 try {
-                    if (go.name.Contains("Player_Copy") || 
-                        go.name.Contains("MobileHUD") || 
-                        go.name.Contains("P_LPSP_UI_Canvas") || 
-                        go.name.ToLower().StartsWith("mummy") ||
-                        go.name.Contains("WindowLight") ||
-                        go.name.Contains("Crater") ||
-                        go.name.Contains("Plaza") ||
-                        go.name.Contains("House")) 
+                    string lowerName = go.name.ToLower();
+                    if (lowerName.Contains("egyptiancity") ||
+                        lowerName.Contains("desertfloor") ||
+                        lowerName.Contains("floorground") ||
+                        lowerName.Contains("player_copy") || 
+                        lowerName.Contains("mobilehud") || 
+                        lowerName.Contains("p_lpsp_ui_canvas") || 
+                        lowerName.StartsWith("mummy") ||
+                        lowerName.Contains("windowlight") ||
+                        lowerName.Contains("crater") ||
+                        lowerName.Contains("plaza") ||
+                        lowerName.Contains("house") ||
+                        lowerName.Contains("pyramid")) 
                     {
                         DestroyImmediate(go);
                     }
@@ -209,12 +211,7 @@ namespace TheAlchemistsCrypt.Editor
             }
             floorMat.mainTextureScale = new Vector2(gridSize * 4f, gridSize * 4f);
 
-            Texture2D sandNormal = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EgyptianAssets/desert_sand_normal.png");
-            if (sandNormal != null) {
-                floorMat.SetTexture("_BumpMap", sandNormal);
-                floorMat.SetFloat("_BumpScale", 0.6f);
-                floorMat.EnableKeyword("_NORMALMAP");
-            }
+            // NO NORMAL MAPS ON THE DESERT FLOOR (Albedo-only sand for pristine mobile performance)
 
             // Create window glowing materials
             Material litWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
@@ -267,6 +264,10 @@ namespace TheAlchemistsCrypt.Editor
             surface.overrideVoxelSize = true;
             surface.voxelSize = 0.2f; 
             surface.BuildNavMesh();
+
+            // Spawn majestic procedural background pyramids (outside city bounds, not affecting NavMesh baking)
+            CreateProceduralPyramid(root, new Vector3(-200f, 0f, 200f), 140f, 90f, wallMat, new Color(1f, 0.85f, 0.4f));
+            CreateProceduralPyramid(root, new Vector3(220f, 0f, -220f), 160f, 100f, wallMat, new Color(1f, 0.5f, 0.2f));
 
             FixPlayerAndWeapons();
             StaticBatchingUtility.Combine(root);
@@ -384,10 +385,15 @@ namespace TheAlchemistsCrypt.Editor
         private void InstantiateProp(GameObject prefab, Vector3 pos, Transform parent)
         {
             var p = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-            p.transform.position = pos; p.transform.localScale = Vector3.one * 0.3f;
+            p.transform.localScale = Vector3.one * 0.3f;
             p.transform.rotation = Quaternion.Euler(-90, 0, 0);
-            p.AddComponent<Rigidbody>().mass = 20f;
-            if (p.GetComponent<Collider>() == null) p.AddComponent<BoxCollider>();
+
+            // Align bottom base of prop flush with ground and generate visual bounds collider
+            AlignToGroundAndAddCollider(p, pos);
+
+            var rb = p.AddComponent<Rigidbody>();
+            rb.mass = 20f;
+            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
         }
 
         private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab, Material sandMat, Material craterMat)
@@ -401,6 +407,13 @@ namespace TheAlchemistsCrypt.Editor
                 var t = (GameObject)PrefabUtility.InstantiatePrefab(trees[Random.Range(0, trees.Length)], p.transform);
                 t.transform.localScale = Vector3.one * 8f; 
                 t.transform.rotation = Quaternion.Euler(-90, 0, 0);
+                
+                AlignToGroundAndAddCollider(t, pos);
+
+                t.isStatic = true;
+                foreach (Transform child in t.GetComponentsInChildren<Transform>(true)) {
+                    child.gameObject.isStatic = true;
+                }
             }
 
             // Spawn majestic ancient Egyptian columns at the plaza corners
@@ -426,9 +439,11 @@ namespace TheAlchemistsCrypt.Editor
         private void SpawnColumn(Transform parent, Vector3 pos, GameObject columnPrefab)
         {
             var col = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, parent);
-            col.transform.position = pos;
             col.transform.localScale = Vector3.one * 3f;
             col.transform.rotation = Quaternion.identity;
+
+            AlignToGroundAndAddCollider(col, pos);
+
             col.isStatic = true;
             foreach (Transform t in col.GetComponentsInChildren<Transform>(true)) {
                 t.gameObject.isStatic = true;
@@ -518,6 +533,160 @@ namespace TheAlchemistsCrypt.Editor
                 if (n != null) { m.SetTexture("_BumpMap", n); m.EnableKeyword("_NORMALMAP"); }
             }
             return m;
+        }
+
+        private void AlignToGroundAndAddCollider(GameObject obj, Vector3 basePos)
+        {
+            obj.transform.position = basePos;
+
+            var renderers = obj.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length > 0) {
+                float minY = float.MaxValue;
+                foreach (var r in renderers) {
+                    if (r is ParticleSystemRenderer) continue;
+                    if (r.bounds.min.y < minY) {
+                        minY = r.bounds.min.y;
+                    }
+                }
+                if (minY != float.MaxValue) {
+                    float yOffset = basePos.y - minY;
+                    obj.transform.position = new Vector3(basePos.x, basePos.y + yOffset, basePos.z);
+                }
+            }
+
+            EnsurePerfectBoxCollider(obj);
+        }
+
+        private void EnsurePerfectBoxCollider(GameObject obj)
+        {
+            foreach (var col in obj.GetComponentsInChildren<Collider>(true)) {
+                DestroyImmediate(col);
+            }
+
+            var renderers = obj.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0) {
+                obj.AddComponent<BoxCollider>();
+                return;
+            }
+
+            Vector3 originalPos = obj.transform.position;
+            Quaternion originalRot = obj.transform.rotation;
+            Vector3 originalScale = obj.transform.localScale;
+
+            obj.transform.rotation = Quaternion.identity;
+
+            Bounds bounds = new Bounds(Vector3.zero, Vector3.zero);
+            bool initialized = false;
+
+            foreach (var r in renderers) {
+                if (r is ParticleSystemRenderer) continue;
+
+                Bounds childBounds = r.bounds;
+                Vector3 localCenter = obj.transform.InverseTransformPoint(childBounds.center);
+                Vector3 localExtents = obj.transform.InverseTransformVector(childBounds.extents);
+
+                localExtents.x = Mathf.Abs(localExtents.x);
+                localExtents.y = Mathf.Abs(localExtents.y);
+                localExtents.z = Mathf.Abs(localExtents.z);
+
+                Bounds localChildBounds = new Bounds(localCenter, localExtents * 2f);
+
+                if (!initialized) {
+                    bounds = localChildBounds;
+                    initialized = true;
+                } else {
+                    bounds.Encapsulate(localChildBounds);
+                }
+            }
+
+            obj.transform.rotation = originalRot;
+
+            if (initialized) {
+                var box = obj.AddComponent<BoxCollider>();
+                box.center = bounds.center;
+                box.size = bounds.size;
+            } else {
+                obj.AddComponent<BoxCollider>();
+            }
+        }
+
+        private void CreateProceduralPyramid(GameObject root, Vector3 pos, float baseSize, float height, Material mat, Color glowColor)
+        {
+            var pGo = new GameObject("Pyramid");
+            pGo.transform.SetParent(root.transform);
+            pGo.transform.position = pos;
+            pGo.isStatic = true;
+
+            Mesh mesh = new Mesh();
+            mesh.name = "PyramidMesh";
+
+            float half = baseSize / 2f;
+
+            Vector3[] vertices = new Vector3[18];
+            int[] triangles = new int[18];
+            Vector2[] uvs = new Vector2[18];
+
+            Vector3 apex = new Vector3(0, height, 0);
+            Vector3 fl = new Vector3(-half, 0, -half);
+            Vector3 fr = new Vector3(half, 0, -half);
+            Vector3 br = new Vector3(half, 0, half);
+            Vector3 bl = new Vector3(-half, 0, half);
+
+            // Front Face (fl -> fr -> apex)
+            vertices[0] = fl; vertices[1] = fr; vertices[2] = apex;
+            triangles[0] = 0; triangles[1] = 2; triangles[2] = 1;
+            uvs[0] = new Vector2(0, 0); uvs[1] = new Vector2(1, 0); uvs[2] = new Vector2(0.5f, 1);
+
+            // Right Face (fr -> br -> apex)
+            vertices[3] = fr; vertices[4] = br; vertices[5] = apex;
+            triangles[3] = 3; triangles[4] = 5; triangles[5] = 4;
+            uvs[3] = new Vector2(0, 0); uvs[4] = new Vector2(1, 0); uvs[5] = new Vector2(0.5f, 1);
+
+            // Back Face (br -> bl -> apex)
+            vertices[6] = br; vertices[7] = bl; vertices[8] = apex;
+            triangles[6] = 6; triangles[7] = 8; triangles[8] = 7;
+            uvs[6] = new Vector2(0, 0); uvs[7] = new Vector2(1, 0); uvs[8] = new Vector2(0.5f, 1);
+
+            // Left Face (bl -> fl -> apex)
+            vertices[9] = bl; vertices[10] = fl; vertices[11] = apex;
+            triangles[9] = 9; triangles[10] = 11; triangles[11] = 10;
+            uvs[9] = new Vector2(0, 0); uvs[10] = new Vector2(1, 0); uvs[11] = new Vector2(0.5f, 1);
+
+            // Base Face Tri 1 (bl -> br -> fl)
+            vertices[12] = bl; vertices[13] = br; vertices[14] = fl;
+            triangles[12] = 12; triangles[13] = 14; triangles[14] = 13;
+            uvs[12] = new Vector2(0, 1); uvs[13] = new Vector2(1, 1); uvs[14] = new Vector2(0, 0);
+
+            // Base Face Tri 2 (br -> fr -> fl)
+            vertices[15] = br; vertices[16] = fr; vertices[17] = fl;
+            triangles[15] = 15; triangles[16] = 17; triangles[17] = 16;
+            uvs[15] = new Vector2(1, 1); uvs[16] = new Vector2(1, 0); uvs[17] = new Vector2(0, 0);
+
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
+            mesh.uv = uvs;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var filter = pGo.AddComponent<MeshFilter>();
+            filter.sharedMesh = mesh;
+
+            var renderer = pGo.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = mat;
+
+            pGo.AddComponent<MeshCollider>().sharedMesh = mesh;
+
+            pGo.isStatic = true;
+
+            var lightGo = new GameObject("PyramidBeacon");
+            lightGo.transform.SetParent(pGo.transform);
+            lightGo.transform.localPosition = new Vector3(0f, height + 2f, 0f);
+            var l = lightGo.AddComponent<Light>();
+            l.type = LightType.Point;
+            l.color = glowColor;
+            l.range = 300f;
+            l.intensity = 15f;
+            l.shadows = LightShadows.None;
         }
     }
 }
