@@ -130,6 +130,19 @@ namespace InfimaGames.LowPolyShooterPack
             rigidBody.constraints = RigidbodyConstraints.FreezeRotation;
             //Cache the CapsuleCollider.
             capsule = GetComponent<CapsuleCollider>();
+            
+            // Set robust defaults immediately to avoid initial offset clipping
+            capsule.height = 1.8f;
+            capsule.center = new Vector3(0f, 0.9f, 0f);
+
+            // Prevent sticking to walls/ground by applying a zero-friction PhysicMaterial
+            PhysicsMaterial zeroFrictionMat = new PhysicsMaterial("ZeroFrictionPlayer");
+            zeroFrictionMat.dynamicFriction = 0f;
+            zeroFrictionMat.staticFriction = 0f;
+            zeroFrictionMat.frictionCombine = PhysicsMaterialCombine.Minimum;
+            zeroFrictionMat.bounciness = 0f;
+            zeroFrictionMat.bounceCombine = PhysicsMaterialCombine.Minimum;
+            capsule.sharedMaterial = zeroFrictionMat;
 
             //Audio Source Setup.
             audioSource = GetComponent<AudioSource>();
@@ -145,7 +158,7 @@ namespace InfimaGames.LowPolyShooterPack
             float radius = capsule.radius * 0.9f;
             // Start spherecast slightly above the capsule bottom to prevent clipping
             Vector3 origin = bounds.center + Vector3.down * (bounds.extents.y - radius);
-            float maxDistance = 0.15f; 
+            float maxDistance = 0.4f; // Increased from 0.15f to reliably reach the ground FloorGround
 
             int hits = Physics.SphereCastNonAlloc(origin, radius, Vector3.down, groundHits, maxDistance, ~0, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < hits; i++)
@@ -192,7 +205,7 @@ namespace InfimaGames.LowPolyShooterPack
                 // If held for less than 0.3 seconds, apply extra continuous force
                 if (Time.time - TheAlchemistsCrypt.Input.MobileInputManager.Instance.JumpStartTime < 0.3f)
                 {
-                    rigidBody.AddForce(Vector3.up * (jumpForce * 2.0f * Time.deltaTime), ForceMode.Acceleration);
+                    rigidBody.AddForce(Vector3.up * (jumpForce * 2.0f * Time.fixedDeltaTime), ForceMode.Acceleration);
                 }
             }
         }
@@ -252,21 +265,21 @@ namespace InfimaGames.LowPolyShooterPack
             if (isCrouching)
             {
                 movement *= speedCrouching;
-                capsule.height = Mathf.Lerp(capsule.height, 1.0f, Time.deltaTime * 10f);
-                capsule.center = Vector3.Lerp(capsule.center, new Vector3(0, -0.5f, 0), Time.deltaTime * 10f);
+                capsule.height = Mathf.Lerp(capsule.height, 1.0f, Time.fixedDeltaTime * 10f);
+                capsule.center = Vector3.Lerp(capsule.center, new Vector3(0, 0.5f, 0), Time.fixedDeltaTime * 10f);
             }
             else if(playerCharacter.IsRunning())
             {
                 movement *= speedRunning;
-                capsule.height = Mathf.Lerp(capsule.height, 2.0f, Time.deltaTime * 10f);
-                capsule.center = Vector3.Lerp(capsule.center, Vector3.zero, Time.deltaTime * 10f);
+                capsule.height = Mathf.Lerp(capsule.height, 1.8f, Time.fixedDeltaTime * 10f);
+                capsule.center = Vector3.Lerp(capsule.center, new Vector3(0, 0.9f, 0), Time.fixedDeltaTime * 10f);
             }
             else
             {
                 //Multiply by the normal walking speed.
                 movement *= speedWalking;
-                capsule.height = Mathf.Lerp(capsule.height, 2.0f, Time.deltaTime * 10f);
-                capsule.center = Vector3.Lerp(capsule.center, Vector3.zero, Time.deltaTime * 10f);
+                capsule.height = Mathf.Lerp(capsule.height, 1.8f, Time.fixedDeltaTime * 10f);
+                capsule.center = Vector3.Lerp(capsule.center, new Vector3(0, 0.9f, 0), Time.fixedDeltaTime * 10f);
             }
 
             //World space velocity calculation. This allows us to add it to the rigidbody's velocity properly.
