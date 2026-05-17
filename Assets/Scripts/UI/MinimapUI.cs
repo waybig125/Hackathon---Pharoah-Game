@@ -317,6 +317,29 @@ namespace TheAlchemistsCrypt.UI
             
             Debug.Log($"MinimapUI: Toggled Zoom! ZoomedOut={isZoomedOut}, CurrentScale={currentScale}");
 
+            if (minimapFrame != null)
+            {
+                minimapFrame.sizeDelta = isZoomedOut ? new Vector2(480, 480) : new Vector2(240, 240);
+                minimapFrame.anchoredPosition = isZoomedOut ? new Vector2(-280, -340) : new Vector2(-160, -220);
+            }
+
+            if (compassRing != null)
+            {
+                compassRing.sizeDelta = isZoomedOut ? new Vector2(440, 440) : new Vector2(220, 220);
+                float labelRadius = isZoomedOut ? 170f : 85f;
+                foreach (Transform child in compassRing)
+                {
+                    var labelRect = child.GetComponent<RectTransform>();
+                    if (labelRect != null)
+                    {
+                        if (child.name == "Label_N") labelRect.anchoredPosition = new Vector2(0, labelRadius);
+                        else if (child.name == "Label_E") labelRect.anchoredPosition = new Vector2(labelRadius, 0);
+                        else if (child.name == "Label_S") labelRect.anchoredPosition = new Vector2(0, -labelRadius);
+                        else if (child.name == "Label_W") labelRect.anchoredPosition = new Vector2(-labelRadius, 0);
+                    }
+                }
+            }
+
             // Instantly update static indicators' positions
             foreach (var s in staticIndicators)
             {

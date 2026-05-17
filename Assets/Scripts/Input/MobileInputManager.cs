@@ -17,6 +17,7 @@ namespace TheAlchemistsCrypt.Input
         // Output values
         public Vector2 MovementInput { get; private set; }
         public Vector2 LookInput { get; private set; }
+        public Vector2 VirtualJoystickInput { get; set; }
         public bool IsTouchActive { get; private set; } // Track if a finger is on the look zone
         public bool IsFiring { get; private set; }
         public bool WasFiringPressed { get; set; } // Trigger for semi-auto
@@ -73,6 +74,10 @@ namespace TheAlchemistsCrypt.Input
             // 1. Read virtual on-screen joystick
             if (moveAction != null)
                 finalMove = moveAction.ReadValue<Vector2>();
+
+            // If New Input System returns nothing, use our custom virtual joystick value
+            if (finalMove.sqrMagnitude < 0.01f)
+                finalMove = VirtualJoystickInput;
 
             // 2. Read Keyboard WASD/Arrow keys
             Vector2 keyboardInput = Vector2.zero;

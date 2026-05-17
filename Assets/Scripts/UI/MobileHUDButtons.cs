@@ -104,6 +104,12 @@ namespace TheAlchemistsCrypt.UI
             if (joystickRingSprite == null) joystickRingSprite = CreateRingSprite();
             if (joystickKnobSprite == null) joystickKnobSprite = CreateKnobSprite();
 
+            fireIcon = CreateFireSymbolSprite(128);
+            reloadIcon = CreateReloadSymbolSprite(128);
+            swapIcon = CreateSwapSymbolSprite(128);
+            sprintIcon = CreateSprintSymbolSprite(128);
+            jumpIcon = CreateJumpSymbolSprite(128);
+
             sulfurBarSprite = CreateAlchemicalBarSprite(new Color(0.95f, 0.55f, 0.05f), new Color(1f, 0.85f, 0.1f));
             mercuryBarSprite = CreateAlchemicalBarSprite(new Color(0.1f, 0.5f, 0.8f), new Color(0.4f, 0.9f, 0.95f));
             saltBarSprite = CreateAlchemicalBarSprite(new Color(0.9f, 0.7f, 0.2f), new Color(1f, 1f, 1f));
@@ -122,6 +128,116 @@ namespace TheAlchemistsCrypt.UI
                 }
             }
             tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateFireSymbolSprite(int size)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float half = size * 0.5f;
+            Color gold = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    float px = (x - half) / half;
+                    float py = (y - half) / half;
+                    float widthAtY = (1f - py) * 0.5f;
+                    if (py >= -0.6f && py <= 0.7f && Mathf.Abs(px) <= widthAtY) {
+                        float distToEdge = Mathf.Min(
+                            Mathf.Abs(Mathf.Abs(px) - widthAtY),
+                            Mathf.Abs(py - -0.6f)
+                        );
+                        if (distToEdge < 0.18f || (py >= 0.1f && py <= 0.2f)) {
+                            tex.SetPixel(x, y, gold);
+                        } else {
+                            tex.SetPixel(x, y, Color.clear);
+                        }
+                    } else {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateReloadSymbolSprite(int size)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float half = size * 0.5f;
+            Color gold = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    float dx = (x - half) / half;
+                    float dy = (y - half) / half;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (dist >= 0.5f && dist <= 0.75f) {
+                        bool gap = (dx > 0.6f && dy > -0.2f && dy < 0.2f) || (dx < -0.6f && dy > -0.2f && dy < 0.2f);
+                        if (!gap) tex.SetPixel(x, y, gold);
+                        else tex.SetPixel(x, y, Color.clear);
+                    }
+                    else if ((dx > 0.4f && dx < 0.85f && dy > 0.2f && dy < 0.45f && Mathf.Abs(dx - 0.62f) < (0.45f - dy)) ||
+                             (dx < -0.4f && dx > -0.85f && dy < -0.2f && dy > -0.45f && Mathf.Abs(dx + 0.62f) < (dy + 0.45f))) {
+                        tex.SetPixel(x, y, gold);
+                    }
+                    else {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateSwapSymbolSprite(int size)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float half = size * 0.5f;
+            Color gold = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    float px = (x - half) / half;
+                    float py = (y - half) / half;
+                    bool line1 = Mathf.Abs(px - py) < 0.08f;
+                    bool line2 = Mathf.Abs(px + py) < 0.08f;
+                    if (line1 || line2) tex.SetPixel(x, y, gold);
+                    else tex.SetPixel(x, y, Color.clear);
+                }
+            }
+            tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateSprintSymbolSprite(int size)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float half = size * 0.5f;
+            Color gold = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    float px = (x - half) / half;
+                    float py = (y - half) / half;
+                    bool chevron1 = Mathf.Abs(py - (px * 0.5f)) < 0.09f && px >= -0.7f && px <= 0.7f;
+                    bool chevron2 = Mathf.Abs(py - 0.2f - (px * 0.5f)) < 0.09f && px >= -0.7f && px <= 0.7f;
+                    bool chevron3 = Mathf.Abs(py - 0.4f - (px * 0.5f)) < 0.09f && px >= -0.7f && px <= 0.7f;
+                    if (chevron1 || chevron2 || chevron3) tex.SetPixel(x, y, gold);
+                    else tex.SetPixel(x, y, Color.clear);
+                }
+            }
+            tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateJumpSymbolSprite(int size)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float half = size * 0.5f;
+            Color gold = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    float px = (x - half) / half;
+                    float py = (y - half) / half;
+                    bool chevron1 = Mathf.Abs(py - (1.1f - Mathf.Abs(px))) < 0.09f && Mathf.Abs(px) <= 0.75f;
+                    bool chevron2 = Mathf.Abs(py + 0.3f - (1.1f - Mathf.Abs(px))) < 0.09f && Mathf.Abs(px) <= 0.75f;
+                    if (chevron1 || chevron2) tex.SetPixel(x, y, gold);
+                    else tex.SetPixel(x, y, Color.clear);
+                }
+            }
+            tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
         }
 
         private Sprite CreateBorderSprite(int w, int h, int thickness, Color borderCol)
@@ -379,9 +495,10 @@ namespace TheAlchemistsCrypt.UI
             visualImage.color = Color.white; visualImage.raycastTarget = false;
             if (joystickKnobSprite != null) visualImage.sprite = joystickKnobSprite;
 
-            var onScreenStick = joystickHandle.gameObject.AddComponent<UnityEngine.InputSystem.OnScreen.OnScreenStick>();
-            onScreenStick.movementRange = 180f; 
-            onScreenStick.controlPath = "<Gamepad>/leftStick"; 
+            var dragHandler = joystickHandle.gameObject.AddComponent<JoystickDragHandler>();
+            dragHandler.backgroundRing = joystickBg;
+            dragHandler.knobVisual = knobVisual;
+            dragHandler.movementRange = 180f;
 
             // --- ACTION BUTTONS (Block styled borderless charcoal slabs with alchemical gold text) ---
             var btnContainer = new GameObject("ButtonContainer", typeof(RectTransform)).GetComponent<RectTransform>();
@@ -390,11 +507,11 @@ namespace TheAlchemistsCrypt.UI
             btnContainer.anchoredPosition = new Vector2(-50, 50); // Bezel safety
 
             // 2x2 control grid + massive fire button next to it
-            CreateBlockButton(btnContainer, "FIRE", new Vector2(-200, 130), new Vector2(260, 180), () => SetFire(true), () => SetFire(false));
-            CreateBlockButton(btnContainer, "RELOAD", new Vector2(-480, 180), new Vector2(180, 80), () => Reload());
-            CreateBlockButton(btnContainer, "SWAP", new Vector2(-680, 80), new Vector2(180, 80), () => Swap());
-            CreateSprintBlockButton(btnContainer, new Vector2(-680, 180), new Vector2(180, 80));
-            CreateBlockButton(btnContainer, "JUMP", new Vector2(-480, 80), new Vector2(180, 80), () => SetJump(true), () => SetJump(false));
+            CreateBlockButton(btnContainer, "FIRE", new Vector2(-200, 130), new Vector2(260, 180), fireIcon, () => SetFire(true), () => SetFire(false));
+            CreateBlockButton(btnContainer, "RELOAD", new Vector2(-480, 180), new Vector2(180, 80), reloadIcon, () => Reload());
+            CreateBlockButton(btnContainer, "SWAP", new Vector2(-680, 80), new Vector2(180, 80), swapIcon, () => Swap());
+            CreateSprintBlockButton(btnContainer, new Vector2(-680, 180), new Vector2(180, 80), sprintIcon);
+            CreateBlockButton(btnContainer, "JUMP", new Vector2(-480, 80), new Vector2(180, 80), jumpIcon, () => SetJump(true), () => SetJump(false));
 
             HideDebugLabels();
 
@@ -517,7 +634,7 @@ namespace TheAlchemistsCrypt.UI
             new GameObject("MinimapCanvasContainer", typeof(RectTransform), typeof(MinimapUI)).transform.SetParent(root, false);
         }
 
-        private void CreateBlockButton(Transform parent, string label, Vector2 pos, Vector2 size, System.Action onDown, System.Action onUp = null)
+        private void CreateBlockButton(Transform parent, string label, Vector2 pos, Vector2 size, Sprite iconSprite, System.Action onDown, System.Action onUp = null)
         {
             var go = new GameObject(label, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             go.SetParent(parent, false);
@@ -530,34 +647,67 @@ namespace TheAlchemistsCrypt.UI
             img.sprite = charcoalSprite;
             img.raycastTarget = true;
 
+            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            iconGo.SetParent(go, false);
+            var iconImg = iconGo.GetComponent<Image>();
+            iconImg.sprite = iconSprite;
+            iconImg.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            iconImg.preserveAspect = true;
+            iconImg.raycastTarget = false;
+
             var txtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             txtGo.SetParent(go, false);
-            txtGo.anchorMin = Vector2.zero;
-            txtGo.anchorMax = Vector2.one;
-            txtGo.offsetMin = txtGo.offsetMax = Vector2.zero;
 
             var txt = txtGo.GetComponent<Text>();
             txt.font = GetRobustFont();
-            txt.fontSize = size.y > 100 ? 36 : 22;
             txt.fontStyle = FontStyle.Bold;
-            txt.alignment = TextAnchor.MiddleCenter;
             txt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); // Alchemical gold!
             txt.text = label;
+            txt.raycastTarget = false;
+
+            if (size.y > 100) // Large FIRE button
+            {
+                iconGo.anchorMin = iconGo.anchorMax = new Vector2(0.5f, 0.5f);
+                iconGo.anchoredPosition = new Vector2(0, 25);
+                iconGo.sizeDelta = new Vector2(85, 85);
+
+                txtGo.anchorMin = txtGo.anchorMax = new Vector2(0.5f, 0.5f);
+                txtGo.anchoredPosition = new Vector2(0, -45);
+                txtGo.sizeDelta = new Vector2(220, 40);
+                txt.alignment = TextAnchor.MiddleCenter;
+                txt.fontSize = 28;
+            }
+            else // Smaller utility buttons
+            {
+                iconGo.anchorMin = iconGo.anchorMax = new Vector2(0f, 0.5f);
+                iconGo.pivot = new Vector2(0f, 0.5f);
+                iconGo.anchoredPosition = new Vector2(20, 0);
+                iconGo.sizeDelta = new Vector2(40, 40);
+
+                txtGo.anchorMin = Vector2.zero;
+                txtGo.anchorMax = Vector2.one;
+                txtGo.offsetMin = new Vector2(70, 0);
+                txtGo.offsetMax = Vector2.zero;
+                txt.alignment = TextAnchor.MiddleLeft;
+                txt.fontSize = 20;
+            }
 
             var helper = go.gameObject.AddComponent<ButtonInputHelper>();
             helper.onDown = () => {
                 go.localScale = new Vector3(0.95f, 0.95f, 1f);
                 txt.color = new Color(0.8f, 0.65f, 0.1f, 0.95f);
+                if (iconImg != null) iconImg.color = new Color(0.8f, 0.65f, 0.1f, 0.95f);
                 onDown?.Invoke();
             };
             helper.onUp = () => {
                 go.localScale = new Vector3(1f, 1f, 1f);
                 txt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+                if (iconImg != null) iconImg.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
                 onUp?.Invoke();
             };
         }
 
-        private void CreateSprintBlockButton(Transform parent, Vector2 pos, Vector2 size)
+        private void CreateSprintBlockButton(Transform parent, Vector2 pos, Vector2 size, Sprite iconSprite)
         {
             var go = new GameObject("SPRINT", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             go.SetParent(parent, false);
@@ -570,17 +720,30 @@ namespace TheAlchemistsCrypt.UI
             img.sprite = charcoalSprite;
             img.raycastTarget = true;
 
+            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            iconGo.SetParent(go, false);
+            iconGo.anchorMin = iconGo.anchorMax = new Vector2(0f, 0.5f);
+            iconGo.pivot = new Vector2(0f, 0.5f);
+            iconGo.anchoredPosition = new Vector2(20, 0);
+            iconGo.sizeDelta = new Vector2(40, 40);
+            var iconImg = iconGo.GetComponent<Image>();
+            iconImg.sprite = iconSprite;
+            iconImg.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            iconImg.preserveAspect = true;
+            iconImg.raycastTarget = false;
+
             var txtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             txtGo.SetParent(go, false);
             txtGo.anchorMin = Vector2.zero;
             txtGo.anchorMax = Vector2.one;
-            txtGo.offsetMin = txtGo.offsetMax = Vector2.zero;
+            txtGo.offsetMin = new Vector2(70, 0);
+            txtGo.offsetMax = Vector2.zero;
 
             sprintButtonText = txtGo.GetComponent<Text>();
             sprintButtonText.font = GetRobustFont();
-            sprintButtonText.fontSize = 22;
+            sprintButtonText.fontSize = 20;
             sprintButtonText.fontStyle = FontStyle.Bold;
-            sprintButtonText.alignment = TextAnchor.MiddleCenter;
+            sprintButtonText.alignment = TextAnchor.MiddleLeft;
             sprintButtonText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
             sprintButtonText.text = "SPRINT: OFF";
 
@@ -590,6 +753,7 @@ namespace TheAlchemistsCrypt.UI
                 sprintButtonText.text = sprintToggleState ? "SPRINT: ON" : "SPRINT: OFF";
                 go.localScale = sprintToggleState ? new Vector3(0.97f, 0.97f, 1f) : new Vector3(1f, 1f, 1f);
                 sprintButtonText.color = sprintToggleState ? new Color(1f, 0.95f, 0.6f, 0.95f) : new Color(0.95f, 0.8f, 0.2f, 0.95f);
+                if (iconImg != null) iconImg.color = sprintToggleState ? new Color(1f, 0.95f, 0.6f, 0.95f) : new Color(0.95f, 0.8f, 0.2f, 0.95f);
                 SetSprint(sprintToggleState);
             };
         }
@@ -1118,5 +1282,45 @@ namespace TheAlchemistsCrypt.UI
             if (delta.sqrMagnitude > 0.0001f) TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetLook(delta);
         }
         public void OnPointerUp(PointerEventData data) { if (data.pointerId == trackedPointerId) { trackedPointerId = -1; TheAlchemistsCrypt.Input.MobileInputManager.Instance?.ConsumeLook(); } }
+    }
+
+    public class JoystickDragHandler : MonoBehaviour, IDragHandler, IPointerDownHandler, IPointerUpHandler
+    {
+        public RectTransform backgroundRing;
+        public RectTransform knobVisual;
+        public float movementRange = 180f;
+
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            OnDrag(eventData);
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            Vector2 localPoint;
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(backgroundRing, eventData.position, eventData.pressEventCamera, out localPoint))
+            {
+                float dist = localPoint.magnitude;
+                if (dist > movementRange)
+                {
+                    localPoint = localPoint.normalized * movementRange;
+                }
+                knobVisual.anchoredPosition = localPoint;
+
+                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+                {
+                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.VirtualJoystickInput = localPoint / movementRange;
+                }
+            }
+        }
+
+        public void OnPointerUp(PointerEventData eventData)
+        {
+            knobVisual.anchoredPosition = Vector2.zero;
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+            {
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.VirtualJoystickInput = Vector2.zero;
+            }
+        }
     }
 }
