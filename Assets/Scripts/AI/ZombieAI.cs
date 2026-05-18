@@ -112,7 +112,7 @@ namespace TheAlchemistsCrypt.AI
             MaterialPropertyBlock block = new MaterialPropertyBlock();
             foreach (Renderer r in renderers)
             {
-                if (r == null || r is CanvasRenderer) continue;
+                if (r == null) continue;
                 r.GetPropertyBlock(block);
                 block.SetColor("_Color", col);
                 block.SetColor("_BaseColor", col);
@@ -126,7 +126,7 @@ namespace TheAlchemistsCrypt.AI
             Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
             foreach (Renderer r in renderers)
             {
-                if (r == null || r is CanvasRenderer) continue;
+                if (r == null) continue;
                 r.SetPropertyBlock(null);
             }
         }
