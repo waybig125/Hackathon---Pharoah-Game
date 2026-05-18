@@ -246,7 +246,11 @@ namespace TheAlchemistsCrypt.Editor
             if (columnPrefab == null) columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_pillar_column.glb");
             
             string sandAlbedoPath = "Assets/EgyptianAssets/desert_sand_albedo.png";
-            Material wallMat = CreateLit(new Color(0.92f, 0.85f, 0.7f), 4f, "desert_sand_normal.png");
+            Material wallMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            var wallTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EgyptianAssets/egyptian_wall_albedo.png");
+            if (wallTex != null) wallMat.SetTexture("_BaseMap", wallTex);
+            else wallMat.color = new Color(0.92f, 0.85f, 0.7f);
+            wallMat.mainTextureScale = new Vector2(4f, 4f);
             Material woodMat = CreateLit(new Color(0.25f, 0.15f, 0.08f), 1f);
             Material holeMat = CreateLit(new Color(0.05f, 0.03f, 0.01f), 1f);
 
