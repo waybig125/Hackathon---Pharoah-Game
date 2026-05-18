@@ -47,18 +47,28 @@ namespace TheAlchemistsCrypt.Weapons
             if (zombie == null) zombie = other.GetComponentInParent<TheAlchemistsCrypt.AI.ZombieAI>();
             if (zombie != null)
             {
+                // Robust headshot detection: check if hit collider name contains "head", "skull", or "brain"
+                bool isHeadshot = other != null && (other.name.ToLower().Contains("head") || other.name.ToLower().Contains("skull") || other.name.ToLower().Contains("brain"));
+                if (isHeadshot)
+                {
+                    Debug.Log($"[HEADSHOT] Hit mummy head bone {other.name}!");
+                }
+
                 switch (element)
                 {
                     case ElementType.Sulfur:
-                        zombie.TakeDamage(5f);
+                        float sulfurDamage = isHeadshot ? 10f : 5f;
+                        zombie.TakeDamage(sulfurDamage);
                         ApplySulfurAOE(transform.position, zombie);
                         break;
                     case ElementType.Mercury:
-                        zombie.TakeDamage(2f);
+                        float mercuryDamage = isHeadshot ? 5f : 2f;
+                        zombie.TakeDamage(mercuryDamage);
                         zombie.ApplyMercurySlow(4f);
                         break;
                     case ElementType.Salt:
-                        zombie.TakeDamage(2f);
+                        float saltDamage = isHeadshot ? 5f : 2f;
+                        zombie.TakeDamage(saltDamage);
                         zombie.ApplySaltStun(3f);
                         break;
                 }

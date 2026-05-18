@@ -1709,13 +1709,8 @@ namespace TheAlchemistsCrypt.UI
             menuPanelGo.sizeDelta = new Vector2(500, 700);
 
             var menuImg = menuPanelGo.GetComponent<Image>();
-            menuImg.sprite = obsidianSprite;
-
-            var menuBorderGo = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            menuBorderGo.SetParent(menuPanelGo, false);
-            menuBorderGo.anchorMin = Vector2.zero; menuBorderGo.anchorMax = Vector2.one;
-            menuBorderGo.offsetMin = menuBorderGo.offsetMax = Vector2.zero;
-            menuBorderGo.GetComponent<Image>().sprite = CreateBorderSprite(500, 700, 5, new Color(0.95f, 0.8f, 0.2f, 0.95f));
+            menuImg.sprite = null; // Perfect borderless rectangle
+            menuImg.color = new Color(0.06f, 0.06f, 0.07f, 0.88f); // Dark charcoal semi-transparent glass card
 
             // Title Text
             var titleGo = new GameObject("TitleText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
@@ -1728,7 +1723,7 @@ namespace TheAlchemistsCrypt.UI
             titleTxt.fontSize = 44;
             titleTxt.fontStyle = FontStyle.Bold;
             titleTxt.alignment = TextAnchor.MiddleCenter;
-            titleTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            titleTxt.color = new Color(1.0f, 0.84f, 0.0f, 0.98f); // Premium bright glowing gold
             titleTxt.text = "THE ALCHEMIST'S\nCRYPT";
 
             // Subtitle
@@ -1742,7 +1737,7 @@ namespace TheAlchemistsCrypt.UI
             subTxt.fontSize = 20;
             subTxt.fontStyle = FontStyle.Italic;
             subTxt.alignment = TextAnchor.MiddleCenter;
-            subTxt.color = new Color(0.85f, 0.2f, 0.2f, 0.9f);
+            subTxt.color = new Color(0.2f, 0.85f, 0.4f, 0.95f); // Glowing emerald alchemical green
             subTxt.text = "Unravel the Pharaoh's secrets...";
 
             // START Button
@@ -1752,7 +1747,8 @@ namespace TheAlchemistsCrypt.UI
             startBtnGo.anchoredPosition = new Vector2(0, -60);
             startBtnGo.sizeDelta = new Vector2(360, 80);
             var startBtnImg = startBtnGo.GetComponent<Image>();
-            startBtnImg.sprite = goldGradientSprite;
+            startBtnImg.sprite = null; // Modern flat rectangle
+            startBtnImg.color = new Color(1.0f, 0.78f, 0.0f, 0.95f); // Vibrant bold gold
 
             var startBtnTextGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             startBtnTextGo.SetParent(startBtnGo, false);
@@ -1763,7 +1759,7 @@ namespace TheAlchemistsCrypt.UI
             startBtnTxt.fontSize = 28;
             startBtnTxt.fontStyle = FontStyle.Bold;
             startBtnTxt.alignment = TextAnchor.MiddleCenter;
-            startBtnTxt.color = new Color(0.12f, 0.06f, 0f, 0.95f);
+            startBtnTxt.color = new Color(0.08f, 0.08f, 0.08f, 1f); // Rich high-contrast dark charcoal text
             startBtnTxt.text = "START VOYAGE";
 
             var startHelper = startBtnGo.gameObject.AddComponent<ButtonInputHelper>();
@@ -1792,13 +1788,8 @@ namespace TheAlchemistsCrypt.UI
             quitBtnGo.anchoredPosition = new Vector2(0, -170);
             quitBtnGo.sizeDelta = new Vector2(360, 80);
             var quitBtnImg = quitBtnGo.GetComponent<Image>();
-            quitBtnImg.sprite = obsidianSprite;
-
-            var quitBorderGo = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            quitBorderGo.SetParent(quitBtnGo, false);
-            quitBorderGo.anchorMin = Vector2.zero; quitBorderGo.anchorMax = Vector2.one;
-            quitBorderGo.offsetMin = quitBorderGo.offsetMax = Vector2.zero;
-            quitBorderGo.GetComponent<Image>().sprite = CreateBorderSprite(360, 80, 3, new Color(0.95f, 0.8f, 0.2f, 0.9f));
+            quitBtnImg.sprite = null; // Modern flat rectangle
+            quitBtnImg.color = new Color(0.12f, 0.12f, 0.14f, 0.95f); // Sleek modern dark charcoal
 
             var quitBtnTextGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             quitBtnTextGo.SetParent(quitBtnGo, false);
