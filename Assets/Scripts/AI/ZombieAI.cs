@@ -34,8 +34,16 @@ namespace TheAlchemistsCrypt.AI
         private bool isStunned = false;
         private float saltStunTimer = 0f;
         
-        private Color originalColor = Color.white;
-        private bool hasBackedUpColor = false;
+        private struct MaterialColorBackup
+        {
+            public Material material;
+            public Color originalColor;
+            public Color originalBaseColor;
+            public Color originalEmissionColor;
+            public bool wasEmissionEnabled;
+        }
+        private System.Collections.Generic.List<MaterialColorBackup> materialBackups = new System.Collections.Generic.List<MaterialColorBackup>();
+        private bool colorsBackedUp = false;
 
         [Header("Procedural Health Bar HUD")]
         private GameObject healthBarObj;
@@ -106,18 +114,8 @@ namespace TheAlchemistsCrypt.AI
 
         private void BackupOriginalColors()
         {
-            if (hasBackedUpColor) return;
-            Renderer r = GetComponentInChildren<Renderer>();
-            if (r != null && r.material != null)
-            {
-                originalColor = r.material.HasProperty("_BaseColor") ? r.material.GetColor("_BaseColor") : (r.material.HasProperty("_Color") ? r.material.GetColor("_Color") : Color.white);
-                hasBackedUpColor = true;
-            }
-        }
-
-        private void SetStatusColor(Color col)
-        {
-            BackupOriginalColors();
+            if (colorsBackedUp) return;
+            materialBackups.Clear();
             Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
             foreach (Renderer r in renderers)
             {
@@ -125,21 +123,49 @@ namespace TheAlchemistsCrypt.AI
                 foreach (Material m in r.materials)
                 {
                     if (m == null) continue;
-                    if (m.HasProperty("_Color")) m.SetColor("_Color", col);
-                    if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", col);
-                    if (m.HasProperty("_EmissionColor"))
-                    {
-                        m.SetColor("_EmissionColor", col * 0.5f);
-                        m.EnableKeyword("_EMISSION");
-                    }
+                    MaterialColorBackup backup = new MaterialColorBackup();
+                    backup.material = m;
+                    backup.originalColor = m.HasProperty("_Color") ? m.GetColor("_Color") : Color.white;
+                    backup.originalBaseColor = m.HasProperty("_BaseColor") ? m.GetColor("_BaseColor") : Color.white;
+                    backup.originalEmissionColor = m.HasProperty("_EmissionColor") ? m.GetColor("_EmissionColor") : Color.black;
+                    backup.wasEmissionEnabled = m.IsKeywordEnabled("_EMISSION");
+                    materialBackups.Add(backup);
+                }
+            }
+            colorsBackedUp = true;
+        }
+
+        private void SetStatusColor(Color col)
+        {
+            BackupOriginalColors();
+            foreach (var backup in materialBackups)
+            {
+                if (backup.material == null) continue;
+                if (backup.material.HasProperty("_Color")) backup.material.SetColor("_Color", col);
+                if (backup.material.HasProperty("_BaseColor")) backup.material.SetColor("_BaseColor", col);
+                if (backup.material.HasProperty("_EmissionColor"))
+                {
+                    backup.material.SetColor("_EmissionColor", col * 0.8f);
+                    backup.material.EnableKeyword("_EMISSION");
                 }
             }
         }
 
         private void RestoreColors()
         {
-            if (!hasBackedUpColor) return;
-            SetStatusColor(originalColor);
+            if (!colorsBackedUp) return;
+            foreach (var backup in materialBackups)
+            {
+                if (backup.material == null) continue;
+                if (backup.material.HasProperty("_Color")) backup.material.SetColor("_Color", backup.originalColor);
+                if (backup.material.HasProperty("_BaseColor")) backup.material.SetColor("_BaseColor", backup.originalBaseColor);
+                if (backup.material.HasProperty("_EmissionColor")) backup.material.SetColor("_EmissionColor", backup.originalEmissionColor);
+                
+                if (backup.wasEmissionEnabled)
+                    backup.material.EnableKeyword("_EMISSION");
+                else
+                    backup.material.DisableKeyword("_EMISSION");
+            }
         }
 
         public void ApplyMercurySlow(float duration)
@@ -153,7 +179,7 @@ namespace TheAlchemistsCrypt.AI
         {
             isStunned = true;
             saltStunTimer = duration;
-            SetStatusColor(new Color(1.0f, 0.85f, 0.2f)); // Sparkling crystalline gold-yellow
+            SetStatusColor(new Color(0.85f, 0.3f, 1.0f)); // Sparkling crystalline royal purple/violet
         }
 
         private void Start()
@@ -243,7 +269,9 @@ namespace TheAlchemistsCrypt.AI
             Vector3 currentTargetPos = player.position;
             float currentSpeed = 2.2f;
 
-            if (hasTacticalTarget) {
+            // Focus completely on chasing player at close proximity to prevent turning away
+            float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+            if (hasTacticalTarget && distanceToPlayer > 4.0f) {
                 currentTargetPos = tacticalTarget;
                 currentSpeed = 2.2f * tacticalSpeedMult;
             }

@@ -34,6 +34,16 @@ namespace TheAlchemistsCrypt.Weapons
 
         private FireMode lastMode;
 
+        private void OnEnable()
+        {
+            isReloading = false;
+        }
+
+        private void OnDisable()
+        {
+            isReloading = false;
+        }
+
         private void Start()
         {
             currentAmmo = maxAmmo;
@@ -60,7 +70,7 @@ namespace TheAlchemistsCrypt.Weapons
             {
                 case FireMode.Sulfur: glowColor = new Color(1.0f, 0.3f, 0.0f); break; // Fiery orange
                 case FireMode.Mercury: glowColor = new Color(0.0f, 0.9f, 1.0f); break; // Cyan/blue
-                case FireMode.Salt: glowColor = new Color(0.9f, 0.9f, 1.0f); break; // Crystalline white/violet
+                case FireMode.Salt: glowColor = new Color(0.8f, 0.2f, 1.0f); break; // Majestic royal violet/purple
             }
 
             // Find all renderers in children to apply element coloring
