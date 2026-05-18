@@ -1059,6 +1059,24 @@ namespace TheAlchemistsCrypt.UI
                 if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = false;
             }
 
+            // ON desktop, escape should trigger settings toggling.
+            if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Escape)) {
+                if (settingsModalInstance != null) {
+                    var bg = settingsModalInstance;
+                    Destroy(bg);
+                    settingsModalInstance = null;
+                    Time.timeScale = 1f; // RESUME THE GAME!
+                    if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
+                    Cursor.lockState = CursorLockMode.Locked;
+                    Cursor.visible = false;
+                } else {
+                    var canvas = GetComponent<Canvas>();
+                    if (canvas != null) {
+                        OpenSettingsModal(canvas.GetComponent<RectTransform>());
+                    }
+                }
+            }
+
             // Aggressively disable competing canvases, including clones and weapon UI
             var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include);
             foreach (var c in canvases) {
@@ -1125,6 +1143,7 @@ namespace TheAlchemistsCrypt.UI
         private void OpenSettingsModal(RectTransform parentCanvas)
         {
             if (settingsModalInstance != null) return;
+            Time.timeScale = 0f; // PAUSE THE GAME!
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = false;
             
             // Background blur overlay
@@ -1236,6 +1255,7 @@ namespace TheAlchemistsCrypt.UI
             closeGo.gameObject.AddComponent<ButtonInputHelper>().onUp = () => {
                 Destroy(modalBg.gameObject);
                 settingsModalInstance = null;
+                Time.timeScale = 1f; // RESUME THE GAME!
                 if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;

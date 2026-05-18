@@ -358,33 +358,141 @@ namespace TheAlchemistsCrypt.Editor
         {
             var h = new GameObject("House"); h.transform.SetParent(parent); h.transform.position = pos; h.isStatic = true;
             int floors = (Random.value < 0.2f) ? 1 : (Random.value < 0.7f ? 2 : 3);
-            float height = floors * 12f;
-            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            body.transform.SetParent(h.transform); body.transform.localPosition = new Vector3(0, height / 2f, 0); body.transform.localScale = new Vector3(20, height, 20);
-            body.GetComponent<Renderer>().sharedMaterial = wall; body.isStatic = true;
-
-            Material windowMat = (Random.value < 0.85f) ? litWindowMat : darkWindowMat;
+            
+            // Build stacked stepped floors: wider lower floor, smaller upper floors
             for (int f = 0; f < floors; f++) {
+                float width = 20f - f * 4f;
+                float depth = 20f - f * 4f;
                 float windowY = (f * 12f) + 6f;
+
+                var floorBody = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                floorBody.name = "Floor_" + f;
+                floorBody.transform.SetParent(h.transform);
+                floorBody.transform.localPosition = new Vector3(0, (f * 12f) + 6f, 0);
+                floorBody.transform.localScale = new Vector3(width, 12f, depth);
+                floorBody.GetComponent<Renderer>().sharedMaterial = wall;
+                floorBody.isStatic = true;
+
+                // Windows on each floor
+                Material windowMat = (Random.value < 0.85f) ? litWindowMat : darkWindowMat;
                 var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                win.transform.SetParent(h.transform); win.transform.localScale = new Vector3(3.6f, 2.6f, 0.3f); win.GetComponent<Renderer>().sharedMaterial = windowMat;
+                win.name = "Window_Floor_" + f;
+                win.transform.SetParent(h.transform);
+                win.transform.localScale = new Vector3(3.6f, 2.6f, 0.3f);
+                win.GetComponent<Renderer>().sharedMaterial = windowMat;
                 DestroyImmediate(win.GetComponent<Collider>());
-                win.transform.localPosition = new Vector3(0f, windowY, -10.15f); win.transform.localRotation = Quaternion.Euler(0, 180, 0); win.isStatic = true;
+                win.transform.localPosition = new Vector3(0f, windowY, -(depth / 2f) - 0.15f);
+                win.transform.localRotation = Quaternion.Euler(0, 180, 0);
+                win.isStatic = true;
+
                 if (windowMat == litWindowMat) {
-                    var lightGo = new GameObject("WindowLight"); lightGo.transform.SetParent(win.transform); lightGo.transform.localPosition = new Vector3(0f, 0f, -0.6f);
-                    var l = lightGo.AddComponent<Light>(); l.type = LightType.Point; l.color = new Color(1f, 0.75f, 0.3f); l.range = 8f; l.intensity = 1.6f;
+                    var lightGo = new GameObject("WindowLight");
+                    lightGo.transform.SetParent(win.transform);
+                    lightGo.transform.localPosition = new Vector3(0f, 0f, -0.6f);
+                    var l = lightGo.AddComponent<Light>();
+                    l.type = LightType.Point;
+                    l.color = new Color(1f, 0.75f, 0.3f);
+                    l.range = 10f;
+                    l.intensity = 2.5f;
                 }
             }
+
+            // Door on Floor 0 (back wall)
             var door = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            door.transform.SetParent(h.transform); door.transform.localPosition = new Vector3(0, 4, 10.1f); door.transform.localScale = new Vector3(6, 8, 0.2f); door.GetComponent<Renderer>().sharedMaterial = wood; door.isStatic = true;
+            door.name = "Door";
+            door.transform.SetParent(h.transform);
+            door.transform.localPosition = new Vector3(0, 4, 10.1f);
+            door.transform.localScale = new Vector3(6, 8, 0.2f);
+            door.GetComponent<Renderer>().sharedMaterial = wood;
+            door.isStatic = true;
+
+            // Spawn Crates and Barrels around the house!
+            if (crate != null) {
+                Vector3 cratePos = pos + new Vector3(13f, 0f, 11f);
+                var cObj = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
+                cObj.name = "HouseCrate_1";
+                cObj.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
+                AlignToGroundAndAddCollider(cObj, cratePos, Quaternion.Euler(0, Random.Range(0, 360), 0), 0f);
+                cObj.isStatic = true;
+
+                // Stack a second crate on top!
+                Vector3 stackedPos = cratePos + Vector3.up * 1.8f;
+                var cObj2 = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
+                cObj2.name = "HouseCrate_2";
+                cObj2.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f);
+                AlignToGroundAndAddCollider(cObj2, stackedPos, Quaternion.Euler(0, Random.Range(0, 360), 0), 0f);
+                cObj2.isStatic = true;
+            }
+            if (barrel != null) {
+                Vector3 barrelPos = pos + new Vector3(-13f, 0f, -11f);
+                var bObj = (GameObject)PrefabUtility.InstantiatePrefab(barrel, parent);
+                bObj.name = "HouseBarrel_1";
+                bObj.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f); // Fixed to be realistic size!
+                AlignToGroundAndAddCollider(bObj, barrelPos, Quaternion.identity, 0f);
+                bObj.isStatic = true;
+
+                Vector3 barrelPos2 = pos + new Vector3(-11f, 0f, -13f);
+                var bObj2 = (GameObject)PrefabUtility.InstantiatePrefab(barrel, parent);
+                bObj2.name = "HouseBarrel_2";
+                bObj2.transform.localScale = new Vector3(0.9f, 0.9f, 0.9f); // Fixed to be realistic size!
+                AlignToGroundAndAddCollider(bObj2, barrelPos2, Quaternion.identity, 0f);
+                bObj2.isStatic = true;
+            }
         }
 
         private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab, Material sandMat, Material craterMat)
         {
             var p = new GameObject("Plaza"); p.transform.SetParent(parent); p.transform.position = pos; p.isStatic = true;
+            
+            // Generate a Beautiful, Interactive Sandy Crater!
+            var craterCenter = new GameObject("Crater");
+            craterCenter.transform.SetParent(p.transform);
+            craterCenter.transform.localPosition = Vector3.zero;
+            
+            // 1. Central dark pit disc
+            var hole = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            hole.name = "CraterHole";
+            hole.transform.SetParent(craterCenter.transform);
+            hole.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+            hole.transform.localScale = new Vector3(8f, 0.05f, 8f);
+            hole.GetComponent<Renderer>().sharedMaterial = craterMat;
+            DestroyImmediate(hole.GetComponent<Collider>()); // Visual only, so you can stand slightly in the center if needed
+            hole.isStatic = true;
+            
+            // 2. Surround the pit with a ring of rocky boulders (boulder rim)
+            int segments = 8;
+            float radius = 5f;
+            for (int i = 0; i < segments; i++) {
+                float angle = i * (360f / segments) * Mathf.Deg2Rad;
+                Vector3 boulderLocalPos = new Vector3(Mathf.Cos(angle) * radius, 0.5f, Mathf.Sin(angle) * radius);
+                
+                var boulder = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                boulder.name = "CraterRim_" + i;
+                boulder.transform.SetParent(craterCenter.transform);
+                boulder.transform.localPosition = boulderLocalPos;
+                boulder.transform.localScale = new Vector3(2.5f, 1.5f + Random.Range(-0.5f, 0.5f), 2.5f);
+                boulder.transform.localRotation = Quaternion.Euler(Random.Range(-15f, 15f), Random.Range(0f, 360f), Random.Range(-15f, 15f));
+                boulder.GetComponent<Renderer>().sharedMaterial = sandMat; // Use floor/sand texture to blend
+                boulder.isStatic = true;
+                
+                // Add BoxCollider for physical obstruction so player can't walk through!
+                var col = boulder.GetComponent<BoxCollider>();
+                if (col == null) col = boulder.AddComponent<BoxCollider>();
+            }
+
+            // Spawns ancient columns in the plaza for ruins detailing
+            if (columnPrefab != null) {
+                var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
+                colObj.name = "RuinedColumn";
+                colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
+                AlignToGroundAndAddCollider(colObj, pos + new Vector3(-8f, 0f, -8f), Quaternion.identity, 0f);
+                colObj.isStatic = true;
+            }
+
+            // Also spawn trees if available (offset from the crater to avoid overlapping)
             if (trees != null && trees.Length > 0) {
                 var t = (GameObject)PrefabUtility.InstantiatePrefab(trees[Random.Range(0, trees.Length)], p.transform);
-                t.transform.localScale = Vector3.one * 8f; AlignToGroundAndAddCollider(t, pos, Quaternion.Euler(-90, 0, 0), -1.8f);
+                t.transform.localScale = Vector3.one * 8f; AlignToGroundAndAddCollider(t, pos + new Vector3(8f, 0f, 8f), Quaternion.Euler(-90, 0, 0), -1.8f);
                 t.isStatic = true;
             }
         }
