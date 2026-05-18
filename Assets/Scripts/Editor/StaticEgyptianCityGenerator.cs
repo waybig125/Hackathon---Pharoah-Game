@@ -101,9 +101,11 @@ namespace TheAlchemistsCrypt.Editor
                 if (destClip == null) {
                     destClip = new AnimationClip();
                     EditorUtility.CopySerialized(sourceClip, destClip);
+                    destClip.name = animName + "_loop";
                     AssetDatabase.CreateAsset(destClip, destPath);
                 } else {
                     EditorUtility.CopySerialized(sourceClip, destClip);
+                    destClip.name = animName + "_loop";
                 }
 
                 // Force loop settings on native serialized asset
@@ -269,12 +271,46 @@ namespace TheAlchemistsCrypt.Editor
 
             SetupEnvironment();
 
-            var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            ground.name = "FloorGround";
-            ground.transform.SetParent(root.transform);
-            ground.transform.localScale = new Vector3(100, 1, 100);
-            ground.GetComponent<Renderer>().sharedMaterial = floorMat;
-            ground.isStatic = true;
+            // Create a gorgeous Unity Terrain for the Desert dunes
+            string layerPath = "Assets/EgyptianAssets/DesertSandLayer.terrainlayer";
+            TerrainLayer layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
+            if (layer == null) {
+                layer = new TerrainLayer();
+                layer.diffuseTexture = sandAlbedo != null ? sandAlbedo : Texture2D.whiteTexture;
+                layer.tileSize = new Vector2(10f, 10f);
+                AssetDatabase.CreateAsset(layer, layerPath);
+            }
+
+            TerrainData terrainData = new TerrainData();
+            terrainData.heightmapResolution = 513;
+            terrainData.size = new Vector3(1000f, 15f, 1000f);
+
+            int resolution = terrainData.heightmapResolution;
+            float[,] heights = new float[resolution, resolution];
+            for (int i = 0; i < resolution; i++) {
+                for (int j = 0; j < resolution; j++) {
+                    float tx = (float)i / (resolution - 1);
+                    float ty = (float)j / (resolution - 1);
+                    // Beautiful layered sine waves for desert dunes
+                    float dune1 = Mathf.Sin(tx * 12f + ty * 8f) * 0.35f;
+                    float dune2 = Mathf.Cos(tx * 6f - ty * 14f) * 0.15f;
+                    float ripple = Mathf.Sin(tx * 120f + ty * 80f) * 0.005f;
+
+                    // Smooth center flattening so building placement and player spawn are level
+                    float distFromCenter = Mathf.Sqrt((tx - 0.5f) * (tx - 0.5f) + (ty - 0.5f) * (ty - 0.5f));
+                    float centerFlattenFactor = Mathf.SmoothStep(0f, 1f, distFromCenter * 5f); // 20% radius is flat, smooth transition outwards
+
+                    heights[i, j] = (dune1 + dune2 + ripple + 0.5f) * centerFlattenFactor;
+                }
+            }
+            terrainData.SetHeights(0, 0, heights);
+            terrainData.terrainLayers = new TerrainLayer[] { layer };
+
+            GameObject terrainGo = Terrain.CreateTerrainGameObject(terrainData);
+            terrainGo.name = "DesertTerrain";
+            terrainGo.transform.SetParent(root.transform);
+            terrainGo.transform.position = new Vector3(-500f, -0.05f, -500f);
+            terrainGo.isStatic = true;
 
             float spacing = 32f;
             float halfSpan = (gridSize * spacing) / 2f;
@@ -286,6 +322,7 @@ namespace TheAlchemistsCrypt.Editor
                     float posZ = -halfSpan + (z * spacing) + (spacing / 2f);
                     Vector3 pos = new Vector3(posX, 0, posZ);
                     pos.x += Random.Range(-2f, 2f); pos.z += Random.Range(-2f, 2f);
+                    pos.y = GetTerrainHeight(pos);
 
                     if (pos.magnitude > 25f) {
                         if (Random.value < 0.75f) {
@@ -406,36 +443,21 @@ namespace TheAlchemistsCrypt.Editor
             door.GetComponent<Renderer>().sharedMaterial = wood;
             door.isStatic = true;
 
-            // Spawn Crates and Barrels around the house!
-            if (crate != null) {
-                Vector3 cratePos = pos + new Vector3(13f, 0f, 11f);
-                var cObj = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
-                cObj.name = "HouseCrate_1";
-                cObj.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
-                AlignToGroundAndAddCollider(cObj, cratePos, Quaternion.Euler(0, Random.Range(0, 360), 0), 0f);
-                cObj.isStatic = true;
+            // Removed crates to declutter residential house yards as per user request
 
-                // Stack a second crate on top!
-                Vector3 stackedPos = cratePos + Vector3.up * 1.8f;
-                var cObj2 = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
-                cObj2.name = "HouseCrate_2";
-                cObj2.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f);
-                AlignToGroundAndAddCollider(cObj2, stackedPos, Quaternion.Euler(0, Random.Range(0, 360), 0), 0f);
-                cObj2.isStatic = true;
-            }
             if (barrel != null) {
                 Vector3 barrelPos = pos + new Vector3(-13f, 0f, -11f);
                 var bObj = (GameObject)PrefabUtility.InstantiatePrefab(barrel, parent);
                 bObj.name = "HouseBarrel_1";
-                bObj.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f); // Fixed to be realistic size!
-                AlignToGroundAndAddCollider(bObj, barrelPos, Quaternion.identity, 0f);
+                bObj.transform.localScale = new Vector3(0.08f, 0.08f, 0.08f); // Scaled to beautiful realistic size
+                AlignToGroundAndAddCollider(bObj, barrelPos, Quaternion.Euler(-90f, 0f, 0f), 0f); // Stand vertical
                 bObj.isStatic = true;
 
                 Vector3 barrelPos2 = pos + new Vector3(-11f, 0f, -13f);
                 var bObj2 = (GameObject)PrefabUtility.InstantiatePrefab(barrel, parent);
                 bObj2.name = "HouseBarrel_2";
-                bObj2.transform.localScale = new Vector3(0.9f, 0.9f, 0.9f); // Fixed to be realistic size!
-                AlignToGroundAndAddCollider(bObj2, barrelPos2, Quaternion.identity, 0f);
+                bObj2.transform.localScale = new Vector3(0.07f, 0.07f, 0.07f); // Scaled to beautiful realistic size
+                AlignToGroundAndAddCollider(bObj2, barrelPos2, Quaternion.Euler(-90f, 0f, 0f), 0f); // Stand vertical
                 bObj2.isStatic = true;
             }
         }
@@ -485,7 +507,7 @@ namespace TheAlchemistsCrypt.Editor
                 var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
                 colObj.name = "RuinedColumn";
                 colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
-                AlignToGroundAndAddCollider(colObj, pos + new Vector3(-8f, 0f, -8f), Quaternion.identity, 0f);
+                AlignToGroundAndAddCollider(colObj, pos + new Vector3(-8f, 0f, -8f), Quaternion.Euler(-90f, 0f, 0f), 0f);
                 colObj.isStatic = true;
             }
 
@@ -500,6 +522,7 @@ namespace TheAlchemistsCrypt.Editor
         private void FixPlayerAndWeapons()
         {
             var p = GameObject.Find("Player"); if (p == null) return; p.tag = "Player";
+            p.transform.position = new Vector3(0f, GetTerrainHeight(Vector3.zero) + 1.2f, 0f);
             var inv = p.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>(); if (inv == null) return;
             Color[] colors = { new Color(1, 0.4f, 0), Color.white, new Color(0, 0.7f, 1) };
             int idx = 0;
@@ -528,16 +551,30 @@ namespace TheAlchemistsCrypt.Editor
             return m;
         }
 
+        private float GetTerrainHeight(Vector3 pos)
+        {
+            var terrain = Terrain.activeTerrain;
+            if (terrain != null && terrain.terrainData != null)
+            {
+                return terrain.transform.position.y + terrain.SampleHeight(pos);
+            }
+            return 0f;
+        }
+
         private void AlignToGroundAndAddCollider(GameObject obj, Vector3 basePos, Quaternion targetRot, float offsetAdjustment)
         {
-            obj.transform.position = basePos; obj.transform.rotation = targetRot;
+            Vector3 terrainPos = basePos;
+            terrainPos.y = GetTerrainHeight(basePos);
+            obj.transform.position = terrainPos; 
+            obj.transform.rotation = targetRot;
+            
             var renderers = obj.GetComponentsInChildren<Renderer>(true);
             if (renderers.Length > 0) {
                 float minY = float.MaxValue;
                 foreach (var r in renderers) if (!(r is ParticleSystemRenderer) && r.bounds.min.y < minY) minY = r.bounds.min.y;
                 if (minY != float.MaxValue) {
-                    float yOffset = basePos.y - minY + offsetAdjustment;
-                    obj.transform.position = new Vector3(basePos.x, basePos.y + yOffset, basePos.z);
+                    float yOffset = terrainPos.y - minY + offsetAdjustment;
+                    obj.transform.position = new Vector3(terrainPos.x, terrainPos.y + yOffset, terrainPos.z);
                 }
             }
             foreach (var col in obj.GetComponentsInChildren<Collider>(true)) DestroyImmediate(col);

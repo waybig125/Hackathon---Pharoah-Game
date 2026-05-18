@@ -50,37 +50,34 @@ namespace TheAlchemistsCrypt.Weapons
                 switch (element)
                 {
                     case ElementType.Sulfur:
-                        // High AOE Fire Damage. Trigger explosion!
-                        zombie.TakeDamage(35f);
-                        ApplySulfurAOE(transform.position);
+                        zombie.TakeDamage(5f);
+                        ApplySulfurAOE(transform.position, zombie);
                         break;
                     case ElementType.Mercury:
-                        // Slows enemies
-                        zombie.TakeDamage(25f);
-                        zombie.ApplyMercurySlow(3f); // Slow for 3 seconds
+                        zombie.TakeDamage(2f);
+                        zombie.ApplyMercurySlow(4f);
                         break;
                     case ElementType.Salt:
-                        // Stuns & Purifies
-                        zombie.TakeDamage(20f);
-                        zombie.ApplySaltStun(2f); // Stun for 2 seconds
+                        zombie.TakeDamage(2f);
+                        zombie.ApplySaltStun(3f);
                         break;
                 }
             }
             Deactivate();
         }
 
-        private void ApplySulfurAOE(Vector3 position)
+        private void ApplySulfurAOE(Vector3 position, TheAlchemistsCrypt.AI.ZombieAI directHitZombie = null)
         {
             Collider[] colliders = Physics.OverlapSphere(position, 4.0f);
             foreach (Collider c in colliders)
             {
                 var z = c.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>();
                 if (z == null) z = c.GetComponentInParent<TheAlchemistsCrypt.AI.ZombieAI>();
-                if (z != null)
+                if (z != null && z != directHitZombie)
                 {
                     // Calculate falloff damage based on distance
                     float dist = Vector3.Distance(position, z.transform.position);
-                    float damage = Mathf.Lerp(30f, 10f, dist / 4.0f);
+                    float damage = Mathf.Lerp(5f, 1f, dist / 4.0f);
                     z.TakeDamage(damage);
                     
                     // Knockback if Rigidbody exists

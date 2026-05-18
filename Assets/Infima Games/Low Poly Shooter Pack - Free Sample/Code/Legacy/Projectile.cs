@@ -81,30 +81,21 @@ public class Projectile : MonoBehaviour {
 				}
 			}
 
-			// 2. Check vulnerability: must match activeElement, otherwise 0 damage
-			if (zombie.vulnerableElement.ToLower() == activeElement)
+			// Bypassing vulnerability/immunity check - all mummies are now damageable!
+			switch (activeElement)
 			{
-				switch (activeElement)
-				{
-					case "sulfur":
-						zombie.TakeDamage(35f);
-						ApplySulfurAOE(collision.contacts[0].point);
-						break;
-					case "mercury":
-						zombie.TakeDamage(25f);
-						zombie.ApplyMercurySlow(3f);
-						break;
-					case "salt":
-						zombie.TakeDamage(20f);
-						zombie.ApplySaltStun(2f);
-						break;
-				}
-			}
-			else
-			{
-				Debug.Log($"Mummy Immune! Attacked with {activeElement} but vulnerable to {zombie.vulnerableElement}");
-				// Visual feedback: deal exactly ZERO damage
-				zombie.TakeDamage(0f);
+				case "sulfur":
+					zombie.TakeDamage(5f);
+					ApplySulfurAOE(collision.contacts[0].point, zombie);
+					break;
+				case "mercury":
+					zombie.TakeDamage(2f);
+					zombie.ApplyMercurySlow(4f);
+					break;
+				case "salt":
+					zombie.TakeDamage(2f);
+					zombie.ApplySaltStun(3f);
+					break;
 			}
 
 			Destroy(gameObject); // Destroy the bullet immediately on hitting a mummy/zombie to avoid multiple hits!
@@ -229,18 +220,18 @@ public class Projectile : MonoBehaviour {
 		Destroy (gameObject);
 	}
 
-	private void ApplySulfurAOE(Vector3 position)
+	private void ApplySulfurAOE(Vector3 position, TheAlchemistsCrypt.AI.ZombieAI directHitZombie = null)
 	{
 		Collider[] colliders = Physics.OverlapSphere(position, 4.0f);
 		foreach (Collider c in colliders)
 		{
 			var z = c.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>();
 			if (z == null) z = c.GetComponentInParent<TheAlchemistsCrypt.AI.ZombieAI>();
-			if (z != null && z.vulnerableElement.ToLower() == "sulfur")
+			if (z != null && z != directHitZombie)
 			{
 				// Calculate falloff damage based on distance
 				float dist = Vector3.Distance(position, z.transform.position);
-				float damage = Mathf.Lerp(30f, 10f, dist / 4.0f);
+				float damage = Mathf.Lerp(5f, 1f, dist / 4.0f);
 				z.TakeDamage(damage);
 				
 				// Knockback if Rigidbody exists

@@ -37,6 +37,73 @@ namespace TheAlchemistsCrypt.AI
         private Color originalColor = Color.white;
         private bool hasBackedUpColor = false;
 
+        [Header("Procedural Health Bar HUD")]
+        private GameObject healthBarObj;
+        private UnityEngine.UI.Image healthBarFill;
+        private Transform mainCameraTransform;
+
+        private void CreateHealthBar()
+        {
+            if (Camera.main != null) mainCameraTransform = Camera.main.transform;
+
+            healthBarObj = new GameObject("MummyHealthBarCanvas");
+            healthBarObj.transform.SetParent(transform);
+            healthBarObj.transform.localPosition = new Vector3(0f, 2.3f, 0f);
+            healthBarObj.transform.localRotation = Quaternion.identity;
+            healthBarObj.transform.localScale = new Vector3(0.003f, 0.003f, 0.003f);
+
+            Canvas canvas = healthBarObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+
+            UnityEngine.UI.CanvasScaler scaler = healthBarObj.AddComponent<UnityEngine.UI.CanvasScaler>();
+            scaler.dynamicPixelsPerUnit = 10f;
+
+            GameObject bgObj = new GameObject("HealthBarBG");
+            bgObj.transform.SetParent(healthBarObj.transform, false);
+            var bgImage = bgObj.AddComponent<UnityEngine.UI.Image>();
+            bgImage.color = new Color(0.3f, 0.0f, 0.0f, 0.6f);
+            var bgRect = bgObj.GetComponent<RectTransform>();
+            bgRect.sizeDelta = new Vector2(300f, 40f);
+
+            GameObject fillAreaObj = new GameObject("FillArea");
+            fillAreaObj.transform.SetParent(healthBarObj.transform, false);
+            var fillAreaRect = fillAreaObj.AddComponent<RectTransform>();
+            fillAreaRect.sizeDelta = new Vector2(300f, 40f);
+
+            GameObject fillObj = new GameObject("HealthBarFill");
+            fillObj.transform.SetParent(fillAreaObj.transform, false);
+            healthBarFill = fillObj.AddComponent<UnityEngine.UI.Image>();
+            healthBarFill.color = Color.green;
+            var fillRect = fillObj.GetComponent<RectTransform>();
+            fillRect.anchorMin = new Vector2(0f, 0.5f);
+            fillRect.anchorMax = new Vector2(0f, 0.5f);
+            fillRect.pivot = new Vector2(0f, 0.5f);
+            fillRect.sizeDelta = new Vector2(300f, 40f);
+            fillRect.localPosition = new Vector3(-150f, 0f, 0f);
+        }
+
+        private void UpdateHealthBar()
+        {
+            if (isDead)
+            {
+                if (healthBarObj != null) Destroy(healthBarObj);
+                return;
+            }
+
+            if (healthBarObj == null || healthBarFill == null) return;
+
+            if (mainCameraTransform == null && Camera.main != null) mainCameraTransform = Camera.main.transform;
+            if (mainCameraTransform != null)
+            {
+                healthBarObj.transform.LookAt(healthBarObj.transform.position + mainCameraTransform.rotation * Vector3.forward, mainCameraTransform.rotation * Vector3.up);
+            }
+
+            float fillPct = Mathf.Clamp01(currentHealth / maxHealth);
+            var rect = healthBarFill.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(300f * fillPct, 40f);
+            healthBarFill.color = Color.Lerp(Color.red, Color.green, fillPct);
+        }
+
         private void BackupOriginalColors()
         {
             if (hasBackedUpColor) return;
@@ -79,14 +146,14 @@ namespace TheAlchemistsCrypt.AI
         {
             isSlowed = true;
             mercurySlowTimer = duration;
-            SetStatusColor(new Color(0.2f, 0.6f, 1.0f)); // Blue/cyan tint
+            SetStatusColor(new Color(0.15f, 0.6f, 1.0f)); // Glowing metallic cyan-blue
         }
 
         public void ApplySaltStun(float duration)
         {
             isStunned = true;
             saltStunTimer = duration;
-            SetStatusColor(new Color(0.9f, 0.8f, 1.0f)); // Sparkly crystalline purple tint
+            SetStatusColor(new Color(1.0f, 0.85f, 0.2f)); // Sparkling crystalline gold-yellow
         }
 
         private void Start()
@@ -114,25 +181,9 @@ namespace TheAlchemistsCrypt.AI
             string[] vulnerabilities = { "sulfur", "mercury", "salt" };
             vulnerableElement = vulnerabilities[Random.Range(0, vulnerabilities.Length)];
 
-            // Tint mummy models visually based on vulnerability
-            Color vulnerabilityColor = Color.white;
-            if (vulnerableElement == "sulfur")
-            {
-                vulnerabilityColor = new Color(1.0f, 0.35f, 0.05f); // Fiery orange
-            }
-            else if (vulnerableElement == "mercury")
-            {
-                vulnerabilityColor = new Color(0.0f, 0.85f, 1.0f); // Cool cyan
-            }
-            else if (vulnerableElement == "salt")
-            {
-                vulnerabilityColor = new Color(0.85f, 0.85f, 1.0f); // Crystalline purple/white
-            }
-
-            // Set up originalColor so status effects can restore back to this base color tint
-            originalColor = vulnerabilityColor;
-            hasBackedUpColor = true;
-            SetStatusColor(vulnerabilityColor);
+            // Same color mummies: backup and do not apply initial vulnerability tint!
+            BackupOriginalColors();
+            CreateHealthBar();
         }
 
         private void FindPlayer()
@@ -153,6 +204,8 @@ namespace TheAlchemistsCrypt.AI
 
         private void Update()
         {
+            UpdateHealthBar();
+
             if (isDead) {
                 deathTimer += Time.deltaTime;
                 if (deathTimer > 1f) transform.position += Vector3.down * 0.6f * Time.deltaTime;
@@ -302,6 +355,7 @@ namespace TheAlchemistsCrypt.AI
         private void Die()
         {
             isDead = true;
+            if (healthBarObj != null) Destroy(healthBarObj);
             
             if (agent != null)
             {
