@@ -276,7 +276,7 @@ namespace TheAlchemistsCrypt.UI
             for (int y = 0; y < h; y++) {
                 for (int x = 0; x < w; x++) {
                     float t = (float)x / w;
-                    Color col = Color.Lerp(new Color(0.05f, 0.85f, 0.25f, 0.95f), new Color(0.95f, 0.85f, 0.05f, 0.95f), t);
+                    Color col = Color.Lerp(new Color(0.7f, 0.05f, 0.12f, 0.95f), new Color(0.95f, 0.15f, 0.2f, 0.95f), t);
                     tex.SetPixel(x, y, col);
                 }
             }
@@ -839,7 +839,7 @@ namespace TheAlchemistsCrypt.UI
                 tickGo.sizeDelta = new Vector2(tickWidth, tickHeight);
 
                 var img = tickGo.GetComponent<Image>();
-                img.sprite = CreateSolidBarSprite((int)tickWidth, (int)tickHeight, new Color(0.04f, 0.04f, 0.04f, 0.8f));
+                img.sprite = CreateSolidBarSprite((int)tickWidth, (int)tickHeight, Color.white);
                 ammoTicks.Add(img);
             }
 
@@ -1115,17 +1115,22 @@ namespace TheAlchemistsCrypt.UI
                 ammoIconImage.sprite = activeElementIcon;
             }
 
-            var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
             int current = 30;
             int total = 30;
-            if (character != null) {
-                var weapon = character.GetEquippedWeapon();
-                if (weapon != null) {
-                    current = weapon.GetAmmunitionCurrent();
-                    total = weapon.GetAmmunitionTotal();
-                    if (current <= 0) {
-                        current = 30;
-                        total = 30;
+            var focus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+            if (focus != null)
+            {
+                current = focus.CurrentAmmo;
+                total = focus.MaxAmmo;
+            }
+            else
+            {
+                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                if (character != null) {
+                    var weapon = character.GetEquippedWeapon();
+                    if (weapon != null) {
+                        current = weapon.GetAmmunitionCurrent();
+                        total = weapon.GetAmmunitionTotal();
                     }
                 }
             }

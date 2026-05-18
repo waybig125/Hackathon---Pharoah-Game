@@ -14,10 +14,17 @@ namespace TheAlchemistsCrypt.AI
         private Animator animator;
         private string currentAnimState = "";
 
+        [Header("Tactical AI Settings")]
+        public int mummyId = 0;
+        [HideInInspector] public Vector3 tacticalTarget;
+        [HideInInspector] public float tacticalSpeedMult = 1f;
+        [HideInInspector] public bool hasTacticalTarget = false;
+
         [Header("Health Settings")]
         public float maxHealth = 10f;
         public float currentHealth = 10f;
         private bool isDead = false;
+        public bool IsDead => isDead;
         private float deathTimer = 0f;
 
         private void Start()
@@ -74,9 +81,20 @@ namespace TheAlchemistsCrypt.AI
                 return;
             }
 
-            if (agent.isActiveAndEnabled) agent.SetDestination(player.position);
+            Vector3 currentTargetPos = player.position;
+            float currentSpeed = 2.2f;
 
-            Vector3 targetDir = player.position - transform.position;
+            if (hasTacticalTarget) {
+                currentTargetPos = tacticalTarget;
+                currentSpeed = 2.2f * tacticalSpeedMult;
+            }
+
+            if (agent.isActiveAndEnabled) {
+                agent.SetDestination(currentTargetPos);
+                agent.speed = currentSpeed;
+            }
+
+            Vector3 targetDir = currentTargetPos - transform.position;
             targetDir.y = 0f;
             if (targetDir.sqrMagnitude > 0.01f) {
                 Quaternion targetRot = Quaternion.LookRotation(targetDir);

@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using UnityEngine;
 using TheAlchemistsCrypt.Input;
 using TheAlchemistsCrypt.Core;
@@ -11,8 +13,15 @@ namespace TheAlchemistsCrypt.Weapons
         [Header("Weapon Settings")]
         [SerializeField] private FireMode currentMode = FireMode.Sulfur;
         public FireMode CurrentMode => currentMode;
-        [SerializeField] private float fireRate = 0.5f;
+        [SerializeField] private float fireRate = 0.25f; // Faster firing for better alchemical gameplay feel
         [SerializeField] private Transform firePoint;
+
+        [Header("Ammo Settings")]
+        [SerializeField] private int maxAmmo = 30;
+        public int MaxAmmo => maxAmmo;
+        [SerializeField] private int currentAmmo = 30;
+        public int CurrentAmmo => currentAmmo;
+        [SerializeField] private float reloadDuration = 1.2f;
 
         [Header("Pool Tags")]
         [SerializeField] private string sulfurPoolTag = "SulfurProjectile";
@@ -20,6 +29,13 @@ namespace TheAlchemistsCrypt.Weapons
         [SerializeField] private string saltPoolTag = "SaltProjectile";
 
         private float nextFireTime;
+        private bool isReloading = false;
+        public bool IsReloading => isReloading;
+
+        private void Start()
+        {
+            currentAmmo = maxAmmo;
+        }
 
         private void Update()
         {
@@ -29,15 +45,42 @@ namespace TheAlchemistsCrypt.Weapons
 
         private void HandleShooting()
         {
-            if (MobileInputManager.Instance.IsFiring && Time.time >= nextFireTime)
+            if (isReloading) return;
+
+            // Trigger reload if out of ammo or reload input is pressed
+            if (currentAmmo <= 0 || (MobileInputManager.Instance != null && MobileInputManager.Instance.IsReloading) || UnityEngine.Input.GetKeyDown(KeyCode.R))
             {
-                Shoot();
-                nextFireTime = Time.time + fireRate;
+                StartCoroutine(ReloadCoroutine());
+                return;
             }
+
+            if (MobileInputManager.Instance != null && MobileInputManager.Instance.IsFiring && Time.time >= nextFireTime)
+            {
+                if (currentAmmo > 0)
+                {
+                    Shoot();
+                    currentAmmo--;
+                    nextFireTime = Time.time + fireRate;
+                }
+            }
+        }
+
+        private IEnumerator ReloadCoroutine()
+        {
+            isReloading = true;
+            if (MobileInputManager.Instance != null) MobileInputManager.Instance.IsReloading = false;
+            
+            yield return new WaitForSeconds(reloadDuration);
+            
+            currentAmmo = maxAmmo;
+            isReloading = false;
+            Debug.Log("Alchemical Focus Reloaded!");
         }
 
         private void HandleModeSwitch()
         {
+            if (MobileInputManager.Instance == null) return;
+
             // Mobile Swap Logic
             if (MobileInputManager.Instance.IsSwappingWeapon)
             {
@@ -67,7 +110,10 @@ namespace TheAlchemistsCrypt.Weapons
                 case FireMode.Salt: tag = saltPoolTag; break;
             }
 
-            ObjectPooler.Instance.SpawnFromPool(tag, firePoint.position, firePoint.rotation);
+            if (ObjectPooler.Instance != null && firePoint != null)
+            {
+                ObjectPooler.Instance.SpawnFromPool(tag, firePoint.position, firePoint.rotation);
+            }
         }
     }
 }

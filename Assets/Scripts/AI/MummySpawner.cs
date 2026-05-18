@@ -8,6 +8,13 @@ namespace TheAlchemistsCrypt.AI
         {
             // Spawn the active mummies at runtime!
             SpawnMummies();
+
+            // Auto-spawn HiveMindManager at runtime if not present
+            if (GameObject.FindAnyObjectByType<HiveMindManager>() == null)
+            {
+                var hmGo = new GameObject("HiveMindManager");
+                hmGo.AddComponent<HiveMindManager>();
+            }
         }
 
         private void SpawnMummies()
@@ -58,6 +65,32 @@ namespace TheAlchemistsCrypt.AI
                 go.transform.position = spawnPos;
                 go.transform.localScale = new Vector3(1.6f, 1.6f, 1.6f);
 
+                // Programmatically assign high-fidelity URP Lit materials to ensure they are 100% visible and beautiful
+                Renderer[] renderers = go.GetComponentsInChildren<Renderer>(true);
+                Shader urpShader = Shader.Find("Universal Render Pipeline/Lit");
+                Texture2D diffTex = null;
+                Texture2D normTex = null;
+#if UNITY_EDITOR
+                diffTex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Mummy_Assets/texture/texture_diffuse.png");
+                normTex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Mummy_Assets/texture/texture_normal.png");
+#endif
+                foreach (Renderer r in renderers) {
+                    if (r == null) continue;
+                    Material[] sharedMats = r.sharedMaterials;
+                    for (int j = 0; j < sharedMats.Length; j++) {
+                        if (urpShader != null) {
+                            Material uMat = new Material(urpShader);
+                            if (diffTex != null) uMat.SetTexture("_BaseMap", diffTex);
+                            if (normTex != null) {
+                                uMat.SetTexture("_BumpMap", normTex);
+                                uMat.EnableKeyword("_NORMALMAP");
+                            }
+                            sharedMats[j] = uMat;
+                        }
+                    }
+                    r.sharedMaterials = sharedMats;
+                }
+
                 var anim = go.GetComponent<Animator>();
                 if (anim == null) anim = go.AddComponent<Animator>();
                 anim.runtimeAnimatorController = controller;
@@ -93,6 +126,7 @@ namespace TheAlchemistsCrypt.AI
 
                 var ai = go.GetComponent<ZombieAI>();
                 if (ai == null) ai = go.AddComponent<ZombieAI>();
+                ai.mummyId = i + 1; // Assign stable unique IDs: 1, 2, 3
             }
 
             Debug.Log("MummySpawner: Successfully spawned active mummies dynamically at runtime!");
