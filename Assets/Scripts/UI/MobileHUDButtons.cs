@@ -1053,6 +1053,12 @@ namespace TheAlchemistsCrypt.UI
 
         private void Update()
         {
+            if (settingsModalInstance != null) {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = false;
+            }
+
             // Aggressively disable competing canvases, including clones and weapon UI
             var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include);
             foreach (var c in canvases) {
@@ -1120,31 +1126,181 @@ namespace TheAlchemistsCrypt.UI
         {
             if (settingsModalInstance != null) return;
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = false;
+            
+            // Background blur overlay
             var modalBg = new GameObject("SettingsModal", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             modalBg.SetParent(parentCanvas, false); modalBg.anchorMin = Vector2.zero; modalBg.anchorMax = Vector2.one; modalBg.offsetMin = modalBg.offsetMax = Vector2.zero;
-            modalBg.GetComponent<Image>().color = new Color(0, 0, 0, 0.75f); settingsModalInstance = modalBg.gameObject;
+            modalBg.GetComponent<Image>().color = new Color(0, 0, 0, 0.85f); settingsModalInstance = modalBg.gameObject;
             
+            // Dialog box
             var dialog = new GameObject("Dialog", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            dialog.SetParent(modalBg, false); dialog.anchorMin = dialog.anchorMax = new Vector2(0.5f, 0.5f); dialog.sizeDelta = new Vector2(600, 400);
+            dialog.SetParent(modalBg, false); dialog.anchorMin = dialog.anchorMax = new Vector2(0.5f, 0.5f); dialog.sizeDelta = new Vector2(800, 550);
             dialog.GetComponent<Image>().sprite = charcoalSprite;
+            
+            // Add a beautiful gold border around the dialog!
+            var border = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            border.SetParent(dialog, false); border.anchorMin = Vector2.zero; border.anchorMax = Vector2.one;
+            border.offsetMin = new Vector2(4, 4); border.offsetMax = new Vector2(-4, -4);
+            var borderImg = border.GetComponent<Image>();
+            borderImg.color = new Color(0.95f, 0.8f, 0.2f, 0.2f); // Golden glow border
+            borderImg.sprite = charcoalSprite; // Use charcoal base or transparent fill
+            
+            // Title Text
+            var titleGo = new GameObject("Title", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            titleGo.SetParent(dialog, false); titleGo.anchoredPosition = new Vector2(0, 220); titleGo.sizeDelta = new Vector2(700, 60);
+            var titleTxt = titleGo.GetComponent<Text>();
+            titleTxt.font = GetRobustFont(); titleTxt.fontSize = 28; titleTxt.fontStyle = FontStyle.Bold;
+            titleTxt.alignment = TextAnchor.MiddleCenter; titleTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            titleTxt.text = "THE PHARAOH'S VAULT - SETTINGS";
 
+            // Row 1: Swipe Sensitivity
+            float currentSens = PlayerPrefs.GetFloat("MobileSensitivity", 0.08f);
+            var sensRow = CreateSettingsRow(dialog, "TOUCH SENSITIVITY", new Vector2(0, 100), currentSens.ToString("F2"),
+                () => {
+                    float s = PlayerPrefs.GetFloat("MobileSensitivity", 0.08f);
+                    s = Mathf.Clamp(s - 0.01f, 0.02f, 0.30f);
+                    PlayerPrefs.SetFloat("MobileSensitivity", s); PlayerPrefs.Save();
+                    var sz = GameObject.FindAnyObjectByType<LookSwipeZone>();
+                    if (sz != null) sz.sensitivity = s;
+                    return s.ToString("F2");
+                },
+                () => {
+                    float s = PlayerPrefs.GetFloat("MobileSensitivity", 0.08f);
+                    s = Mathf.Clamp(s + 0.01f, 0.02f, 0.30f);
+                    PlayerPrefs.SetFloat("MobileSensitivity", s); PlayerPrefs.Save();
+                    var sz = GameObject.FindAnyObjectByType<LookSwipeZone>();
+                    if (sz != null) sz.sensitivity = s;
+                    return s.ToString("F2");
+                }
+            );
+
+            // Row 2: Master Volume
+            float currentVol = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
+            AudioListener.volume = currentVol;
+            var volRow = CreateSettingsRow(dialog, "MASTER VOLUME", new Vector2(0, 0), Mathf.RoundToInt(currentVol * 100f) + "%",
+                () => {
+                    float v = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
+                    v = Mathf.Clamp(v - 0.1f, 0f, 1f);
+                    PlayerPrefs.SetFloat("MasterVolume", v); PlayerPrefs.Save();
+                    AudioListener.volume = v;
+                    return Mathf.RoundToInt(v * 100f) + "%";
+                },
+                () => {
+                    float v = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
+                    v = Mathf.Clamp(v + 0.1f, 0f, 1f);
+                    PlayerPrefs.SetFloat("MasterVolume", v); PlayerPrefs.Save();
+                    AudioListener.volume = v;
+                    return Mathf.RoundToInt(v * 100f) + "%";
+                }
+            );
+
+            // Row 3: Visual Fidelity
+            int currentQuality = QualitySettings.GetQualityLevel();
+            string[] qualityNames = { "LOW", "MEDIUM", "ULTRA" };
+            string initialQualityName = currentQuality < qualityNames.Length ? qualityNames[currentQuality] : "ULTRA";
+            var qualRow = CreateSettingsRow(dialog, "VISUAL QUALITY", new Vector2(0, -100), initialQualityName,
+                () => {
+                    int q = QualitySettings.GetQualityLevel();
+                    q = Mathf.Clamp(q - 1, 0, 2);
+                    QualitySettings.SetQualityLevel(q, true);
+                    return qualityNames[q];
+                },
+                () => {
+                    int q = QualitySettings.GetQualityLevel();
+                    q = Mathf.Clamp(q + 1, 0, 2);
+                    QualitySettings.SetQualityLevel(q, true);
+                    return qualityNames[q];
+                }
+            );
+
+            // Close Button
             var closeGo = new GameObject("CloseButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            closeGo.SetParent(dialog, false); closeGo.anchorMin = closeGo.anchorMax = new Vector2(0.5f, 0.2f); closeGo.sizeDelta = new Vector2(200, 60);
+            closeGo.SetParent(dialog, false); closeGo.anchoredPosition = new Vector2(0, -210); closeGo.sizeDelta = new Vector2(250, 60);
             closeGo.GetComponent<Image>().sprite = charcoalSprite;
+            
+            // Add gold highlights to the close button
+            var closeHighlight = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            closeHighlight.SetParent(closeGo, false); closeHighlight.anchorMin = Vector2.zero; closeHighlight.anchorMax = Vector2.one;
+            closeHighlight.offsetMin = closeHighlight.offsetMax = Vector2.zero;
+            closeHighlight.GetComponent<Image>().color = new Color(0.95f, 0.8f, 0.2f, 0.15f);
             
             var closeTxtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             closeTxtGo.SetParent(closeGo, false);
             closeTxtGo.anchorMin = Vector2.zero; closeTxtGo.anchorMax = Vector2.one;
             closeTxtGo.offsetMin = closeTxtGo.offsetMax = Vector2.zero;
             var closeTxt = closeTxtGo.GetComponent<Text>();
-            closeTxt.font = GetRobustFont();
-            closeTxt.fontSize = 20;
-            closeTxt.fontStyle = FontStyle.Bold;
-            closeTxt.alignment = TextAnchor.MiddleCenter;
-            closeTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
-            closeTxt.text = "CLOSE";
+            closeTxt.font = GetRobustFont(); closeTxt.fontSize = 22; closeTxt.fontStyle = FontStyle.Bold;
+            closeTxt.alignment = TextAnchor.MiddleCenter; closeTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            closeTxt.text = "RETURN TO GAME";
 
-            closeGo.gameObject.AddComponent<ButtonInputHelper>().onUp = () => { Destroy(modalBg.gameObject); settingsModalInstance = null; if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true; };
+            closeGo.gameObject.AddComponent<ButtonInputHelper>().onUp = () => {
+                Destroy(modalBg.gameObject);
+                settingsModalInstance = null;
+                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+            };
+        }
+
+        private GameObject CreateSettingsRow(RectTransform parent, string labelText, Vector2 pos, string initialVal, System.Func<string> onDec, System.Func<string> onInc)
+        {
+            var row = new GameObject("Row_" + labelText.Replace(" ", ""), typeof(RectTransform)).GetComponent<RectTransform>();
+            row.SetParent(parent, false); row.anchoredPosition = pos; row.sizeDelta = new Vector2(700, 70);
+
+            // Label
+            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            lblGo.SetParent(row, false); lblGo.anchorMin = new Vector2(0, 0.5f); lblGo.anchorMax = new Vector2(0.4f, 0.5f);
+            lblGo.pivot = new Vector2(0, 0.5f); lblGo.anchoredPosition = new Vector2(20, 0); lblGo.sizeDelta = new Vector2(250, 50);
+            var lblTxt = lblGo.GetComponent<Text>();
+            lblTxt.font = GetRobustFont(); lblTxt.fontSize = 20; lblTxt.fontStyle = FontStyle.Bold;
+            lblTxt.alignment = TextAnchor.MiddleLeft; lblTxt.color = new Color(0.95f, 0.85f, 0.6f, 0.95f);
+            lblTxt.text = labelText;
+
+            // Dec Button [-]
+            var decGo = new GameObject("DecBtn", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            decGo.SetParent(row, false); decGo.anchoredPosition = new Vector2(100, 0); decGo.sizeDelta = new Vector2(50, 50);
+            decGo.GetComponent<Image>().sprite = charcoalSprite;
+            var decHighlight = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            decHighlight.SetParent(decGo, false); decHighlight.anchorMin = Vector2.zero; decHighlight.anchorMax = Vector2.one; decHighlight.offsetMin = decHighlight.offsetMax = Vector2.zero;
+            decHighlight.GetComponent<Image>().color = new Color(0.95f, 0.8f, 0.2f, 0.15f);
+            var decTxtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            decTxtGo.SetParent(decGo, false); decTxtGo.anchorMin = Vector2.zero; decTxtGo.anchorMax = Vector2.one; decTxtGo.offsetMin = decTxtGo.offsetMax = Vector2.zero;
+            var decTxt = decTxtGo.GetComponent<Text>();
+            decTxt.font = GetRobustFont(); decTxt.fontSize = 24; decTxt.fontStyle = FontStyle.Bold;
+            decTxt.alignment = TextAnchor.MiddleCenter; decTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); decTxt.text = "-";
+
+            // Value text box
+            var valGo = new GameObject("ValBtn", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            valGo.SetParent(row, false); valGo.anchoredPosition = new Vector2(210, 0); valGo.sizeDelta = new Vector2(150, 50);
+            valGo.GetComponent<Image>().sprite = charcoalSprite;
+            var valTxtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            valTxtGo.SetParent(valGo, false); valTxtGo.anchorMin = Vector2.zero; valTxtGo.anchorMax = Vector2.one; valTxtGo.offsetMin = valTxtGo.offsetMax = Vector2.zero;
+            var valTxt = valTxtGo.GetComponent<Text>();
+            valTxt.font = GetRobustFont(); valTxt.fontSize = 20; valTxt.fontStyle = FontStyle.Bold;
+            valTxt.alignment = TextAnchor.MiddleCenter; valTxt.color = new Color(1f, 0.95f, 0.8f, 0.95f); valTxt.text = initialVal;
+
+            // Inc Button [+]
+            var incGo = new GameObject("IncBtn", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            incGo.SetParent(row, false); incGo.anchoredPosition = new Vector2(320, 0); incGo.sizeDelta = new Vector2(50, 50);
+            incGo.GetComponent<Image>().sprite = charcoalSprite;
+            var incHighlight = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            incHighlight.SetParent(incGo, false); incHighlight.anchorMin = Vector2.zero; incHighlight.anchorMax = Vector2.one; incHighlight.offsetMin = incHighlight.offsetMax = Vector2.zero;
+            incHighlight.GetComponent<Image>().color = new Color(0.95f, 0.8f, 0.2f, 0.15f);
+            var incTxtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            incTxtGo.SetParent(incGo, false); incTxtGo.anchorMin = Vector2.zero; incTxtGo.anchorMax = Vector2.one; incTxtGo.offsetMin = incTxtGo.offsetMax = Vector2.zero;
+            var incTxt = incTxtGo.GetComponent<Text>();
+            incTxt.font = GetRobustFont(); incTxt.fontSize = 24; incTxt.fontStyle = FontStyle.Bold;
+            incTxt.alignment = TextAnchor.MiddleCenter; incTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); incTxt.text = "+";
+
+            // Position controls to the right
+            decGo.anchorMin = decGo.anchorMax = new Vector2(1, 0.5f); decGo.anchoredPosition = new Vector2(-270, 0);
+            valGo.anchorMin = valGo.anchorMax = new Vector2(1, 0.5f); valGo.anchoredPosition = new Vector2(-160, 0);
+            incGo.anchorMin = incGo.anchorMax = new Vector2(1, 0.5f); incGo.anchoredPosition = new Vector2(-50, 0);
+
+            decGo.gameObject.AddComponent<ButtonInputHelper>().onUp = () => { valTxt.text = onDec(); };
+            incGo.gameObject.AddComponent<ButtonInputHelper>().onUp = () => { valTxt.text = onInc(); };
+
+            return row.gameObject;
         }
 
         public void UpdateHealth(float h)

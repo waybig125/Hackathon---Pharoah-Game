@@ -16,9 +16,9 @@ namespace TheAlchemistsCrypt.AI
             if (GameObject.Find("Mummy_Base_Active") != null) return;
 
             string[] fbxPaths = {
-                "Assets/Mummy_Assets/mummy_base.fbx",
-                "Assets/Mummy_Assets/mummy_base.fbx",
-                "Assets/Mummy_Assets/mummy_base.fbx"
+                "Assets/Mummy_Assets/new_Walking.fbx",
+                "Assets/Mummy_Assets/new_Walking.fbx",
+                "Assets/Mummy_Assets/new_Walking.fbx"
             };
 
             string[] names = { "Mummy_Alpha", "Mummy_Beta", "Mummy_Gamma" };
