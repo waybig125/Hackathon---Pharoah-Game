@@ -446,12 +446,15 @@ namespace TheAlchemistsCrypt.Editor
                         var lightGo = new GameObject("WindowLight");
                         lightGo.transform.SetParent(win.transform);
                         lightGo.transform.localPosition = new Vector3(0f, 0f, -0.6f);
+                        lightGo.transform.localRotation = Quaternion.Euler(30f, 180f, 0f); // Point outward and 30 degrees downward
                         var l = lightGo.AddComponent<Light>();
-                        l.type = LightType.Point;
+                        l.type = LightType.Spot;
+                        l.spotAngle = 120f;
+                        l.innerSpotAngle = 60f;
                         l.color = new Color(1.0f, 0.72f, 0.28f); // Warm atmospheric amber
                         l.range = 14f;
                         l.intensity = 8.0f;
-                        l.shadows = LightShadows.Soft; // Enable soft shadows for beautiful reflections
+                        l.shadows = LightShadows.None; // Disable shadows to solve URP shadow map limits & warning spam
                     }
                 }
             }
@@ -470,21 +473,21 @@ namespace TheAlchemistsCrypt.Editor
                 Vector3 cratePos = pos + new Vector3(13f, 0f, 11f);
                 var cObj = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
                 cObj.name = "HouseCrate_1";
-                cObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f); // Upgraded scale
+                cObj.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f); // Calibrated scale
                 AlignToGroundAndAddCollider(cObj, cratePos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f);
                 cObj.isStatic = true;
 
                 // Stack a second crate on top!
-                Vector3 stackedPos = cratePos + Vector3.up * 3.0f; // Sits perfectly on top
+                Vector3 stackedPos = cObj.transform.position + Vector3.up * 0.70f; // Sits perfectly on top of aligned first crate
                 var cObj2 = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
                 cObj2.name = "HouseCrate_2";
-                cObj2.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
-                AlignToGroundAndAddCollider(cObj2, stackedPos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f);
+                cObj2.transform.localScale = new Vector3(0.30f, 0.30f, 0.30f); // Calibrated scale
+                AlignToGroundAndAddCollider(cObj2, stackedPos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f, false);
                 cObj2.isStatic = true;
 
                 // 35% chance to spawn Medicine above the crate stack!
                 if (Random.value < 0.35f) {
-                    SpawnMedicine(parent, stackedPos + Vector3.up * 2.2f);
+                    SpawnMedicine(parent, cObj2.transform.position + Vector3.up * 0.6f); // Calibrated height
                 }
             }
 
@@ -492,20 +495,20 @@ namespace TheAlchemistsCrypt.Editor
                 Vector3 barrelPos = pos + new Vector3(-13f, 0f, -11f);
                 var bObj = (GameObject)PrefabUtility.InstantiatePrefab(barrel, parent);
                 bObj.name = "HouseBarrel_1";
-                bObj.transform.localScale = new Vector3(0.6f, 0.6f, 0.6f); // Upgraded scale
+                bObj.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f); // Calibrated scale
                 AlignToGroundAndAddCollider(bObj, barrelPos, Quaternion.Euler(-90f, 0f, 0f), 0f);
                 bObj.isStatic = true;
 
                 Vector3 barrelPos2 = pos + new Vector3(-11f, 0f, -13f);
                 var bObj2 = (GameObject)PrefabUtility.InstantiatePrefab(barrel, parent);
                 bObj2.name = "HouseBarrel_2";
-                bObj2.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+                bObj2.transform.localScale = new Vector3(0.12f, 0.12f, 0.12f); // Calibrated scale
                 AlignToGroundAndAddCollider(bObj2, barrelPos2, Quaternion.Euler(-90f, 0f, 0f), 0f);
                 bObj2.isStatic = true;
 
                 // 35% chance to spawn Medicine above the first barrel!
                 if (Random.value < 0.35f) {
-                    SpawnMedicine(parent, barrelPos + Vector3.up * 2.8f);
+                    SpawnMedicine(parent, bObj.transform.position + Vector3.up * 0.9f); // Calibrated height
                 }
             }
         }
@@ -581,7 +584,7 @@ namespace TheAlchemistsCrypt.Editor
             return 0f;
         }
 
-        private void AlignToGroundAndAddCollider(GameObject obj, Vector3 basePos, Quaternion targetRot, float offsetAdjustment)
+        private void AlignToGroundAndAddCollider(GameObject obj, Vector3 basePos, Quaternion targetRot, float offsetAdjustment, bool alignToTerrain = true)
         {
             // DYNAMIC URP SHADER CONVERTER
             // Convert standard shaders on imported meshes to URP to avoid pink-material artifacts
@@ -618,26 +621,71 @@ namespace TheAlchemistsCrypt.Editor
                 if (changed) r.sharedMaterials = mats;
             }
 
-            Vector3 terrainPos = basePos;
-            terrainPos.y = GetTerrainHeight(basePos);
-            obj.transform.position = terrainPos; 
+            Vector3 targetPos = basePos;
+            if (alignToTerrain)
+            {
+                targetPos.y = GetTerrainHeight(basePos);
+            }
+            obj.transform.position = targetPos; 
             obj.transform.rotation = targetRot;
             
-            var renderers = obj.GetComponentsInChildren<Renderer>(true);
-            if (renderers.Length > 0) {
-                float minY = float.MaxValue;
-                foreach (var r in renderers) if (!(r is ParticleSystemRenderer) && r.bounds.min.y < minY) minY = r.bounds.min.y;
-                if (minY != float.MaxValue) {
-                    float yOffset = terrainPos.y - minY + offsetAdjustment;
-                    obj.transform.position = new Vector3(terrainPos.x, terrainPos.y + yOffset, terrainPos.z);
+            // DYNAMIC HEIGHT ALIGNMENT VIA ROTATED & SCALED STATIC BOUNDS
+            var filter = obj.GetComponentInChildren<MeshFilter>(true);
+            if (filter != null && filter.sharedMesh != null)
+            {
+                Bounds localBounds = filter.sharedMesh.bounds;
+                Vector3 scale = obj.transform.localScale;
+                
+                // Get 8 corners of the local bounding box
+                Vector3[] corners = new Vector3[8];
+                Vector3 min = localBounds.min;
+                Vector3 max = localBounds.max;
+                corners[0] = new Vector3(min.x, min.y, min.z);
+                corners[1] = new Vector3(min.x, min.y, max.z);
+                corners[2] = new Vector3(min.x, max.y, min.z);
+                corners[3] = new Vector3(min.x, max.y, max.z);
+                corners[4] = new Vector3(max.x, min.y, min.z);
+                corners[5] = new Vector3(max.x, min.y, max.z);
+                corners[6] = new Vector3(max.x, max.y, min.z);
+                corners[7] = new Vector3(max.x, max.y, max.z);
+
+                float rotatedMinY = float.MaxValue;
+                for (int i = 0; i < 8; i++)
+                {
+                    // Scale local corner
+                    Vector3 scaledCorner = Vector3.Scale(corners[i], scale);
+                    // Rotate scaled corner by the target rotation
+                    Vector3 rotatedCorner = targetRot * scaledCorner;
+                    if (rotatedCorner.y < rotatedMinY)
+                    {
+                        rotatedMinY = rotatedCorner.y;
+                    }
+                }
+
+                // The offset to place the bottom of the rotated mesh exactly at targetPos.y
+                float verticalOffset = -rotatedMinY + offsetAdjustment;
+                obj.transform.position = new Vector3(targetPos.x, targetPos.y + verticalOffset, targetPos.z);
+            }
+            else
+            {
+                // Fallback to bounding box check if no mesh filter is found
+                var renderers = obj.GetComponentsInChildren<Renderer>(true);
+                if (renderers.Length > 0) {
+                    float minY = float.MaxValue;
+                    foreach (var r in renderers) if (!(r is ParticleSystemRenderer) && r.bounds.min.y < minY) minY = r.bounds.min.y;
+                    if (minY != float.MaxValue) {
+                        float yOffset = targetPos.y - minY + offsetAdjustment;
+                        obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset, targetPos.z);
+                    }
                 }
             }
+
             foreach (var col in obj.GetComponentsInChildren<Collider>(true)) DestroyImmediate(col);
             var filters = obj.GetComponentsInChildren<MeshFilter>(true);
             if (filters.Length > 0) {
-                foreach (var filter in filters) {
-                    if (filter.sharedMesh == null) continue;
-                    var mc = filter.gameObject.AddComponent<MeshCollider>(); mc.sharedMesh = filter.sharedMesh;
+                foreach (var filterObj in filters) {
+                    if (filterObj.sharedMesh == null) continue;
+                    var mc = filterObj.gameObject.AddComponent<MeshCollider>(); mc.sharedMesh = filterObj.sharedMesh;
                 }
             } else obj.AddComponent<BoxCollider>();
         }
