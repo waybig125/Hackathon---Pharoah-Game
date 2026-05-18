@@ -629,54 +629,20 @@ namespace TheAlchemistsCrypt.Editor
             obj.transform.position = targetPos; 
             obj.transform.rotation = targetRot;
             
-            // DYNAMIC HEIGHT ALIGNMENT VIA ROTATED & SCALED STATIC BOUNDS
-            var filter = obj.GetComponentInChildren<MeshFilter>(true);
-            if (filter != null && filter.sharedMesh != null)
+            // Robust alignment using world space renderer bounds
+            var renderers = obj.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length > 0)
             {
-                Bounds localBounds = filter.sharedMesh.bounds;
-                Vector3 scale = obj.transform.localScale;
-                
-                // Get 8 corners of the local bounding box
-                Vector3[] corners = new Vector3[8];
-                Vector3 min = localBounds.min;
-                Vector3 max = localBounds.max;
-                corners[0] = new Vector3(min.x, min.y, min.z);
-                corners[1] = new Vector3(min.x, min.y, max.z);
-                corners[2] = new Vector3(min.x, max.y, min.z);
-                corners[3] = new Vector3(min.x, max.y, max.z);
-                corners[4] = new Vector3(max.x, min.y, min.z);
-                corners[5] = new Vector3(max.x, min.y, max.z);
-                corners[6] = new Vector3(max.x, max.y, min.z);
-                corners[7] = new Vector3(max.x, max.y, max.z);
-
-                float rotatedMinY = float.MaxValue;
-                for (int i = 0; i < 8; i++)
+                float minY = float.MaxValue;
+                foreach (var r in renderers)
                 {
-                    // Scale local corner
-                    Vector3 scaledCorner = Vector3.Scale(corners[i], scale);
-                    // Rotate scaled corner by the target rotation
-                    Vector3 rotatedCorner = targetRot * scaledCorner;
-                    if (rotatedCorner.y < rotatedMinY)
-                    {
-                        rotatedMinY = rotatedCorner.y;
-                    }
+                    if (r is ParticleSystemRenderer) continue;
+                    if (r.bounds.min.y < minY) minY = r.bounds.min.y;
                 }
-
-                // The offset to place the bottom of the rotated mesh exactly at targetPos.y
-                float verticalOffset = -rotatedMinY + offsetAdjustment;
-                obj.transform.position = new Vector3(targetPos.x, targetPos.y + verticalOffset, targetPos.z);
-            }
-            else
-            {
-                // Fallback to bounding box check if no mesh filter is found
-                var renderers = obj.GetComponentsInChildren<Renderer>(true);
-                if (renderers.Length > 0) {
-                    float minY = float.MaxValue;
-                    foreach (var r in renderers) if (!(r is ParticleSystemRenderer) && r.bounds.min.y < minY) minY = r.bounds.min.y;
-                    if (minY != float.MaxValue) {
-                        float yOffset = targetPos.y - minY + offsetAdjustment;
-                        obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset, targetPos.z);
-                    }
+                if (minY != float.MaxValue)
+                {
+                    float yOffset = targetPos.y - minY + offsetAdjustment;
+                    obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset, targetPos.z);
                 }
             }
 
