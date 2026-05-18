@@ -35,7 +35,7 @@ namespace TheAlchemistsCrypt.AI
             {
                 yield return new WaitForSeconds(spawnInterval);
 
-                var activeZombies = GameObject.FindObjectsByType<ZombieAI>(FindObjectsSortMode.None);
+                var activeZombies = GameObject.FindObjectsByType<ZombieAI>(FindObjectsInactive.Exclude);
                 int aliveCount = 0;
                 int maxExistingId = 0;
                 

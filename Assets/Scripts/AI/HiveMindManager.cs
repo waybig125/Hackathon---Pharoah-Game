@@ -136,7 +136,7 @@ namespace TheAlchemistsCrypt.AI
 
             // 2. Gather mummies state
             var mStates = new List<MummyState>();
-            var zombies = GameObject.FindObjectsByType<ZombieAI>(FindObjectsSortMode.None);
+            var zombies = GameObject.FindObjectsByType<ZombieAI>(FindObjectsInactive.Exclude);
             foreach (var z in zombies)
             {
                 if (z == null || z.IsDead) continue;

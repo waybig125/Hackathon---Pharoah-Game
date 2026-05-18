@@ -1117,7 +1117,6 @@ namespace TheAlchemistsCrypt.UI
 
             int current = 30;
             int total = 30;
-            var focus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
             if (focus != null)
             {
                 current = focus.CurrentAmmo;
