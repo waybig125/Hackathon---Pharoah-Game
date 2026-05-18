@@ -1216,23 +1216,13 @@ namespace TheAlchemistsCrypt.UI
                 (val) => Mathf.RoundToInt(val * 100f) + "%"
             );
 
-            // Row 3: Hive Narration Toggle (SELECTOR)
+            // Row 3: Hive Narration Toggle (CHECKBOX TOGGLE)
             int showNar = PlayerPrefs.GetInt("ShowNarration", 1);
-            string initialShowStr = showNar == 1 ? "ON" : "OFF";
-            var narrationRow = CreateSettingsRow(dialog, "HIVE NARRATION", new Vector2(0, -40), initialShowStr,
-                () => {
-                    int currentVal = PlayerPrefs.GetInt("ShowNarration", 1);
-                    int nextVal = currentVal == 1 ? 0 : 1;
+            var narrationRow = CreateSettingsToggleRow(dialog, "HIVE NARRATION", new Vector2(0, -40), showNar == 1,
+                (val) => {
+                    int nextVal = val ? 1 : 0;
                     PlayerPrefs.SetInt("ShowNarration", nextVal); PlayerPrefs.Save();
                     if (nextVal == 0 && narrationPanel != null) narrationPanel.SetActive(false);
-                    return nextVal == 1 ? "ON" : "OFF";
-                },
-                () => {
-                    int currentVal = PlayerPrefs.GetInt("ShowNarration", 1);
-                    int nextVal = currentVal == 1 ? 0 : 1;
-                    PlayerPrefs.SetInt("ShowNarration", nextVal); PlayerPrefs.Save();
-                    if (nextVal == 0 && narrationPanel != null) narrationPanel.SetActive(false);
-                    return nextVal == 1 ? "ON" : "OFF";
                 }
             );
 
@@ -1439,34 +1429,25 @@ namespace TheAlchemistsCrypt.UI
                 if (canvas == null) return;
                 var root = canvas.GetComponent<RectTransform>();
 
-                // Golden-bordered charcoal panel for narration
+                // Sleek, borderless translucent black pill panel for narration
                 var panelGo = new GameObject("NarrationPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                 panelGo.SetParent(root, false);
-                panelGo.anchorMin = panelGo.anchorMax = new Vector2(0.5f, 1f);
-                panelGo.pivot = new Vector2(0.5f, 1f);
-                panelGo.anchoredPosition = new Vector2(0, -135);
-                panelGo.sizeDelta = new Vector2(700, 110);
+                panelGo.anchorMin = panelGo.anchorMax = new Vector2(0.5f, 0f);
+                panelGo.pivot = new Vector2(0.5f, 0f);
+                panelGo.anchoredPosition = new Vector2(0, 220); // Placed beautifully above dual joysticks
+                panelGo.sizeDelta = new Vector2(900, 75);
                 panelGo.GetComponent<Image>().sprite = charcoalSprite;
-                panelGo.GetComponent<Image>().color = new Color(0, 0, 0, 0.85f);
+                panelGo.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.65f); // Sleek transparent backing
                 narrationPanel = panelGo.gameObject;
 
-                // Gold border highlight
-                var hlGo = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-                hlGo.SetParent(panelGo, false);
-                hlGo.anchorMin = Vector2.zero; hlGo.anchorMax = Vector2.one;
-                hlGo.offsetMin = new Vector2(3, 3); hlGo.offsetMax = new Vector2(-3, -3);
-                var hlImg = hlGo.GetComponent<Image>();
-                hlImg.sprite = charcoalSprite;
-                hlImg.color = new Color(0.95f, 0.8f, 0.2f, 0.2f); // subtle golden border glow
-
-                // Text
+                // Text (No golden border, clean modern look)
                 var txtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
                 txtGo.SetParent(panelGo, false);
                 txtGo.anchorMin = Vector2.zero; txtGo.anchorMax = Vector2.one;
-                txtGo.offsetMin = new Vector2(25, 10); txtGo.offsetMax = new Vector2(-25, -10);
+                txtGo.offsetMin = new Vector2(30, 5); txtGo.offsetMax = new Vector2(-30, -5);
                 narrationText = txtGo.GetComponent<Text>();
                 narrationText.font = GetRobustFont();
-                narrationText.fontSize = 20;
+                narrationText.fontSize = 19;
                 narrationText.fontStyle = FontStyle.Italic;
                 narrationText.alignment = TextAnchor.MiddleCenter;
                 narrationText.color = new Color(0.95f, 0.85f, 0.6f, 0.95f); // Rich warm cream/gold
@@ -1701,16 +1682,16 @@ namespace TheAlchemistsCrypt.UI
             bgImg.color = Color.white;
             bgImg.preserveAspect = false;
 
-            // Elegant right Obsidian Menu Panel
+            // Elegant Left Obsidian Menu Panel (Transparent & Left-aligned)
             var menuPanelGo = new GameObject("MenuPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             menuPanelGo.SetParent(startCanvasGo.transform, false);
-            menuPanelGo.anchorMin = menuPanelGo.anchorMax = new Vector2(1f, 0.5f);
-            menuPanelGo.anchoredPosition = new Vector2(-280, 0); // Offset to be perfectly readable on right
+            menuPanelGo.anchorMin = menuPanelGo.anchorMax = new Vector2(0f, 0.5f);
+            menuPanelGo.anchoredPosition = new Vector2(320, 0); // Beautifully centered on left half of the screen
             menuPanelGo.sizeDelta = new Vector2(500, 700);
 
             var menuImg = menuPanelGo.GetComponent<Image>();
             menuImg.sprite = null; // Perfect borderless rectangle
-            menuImg.color = new Color(0.06f, 0.06f, 0.07f, 0.88f); // Dark charcoal semi-transparent glass card
+            menuImg.color = new Color(0f, 0f, 0f, 0f); // Completely transparent to remove black background
 
             // Title Text
             var titleGo = new GameObject("TitleText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
@@ -1719,26 +1700,12 @@ namespace TheAlchemistsCrypt.UI
             titleGo.anchoredPosition = new Vector2(0, -100);
             titleGo.sizeDelta = new Vector2(440, 150);
             var titleTxt = titleGo.GetComponent<Text>();
-            titleTxt.font = GetRobustFont();
+            titleTxt.font = GetTitleFont(); // Premium dynamic MedievalSharp font
             titleTxt.fontSize = 44;
             titleTxt.fontStyle = FontStyle.Bold;
             titleTxt.alignment = TextAnchor.MiddleCenter;
             titleTxt.color = new Color(1.0f, 0.84f, 0.0f, 0.98f); // Premium bright glowing gold
             titleTxt.text = "THE ALCHEMIST'S\nCRYPT";
-
-            // Subtitle
-            var subGo = new GameObject("SubtitleText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            subGo.SetParent(menuPanelGo, false);
-            subGo.anchorMin = subGo.anchorMax = new Vector2(0.5f, 1f);
-            subGo.anchoredPosition = new Vector2(0, -260);
-            subGo.sizeDelta = new Vector2(440, 60);
-            var subTxt = subGo.GetComponent<Text>();
-            subTxt.font = GetRobustFont();
-            subTxt.fontSize = 20;
-            subTxt.fontStyle = FontStyle.Italic;
-            subTxt.alignment = TextAnchor.MiddleCenter;
-            subTxt.color = new Color(0.2f, 0.85f, 0.4f, 0.95f); // Glowing emerald alchemical green
-            subTxt.text = "Unravel the Pharaoh's secrets...";
 
             // START Button
             var startBtnGo = new GameObject("StartButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
@@ -1826,6 +1793,70 @@ namespace TheAlchemistsCrypt.UI
             {
                 SetLayerRecursively(child.gameObject, layer);
             }
+        }
+
+        private Font GetTitleFont()
+        {
+            Font f = Resources.Load<Font>("Fonts/MedievalSharp");
+            if (f == null) f = GetRobustFont();
+            return f;
+        }
+
+        private GameObject CreateSettingsToggleRow(RectTransform parent, string labelText, Vector2 pos, bool initialVal, System.Action<bool> onToggle)
+        {
+            var row = new GameObject("Row_" + labelText.Replace(" ", ""), typeof(RectTransform)).GetComponent<RectTransform>();
+            row.SetParent(parent, false); row.anchoredPosition = pos; row.sizeDelta = new Vector2(700, 70);
+
+            // Label
+            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            lblGo.SetParent(row, false); lblGo.anchorMin = new Vector2(0, 0.5f); lblGo.anchorMax = new Vector2(0.4f, 0.5f);
+            lblGo.pivot = new Vector2(0, 0.5f); lblGo.anchoredPosition = new Vector2(20, 0); lblGo.sizeDelta = new Vector2(250, 50);
+            var lblTxt = lblGo.GetComponent<Text>();
+            lblTxt.font = GetRobustFont(); lblTxt.fontSize = 20; lblTxt.fontStyle = FontStyle.Bold;
+            lblTxt.alignment = TextAnchor.MiddleLeft; lblTxt.color = new Color(0.95f, 0.85f, 0.6f, 0.95f);
+            lblTxt.text = labelText;
+
+            // Checkbox Outline (Outer Gold Frame)
+            var outlineGo = new GameObject("Outline", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            outlineGo.SetParent(row, false);
+            outlineGo.anchorMin = outlineGo.anchorMax = new Vector2(1f, 0.5f);
+            outlineGo.anchoredPosition = new Vector2(-160, 0);
+            outlineGo.sizeDelta = new Vector2(54, 54);
+            var outImg = outlineGo.GetComponent<Image>();
+            outImg.sprite = null;
+            outImg.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+
+            // Checkbox Backing (Inner Card)
+            var boxGo = new GameObject("Checkbox", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            boxGo.SetParent(outlineGo, false);
+            boxGo.anchorMin = Vector2.zero; boxGo.anchorMax = Vector2.one;
+            boxGo.offsetMin = new Vector2(2, 2); boxGo.offsetMax = new Vector2(-2, -2);
+            
+            var boxImg = boxGo.GetComponent<Image>();
+            boxImg.sprite = charcoalSprite;
+            boxImg.color = Color.white;
+
+            // Checkmark
+            var markGo = new GameObject("Checkmark", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            markGo.SetParent(boxGo, false);
+            markGo.anchorMin = markGo.anchorMax = new Vector2(0.5f, 0.5f);
+            markGo.sizeDelta = new Vector2(30, 30);
+            var markImg = markGo.GetComponent<Image>();
+            markImg.sprite = null;
+            markImg.color = new Color(1.0f, 0.78f, 0.0f, 0.95f);
+
+            bool currentVal = initialVal;
+            markGo.gameObject.SetActive(currentVal);
+
+            var helper = boxGo.gameObject.AddComponent<ButtonInputHelper>();
+            helper.onUp = () =>
+            {
+                currentVal = !currentVal;
+                markGo.gameObject.SetActive(currentVal);
+                onToggle(currentVal);
+            };
+
+            return row.gameObject;
         }
 
         private Font GetRobustFont()

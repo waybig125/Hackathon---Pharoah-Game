@@ -21,6 +21,7 @@ namespace TheAlchemistsCrypt.UI
         private RectTransform mapContent;
         private RectTransform minimapFrame;
         private RectTransform compassRing;
+        private RectTransform playerIndicator;
         
         // Icon assets generated procedurally
         private Sprite obsidianSprite;
@@ -123,11 +124,11 @@ namespace TheAlchemistsCrypt.UI
             compassRing.sizeDelta = new Vector2(220, 220);
 
             // Add N, E, S, W text labels
-            string[] directions = { "N", "E", "S", "W" };
+            string[] directions = { "N", ".", ".", "." };
             Vector2[] positions = { new Vector2(0, 85), new Vector2(85, 0), new Vector2(0, -85), new Vector2(-85, 0) };
             for (int i = 0; i < 4; i++)
             {
-                var dirGo = new GameObject("Label_" + directions[i], typeof(RectTransform), typeof(Text));
+                var dirGo = new GameObject("Label_" + (i == 0 ? "N" : "Dot_" + i), typeof(RectTransform), typeof(Text));
                 var dirRect = dirGo.GetComponent<RectTransform>();
                 dirRect.SetParent(compassRing, false);
                 dirRect.anchorMin = dirRect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -137,7 +138,7 @@ namespace TheAlchemistsCrypt.UI
                 var txt = dirGo.GetComponent<Text>();
                 txt.text = directions[i];
                 txt.font = GetRobustFont();
-                txt.fontSize = 14;
+                txt.fontSize = directions[i] == "N" ? 14 : 24; // Draw larger beautiful dots!
                 txt.fontStyle = FontStyle.Bold;
                 txt.alignment = TextAnchor.MiddleCenter;
                 txt.color = directions[i] == "N" ? new Color(1f, 0.3f, 0.3f, 0.95f) : new Color(0.95f, 0.8f, 0.2f, 0.9f);
@@ -156,13 +157,13 @@ namespace TheAlchemistsCrypt.UI
             borderImg.color = Color.white;
             borderImg.raycastTarget = false;
 
-            // Player indicator (Static in the very center, pointing up)
+            // Player indicator (Centered, rotates to represent players world rotation)
             var playerGo = new GameObject("PlayerIndicator", typeof(RectTransform), typeof(Image));
-            var playerRect = playerGo.GetComponent<RectTransform>();
-            playerRect.SetParent(minimapFrame, false); // Directly on frame, does not translate/rotate!
-            playerRect.anchorMin = playerRect.anchorMax = new Vector2(0.5f, 0.5f);
-            playerRect.anchoredPosition = Vector2.zero;
-            playerRect.sizeDelta = new Vector2(32, 32);
+            playerIndicator = playerGo.GetComponent<RectTransform>();
+            playerIndicator.SetParent(minimapFrame, false); // Directly on frame, does not translate!
+            playerIndicator.anchorMin = playerIndicator.anchorMax = new Vector2(0.5f, 0.5f);
+            playerIndicator.anchoredPosition = Vector2.zero;
+            playerIndicator.sizeDelta = new Vector2(32, 32);
             
             var playerImg = playerGo.GetComponent<Image>();
             playerImg.sprite = playerArrowSprite;
@@ -243,16 +244,21 @@ namespace TheAlchemistsCrypt.UI
                 if (playerTransform == null) return;
             }
 
-            // Update Map translation & rotation relative to the player
+            // Update Map translation relative to the player
             Vector3 playerPos = playerTransform.position;
             Vector3 playerRot = playerTransform.eulerAngles;
 
             mapContent.anchoredPosition = new Vector2(-playerPos.x * currentScale, -playerPos.z * currentScale);
-            mapContent.localEulerAngles = new Vector3(0, 0, playerRot.y);
+            mapContent.localEulerAngles = Vector3.zero; // Static, non-rotating map
             
+            if (playerIndicator != null)
+            {
+                playerIndicator.localEulerAngles = new Vector3(0, 0, -playerRot.y); // Rotate player arrow blip directly
+            }
+
             if (compassRing != null)
             {
-                compassRing.localEulerAngles = new Vector3(0, 0, playerRot.y);
+                compassRing.localEulerAngles = Vector3.zero; // Compass letters stay fixed (North is UP)
             }
 
             // Update dynamic zombie indicators
@@ -333,9 +339,9 @@ namespace TheAlchemistsCrypt.UI
                     if (labelRect != null)
                     {
                         if (child.name == "Label_N") labelRect.anchoredPosition = new Vector2(0, labelRadius);
-                        else if (child.name == "Label_E") labelRect.anchoredPosition = new Vector2(labelRadius, 0);
-                        else if (child.name == "Label_S") labelRect.anchoredPosition = new Vector2(0, -labelRadius);
-                        else if (child.name == "Label_W") labelRect.anchoredPosition = new Vector2(-labelRadius, 0);
+                        else if (child.name == "Label_Dot_1") labelRect.anchoredPosition = new Vector2(labelRadius, 0);
+                        else if (child.name == "Label_Dot_2") labelRect.anchoredPosition = new Vector2(0, -labelRadius);
+                        else if (child.name == "Label_Dot_3") labelRect.anchoredPosition = new Vector2(-labelRadius, 0);
                     }
                 }
             }

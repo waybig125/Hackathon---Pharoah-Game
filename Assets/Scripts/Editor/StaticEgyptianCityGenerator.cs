@@ -419,27 +419,40 @@ namespace TheAlchemistsCrypt.Editor
                 floorBody.GetComponent<Renderer>().sharedMaterial = wall;
                 floorBody.isStatic = true;
 
-                // Windows on each floor
-                Material windowMat = (Random.value < 0.85f) ? litWindowMat : darkWindowMat;
-                var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                win.name = "Window_Floor_" + f;
-                win.transform.SetParent(h.transform);
-                win.transform.localScale = new Vector3(3.6f, 2.6f, 0.3f);
-                win.GetComponent<Renderer>().sharedMaterial = windowMat;
-                DestroyImmediate(win.GetComponent<Collider>());
-                win.transform.localPosition = new Vector3(0f, windowY, -(depth / 2f) - 0.15f);
-                win.transform.localRotation = Quaternion.Euler(0, 180, 0);
-                win.isStatic = true;
+                // Windows on all four sides (South, North, West, East)
+                Vector3[] localPositions = new Vector3[]
+                {
+                    new Vector3(0f, windowY, -(depth / 2f) - 0.15f), // South
+                    new Vector3(0f, windowY, (depth / 2f) + 0.15f),  // North
+                    new Vector3(-(width / 2f) - 0.15f, windowY, 0f), // West
+                    new Vector3((width / 2f) + 0.15f, windowY, 0f)   // East
+                };
 
-                if (windowMat == litWindowMat) {
-                    var lightGo = new GameObject("WindowLight");
-                    lightGo.transform.SetParent(win.transform);
-                    lightGo.transform.localPosition = new Vector3(0f, 0f, -0.6f);
-                    var l = lightGo.AddComponent<Light>();
-                    l.type = LightType.Point;
-                    l.color = new Color(1f, 0.75f, 0.3f);
-                    l.range = 10f;
-                    l.intensity = 2.5f;
+                float[] rotations = new float[] { 180f, 0f, 90f, -90f };
+
+                for (int side = 0; side < 4; side++) {
+                    Material windowMat = (Random.value < 0.85f) ? litWindowMat : darkWindowMat;
+                    var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    win.name = "Window_Floor_" + f + "_Side_" + side;
+                    win.transform.SetParent(h.transform);
+                    win.transform.localScale = new Vector3(3.6f, 2.6f, 0.3f);
+                    win.GetComponent<Renderer>().sharedMaterial = windowMat;
+                    DestroyImmediate(win.GetComponent<Collider>());
+                    win.transform.localPosition = localPositions[side];
+                    win.transform.localRotation = Quaternion.Euler(0, rotations[side], 0);
+                    win.isStatic = true;
+
+                    if (windowMat == litWindowMat) {
+                        var lightGo = new GameObject("WindowLight");
+                        lightGo.transform.SetParent(win.transform);
+                        lightGo.transform.localPosition = new Vector3(0f, 0f, -0.6f);
+                        var l = lightGo.AddComponent<Light>();
+                        l.type = LightType.Point;
+                        l.color = new Color(1.0f, 0.72f, 0.28f); // Warm atmospheric amber
+                        l.range = 14f;
+                        l.intensity = 8.0f;
+                        l.shadows = LightShadows.Soft; // Enable soft shadows for beautiful reflections
+                    }
                 }
             }
 
@@ -457,34 +470,52 @@ namespace TheAlchemistsCrypt.Editor
                 Vector3 cratePos = pos + new Vector3(13f, 0f, 11f);
                 var cObj = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
                 cObj.name = "HouseCrate_1";
-                cObj.transform.localScale = new Vector3(0.22f, 0.22f, 0.22f); // Standardized beautiful realistic scale
-                AlignToGroundAndAddCollider(cObj, cratePos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f); // Stand vertical and random rotation
+                cObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f); // Upgraded scale
+                AlignToGroundAndAddCollider(cObj, cratePos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f);
                 cObj.isStatic = true;
 
                 // Stack a second crate on top!
-                Vector3 stackedPos = cratePos + Vector3.up * 0.44f; // Sits perfectly on top of the first crate
+                Vector3 stackedPos = cratePos + Vector3.up * 3.0f; // Sits perfectly on top
                 var cObj2 = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
                 cObj2.name = "HouseCrate_2";
-                cObj2.transform.localScale = new Vector3(0.18f, 0.18f, 0.18f); // Stacked crate slightly smaller
+                cObj2.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
                 AlignToGroundAndAddCollider(cObj2, stackedPos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f);
                 cObj2.isStatic = true;
+
+                // 35% chance to spawn Medicine above the crate stack!
+                if (Random.value < 0.35f) {
+                    SpawnMedicine(parent, stackedPos + Vector3.up * 2.2f);
+                }
             }
 
             if (barrel != null) {
                 Vector3 barrelPos = pos + new Vector3(-13f, 0f, -11f);
                 var bObj = (GameObject)PrefabUtility.InstantiatePrefab(barrel, parent);
                 bObj.name = "HouseBarrel_1";
-                bObj.transform.localScale = new Vector3(0.08f, 0.08f, 0.08f); // Scaled to beautiful realistic size
-                AlignToGroundAndAddCollider(bObj, barrelPos, Quaternion.Euler(-90f, 0f, 0f), 0f); // Stand vertical
+                bObj.transform.localScale = new Vector3(0.6f, 0.6f, 0.6f); // Upgraded scale
+                AlignToGroundAndAddCollider(bObj, barrelPos, Quaternion.Euler(-90f, 0f, 0f), 0f);
                 bObj.isStatic = true;
 
                 Vector3 barrelPos2 = pos + new Vector3(-11f, 0f, -13f);
                 var bObj2 = (GameObject)PrefabUtility.InstantiatePrefab(barrel, parent);
                 bObj2.name = "HouseBarrel_2";
-                bObj2.transform.localScale = new Vector3(0.07f, 0.07f, 0.07f); // Scaled to beautiful realistic size
-                AlignToGroundAndAddCollider(bObj2, barrelPos2, Quaternion.Euler(-90f, 0f, 0f), 0f); // Stand vertical
+                bObj2.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+                AlignToGroundAndAddCollider(bObj2, barrelPos2, Quaternion.Euler(-90f, 0f, 0f), 0f);
                 bObj2.isStatic = true;
+
+                // 35% chance to spawn Medicine above the first barrel!
+                if (Random.value < 0.35f) {
+                    SpawnMedicine(parent, barrelPos + Vector3.up * 2.8f);
+                }
             }
+        }
+
+        private void SpawnMedicine(Transform parent, Vector3 spawnPos)
+        {
+            var med = new GameObject("MedicinePickup", typeof(TheAlchemistsCrypt.Gameplay.MedicinePickup));
+            med.transform.SetParent(parent, false);
+            med.transform.position = spawnPos;
+            med.isStatic = false; // Floating pickup rotates, not static!
         }
 
         private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab, Material sandMat, Material craterMat)

@@ -47,11 +47,13 @@ namespace TheAlchemistsCrypt.Weapons
             if (zombie == null) zombie = other.GetComponentInParent<TheAlchemistsCrypt.AI.ZombieAI>();
             if (zombie != null)
             {
-                // Robust headshot detection: check if hit collider name contains "head", "skull", or "brain"
-                bool isHeadshot = other != null && (other.name.ToLower().Contains("head") || other.name.ToLower().Contains("skull") || other.name.ToLower().Contains("brain"));
+                // Hybrid headshot detection: check skeletal bone name or relative vertical height (relativeY >= 1.4f)
+                float relativeY = transform.position.y - zombie.transform.position.y;
+                bool isHeadshot = (other != null && (other.name.ToLower().Contains("head") || other.name.ToLower().Contains("skull") || other.name.ToLower().Contains("brain"))) 
+                                  || (relativeY >= 1.4f);
                 if (isHeadshot)
                 {
-                    Debug.Log($"[HEADSHOT] Hit mummy head bone {other.name}!");
+                    Debug.Log($"[HEADSHOT] Hit mummy head bone {other.name} (relativeY: {relativeY:F2})!");
                 }
 
                 switch (element)

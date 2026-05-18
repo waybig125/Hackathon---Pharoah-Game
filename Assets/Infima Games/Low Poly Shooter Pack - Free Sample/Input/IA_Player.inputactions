@@ -418,7 +418,7 @@
                 {
                     "name": "Keyboard",
                     "id": "cb6cccc0-3b41-4272-9fa9-a7193c1096be",
-                    "path": "Dpad",
+                    "path": "2DVector",
                     "interactions": "",
                     "processors": "NormalizeVector2",
                     "groups": "",
