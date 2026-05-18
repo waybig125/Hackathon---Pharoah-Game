@@ -34,17 +34,6 @@ namespace TheAlchemistsCrypt.AI
         private bool isStunned = false;
         private float saltStunTimer = 0f;
         
-        private struct MaterialColorBackup
-        {
-            public Material material;
-            public Color originalColor;
-            public Color originalBaseColor;
-            public Color originalEmissionColor;
-            public bool wasEmissionEnabled;
-        }
-        private System.Collections.Generic.List<MaterialColorBackup> materialBackups = new System.Collections.Generic.List<MaterialColorBackup>();
-        private bool colorsBackedUp = false;
-
         [Header("Procedural Health Bar HUD")]
         private GameObject healthBarObj;
         private UnityEngine.UI.Image healthBarFill;
@@ -56,30 +45,36 @@ namespace TheAlchemistsCrypt.AI
 
             healthBarObj = new GameObject("MummyHealthBarCanvas");
             healthBarObj.transform.SetParent(transform);
-            healthBarObj.transform.localPosition = new Vector3(0f, 2.3f, 0f);
+            healthBarObj.transform.localPosition = new Vector3(0f, 2.4f, 0f); // Slightly higher to be fully visible above head
             healthBarObj.transform.localRotation = Quaternion.identity;
             healthBarObj.transform.localScale = new Vector3(0.003f, 0.003f, 0.003f);
+            healthBarObj.layer = 0; // Default layer
 
             Canvas canvas = healthBarObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
+            canvas.worldCamera = Camera.main;
+            canvas.sortingOrder = 5; // Render on top of meshes
 
             UnityEngine.UI.CanvasScaler scaler = healthBarObj.AddComponent<UnityEngine.UI.CanvasScaler>();
             scaler.dynamicPixelsPerUnit = 10f;
 
             GameObject bgObj = new GameObject("HealthBarBG");
             bgObj.transform.SetParent(healthBarObj.transform, false);
+            bgObj.layer = 0;
             var bgImage = bgObj.AddComponent<UnityEngine.UI.Image>();
-            bgImage.color = new Color(0.3f, 0.0f, 0.0f, 0.6f);
+            bgImage.color = new Color(0.15f, 0.0f, 0.0f, 0.8f); // Darker red BG for higher contrast
             var bgRect = bgObj.GetComponent<RectTransform>();
             bgRect.sizeDelta = new Vector2(300f, 40f);
 
             GameObject fillAreaObj = new GameObject("FillArea");
             fillAreaObj.transform.SetParent(healthBarObj.transform, false);
+            fillAreaObj.layer = 0;
             var fillAreaRect = fillAreaObj.AddComponent<RectTransform>();
             fillAreaRect.sizeDelta = new Vector2(300f, 40f);
 
             GameObject fillObj = new GameObject("HealthBarFill");
             fillObj.transform.SetParent(fillAreaObj.transform, false);
+            fillObj.layer = 0;
             healthBarFill = fillObj.AddComponent<UnityEngine.UI.Image>();
             healthBarFill.color = Color.green;
             var fillRect = fillObj.GetComponent<RectTransform>();
@@ -103,7 +98,8 @@ namespace TheAlchemistsCrypt.AI
             if (mainCameraTransform == null && Camera.main != null) mainCameraTransform = Camera.main.transform;
             if (mainCameraTransform != null)
             {
-                healthBarObj.transform.LookAt(healthBarObj.transform.position + mainCameraTransform.rotation * Vector3.forward, mainCameraTransform.rotation * Vector3.up);
+                // Force billboard to face camera exactly
+                healthBarObj.transform.LookAt(healthBarObj.transform.position + mainCameraTransform.forward);
             }
 
             float fillPct = Mathf.Clamp01(currentHealth / maxHealth);
@@ -114,57 +110,31 @@ namespace TheAlchemistsCrypt.AI
 
         private void BackupOriginalColors()
         {
-            if (colorsBackedUp) return;
-            materialBackups.Clear();
-            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
-            foreach (Renderer r in renderers)
-            {
-                if (r == null) continue;
-                foreach (Material m in r.materials)
-                {
-                    if (m == null) continue;
-                    MaterialColorBackup backup = new MaterialColorBackup();
-                    backup.material = m;
-                    backup.originalColor = m.HasProperty("_Color") ? m.GetColor("_Color") : Color.white;
-                    backup.originalBaseColor = m.HasProperty("_BaseColor") ? m.GetColor("_BaseColor") : Color.white;
-                    backup.originalEmissionColor = m.HasProperty("_EmissionColor") ? m.GetColor("_EmissionColor") : Color.black;
-                    backup.wasEmissionEnabled = m.IsKeywordEnabled("_EMISSION");
-                    materialBackups.Add(backup);
-                }
-            }
-            colorsBackedUp = true;
+            // Deprecated: using high-performance MaterialPropertyBlock overrides instead
         }
 
         private void SetStatusColor(Color col)
         {
-            BackupOriginalColors();
-            foreach (var backup in materialBackups)
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            MaterialPropertyBlock block = new MaterialPropertyBlock();
+            foreach (Renderer r in renderers)
             {
-                if (backup.material == null) continue;
-                if (backup.material.HasProperty("_Color")) backup.material.SetColor("_Color", col);
-                if (backup.material.HasProperty("_BaseColor")) backup.material.SetColor("_BaseColor", col);
-                if (backup.material.HasProperty("_EmissionColor"))
-                {
-                    backup.material.SetColor("_EmissionColor", col * 0.8f);
-                    backup.material.EnableKeyword("_EMISSION");
-                }
+                if (r == null || r is CanvasRenderer) continue;
+                r.GetPropertyBlock(block);
+                block.SetColor("_Color", col);
+                block.SetColor("_BaseColor", col);
+                block.SetColor("_EmissionColor", col * 0.8f);
+                r.SetPropertyBlock(block);
             }
         }
 
         private void RestoreColors()
         {
-            if (!colorsBackedUp) return;
-            foreach (var backup in materialBackups)
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            foreach (Renderer r in renderers)
             {
-                if (backup.material == null) continue;
-                if (backup.material.HasProperty("_Color")) backup.material.SetColor("_Color", backup.originalColor);
-                if (backup.material.HasProperty("_BaseColor")) backup.material.SetColor("_BaseColor", backup.originalBaseColor);
-                if (backup.material.HasProperty("_EmissionColor")) backup.material.SetColor("_EmissionColor", backup.originalEmissionColor);
-                
-                if (backup.wasEmissionEnabled)
-                    backup.material.EnableKeyword("_EMISSION");
-                else
-                    backup.material.DisableKeyword("_EMISSION");
+                if (r == null || r is CanvasRenderer) continue;
+                r.SetPropertyBlock(null);
             }
         }
 
@@ -186,6 +156,9 @@ namespace TheAlchemistsCrypt.AI
         {
             agent = GetComponent<NavMeshAgent>();
             if (agent == null) agent = gameObject.AddComponent<NavMeshAgent>();
+            
+            // Decouple agent navigation steering from orientation so custom look-rotation works flawlessly
+            agent.updateRotation = false;
             
             animator = GetComponent<Animator>();
             if (animator == null) animator = GetComponentInChildren<Animator>();
@@ -299,7 +272,8 @@ namespace TheAlchemistsCrypt.AI
                 }
             }
 
-            Vector3 targetDir = currentTargetPos - transform.position;
+            // Intelligent look-rotation: always orient mummy to face player while moving or surrounding
+            Vector3 targetDir = player.position - transform.position;
             targetDir.y = 0f;
             if (targetDir.sqrMagnitude > 0.01f) {
                 Quaternion targetRot = Quaternion.LookRotation(targetDir);

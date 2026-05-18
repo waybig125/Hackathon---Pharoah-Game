@@ -93,17 +93,6 @@ namespace TheAlchemistsCrypt.Input
                 keyboardInput = new Vector2(x, y).normalized;
             }
 
-            // Fallback to legacy inputs if needed
-            if (keyboardInput.sqrMagnitude < 0.01f)
-            {
-                float x = UnityEngine.Input.GetAxisRaw("Horizontal");
-                float y = UnityEngine.Input.GetAxisRaw("Vertical");
-                if (Mathf.Abs(x) > 0.01f || Mathf.Abs(y) > 0.01f)
-                {
-                    keyboardInput = new Vector2(x, y).normalized;
-                }
-            }
-
             // 3. Blend inputs gracefully
             if (keyboardInput.sqrMagnitude > 0.01f)
             {
@@ -114,8 +103,19 @@ namespace TheAlchemistsCrypt.Input
                 SetMovement(finalMove);
             }
 
-            // 4. Update Touch Active State
-            bool touchDetected = UnityEngine.Input.touchCount > 0;
+            // 4. Update Touch Active State using modern Input System API
+            bool touchDetected = false;
+            if (UnityEngine.InputSystem.Touchscreen.current != null)
+            {
+                foreach (var touch in UnityEngine.InputSystem.Touchscreen.current.touches)
+                {
+                    if (touch.isInProgress)
+                    {
+                        touchDetected = true;
+                        break;
+                    }
+                }
+            }
             if (finalMove.sqrMagnitude > 0.001f) touchDetected = true;
             
             IsTouchActive = touchDetected;

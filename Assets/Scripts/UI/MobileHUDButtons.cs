@@ -1059,8 +1059,8 @@ namespace TheAlchemistsCrypt.UI
                 if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = false;
             }
 
-            // ON desktop, escape should trigger settings toggling.
-            if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.Escape)) {
+            // ON desktop, escape should trigger settings toggling using modern Input System API.
+            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame) {
                 if (settingsModalInstance != null) {
                     var bg = settingsModalInstance;
                     Destroy(bg);
@@ -1344,7 +1344,9 @@ namespace TheAlchemistsCrypt.UI
             };
 
             sliderHelper.onDown = () => {
-                updateSliderVal(UnityEngine.Input.mousePosition);
+                Vector2 mousePos = UnityEngine.InputSystem.Pointer.current != null ? UnityEngine.InputSystem.Pointer.current.position.ReadValue() : 
+                                   (UnityEngine.InputSystem.Mouse.current != null ? UnityEngine.InputSystem.Mouse.current.position.ReadValue() : Vector2.zero);
+                updateSliderVal(mousePos);
             };
 
             var dragHelper = sliderBgGo.gameObject.AddComponent<SliderDragHelper>();

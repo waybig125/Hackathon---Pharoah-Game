@@ -107,14 +107,17 @@ namespace TheAlchemistsCrypt.Weapons
         {
             if (isReloading) return;
 
-            // Trigger reload if out of ammo or reload input is pressed
-            if (currentAmmo <= 0 || (MobileInputManager.Instance != null && MobileInputManager.Instance.IsReloading) || UnityEngine.Input.GetKeyDown(KeyCode.R))
+            // Trigger reload if out of ammo or reload input is pressed using modern Input System API
+            bool reloadKeyPressed = UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.rKey.wasPressedThisFrame;
+            if (currentAmmo <= 0 || (MobileInputManager.Instance != null && MobileInputManager.Instance.IsReloading) || reloadKeyPressed)
             {
                 StartCoroutine(ReloadCoroutine());
                 return;
             }
 
-            bool isFiringInput = (MobileInputManager.Instance != null && MobileInputManager.Instance.IsFiring) || UnityEngine.Input.GetMouseButton(0);
+            bool isFiringInput = (MobileInputManager.Instance != null && MobileInputManager.Instance.IsFiring) || 
+                                 ((UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.isPressed) || 
+                                  (UnityEngine.InputSystem.Pointer.current != null && UnityEngine.InputSystem.Pointer.current.press.isPressed));
             if (isFiringInput && Time.time >= nextFireTime)
             {
                 if (currentAmmo > 0)
@@ -140,10 +143,8 @@ namespace TheAlchemistsCrypt.Weapons
 
         private void HandleModeSwitch()
         {
-            if (MobileInputManager.Instance == null) return;
-
             // Mobile Swap Logic
-            if (MobileInputManager.Instance.IsSwappingWeapon)
+            if (MobileInputManager.Instance != null && MobileInputManager.Instance.IsSwappingWeapon)
             {
                 int next = ((int)currentMode + 1) % 3;
                 currentMode = (FireMode)next;
@@ -151,10 +152,14 @@ namespace TheAlchemistsCrypt.Weapons
                 Debug.Log($"Mobile: Switched to {currentMode}");
             }
 
-            // Simple keyboard switch for desktop testing
-            if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha1)) currentMode = FireMode.Sulfur;
-            if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha2)) currentMode = FireMode.Mercury;
-            if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha3)) currentMode = FireMode.Salt;
+            // Simple keyboard switch for desktop testing using modern Input System APIs
+            if (UnityEngine.InputSystem.Keyboard.current != null)
+            {
+                var kb = UnityEngine.InputSystem.Keyboard.current;
+                if (kb.digit1Key.wasPressedThisFrame) currentMode = FireMode.Sulfur;
+                if (kb.digit2Key.wasPressedThisFrame) currentMode = FireMode.Mercury;
+                if (kb.digit3Key.wasPressedThisFrame) currentMode = FireMode.Salt;
+            }
         }
 
         public void SetMode(FireMode mode)
