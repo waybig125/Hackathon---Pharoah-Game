@@ -183,8 +183,8 @@ namespace TheAlchemistsCrypt.AI
         {
             if (animator != null && currentAnimState != stateName) {
                 currentAnimState = stateName;
-                // Double fallback: some rigs use trigger, some use CrossFade
-                animator.CrossFadeInFixedTime(stateName, 0.2f);
+                // Double fallback: some rigs use trigger, some use CrossFade. Explicitly specify layer 0 to avoid -1 layer warnings.
+                animator.CrossFadeInFixedTime(stateName, 0.2f, 0);
             }
         }
     }

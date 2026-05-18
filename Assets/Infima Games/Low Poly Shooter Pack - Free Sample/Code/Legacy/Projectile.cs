@@ -63,6 +63,8 @@ public class Projectile : MonoBehaviour {
 		if (zombie != null)
 		{
 			zombie.TakeDamage(25f);
+			Destroy(gameObject); // Destroy the bullet immediately on hitting a mummy/zombie to avoid multiple hits!
+			return;
 		}
 		
 		// //Ignore collision if bullet collides with "Player" tag
