@@ -28,6 +28,7 @@ namespace TheAlchemistsCrypt.AI
         private float deathTimer = 0f;
 
         [Header("Elemental Status Settings")]
+        public string vulnerableElement = "sulfur";
         private bool isSlowed = false;
         private float mercurySlowTimer = 0f;
         private bool isStunned = false;
@@ -108,6 +109,30 @@ namespace TheAlchemistsCrypt.AI
             
             currentHealth = maxHealth;
             FindPlayer();
+
+            // Randomly assign elemental vulnerability: "sulfur", "mercury", or "salt"
+            string[] vulnerabilities = { "sulfur", "mercury", "salt" };
+            vulnerableElement = vulnerabilities[Random.Range(0, vulnerabilities.Length)];
+
+            // Tint mummy models visually based on vulnerability
+            Color vulnerabilityColor = Color.white;
+            if (vulnerableElement == "sulfur")
+            {
+                vulnerabilityColor = new Color(1.0f, 0.35f, 0.05f); // Fiery orange
+            }
+            else if (vulnerableElement == "mercury")
+            {
+                vulnerabilityColor = new Color(0.0f, 0.85f, 1.0f); // Cool cyan
+            }
+            else if (vulnerableElement == "salt")
+            {
+                vulnerabilityColor = new Color(0.85f, 0.85f, 1.0f); // Crystalline purple/white
+            }
+
+            // Set up originalColor so status effects can restore back to this base color tint
+            originalColor = vulnerabilityColor;
+            hasBackedUpColor = true;
+            SetStatusColor(vulnerabilityColor);
         }
 
         private void FindPlayer()

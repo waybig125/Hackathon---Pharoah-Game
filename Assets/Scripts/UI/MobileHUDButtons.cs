@@ -1110,10 +1110,28 @@ namespace TheAlchemistsCrypt.UI
                         break;
                 }
             }
+            else
+            {
+                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                if (character != null)
+                {
+                    var weapon = character.GetEquippedWeapon();
+                    if (weapon != null)
+                    {
+                        string wName = weapon.name.ToLower();
+                        if (wName.Contains("sulfur")) activeElementIcon = sulphurIconSprite;
+                        else if (wName.Contains("mercury")) activeElementIcon = mercuryIconSprite;
+                        else if (wName.Contains("salt")) activeElementIcon = saltIconSprite;
+                    }
+                }
+            }
             if (ammoIconImage != null && activeElementIcon != null)
             {
                 ammoIconImage.sprite = activeElementIcon;
             }
+
+            // Dynamically tint alchemical weapons
+            TryTintWeapons();
 
             int current = 30;
             int total = 30;
@@ -1596,6 +1614,21 @@ namespace TheAlchemistsCrypt.UI
                         break;
                 }
             }
+            else
+            {
+                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                if (character != null)
+                {
+                    var weapon = character.GetEquippedWeapon();
+                    if (weapon != null)
+                    {
+                        string wName = weapon.name.ToLower();
+                        if (wName.Contains("sulfur")) tickColor = new Color(0.95f, 0.55f, 0.05f, 0.95f);
+                        else if (wName.Contains("mercury")) tickColor = new Color(0.1f, 0.75f, 0.95f, 0.95f);
+                        else if (wName.Contains("salt")) tickColor = new Color(0.95f, 0.95f, 0.95f, 0.95f);
+                    }
+                }
+            }
 
             for (int i = 0; i < 30; i++)
             {
@@ -1975,6 +2008,49 @@ namespace TheAlchemistsCrypt.UI
             };
 
             SetLayerRecursively(deathCanvasGo, 5);
+        }
+
+        private bool hasTintedWeapons = false;
+        private void TryTintWeapons()
+        {
+            if (hasTintedWeapons) return;
+            
+            var sulfurGo = GameObject.Find("WEP_Sulfur");
+            var mercuryGo = GameObject.Find("WEP_Mercury");
+            var saltGo = GameObject.Find("WEP_Salt");
+
+            if (sulfurGo == null && mercuryGo == null && saltGo == null) return;
+
+            hasTintedWeapons = true;
+            
+            // Sulfur: Fiery Orange
+            if (sulfurGo != null) TintWeaponMaterials(sulfurGo, new Color(1.0f, 0.35f, 0.05f));
+            
+            // Mercury: Cool Cyan
+            if (mercuryGo != null) TintWeaponMaterials(mercuryGo, new Color(0.0f, 0.85f, 1.0f));
+            
+            // Salt: Bright White Crystalline
+            if (saltGo != null) TintWeaponMaterials(saltGo, new Color(0.85f, 0.85f, 1.0f));
+        }
+
+        private void TintWeaponMaterials(GameObject go, Color col)
+        {
+            Renderer[] renderers = go.GetComponentsInChildren<Renderer>(true);
+            foreach (Renderer r in renderers)
+            {
+                if (r == null) continue;
+                foreach (Material m in r.materials)
+                {
+                    if (m == null) continue;
+                    if (m.HasProperty("_Color")) m.SetColor("_Color", col);
+                    if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", col);
+                    if (m.HasProperty("_EmissionColor"))
+                    {
+                        m.SetColor("_EmissionColor", col * 1.5f);
+                        m.EnableKeyword("_EMISSION");
+                    }
+                }
+            }
         }
     }
 

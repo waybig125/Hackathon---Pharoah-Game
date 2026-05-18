@@ -62,7 +62,51 @@ public class Projectile : MonoBehaviour {
 		if (zombie == null) zombie = collision.gameObject.GetComponentInParent<TheAlchemistsCrypt.AI.ZombieAI>();
 		if (zombie != null)
 		{
-			zombie.TakeDamage(25f);
+			// 1. Determine active element based on equipped weapon
+			string activeElement = "sulfur";
+			var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+			if (character != null)
+			{
+				var inventory = character.GetInventory();
+				if (inventory != null)
+				{
+					var equipped = inventory.GetEquipped();
+					if (equipped != null)
+					{
+						string wName = equipped.name.ToLower();
+						if (wName.Contains("sulfur")) activeElement = "sulfur";
+						else if (wName.Contains("mercury")) activeElement = "mercury";
+						else if (wName.Contains("salt")) activeElement = "salt";
+					}
+				}
+			}
+
+			// 2. Check vulnerability: must match activeElement, otherwise 0 damage
+			if (zombie.vulnerableElement.ToLower() == activeElement)
+			{
+				switch (activeElement)
+				{
+					case "sulfur":
+						zombie.TakeDamage(35f);
+						ApplySulfurAOE(collision.contacts[0].point);
+						break;
+					case "mercury":
+						zombie.TakeDamage(25f);
+						zombie.ApplyMercurySlow(3f);
+						break;
+					case "salt":
+						zombie.TakeDamage(20f);
+						zombie.ApplySaltStun(2f);
+						break;
+				}
+			}
+			else
+			{
+				Debug.Log($"Mummy Immune! Attacked with {activeElement} but vulnerable to {zombie.vulnerableElement}");
+				// Visual feedback: deal exactly ZERO damage
+				zombie.TakeDamage(0f);
+			}
+
 			Destroy(gameObject); // Destroy the bullet immediately on hitting a mummy/zombie to avoid multiple hits!
 			return;
 		}
@@ -183,5 +227,39 @@ public class Projectile : MonoBehaviour {
 		yield return new WaitForSeconds (destroyAfter);
 		//Destroy bullet object
 		Destroy (gameObject);
+	}
+
+	private void ApplySulfurAOE(Vector3 position)
+	{
+		Collider[] colliders = Physics.OverlapSphere(position, 4.0f);
+		foreach (Collider c in colliders)
+		{
+			var z = c.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>();
+			if (z == null) z = c.GetComponentInParent<TheAlchemistsCrypt.AI.ZombieAI>();
+			if (z != null && z.vulnerableElement.ToLower() == "sulfur")
+			{
+				// Calculate falloff damage based on distance
+				float dist = Vector3.Distance(position, z.transform.position);
+				float damage = Mathf.Lerp(30f, 10f, dist / 4.0f);
+				z.TakeDamage(damage);
+				
+				// Knockback if Rigidbody exists
+				var rb = z.GetComponent<Rigidbody>();
+				if (rb != null)
+				{
+					rb.AddExplosionForce(300f, position, 4.0f);
+				}
+			}
+		}
+		
+		// Create a small procedural explosion light
+		GameObject exp = new GameObject("SulfurExplosionLight");
+		exp.transform.position = position;
+		Light l = exp.AddComponent<Light>();
+		l.type = LightType.Point;
+		l.color = new Color(1f, 0.4f, 0f);
+		l.intensity = 15f;
+		l.range = 6f;
+		Destroy(exp, 0.4f);
 	}
 }

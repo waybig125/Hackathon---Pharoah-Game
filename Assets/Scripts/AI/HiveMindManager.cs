@@ -123,6 +123,21 @@ namespace TheAlchemistsCrypt.AI
             {
                 activeElement = focus.CurrentMode.ToString().ToLower();
             }
+            else
+            {
+                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                if (character != null)
+                {
+                    var weapon = character.GetEquippedWeapon();
+                    if (weapon != null)
+                    {
+                        string wName = weapon.name.ToLower();
+                        if (wName.Contains("sulfur")) activeElement = "sulfur";
+                        else if (wName.Contains("mercury")) activeElement = "mercury";
+                        else if (wName.Contains("salt")) activeElement = "salt";
+                    }
+                }
+            }
             pState.active_element = activeElement;
 
             int healthVal = 100;
