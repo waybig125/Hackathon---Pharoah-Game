@@ -36,53 +36,42 @@ namespace TheAlchemistsCrypt.AI
         
         [Header("Procedural Health Bar HUD")]
         private GameObject healthBarObj;
-        private UnityEngine.UI.Image healthBarFill;
+        private SpriteRenderer healthBarFillSr;
         private Transform mainCameraTransform;
+        private Sprite healthBarSprite;
 
         private void CreateHealthBar()
         {
             if (Camera.main != null) mainCameraTransform = Camera.main.transform;
 
-            healthBarObj = new GameObject("MummyHealthBarCanvas");
+            // Generate 1x1 white sprite
+            Texture2D tex = new Texture2D(1, 1);
+            tex.SetPixel(0, 0, Color.white);
+            tex.Apply();
+            healthBarSprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
+
+            // Container
+            healthBarObj = new GameObject("MummyHealthBar");
             healthBarObj.transform.SetParent(transform);
             healthBarObj.transform.localPosition = new Vector3(0f, 2.4f, 0f); // Slightly higher to be fully visible above head
             healthBarObj.transform.localRotation = Quaternion.identity;
-            healthBarObj.transform.localScale = new Vector3(0.003f, 0.003f, 0.003f);
-            healthBarObj.layer = 0; // Default layer
 
-            Canvas canvas = healthBarObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.WorldSpace;
-            canvas.worldCamera = Camera.main;
-            canvas.sortingOrder = 5; // Render on top of meshes
-
-            UnityEngine.UI.CanvasScaler scaler = healthBarObj.AddComponent<UnityEngine.UI.CanvasScaler>();
-            scaler.dynamicPixelsPerUnit = 10f;
-
-            GameObject bgObj = new GameObject("HealthBarBG");
+            // Background
+            GameObject bgObj = new GameObject("BG");
             bgObj.transform.SetParent(healthBarObj.transform, false);
-            bgObj.layer = 0;
-            var bgImage = bgObj.AddComponent<UnityEngine.UI.Image>();
-            bgImage.color = new Color(0.15f, 0.0f, 0.0f, 0.8f); // Darker red BG for higher contrast
-            var bgRect = bgObj.GetComponent<RectTransform>();
-            bgRect.sizeDelta = new Vector2(300f, 40f);
+            var bgSr = bgObj.AddComponent<SpriteRenderer>();
+            bgSr.sprite = healthBarSprite;
+            bgSr.color = new Color(0.15f, 0.0f, 0.0f, 0.8f); // Dark red BG
+            bgObj.transform.localScale = new Vector3(0.9f, 0.12f, 1f); // Thin elegant bar
 
-            GameObject fillAreaObj = new GameObject("FillArea");
-            fillAreaObj.transform.SetParent(healthBarObj.transform, false);
-            fillAreaObj.layer = 0;
-            var fillAreaRect = fillAreaObj.AddComponent<RectTransform>();
-            fillAreaRect.sizeDelta = new Vector2(300f, 40f);
-
-            GameObject fillObj = new GameObject("HealthBarFill");
-            fillObj.transform.SetParent(fillAreaObj.transform, false);
-            fillObj.layer = 0;
-            healthBarFill = fillObj.AddComponent<UnityEngine.UI.Image>();
-            healthBarFill.color = Color.green;
-            var fillRect = fillObj.GetComponent<RectTransform>();
-            fillRect.anchorMin = new Vector2(0f, 0.5f);
-            fillRect.anchorMax = new Vector2(0f, 0.5f);
-            fillRect.pivot = new Vector2(0f, 0.5f);
-            fillRect.sizeDelta = new Vector2(300f, 40f);
-            fillRect.localPosition = new Vector3(-150f, 0f, 0f);
+            // Fill
+            GameObject fillObj = new GameObject("Fill");
+            fillObj.transform.SetParent(healthBarObj.transform, false);
+            healthBarFillSr = fillObj.AddComponent<SpriteRenderer>();
+            healthBarFillSr.sprite = healthBarSprite;
+            healthBarFillSr.color = Color.green;
+            healthBarFillSr.sortingOrder = 1; // Draw on top of BG
+            fillObj.transform.localScale = new Vector3(0.88f, 0.10f, 1f);
         }
 
         private void UpdateHealthBar()
@@ -93,7 +82,7 @@ namespace TheAlchemistsCrypt.AI
                 return;
             }
 
-            if (healthBarObj == null || healthBarFill == null) return;
+            if (healthBarObj == null || healthBarFillSr == null) return;
 
             if (mainCameraTransform == null && Camera.main != null) mainCameraTransform = Camera.main.transform;
             if (mainCameraTransform != null)
@@ -103,9 +92,13 @@ namespace TheAlchemistsCrypt.AI
             }
 
             float fillPct = Mathf.Clamp01(currentHealth / maxHealth);
-            var rect = healthBarFill.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(300f * fillPct, 40f);
-            healthBarFill.color = Color.Lerp(Color.red, Color.green, fillPct);
+            float maxScaleX = 0.88f;
+            float targetScaleX = maxScaleX * fillPct;
+            float posX = -0.5f * maxScaleX * (1f - fillPct);
+
+            healthBarFillSr.gameObject.transform.localPosition = new Vector3(posX, 0f, 0f);
+            healthBarFillSr.gameObject.transform.localScale = new Vector3(targetScaleX, 0.10f, 1f);
+            healthBarFillSr.color = Color.Lerp(Color.red, Color.green, fillPct);
         }
 
         private void BackupOriginalColors()

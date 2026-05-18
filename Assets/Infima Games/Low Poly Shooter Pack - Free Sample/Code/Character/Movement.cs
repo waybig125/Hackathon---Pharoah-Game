@@ -188,8 +188,7 @@ namespace InfimaGames.LowPolyShooterPack
         private void ProcessJumping()
         {
             bool isMobileJumping = TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsJumping;
-            bool isDesktopJumping = (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.spaceKey.isPressed)
-                || UnityEngine.Input.GetKey(KeyCode.Space);
+            bool isDesktopJumping = (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.spaceKey.isPressed);
             
             // Consume the jump input immediately so it never triggers unintended auto-jumps later
             if (isMobileJumping)
@@ -236,31 +235,6 @@ namespace InfimaGames.LowPolyShooterPack
 
             //Get Movement Input!
             Vector2 frameInput = playerCharacter.GetInputMovement();
-            
-            // Fail-safe for Desktop WASD
-            if (frameInput.sqrMagnitude < 0.01f)
-            {
-                float h = 0, v = 0;
-                if (UnityEngine.InputSystem.Keyboard.current != null)
-                {
-                    if (UnityEngine.InputSystem.Keyboard.current.wKey.isPressed) v += 1;
-                    if (UnityEngine.InputSystem.Keyboard.current.sKey.isPressed) v -= 1;
-                    if (UnityEngine.InputSystem.Keyboard.current.aKey.isPressed) h -= 1;
-                    if (UnityEngine.InputSystem.Keyboard.current.dKey.isPressed) h += 1;
-                }
-                
-                // Legacy keyboard axis fallback
-                if (Mathf.Abs(h) < 0.01f && Mathf.Abs(v) < 0.01f)
-                {
-                    h = UnityEngine.Input.GetAxisRaw("Horizontal");
-                    v = UnityEngine.Input.GetAxisRaw("Vertical");
-                }
-
-                if (Mathf.Abs(h) > 0.01f || Mathf.Abs(v) > 0.01f)
-                {
-                    frameInput = new Vector2(h, v).normalized;
-                }
-            }
 
             //Calculate local-space direction by using the player's input.
             var movement = new Vector3(frameInput.x, 0.0f, frameInput.y);

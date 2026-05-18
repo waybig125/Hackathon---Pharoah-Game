@@ -221,6 +221,7 @@ namespace TheAlchemistsCrypt.Editor
                 if (go == null) continue; 
                 string lowerName = go.name.ToLower();
                 if (lowerName.Contains("egyptiancity") || lowerName.Contains("desertfloor") || lowerName.Contains("floorground") ||
+                    lowerName.Contains("groundplane") || lowerName.Contains("desertterrain") ||
                     lowerName.Contains("player_copy") || lowerName.Contains("mobilehud") || lowerName.Contains("p_lpsp_ui_canvas") || 
                     lowerName.StartsWith("mummy") || lowerName.Contains("windowlight") || lowerName.Contains("crater") ||
                     lowerName.Contains("plaza") || lowerName.Contains("house") || lowerName.Contains("pyramid")) 
@@ -296,11 +297,19 @@ namespace TheAlchemistsCrypt.Editor
                     float dune2 = Mathf.Cos(tx * 6f - ty * 14f) * 0.15f;
                     float ripple = Mathf.Sin(tx * 120f + ty * 80f) * 0.005f;
 
-                    // Smooth center flattening so building placement and player spawn are level
-                    float distFromCenter = Mathf.Sqrt((tx - 0.5f) * (tx - 0.5f) + (ty - 0.5f) * (ty - 0.5f));
-                    float centerFlattenFactor = Mathf.SmoothStep(0f, 1f, distFromCenter * 5f); // 20% radius is flat, smooth transition outwards
+                    // Add smooth rolling sand mounds/bumps in the town and plaza area
+                    float townBumps = Mathf.Sin(tx * 35f) * Mathf.Cos(ty * 35f) * 0.045f;
 
-                    heights[i, j] = (dune1 + dune2 + ripple + 0.5f) * centerFlattenFactor;
+                    // Smooth center flattening:
+                    // Player spawn at very center (within 5% radius) is flat.
+                    // Town area (within 25% radius) has gentle rolling bumps/hills.
+                    // Beyond the town, dunes rise majestically.
+                    float distFromCenter = Mathf.Sqrt((tx - 0.5f) * (tx - 0.5f) + (ty - 0.5f) * (ty - 0.5f));
+                    float spawnFlatten = Mathf.SmoothStep(0f, 1f, distFromCenter * 20f);
+                    float townFactor = Mathf.SmoothStep(0.12f, 1f, distFromCenter * 4.5f);
+                    
+                    float baseDune = (dune1 + dune2 + ripple + 0.5f) * (0.1f + 0.9f * townFactor);
+                    heights[i, j] = (baseDune + townBumps) * spawnFlatten;
                 }
             }
             terrainData.SetHeights(0, 0, heights);
@@ -443,7 +452,23 @@ namespace TheAlchemistsCrypt.Editor
             door.GetComponent<Renderer>().sharedMaterial = wood;
             door.isStatic = true;
 
-            // Removed crates to declutter residential house yards as per user request
+            // Spawn breakable crates and barrels around the house!
+            if (crate != null) {
+                Vector3 cratePos = pos + new Vector3(13f, 0f, 11f);
+                var cObj = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
+                cObj.name = "HouseCrate_1";
+                cObj.transform.localScale = new Vector3(0.22f, 0.22f, 0.22f); // Standardized beautiful realistic scale
+                AlignToGroundAndAddCollider(cObj, cratePos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f); // Stand vertical and random rotation
+                cObj.isStatic = true;
+
+                // Stack a second crate on top!
+                Vector3 stackedPos = cratePos + Vector3.up * 0.44f; // Sits perfectly on top of the first crate
+                var cObj2 = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
+                cObj2.name = "HouseCrate_2";
+                cObj2.transform.localScale = new Vector3(0.18f, 0.18f, 0.18f); // Stacked crate slightly smaller
+                AlignToGroundAndAddCollider(cObj2, stackedPos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f);
+                cObj2.isStatic = true;
+            }
 
             if (barrel != null) {
                 Vector3 barrelPos = pos + new Vector3(-13f, 0f, -11f);
@@ -465,42 +490,6 @@ namespace TheAlchemistsCrypt.Editor
         private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab, Material sandMat, Material craterMat)
         {
             var p = new GameObject("Plaza"); p.transform.SetParent(parent); p.transform.position = pos; p.isStatic = true;
-            
-            // Generate a Beautiful, Interactive Sandy Crater!
-            var craterCenter = new GameObject("Crater");
-            craterCenter.transform.SetParent(p.transform);
-            craterCenter.transform.localPosition = Vector3.zero;
-            
-            // 1. Central dark pit disc
-            var hole = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            hole.name = "CraterHole";
-            hole.transform.SetParent(craterCenter.transform);
-            hole.transform.localPosition = new Vector3(0f, 0.05f, 0f);
-            hole.transform.localScale = new Vector3(8f, 0.05f, 8f);
-            hole.GetComponent<Renderer>().sharedMaterial = craterMat;
-            DestroyImmediate(hole.GetComponent<Collider>()); // Visual only, so you can stand slightly in the center if needed
-            hole.isStatic = true;
-            
-            // 2. Surround the pit with a ring of rocky boulders (boulder rim)
-            int segments = 8;
-            float radius = 5f;
-            for (int i = 0; i < segments; i++) {
-                float angle = i * (360f / segments) * Mathf.Deg2Rad;
-                Vector3 boulderLocalPos = new Vector3(Mathf.Cos(angle) * radius, 0.5f, Mathf.Sin(angle) * radius);
-                
-                var boulder = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                boulder.name = "CraterRim_" + i;
-                boulder.transform.SetParent(craterCenter.transform);
-                boulder.transform.localPosition = boulderLocalPos;
-                boulder.transform.localScale = new Vector3(2.5f, 1.5f + Random.Range(-0.5f, 0.5f), 2.5f);
-                boulder.transform.localRotation = Quaternion.Euler(Random.Range(-15f, 15f), Random.Range(0f, 360f), Random.Range(-15f, 15f));
-                boulder.GetComponent<Renderer>().sharedMaterial = sandMat; // Use floor/sand texture to blend
-                boulder.isStatic = true;
-                
-                // Add BoxCollider for physical obstruction so player can't walk through!
-                var col = boulder.GetComponent<BoxCollider>();
-                if (col == null) col = boulder.AddComponent<BoxCollider>();
-            }
 
             // Spawns ancient columns in the plaza for ruins detailing
             if (columnPrefab != null) {
@@ -511,7 +500,7 @@ namespace TheAlchemistsCrypt.Editor
                 colObj.isStatic = true;
             }
 
-            // Also spawn trees if available (offset from the crater to avoid overlapping)
+            // Also spawn trees if available (offset to avoid overlapping)
             if (trees != null && trees.Length > 0) {
                 var t = (GameObject)PrefabUtility.InstantiatePrefab(trees[Random.Range(0, trees.Length)], p.transform);
                 t.transform.localScale = Vector3.one * 8f; AlignToGroundAndAddCollider(t, pos + new Vector3(8f, 0f, 8f), Quaternion.Euler(-90, 0, 0), -1.8f);
@@ -563,6 +552,41 @@ namespace TheAlchemistsCrypt.Editor
 
         private void AlignToGroundAndAddCollider(GameObject obj, Vector3 basePos, Quaternion targetRot, float offsetAdjustment)
         {
+            // DYNAMIC URP SHADER CONVERTER
+            // Convert standard shaders on imported meshes to URP to avoid pink-material artifacts
+            var allRenderers = obj.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in allRenderers)
+            {
+                if (r.sharedMaterials == null) continue;
+                Material[] mats = r.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    if (mats[i] == null) continue;
+                    string shaderName = mats[i].shader.name;
+                    if (shaderName.Contains("Standard") || shaderName.Contains("Built-in") || shaderName == "Legacy Shaders/Diffuse" || shaderName == "Diffuse")
+                    {
+                        var oldMat = mats[i];
+                        var newMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                        newMat.name = oldMat.name + "_URP";
+                        
+                        if (oldMat.HasProperty("_Color")) newMat.SetColor("_BaseColor", oldMat.GetColor("_Color"));
+                        if (oldMat.HasProperty("_MainTex") && oldMat.GetTexture("_MainTex") != null) newMat.SetTexture("_BaseMap", oldMat.GetTexture("_MainTex"));
+                        if (oldMat.HasProperty("_BumpMap") && oldMat.GetTexture("_BumpMap") != null)
+                        {
+                            newMat.SetTexture("_BumpMap", oldMat.GetTexture("_BumpMap"));
+                            newMat.EnableKeyword("_NORMALMAP");
+                        }
+                        if (oldMat.HasProperty("_Metallic")) newMat.SetFloat("_Metallic", oldMat.GetFloat("_Metallic"));
+                        if (oldMat.HasProperty("_Glossiness")) newMat.SetFloat("_Smoothness", oldMat.GetFloat("_Glossiness"));
+                        
+                        mats[i] = newMat;
+                        changed = true;
+                    }
+                }
+                if (changed) r.sharedMaterials = mats;
+            }
+
             Vector3 terrainPos = basePos;
             terrainPos.y = GetTerrainHeight(basePos);
             obj.transform.position = terrainPos; 

@@ -116,7 +116,7 @@ namespace TheAlchemistsCrypt.Input
                     }
                 }
             }
-            if (finalMove.sqrMagnitude > 0.001f) touchDetected = true;
+            if (finalMove.sqrMagnitude > 0.05f) touchDetected = true;
             
             IsTouchActive = touchDetected;
         }

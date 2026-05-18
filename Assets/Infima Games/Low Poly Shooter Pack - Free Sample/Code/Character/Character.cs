@@ -223,13 +223,12 @@ namespace InfimaGames.LowPolyShooterPack
                     mob.IsReloading = false;
                 }
 
-                // Cache movement once per frame to prevent "double consumption" if multiple things call GetInputMovement
-                cachedMovement = mob.GetMovement();
+                // Cache movement: use virtual stick if touch is active, else native axisMovement
+                cachedMovement = isTouchActive ? mob.GetMovement() : axisMovement;
             }
             else {
                 // Fallback to desktop movement if no mobile manager
                 cachedMovement = axisMovement;
-                axisMovement = Vector2.zero;
             }
 
             holdingButtonFire = mobileFiring;
@@ -337,7 +336,8 @@ namespace InfimaGames.LowPolyShooterPack
 
 		public override Vector2 GetInputLook()
 		{
-            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null &&
+                (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsTouchActive || UnityEngine.Input.touchCount > 0))
             {
                 // Let the mobile manager handle the accumulation/consumption logic
                 return TheAlchemistsCrypt.Input.MobileInputManager.Instance.ConsumeLook();
@@ -494,7 +494,6 @@ namespace InfimaGames.LowPolyShooterPack
 		/// <param name="value">Value.</param>
 		public void OnMove(InputValue value)
 		{
-            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) return;
 			//Save the movement input.
 			axisMovement = value.Get<Vector2>();
 		}
@@ -505,7 +504,6 @@ namespace InfimaGames.LowPolyShooterPack
 		/// <param name="value">Value.</param>
 		public void OnLook(InputValue value)
 		{
-            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) return;
 			//Save the look input.
 			axisLook = value.Get<Vector2>();
 		}
