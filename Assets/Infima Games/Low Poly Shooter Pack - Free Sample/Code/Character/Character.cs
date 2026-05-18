@@ -223,8 +223,9 @@ namespace InfimaGames.LowPolyShooterPack
                     mob.IsReloading = false;
                 }
 
-                // Cache movement: use virtual stick if touch is active, else native axisMovement
-                cachedMovement = isTouchActive ? mob.GetMovement() : axisMovement;
+                // Cache movement: use virtual stick or keyboard WASD if active, else native axisMovement
+                Vector2 mobMove = mob.GetMovement();
+                cachedMovement = mobMove.sqrMagnitude > 0.01f ? mobMove : axisMovement;
             }
             else {
                 // Fallback to desktop movement if no mobile manager

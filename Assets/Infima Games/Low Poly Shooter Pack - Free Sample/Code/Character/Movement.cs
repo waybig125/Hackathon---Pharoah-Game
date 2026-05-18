@@ -72,6 +72,7 @@ namespace InfimaGames.LowPolyShooterPack
         /// True if the character is currently grounded.
         /// </summary>
         private bool grounded;
+        private Vector3 groundNormal = Vector3.up;
 
         /// <summary>
         /// Player Character.
@@ -165,11 +166,13 @@ namespace InfimaGames.LowPolyShooterPack
             {
                 if (groundHits[i].collider != null && groundHits[i].collider != capsule)
                 {
+                    groundNormal = groundHits[i].normal;
                     // Clean up array
                     for (int j = 0; j < groundHits.Length; j++) groundHits[j] = new RaycastHit();
                     return true;
                 }
             }
+            groundNormal = Vector3.up;
             return false;
         }
 
@@ -274,7 +277,29 @@ namespace InfimaGames.LowPolyShooterPack
 
             if (!float.IsNaN(movement.x) && !float.IsNaN(movement.z) && !float.IsInfinity(movement.x) && !float.IsInfinity(movement.z))
             {
-                Velocity = new Vector3(movement.x, curY, movement.z);
+                // Project movement vector onto sloped ground plane if grounded and the slope is walkable
+                if (grounded)
+                {
+                    float slopeAngle = Vector3.Angle(Vector3.up, groundNormal);
+                    if (slopeAngle < 50f)
+                    {
+                        Vector3 projectedMovement = Vector3.ProjectOnPlane(movement, groundNormal);
+                        movement = projectedMovement.normalized * movement.magnitude;
+                        
+                        // Smooth slope climbing: use full projected vector (including Y slope climb component)
+                        Velocity = movement;
+                    }
+                    else
+                    {
+                        // Steep slope: prevent walking up by zeroing movement, let character slide down
+                        Velocity = new Vector3(0, curY, 0);
+                    }
+                }
+                else
+                {
+                    // In the air: normal horizontal movement, preserving falling/jumping Y velocity
+                    Velocity = new Vector3(movement.x, curY, movement.z);
+                }
             }
             else
             {
