@@ -27,6 +27,67 @@ namespace TheAlchemistsCrypt.AI
         public bool IsDead => isDead;
         private float deathTimer = 0f;
 
+        [Header("Elemental Status Settings")]
+        private bool isSlowed = false;
+        private float mercurySlowTimer = 0f;
+        private bool isStunned = false;
+        private float saltStunTimer = 0f;
+        
+        private Color originalColor = Color.white;
+        private bool hasBackedUpColor = false;
+
+        private void BackupOriginalColors()
+        {
+            if (hasBackedUpColor) return;
+            Renderer r = GetComponentInChildren<Renderer>();
+            if (r != null && r.material != null)
+            {
+                originalColor = r.material.HasProperty("_BaseColor") ? r.material.GetColor("_BaseColor") : (r.material.HasProperty("_Color") ? r.material.GetColor("_Color") : Color.white);
+                hasBackedUpColor = true;
+            }
+        }
+
+        private void SetStatusColor(Color col)
+        {
+            BackupOriginalColors();
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            foreach (Renderer r in renderers)
+            {
+                if (r == null) continue;
+                foreach (Material m in r.materials)
+                {
+                    if (m == null) continue;
+                    if (m.HasProperty("_Color")) m.SetColor("_Color", col);
+                    if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", col);
+                    if (m.HasProperty("_EmissionColor"))
+                    {
+                        m.SetColor("_EmissionColor", col * 0.5f);
+                        m.EnableKeyword("_EMISSION");
+                    }
+                }
+            }
+        }
+
+        private void RestoreColors()
+        {
+            if (!hasBackedUpColor) return;
+            SetStatusColor(originalColor);
+        }
+
+        public void ApplyMercurySlow(float duration)
+        {
+            isSlowed = true;
+            mercurySlowTimer = duration;
+            SetStatusColor(new Color(0.2f, 0.6f, 1.0f)); // Blue/cyan tint
+        }
+
+        public void ApplySaltStun(float duration)
+        {
+            isStunned = true;
+            saltStunTimer = duration;
+            SetStatusColor(new Color(0.9f, 0.8f, 1.0f)); // Sparkly crystalline purple tint
+        }
+
         private void Start()
         {
             agent = GetComponent<NavMeshAgent>();
@@ -81,6 +142,26 @@ namespace TheAlchemistsCrypt.AI
                 return;
             }
 
+            // Update status timers
+            if (isStunned)
+            {
+                saltStunTimer -= Time.deltaTime;
+                if (saltStunTimer <= 0f)
+                {
+                    isStunned = false;
+                    RestoreColors();
+                }
+            }
+            if (isSlowed)
+            {
+                mercurySlowTimer -= Time.deltaTime;
+                if (mercurySlowTimer <= 0f)
+                {
+                    isSlowed = false;
+                    RestoreColors();
+                }
+            }
+
             Vector3 currentTargetPos = player.position;
             float currentSpeed = 2.2f;
 
@@ -89,9 +170,27 @@ namespace TheAlchemistsCrypt.AI
                 currentSpeed = 2.2f * tacticalSpeedMult;
             }
 
+            // Apply alchemical status speed modifications
+            if (isStunned)
+            {
+                currentSpeed = 0f;
+            }
+            else if (isSlowed)
+            {
+                currentSpeed *= 0.3f; // 70% slow
+            }
+
             if (agent.isActiveAndEnabled) {
-                agent.SetDestination(currentTargetPos);
                 agent.speed = currentSpeed;
+                if (isStunned)
+                {
+                    agent.velocity = Vector3.zero;
+                    if (agent.hasPath) agent.ResetPath();
+                }
+                else
+                {
+                    agent.SetDestination(currentTargetPos);
+                }
             }
 
             Vector3 targetDir = currentTargetPos - transform.position;
@@ -189,6 +288,11 @@ namespace TheAlchemistsCrypt.AI
             foreach (var c in colliders) c.enabled = false;
             var childColliders = GetComponentsInChildren<Collider>();
             foreach (var c in childColliders) c.enabled = false;
+
+            // Spawn Restorative Alchemical Essence Orb procedurally
+            GameObject orbObj = new GameObject("AlchemicalRestorationOrb");
+            orbObj.transform.position = transform.position + Vector3.up * 0.8f;
+            orbObj.AddComponent<TheAlchemistsCrypt.Gameplay.HealthOrb>();
 
             // Attempt to trigger Die/Death animation
             PlayAnimation("Die");

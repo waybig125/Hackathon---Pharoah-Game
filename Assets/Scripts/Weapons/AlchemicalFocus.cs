@@ -32,15 +32,65 @@ namespace TheAlchemistsCrypt.Weapons
         private bool isReloading = false;
         public bool IsReloading => isReloading;
 
+        private FireMode lastMode;
+
         private void Start()
         {
             currentAmmo = maxAmmo;
+            lastMode = currentMode;
+            UpdateWeaponColor();
         }
 
         private void Update()
         {
             HandleShooting();
             HandleModeSwitch();
+
+            if (currentMode != lastMode)
+            {
+                lastMode = currentMode;
+                UpdateWeaponColor();
+            }
+        }
+
+        private void UpdateWeaponColor()
+        {
+            Color glowColor = Color.red; // default Sulfur
+            switch (currentMode)
+            {
+                case FireMode.Sulfur: glowColor = new Color(1.0f, 0.3f, 0.0f); break; // Fiery orange
+                case FireMode.Mercury: glowColor = new Color(0.0f, 0.9f, 1.0f); break; // Cyan/blue
+                case FireMode.Salt: glowColor = new Color(0.9f, 0.9f, 1.0f); break; // Crystalline white/violet
+            }
+
+            // Find all renderers in children to apply element coloring
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            foreach (Renderer r in renderers)
+            {
+                if (r == null) continue;
+                foreach (Material m in r.materials)
+                {
+                    if (m == null) continue;
+                    if (m.HasProperty("_Color")) m.SetColor("_Color", glowColor);
+                    if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", glowColor);
+                    if (m.HasProperty("_EmissionColor"))
+                    {
+                        m.SetColor("_EmissionColor", glowColor * 2.5f); // Make it glow!
+                        m.EnableKeyword("_EMISSION");
+                    }
+                }
+            }
+
+            // Add or update a dynamic glowing Point Light on the firePoint to illuminate the surroundings with the element's color!
+            if (firePoint != null)
+            {
+                Light l = firePoint.GetComponent<Light>();
+                if (l == null) l = firePoint.gameObject.AddComponent<Light>();
+                l.type = LightType.Point;
+                l.color = glowColor;
+                l.intensity = 8.0f;
+                l.range = 5.0f;
+            }
         }
 
         private void HandleShooting()
@@ -54,7 +104,8 @@ namespace TheAlchemistsCrypt.Weapons
                 return;
             }
 
-            if (MobileInputManager.Instance != null && MobileInputManager.Instance.IsFiring && Time.time >= nextFireTime)
+            bool isFiringInput = (MobileInputManager.Instance != null && MobileInputManager.Instance.IsFiring) || UnityEngine.Input.GetMouseButton(0);
+            if (isFiringInput && Time.time >= nextFireTime)
             {
                 if (currentAmmo > 0)
                 {
@@ -112,7 +163,16 @@ namespace TheAlchemistsCrypt.Weapons
 
             if (ObjectPooler.Instance != null && firePoint != null)
             {
-                ObjectPooler.Instance.SpawnFromPool(tag, firePoint.position, firePoint.rotation);
+                GameObject spawned = ObjectPooler.Instance.SpawnFromPool(tag, firePoint.position, firePoint.rotation);
+                if (spawned != null)
+                {
+                    Projectile proj = spawned.GetComponent<Projectile>();
+                    if (proj == null) proj = spawned.GetComponentInChildren<Projectile>();
+                    if (proj != null)
+                    {
+                        proj.element = (Projectile.ElementType)currentMode;
+                    }
+                }
             }
         }
     }

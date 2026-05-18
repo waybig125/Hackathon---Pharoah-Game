@@ -292,7 +292,7 @@ namespace TheAlchemistsCrypt.UI
             tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
         }
 
-        private Sprite CreateProceduralHealthIconSprite()
+         private Sprite CreateProceduralHealthIconSprite()
         {
             int size = 64;
             Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
@@ -1094,7 +1094,7 @@ namespace TheAlchemistsCrypt.UI
 
             // Update alchemical mode icon in Ammo panel
             Sprite activeElementIcon = sulphurIconSprite;
-            var focus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+            var focus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>(FindObjectsInactive.Include);
             if (focus != null)
             {
                 switch (focus.CurrentMode)
@@ -1157,7 +1157,7 @@ namespace TheAlchemistsCrypt.UI
             
             // Dialog box
             var dialog = new GameObject("Dialog", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            dialog.SetParent(modalBg, false); dialog.anchorMin = dialog.anchorMax = new Vector2(0.5f, 0.5f); dialog.sizeDelta = new Vector2(800, 550);
+            dialog.SetParent(modalBg, false); dialog.anchorMin = dialog.anchorMax = new Vector2(0.5f, 0.5f); dialog.sizeDelta = new Vector2(800, 600);
             dialog.GetComponent<Image>().sprite = charcoalSprite;
             
             // Add a beautiful gold border around the dialog!
@@ -1170,58 +1170,59 @@ namespace TheAlchemistsCrypt.UI
             
             // Title Text
             var titleGo = new GameObject("Title", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            titleGo.SetParent(dialog, false); titleGo.anchoredPosition = new Vector2(0, 220); titleGo.sizeDelta = new Vector2(700, 60);
+            titleGo.SetParent(dialog, false); titleGo.anchoredPosition = new Vector2(0, 240); titleGo.sizeDelta = new Vector2(700, 60);
             var titleTxt = titleGo.GetComponent<Text>();
             titleTxt.font = GetRobustFont(); titleTxt.fontSize = 28; titleTxt.fontStyle = FontStyle.Bold;
             titleTxt.alignment = TextAnchor.MiddleCenter; titleTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
             titleTxt.text = "THE PHARAOH'S VAULT - SETTINGS";
 
-            // Row 1: Swipe Sensitivity
+            // Row 1: Swipe Sensitivity (SLIDER)
             float currentSens = PlayerPrefs.GetFloat("MobileSensitivity", 0.08f);
-            var sensRow = CreateSettingsRow(dialog, "TOUCH SENSITIVITY", new Vector2(0, 100), currentSens.ToString("F2"),
-                () => {
-                    float s = PlayerPrefs.GetFloat("MobileSensitivity", 0.08f);
-                    s = Mathf.Clamp(s - 0.01f, 0.02f, 0.30f);
-                    PlayerPrefs.SetFloat("MobileSensitivity", s); PlayerPrefs.Save();
+            var sensRow = CreateSettingsSliderRow(dialog, "TOUCH SENSITIVITY", new Vector2(0, 130), 0.02f, 0.30f, currentSens,
+                (val) => {
+                    PlayerPrefs.SetFloat("MobileSensitivity", val); PlayerPrefs.Save();
                     var sz = GameObject.FindAnyObjectByType<LookSwipeZone>();
-                    if (sz != null) sz.sensitivity = s;
-                    return s.ToString("F2");
+                    if (sz != null) sz.sensitivity = val;
                 },
-                () => {
-                    float s = PlayerPrefs.GetFloat("MobileSensitivity", 0.08f);
-                    s = Mathf.Clamp(s + 0.01f, 0.02f, 0.30f);
-                    PlayerPrefs.SetFloat("MobileSensitivity", s); PlayerPrefs.Save();
-                    var sz = GameObject.FindAnyObjectByType<LookSwipeZone>();
-                    if (sz != null) sz.sensitivity = s;
-                    return s.ToString("F2");
-                }
+                (val) => val.ToString("F2")
             );
 
-            // Row 2: Master Volume
+            // Row 2: Master Volume (SLIDER)
             float currentVol = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
             AudioListener.volume = currentVol;
-            var volRow = CreateSettingsRow(dialog, "MASTER VOLUME", new Vector2(0, 0), Mathf.RoundToInt(currentVol * 100f) + "%",
+            var volRow = CreateSettingsSliderRow(dialog, "MASTER VOLUME", new Vector2(0, 45), 0f, 1f, currentVol,
+                (val) => {
+                    PlayerPrefs.SetFloat("MasterVolume", val); PlayerPrefs.Save();
+                    AudioListener.volume = val;
+                },
+                (val) => Mathf.RoundToInt(val * 100f) + "%"
+            );
+
+            // Row 3: Hive Narration Toggle (SELECTOR)
+            int showNar = PlayerPrefs.GetInt("ShowNarration", 1);
+            string initialShowStr = showNar == 1 ? "ON" : "OFF";
+            var narrationRow = CreateSettingsRow(dialog, "HIVE NARRATION", new Vector2(0, -40), initialShowStr,
                 () => {
-                    float v = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
-                    v = Mathf.Clamp(v - 0.1f, 0f, 1f);
-                    PlayerPrefs.SetFloat("MasterVolume", v); PlayerPrefs.Save();
-                    AudioListener.volume = v;
-                    return Mathf.RoundToInt(v * 100f) + "%";
+                    int currentVal = PlayerPrefs.GetInt("ShowNarration", 1);
+                    int nextVal = currentVal == 1 ? 0 : 1;
+                    PlayerPrefs.SetInt("ShowNarration", nextVal); PlayerPrefs.Save();
+                    if (nextVal == 0 && narrationPanel != null) narrationPanel.SetActive(false);
+                    return nextVal == 1 ? "ON" : "OFF";
                 },
                 () => {
-                    float v = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
-                    v = Mathf.Clamp(v + 0.1f, 0f, 1f);
-                    PlayerPrefs.SetFloat("MasterVolume", v); PlayerPrefs.Save();
-                    AudioListener.volume = v;
-                    return Mathf.RoundToInt(v * 100f) + "%";
+                    int currentVal = PlayerPrefs.GetInt("ShowNarration", 1);
+                    int nextVal = currentVal == 1 ? 0 : 1;
+                    PlayerPrefs.SetInt("ShowNarration", nextVal); PlayerPrefs.Save();
+                    if (nextVal == 0 && narrationPanel != null) narrationPanel.SetActive(false);
+                    return nextVal == 1 ? "ON" : "OFF";
                 }
             );
 
-            // Row 3: Visual Fidelity
+            // Row 4: Visual Fidelity (SELECTOR)
             int currentQuality = QualitySettings.GetQualityLevel();
             string[] qualityNames = { "LOW", "MEDIUM", "ULTRA" };
             string initialQualityName = currentQuality < qualityNames.Length ? qualityNames[currentQuality] : "ULTRA";
-            var qualRow = CreateSettingsRow(dialog, "VISUAL QUALITY", new Vector2(0, -100), initialQualityName,
+            var qualRow = CreateSettingsRow(dialog, "VISUAL QUALITY", new Vector2(0, -125), initialQualityName,
                 () => {
                     int q = QualitySettings.GetQualityLevel();
                     q = Mathf.Clamp(q - 1, 0, 2);
@@ -1238,7 +1239,7 @@ namespace TheAlchemistsCrypt.UI
 
             // Close Button
             var closeGo = new GameObject("CloseButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            closeGo.SetParent(dialog, false); closeGo.anchoredPosition = new Vector2(0, -210); closeGo.sizeDelta = new Vector2(250, 60);
+            closeGo.SetParent(dialog, false); closeGo.anchoredPosition = new Vector2(0, -230); closeGo.sizeDelta = new Vector2(250, 60);
             closeGo.GetComponent<Image>().sprite = charcoalSprite;
             
             // Add gold highlights to the close button
@@ -1264,6 +1265,76 @@ namespace TheAlchemistsCrypt.UI
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
             };
+        }
+
+        private GameObject CreateSettingsSliderRow(RectTransform parent, string labelText, Vector2 pos, float minVal, float maxVal, float initialVal, System.Action<float> onValueChange, System.Func<float, string> formatFunc)
+        {
+            var row = new GameObject("Row_" + labelText.Replace(" ", ""), typeof(RectTransform)).GetComponent<RectTransform>();
+            row.SetParent(parent, false); row.anchoredPosition = pos; row.sizeDelta = new Vector2(700, 70);
+
+            // Label
+            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            lblGo.SetParent(row, false); lblGo.anchorMin = new Vector2(0, 0.5f); lblGo.anchorMax = new Vector2(0.4f, 0.5f);
+            lblGo.pivot = new Vector2(0, 0.5f); lblGo.anchoredPosition = new Vector2(20, 0); lblGo.sizeDelta = new Vector2(250, 50);
+            var lblTxt = lblGo.GetComponent<Text>();
+            lblTxt.font = GetRobustFont(); lblTxt.fontSize = 20; lblTxt.fontStyle = FontStyle.Bold;
+            lblTxt.alignment = TextAnchor.MiddleLeft; lblTxt.color = new Color(0.95f, 0.85f, 0.6f, 0.95f);
+            lblTxt.text = labelText;
+
+            // Slider Background track
+            var sliderBgGo = new GameObject("SliderBg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            sliderBgGo.SetParent(row, false); sliderBgGo.anchoredPosition = new Vector2(210, 0); sliderBgGo.sizeDelta = new Vector2(270, 14);
+            sliderBgGo.GetComponent<Image>().sprite = charcoalSprite;
+            sliderBgGo.GetComponent<Image>().color = new Color(0.1f, 0.1f, 0.1f, 0.95f);
+
+            // Slider Fill track (golden/crimson)
+            var sliderFillGo = new GameObject("SliderFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            sliderFillGo.SetParent(sliderBgGo, false);
+            sliderFillGo.anchorMin = new Vector2(0, 0);
+            sliderFillGo.anchorMax = new Vector2((initialVal - minVal) / (maxVal - minVal), 1);
+            sliderFillGo.offsetMin = sliderFillGo.offsetMax = Vector2.zero;
+            sliderFillGo.GetComponent<Image>().sprite = charcoalSprite;
+            sliderFillGo.GetComponent<Image>().color = new Color(0.95f, 0.8f, 0.2f, 0.9f);
+
+            // Handle knob
+            var knobGo = new GameObject("SliderHandle", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            knobGo.SetParent(sliderBgGo, false);
+            knobGo.anchorMin = knobGo.anchorMax = new Vector2((initialVal - minVal) / (maxVal - minVal), 0.5f);
+            knobGo.anchoredPosition = Vector2.zero;
+            knobGo.sizeDelta = new Vector2(26, 26);
+            knobGo.GetComponent<Image>().sprite = CreateSettingsMedallionSprite(32, 32);
+
+            // Value text label at the right
+            var valGo = new GameObject("SliderValueText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            valGo.SetParent(row, false); valGo.anchoredPosition = new Vector2(400, 0); valGo.sizeDelta = new Vector2(100, 50);
+            var valTxt = valGo.GetComponent<Text>();
+            valTxt.font = GetRobustFont(); valTxt.fontSize = 20; valTxt.fontStyle = FontStyle.Bold;
+            valTxt.alignment = TextAnchor.MiddleLeft; valTxt.color = new Color(1f, 0.95f, 0.8f, 0.95f);
+            valTxt.text = formatFunc != null ? formatFunc(initialVal) : initialVal.ToString("F2");
+
+            // Direct interactive drag listener!
+            var sliderHelper = sliderBgGo.gameObject.AddComponent<ButtonInputHelper>();
+            System.Action<Vector2> updateSliderVal = (screenPos) => {
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(sliderBgGo, screenPos, null, out Vector2 localPoint);
+                float width = sliderBgGo.rect.width;
+                float pct = Mathf.Clamp01((localPoint.x + width * 0.5f) / width);
+                float val = Mathf.Lerp(minVal, maxVal, pct);
+                sliderFillGo.anchorMax = new Vector2(pct, 1);
+                knobGo.anchorMin = knobGo.anchorMax = new Vector2(pct, 0.5f);
+                valTxt.text = formatFunc != null ? formatFunc(val) : val.ToString("F2");
+                onValueChange?.Invoke(val);
+            };
+
+            sliderHelper.onDown = () => {
+                updateSliderVal(UnityEngine.Input.mousePosition);
+            };
+
+            var dragHelper = sliderBgGo.gameObject.AddComponent<SliderDragHelper>();
+            dragHelper.onDrag = (screenPos) => {
+                updateSliderVal(screenPos);
+            };
+
+            return row.gameObject;
         }
 
         private GameObject CreateSettingsRow(RectTransform parent, string labelText, Vector2 pos, string initialVal, System.Func<string> onDec, System.Func<string> onInc)
@@ -1325,6 +1396,177 @@ namespace TheAlchemistsCrypt.UI
             incGo.gameObject.AddComponent<ButtonInputHelper>().onUp = () => { valTxt.text = onInc(); };
 
             return row.gameObject;
+        }
+
+        private GameObject narrationPanel = null;
+        private Text narrationText = null;
+        private Coroutine narrationFadeRoutine = null;
+        private GameObject orbTooltipPanel = null;
+        private Text orbTooltipText = null;
+        private Coroutine orbTooltipFadeRoutine = null;
+
+        public void ShowNarration(string message)
+        {
+            if (PlayerPrefs.GetInt("ShowNarration", 1) == 0)
+            {
+                if (narrationPanel != null) narrationPanel.SetActive(false);
+                return;
+            }
+
+            if (narrationPanel == null)
+            {
+                var canvas = GetComponent<Canvas>();
+                if (canvas == null) return;
+                var root = canvas.GetComponent<RectTransform>();
+
+                // Golden-bordered charcoal panel for narration
+                var panelGo = new GameObject("NarrationPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                panelGo.SetParent(root, false);
+                panelGo.anchorMin = panelGo.anchorMax = new Vector2(0.5f, 1f);
+                panelGo.pivot = new Vector2(0.5f, 1f);
+                panelGo.anchoredPosition = new Vector2(0, -135);
+                panelGo.sizeDelta = new Vector2(700, 110);
+                panelGo.GetComponent<Image>().sprite = charcoalSprite;
+                panelGo.GetComponent<Image>().color = new Color(0, 0, 0, 0.85f);
+                narrationPanel = panelGo.gameObject;
+
+                // Gold border highlight
+                var hlGo = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                hlGo.SetParent(panelGo, false);
+                hlGo.anchorMin = Vector2.zero; hlGo.anchorMax = Vector2.one;
+                hlGo.offsetMin = new Vector2(3, 3); hlGo.offsetMax = new Vector2(-3, -3);
+                var hlImg = hlGo.GetComponent<Image>();
+                hlImg.sprite = charcoalSprite;
+                hlImg.color = new Color(0.95f, 0.8f, 0.2f, 0.2f); // subtle golden border glow
+
+                // Text
+                var txtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+                txtGo.SetParent(panelGo, false);
+                txtGo.anchorMin = Vector2.zero; txtGo.anchorMax = Vector2.one;
+                txtGo.offsetMin = new Vector2(25, 10); txtGo.offsetMax = new Vector2(-25, -10);
+                narrationText = txtGo.GetComponent<Text>();
+                narrationText.font = GetRobustFont();
+                narrationText.fontSize = 20;
+                narrationText.fontStyle = FontStyle.Italic;
+                narrationText.alignment = TextAnchor.MiddleCenter;
+                narrationText.color = new Color(0.95f, 0.85f, 0.6f, 0.95f); // Rich warm cream/gold
+                narrationText.horizontalOverflow = HorizontalWrapMode.Wrap;
+                narrationText.verticalOverflow = VerticalWrapMode.Truncate;
+            }
+
+            narrationPanel.SetActive(true);
+            narrationText.text = message;
+
+            if (narrationFadeRoutine != null) StopCoroutine(narrationFadeRoutine);
+            narrationFadeRoutine = StartCoroutine(NarrationFadeOutSequence());
+        }
+
+        private IEnumerator NarrationFadeOutSequence()
+        {
+            float duration = 6f;
+            float elapsed = 0f;
+            var cg = narrationPanel.GetComponent<CanvasGroup>();
+            if (cg == null) cg = narrationPanel.AddComponent<CanvasGroup>();
+            cg.alpha = 1f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            elapsed = 0f;
+            float fadeTime = 1.5f;
+            while (elapsed < fadeTime)
+            {
+                elapsed += Time.deltaTime;
+                cg.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeTime);
+                yield return null;
+            }
+
+            narrationPanel.SetActive(false);
+        }
+
+        public void HideOrbTooltip()
+        {
+            if (orbTooltipPanel != null) orbTooltipPanel.SetActive(false);
+            if (orbTooltipFadeRoutine != null) StopCoroutine(orbTooltipFadeRoutine);
+        }
+
+        public void ShowOrbTooltip(string message)
+        {
+            if (orbTooltipPanel == null)
+            {
+                var canvas = GetComponent<Canvas>();
+                if (canvas == null) return;
+                var root = canvas.GetComponent<RectTransform>();
+
+                // Golden/crimson themed container
+                var panelGo = new GameObject("OrbTooltipPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                panelGo.SetParent(root, false);
+                panelGo.anchorMin = panelGo.anchorMax = new Vector2(0.5f, 0f);
+                panelGo.pivot = new Vector2(0.5f, 0f);
+                panelGo.anchoredPosition = new Vector2(0, 150);
+                panelGo.sizeDelta = new Vector2(600, 60);
+                panelGo.GetComponent<Image>().sprite = charcoalSprite;
+                panelGo.GetComponent<Image>().color = new Color(0.12f, 0.02f, 0.04f, 0.9f); // Crimson tint charcoal!
+                orbTooltipPanel = panelGo.gameObject;
+
+                // Gold border highlight
+                var hlGo = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                hlGo.SetParent(panelGo, false);
+                hlGo.anchorMin = Vector2.zero; hlGo.anchorMax = Vector2.one;
+                hlGo.offsetMin = new Vector2(2, 2); hlGo.offsetMax = new Vector2(-2, -2);
+                var hlImg = hlGo.GetComponent<Image>();
+                hlImg.sprite = charcoalSprite;
+                hlImg.color = new Color(0.95f, 0.8f, 0.2f, 0.3f); // Solid gold border
+
+                // Text
+                var txtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+                txtGo.SetParent(panelGo, false);
+                txtGo.anchorMin = Vector2.zero; txtGo.anchorMax = Vector2.one;
+                txtGo.offsetMin = new Vector2(15, 5); txtGo.offsetMax = new Vector2(-15, -5);
+                orbTooltipText = txtGo.GetComponent<Text>();
+                orbTooltipText.font = GetRobustFont();
+                orbTooltipText.fontSize = 16;
+                orbTooltipText.fontStyle = FontStyle.Bold;
+                orbTooltipText.alignment = TextAnchor.MiddleCenter;
+                orbTooltipText.color = new Color(0.95f, 0.85f, 0.6f, 0.95f); // Gold tint text
+                orbTooltipText.horizontalOverflow = HorizontalWrapMode.Wrap;
+                orbTooltipText.verticalOverflow = VerticalWrapMode.Truncate;
+            }
+
+            orbTooltipPanel.SetActive(true);
+            orbTooltipText.text = message;
+
+            if (orbTooltipFadeRoutine != null) StopCoroutine(orbTooltipFadeRoutine);
+            orbTooltipFadeRoutine = StartCoroutine(OrbTooltipFadeOutSequence());
+        }
+
+        private IEnumerator OrbTooltipFadeOutSequence()
+        {
+            float duration = 3.5f;
+            float elapsed = 0f;
+            var cg = orbTooltipPanel.GetComponent<CanvasGroup>();
+            if (cg == null) cg = orbTooltipPanel.AddComponent<CanvasGroup>();
+            cg.alpha = 1f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            elapsed = 0f;
+            float fadeTime = 0.8f;
+            while (elapsed < fadeTime)
+            {
+                elapsed += Time.deltaTime;
+                cg.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeTime);
+                yield return null;
+            }
+
+            orbTooltipPanel.SetActive(false);
         }
 
         public void UpdateHealth(float h)

@@ -198,6 +198,10 @@ namespace TheAlchemistsCrypt.AI
                             if (!string.IsNullOrEmpty(response.narration))
                             {
                                 Debug.Log($"[HiveMind Narration] {response.narration}");
+                                if (TheAlchemistsCrypt.UI.MobileHUDButtons.Instance != null)
+                                {
+                                    TheAlchemistsCrypt.UI.MobileHUDButtons.Instance.ShowNarration(response.narration);
+                                }
                             }
                         }
                     }

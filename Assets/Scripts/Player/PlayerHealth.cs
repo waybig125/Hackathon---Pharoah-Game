@@ -51,6 +51,14 @@ namespace TheAlchemistsCrypt.Player
             }
         }
 
+        public void Heal(float amount)
+        {
+            if (isDead) return;
+            currentHealth += amount;
+            if (currentHealth > maxHealth) currentHealth = maxHealth;
+            Debug.Log($"Player healed by {amount}. Current health: {currentHealth}/{maxHealth}");
+        }
+
         private void Update()
         {
             if (isDead) return;

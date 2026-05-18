@@ -7,7 +7,7 @@ namespace TheAlchemistsCrypt.AI
     {
         [Header("Spawn Settings")]
         [SerializeField] private int maxMummies = 40;
-        [SerializeField] private float spawnInterval = 5.0f;
+        [SerializeField] private float spawnInterval = 25.0f;
         [SerializeField] private int initialSpawnCount = 3;
 
         private void Start()
