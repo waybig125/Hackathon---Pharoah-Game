@@ -20,6 +20,13 @@ namespace TheAlchemistsCrypt.AI
         [HideInInspector] public float tacticalSpeedMult = 1f;
         [HideInInspector] public bool hasTacticalTarget = false;
 
+        [Header("Ranged Attack Settings")]
+        public float shootCooldown = 3.0f;
+        public float shootMinRange = 2.5f;
+        public float shootMaxRange = 12.0f;
+        private float lastShootTime = 0f;
+        private float shootAnimTimer = 0f;
+
         [Header("Health Settings")]
         public float maxHealth = 10f;
         public float currentHealth = 10f;
@@ -194,6 +201,28 @@ namespace TheAlchemistsCrypt.AI
             }
         }
 
+        private void ShootPlayer()
+        {
+            if (player == null) return;
+            lastShootTime = Time.time;
+
+            // Spawn point is slightly forward and upward (at mummy chest/head level)
+            Vector3 spawnPos = transform.position + Vector3.up * 1.5f + transform.forward * 0.5f;
+
+            GameObject projObj = new GameObject("MummyProjectile");
+            projObj.transform.position = spawnPos;
+
+            var projectile = projObj.AddComponent<MummyProjectile>();
+            // Target the player's chest/body level rather than their feet (which is transform.position)
+            Vector3 targetPos = player.position + Vector3.up * 1.0f;
+            projectile.direction = (targetPos - spawnPos).normalized;
+            projectile.speed = 16f;
+            projectile.damage = 10f;
+
+            // Trigger attack anim
+            PlayAnimation("Attack");
+        }
+
         private void Update()
         {
             UpdateHealthBar();
@@ -242,6 +271,25 @@ namespace TheAlchemistsCrypt.AI
                 currentSpeed = 2.2f * tacticalSpeedMult;
             }
 
+            // Handle ranged shooting anim stop duration
+            if (shootAnimTimer > 0f)
+            {
+                shootAnimTimer -= Time.deltaTime;
+                currentSpeed = 0f;
+            }
+
+            // Check if we should shoot the player in a straight line
+            if (!isStunned && !isDead && player != null)
+            {
+                float dist = Vector3.Distance(transform.position, player.position);
+                if (dist >= shootMinRange && dist <= shootMaxRange && (Time.time - lastShootTime) >= shootCooldown)
+                {
+                    ShootPlayer();
+                    shootAnimTimer = 0.8f;
+                    currentSpeed = 0f;
+                }
+            }
+
             // Apply alchemical status speed modifications
             if (isStunned)
             {
@@ -287,7 +335,11 @@ namespace TheAlchemistsCrypt.AI
                 }
             }
 
-            if (vel > 0.1f) {
+            if (shootAnimTimer > 0f) {
+                PlayAnimation("Attack");
+                if (animator != null) animator.speed = 1.0f;
+            }
+            else if (vel > 0.1f) {
                 PlayAnimation("Walk");
                 if (animator != null) animator.speed = 1.2f; 
             }

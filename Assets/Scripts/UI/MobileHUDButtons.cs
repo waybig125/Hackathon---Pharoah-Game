@@ -8,6 +8,7 @@ namespace TheAlchemistsCrypt.UI
     public class MobileHUDButtons : MonoBehaviour
     {
         public static MobileHUDButtons Instance { get; private set; }
+        public static bool IsCustomizingHUD = false;
 
         private Sprite reloadIcon;
         private Sprite fireIcon;
@@ -775,12 +776,19 @@ namespace TheAlchemistsCrypt.UI
             btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0);
             btnContainer.anchoredPosition = new Vector2(20, 50); // Shifted to the right!
 
-            CreateButton(btnContainer, "FIRE", new Vector2(-280, 280), 380, fireIcon, () => SetFire(true), () => SetFire(false));
-            CreateButton(btnContainer, "RELOAD", new Vector2(-500, 120), 200, reloadIcon, () => Reload());
-            CreateButton(btnContainer, "SWAP", new Vector2(-420, 560), 200, swapIcon, () => Swap());
-            CreateSprintButton(btnContainer, new Vector2(-580, 240), 200);
-            CreateButton(btnContainer, "FOCUS", new Vector2(-520, 440), 200, focusIcon, () => SetAiming(true), () => SetAiming(false));
-            CreateButton(btnContainer, "JUMP", new Vector2(-150, 580), 220, jumpIcon, () => SetJump(true), () => SetJump(false));
+            Vector2 firePos = GetButtonPosition("FIRE", new Vector2(-280, 280));
+            Vector2 reloadPos = GetButtonPosition("RELOAD", new Vector2(-500, 120));
+            Vector2 swapPos = GetButtonPosition("SWAP", new Vector2(-420, 560));
+            Vector2 sprintPos = GetButtonPosition("SPRINT", new Vector2(-580, 240));
+            Vector2 focusPos = GetButtonPosition("FOCUS", new Vector2(-520, 440));
+            Vector2 jumpPos = GetButtonPosition("JUMP", new Vector2(-150, 580));
+
+            CreateButton(btnContainer, "FIRE", firePos, 380, fireIcon, () => SetFire(true), () => SetFire(false));
+            CreateButton(btnContainer, "RELOAD", reloadPos, 200, reloadIcon, () => Reload());
+            CreateButton(btnContainer, "SWAP", swapPos, 200, swapIcon, () => Swap());
+            CreateSprintButton(btnContainer, sprintPos, 200);
+            CreateButton(btnContainer, "FOCUS", focusPos, 200, focusIcon, () => SetAiming(true), () => SetAiming(false));
+            CreateButton(btnContainer, "JUMP", jumpPos, 220, jumpIcon, () => SetJump(true), () => SetJump(false));
 
             HideDebugLabels();
 
@@ -1103,10 +1111,49 @@ namespace TheAlchemistsCrypt.UI
             }
         }
 
-        private class ButtonInputHelper : MonoBehaviour, IPointerDownHandler, IPointerUpHandler {
+        private class ButtonInputHelper : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler {
             public System.Action onDown; public System.Action onUp;
-            public void OnPointerDown(PointerEventData data) => onDown?.Invoke();
-            public void OnPointerUp(PointerEventData data) => onUp?.Invoke();
+            private RectTransform rectTransform;
+
+            private void Awake()
+            {
+                rectTransform = GetComponent<RectTransform>();
+            }
+
+            public void OnPointerDown(PointerEventData data)
+            {
+                if (IsCustomizingHUD) return;
+                onDown?.Invoke();
+            }
+
+            public void OnPointerUp(PointerEventData data)
+            {
+                if (IsCustomizingHUD) return;
+                onUp?.Invoke();
+            }
+
+            public void OnDrag(PointerEventData data)
+            {
+                if (!IsCustomizingHUD || rectTransform == null) return;
+                
+                var canvas = GetComponentInParent<Canvas>();
+                if (canvas != null)
+                {
+                    Vector2 localPos;
+                    RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                        rectTransform.parent as RectTransform,
+                        data.position,
+                        canvas.worldCamera,
+                        out localPos
+                    );
+                    rectTransform.anchoredPosition = localPos;
+                    
+                    string btnName = gameObject.name;
+                    PlayerPrefs.SetFloat("ButtonPos_" + btnName + "_X", localPos.x);
+                    PlayerPrefs.SetFloat("ButtonPos_" + btnName + "_Y", localPos.y);
+                    PlayerPrefs.Save();
+                }
+            }
         }
 
         private class SliderDragHelper : MonoBehaviour, IDragHandler {
@@ -1236,6 +1283,153 @@ namespace TheAlchemistsCrypt.UI
         private void Reload() { if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsReloading = true; }
         private void Swap() { if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null) TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsSwappingWeapon = true; }
 
+        private Vector2 GetButtonPosition(string btnName, Vector2 defaultPos)
+        {
+            float x = PlayerPrefs.GetFloat("ButtonPos_" + btnName + "_X", defaultPos.x);
+            float y = PlayerPrefs.GetFloat("ButtonPos_" + btnName + "_Y", defaultPos.y);
+            return new Vector2(x, y);
+        }
+
+        private void SaveButtonPos(string btnName, Vector2 pos)
+        {
+            PlayerPrefs.SetFloat("ButtonPos_" + btnName + "_X", pos.x);
+            PlayerPrefs.SetFloat("ButtonPos_" + btnName + "_Y", pos.y);
+        }
+
+        private void ApplyPreset(string presetName)
+        {
+            PlayerPrefs.SetString("HUD_Preset", presetName);
+            
+            if (presetName == "DEFAULT")
+            {
+                SaveButtonPos("FIRE", new Vector2(-280, 280));
+                SaveButtonPos("RELOAD", new Vector2(-500, 120));
+                SaveButtonPos("SWAP", new Vector2(-420, 560));
+                SaveButtonPos("SPRINT", new Vector2(-580, 240));
+                SaveButtonPos("FOCUS", new Vector2(-520, 440));
+                SaveButtonPos("JUMP", new Vector2(-150, 580));
+            }
+            else if (presetName == "COMPACT")
+            {
+                SaveButtonPos("FIRE", new Vector2(-220, 220));
+                SaveButtonPos("RELOAD", new Vector2(-360, 100));
+                SaveButtonPos("SWAP", new Vector2(-300, 440));
+                SaveButtonPos("SPRINT", new Vector2(-440, 200));
+                SaveButtonPos("FOCUS", new Vector2(-400, 320));
+                SaveButtonPos("JUMP", new Vector2(-120, 440));
+            }
+            else if (presetName == "LEFTY")
+            {
+                SaveButtonPos("FIRE", new Vector2(-580, 280));
+                SaveButtonPos("RELOAD", new Vector2(-200, 120));
+                SaveButtonPos("SWAP", new Vector2(-280, 560));
+                SaveButtonPos("SPRINT", new Vector2(-120, 240));
+                SaveButtonPos("FOCUS", new Vector2(-180, 440));
+                SaveButtonPos("JUMP", new Vector2(-150, 580));
+            }
+            PlayerPrefs.Save();
+            BuildHUD();
+        }
+
+        private void ResetToFactoryDefaults()
+        {
+            PlayerPrefs.DeleteKey("HUD_Preset");
+            PlayerPrefs.DeleteKey("ButtonPos_FIRE_X");
+            PlayerPrefs.DeleteKey("ButtonPos_FIRE_Y");
+            PlayerPrefs.DeleteKey("ButtonPos_RELOAD_X");
+            PlayerPrefs.DeleteKey("ButtonPos_RELOAD_Y");
+            PlayerPrefs.DeleteKey("ButtonPos_SWAP_X");
+            PlayerPrefs.DeleteKey("ButtonPos_SWAP_Y");
+            PlayerPrefs.DeleteKey("ButtonPos_SPRINT_X");
+            PlayerPrefs.DeleteKey("ButtonPos_SPRINT_Y");
+            PlayerPrefs.DeleteKey("ButtonPos_FOCUS_X");
+            PlayerPrefs.DeleteKey("ButtonPos_FOCUS_Y");
+            PlayerPrefs.DeleteKey("ButtonPos_JUMP_X");
+            PlayerPrefs.DeleteKey("ButtonPos_JUMP_Y");
+            PlayerPrefs.Save();
+            BuildHUD();
+        }
+
+        private void StartHUDCustomization()
+        {
+            if (settingsModalInstance != null)
+            {
+                Destroy(settingsModalInstance);
+                settingsModalInstance = null;
+            }
+
+            IsCustomizingHUD = true;
+            Time.timeScale = 0f;
+
+            var canvas = transform.GetComponent<RectTransform>();
+            
+            var customRoot = new GameObject("HUDCustomizerOverlay", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            customRoot.SetParent(canvas, false); customRoot.SetAsLastSibling();
+            customRoot.anchorMin = Vector2.zero; customRoot.anchorMax = Vector2.one;
+            customRoot.offsetMin = customRoot.offsetMax = Vector2.zero;
+            customRoot.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.4f);
+
+            var textGo = new GameObject("Instructions", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            textGo.SetParent(customRoot, false);
+            textGo.anchoredPosition = new Vector2(0, 200);
+            textGo.sizeDelta = new Vector2(900, 100);
+            var txt = textGo.GetComponent<Text>();
+            txt.font = GetRobustFont(); txt.fontSize = 28; txt.fontStyle = FontStyle.Bold;
+            txt.alignment = TextAnchor.MiddleCenter;
+            txt.color = new Color(0.95f, 0.85f, 0.2f);
+            txt.text = "MOBILE HUD EDITOR ACTIVE\nDrag any action button to place it. Click SAVE to finish.";
+
+            var saveBtn = new GameObject("SaveButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            saveBtn.SetParent(customRoot, false);
+            saveBtn.anchoredPosition = new Vector2(0, 100);
+            saveBtn.sizeDelta = new Vector2(250, 60);
+            saveBtn.GetComponent<Image>().sprite = charcoalSprite;
+
+            var saveHighlight = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            saveHighlight.SetParent(saveBtn, false); saveHighlight.anchorMin = Vector2.zero; saveHighlight.anchorMax = Vector2.one;
+            saveHighlight.offsetMin = saveHighlight.offsetMax = Vector2.zero;
+            saveHighlight.GetComponent<Image>().color = new Color(0.1f, 0.9f, 0.3f, 0.15f);
+
+            var saveTxtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            saveTxtGo.SetParent(saveBtn, false);
+            saveTxtGo.anchorMin = Vector2.zero; saveTxtGo.anchorMax = Vector2.one;
+            saveTxtGo.offsetMin = saveTxtGo.offsetMax = Vector2.zero;
+            var saveTxt = saveTxtGo.GetComponent<Text>();
+            saveTxt.font = GetRobustFont(); saveTxt.fontSize = 22; saveTxt.fontStyle = FontStyle.Bold;
+            saveTxt.alignment = TextAnchor.MiddleCenter; saveTxt.color = new Color(0.1f, 0.9f, 0.3f);
+            saveTxt.text = "SAVE & EXIT";
+
+            saveBtn.gameObject.AddComponent<ButtonInputHelper>().onUp = () => {
+                IsCustomizingHUD = false;
+                Destroy(customRoot.gameObject);
+                OpenSettingsModal(canvas);
+            };
+        }
+
+        private GameObject CreateSettingsActionButton(RectTransform parent, string labelText, Vector2 pos, Vector2 size, System.Action onClick, Color highlightColor)
+        {
+            var btnGo = new GameObject(labelText, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            btnGo.SetParent(parent, false); btnGo.anchoredPosition = pos; btnGo.sizeDelta = size;
+            btnGo.GetComponent<Image>().sprite = charcoalSprite;
+            
+            var highlight = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            highlight.SetParent(btnGo, false); highlight.anchorMin = Vector2.zero; highlight.anchorMax = Vector2.one;
+            highlight.offsetMin = highlight.offsetMax = Vector2.zero;
+            highlight.GetComponent<Image>().color = highlightColor;
+            
+            var txtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            txtGo.SetParent(btnGo, false);
+            txtGo.anchorMin = Vector2.zero; txtGo.anchorMax = Vector2.one;
+            txtGo.offsetMin = txtGo.offsetMax = Vector2.zero;
+            var txt = txtGo.GetComponent<Text>();
+            txt.font = GetRobustFont(); txt.fontSize = 18; txt.fontStyle = FontStyle.Bold;
+            txt.alignment = TextAnchor.MiddleCenter; txt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            txt.text = labelText;
+
+            btnGo.gameObject.AddComponent<ButtonInputHelper>().onUp = onClick;
+            return btnGo.gameObject;
+        }
+
         private void OpenSettingsModal(RectTransform parentCanvas)
         {
             if (settingsModalInstance != null) return;
@@ -1249,7 +1443,7 @@ namespace TheAlchemistsCrypt.UI
             
             // Dialog box
             var dialog = new GameObject("Dialog", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            dialog.SetParent(modalBg, false); dialog.anchorMin = dialog.anchorMax = new Vector2(0.5f, 0.5f); dialog.sizeDelta = new Vector2(800, 600);
+            dialog.SetParent(modalBg, false); dialog.anchorMin = dialog.anchorMax = new Vector2(0.5f, 0.5f); dialog.sizeDelta = new Vector2(850, 640);
             dialog.GetComponent<Image>().sprite = charcoalSprite;
             
             // Add a beautiful gold border around the dialog!
@@ -1262,7 +1456,7 @@ namespace TheAlchemistsCrypt.UI
             
             // Title Text
             var titleGo = new GameObject("Title", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            titleGo.SetParent(dialog, false); titleGo.anchoredPosition = new Vector2(0, 240); titleGo.sizeDelta = new Vector2(700, 60);
+            titleGo.SetParent(dialog, false); titleGo.anchoredPosition = new Vector2(0, 260); titleGo.sizeDelta = new Vector2(700, 60);
             var titleTxt = titleGo.GetComponent<Text>();
             titleTxt.font = GetRobustFont(); titleTxt.fontSize = 28; titleTxt.fontStyle = FontStyle.Bold;
             titleTxt.alignment = TextAnchor.MiddleCenter; titleTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
@@ -1270,7 +1464,7 @@ namespace TheAlchemistsCrypt.UI
 
             // Row 1: Swipe Sensitivity (SLIDER)
             float currentSens = PlayerPrefs.GetFloat("MobileSensitivity", 0.08f);
-            var sensRow = CreateSettingsSliderRow(dialog, "TOUCH SENSITIVITY", new Vector2(0, 130), 0.02f, 0.30f, currentSens,
+            var sensRow = CreateSettingsSliderRow(dialog, "TOUCH SENSITIVITY", new Vector2(0, 170), 0.02f, 0.30f, currentSens,
                 (val) => {
                     PlayerPrefs.SetFloat("MobileSensitivity", val); PlayerPrefs.Save();
                     var sz = GameObject.FindAnyObjectByType<LookSwipeZone>();
@@ -1282,7 +1476,7 @@ namespace TheAlchemistsCrypt.UI
             // Row 2: Master Volume (SLIDER)
             float currentVol = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
             AudioListener.volume = currentVol;
-            var volRow = CreateSettingsSliderRow(dialog, "MASTER VOLUME", new Vector2(0, 45), 0f, 1f, currentVol,
+            var volRow = CreateSettingsSliderRow(dialog, "MASTER VOLUME", new Vector2(0, 100), 0f, 1f, currentVol,
                 (val) => {
                     PlayerPrefs.SetFloat("MasterVolume", val); PlayerPrefs.Save();
                     AudioListener.volume = val;
@@ -1292,7 +1486,7 @@ namespace TheAlchemistsCrypt.UI
 
             // Row 3: Hive Narration Toggle (CHECKBOX TOGGLE)
             int showNar = PlayerPrefs.GetInt("ShowNarration", 1);
-            var narrationRow = CreateSettingsToggleRow(dialog, "HIVE NARRATION", new Vector2(0, -40), showNar == 1,
+            var narrationRow = CreateSettingsToggleRow(dialog, "HIVE NARRATION", new Vector2(0, 30), showNar == 1,
                 (val) => {
                     int nextVal = val ? 1 : 0;
                     PlayerPrefs.SetInt("ShowNarration", nextVal); PlayerPrefs.Save();
@@ -1304,7 +1498,7 @@ namespace TheAlchemistsCrypt.UI
             int currentQuality = QualitySettings.GetQualityLevel();
             string[] qualityNames = { "LOW", "MEDIUM", "ULTRA" };
             string initialQualityName = currentQuality < qualityNames.Length ? qualityNames[currentQuality] : "ULTRA";
-            var qualRow = CreateSettingsRow(dialog, "VISUAL QUALITY", new Vector2(0, -125), initialQualityName,
+            var qualRow = CreateSettingsRow(dialog, "VISUAL QUALITY", new Vector2(0, -40), initialQualityName,
                 () => {
                     int q = QualitySettings.GetQualityLevel();
                     q = Mathf.Clamp(q - 1, 0, 2);
@@ -1319,9 +1513,50 @@ namespace TheAlchemistsCrypt.UI
                 }
             );
 
+            // Row 5: HUD Layout Preset (SELECTOR)
+            string currentPreset = PlayerPrefs.GetString("HUD_Preset", "DEFAULT");
+            var presetRow = CreateSettingsRow(dialog, "HUD LAYOUT PRESET", new Vector2(0, -110), currentPreset,
+                () => {
+                    string next = "DEFAULT";
+                    if (currentPreset == "DEFAULT") next = "LEFTY";
+                    else if (currentPreset == "LEFTY") next = "COMPACT";
+                    currentPreset = next;
+                    ApplyPreset(currentPreset);
+                    return currentPreset;
+                },
+                () => {
+                    string next = "DEFAULT";
+                    if (currentPreset == "DEFAULT") next = "COMPACT";
+                    else if (currentPreset == "COMPACT") next = "LEFTY";
+                    currentPreset = next;
+                    ApplyPreset(currentPreset);
+                    return currentPreset;
+                }
+            );
+
+            // Row 6: Custom Layout Action Buttons (CUSTOMIZE / RESET)
+            CreateSettingsActionButton(dialog, "CUSTOMIZE HUD LAYOUT", new Vector2(-160, -180), new Vector2(300, 50),
+                () => {
+                    StartHUDCustomization();
+                },
+                new Color(0.95f, 0.8f, 0.2f, 0.15f)
+            );
+
+            CreateSettingsActionButton(dialog, "RESET TO DEFAULT", new Vector2(160, -180), new Vector2(300, 50),
+                () => {
+                    ResetToFactoryDefaults();
+                    if (settingsModalInstance != null) {
+                        Destroy(modalBg.gameObject);
+                        settingsModalInstance = null;
+                        OpenSettingsModal(parentCanvas);
+                    }
+                },
+                new Color(0.9f, 0.2f, 0.2f, 0.15f)
+            );
+
             // Close Button
             var closeGo = new GameObject("CloseButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            closeGo.SetParent(dialog, false); closeGo.anchoredPosition = new Vector2(0, -230); closeGo.sizeDelta = new Vector2(250, 60);
+            closeGo.SetParent(dialog, false); closeGo.anchoredPosition = new Vector2(0, -250); closeGo.sizeDelta = new Vector2(250, 50);
             closeGo.GetComponent<Image>().sprite = charcoalSprite;
             
             // Add gold highlights to the close button
@@ -1335,7 +1570,7 @@ namespace TheAlchemistsCrypt.UI
             closeTxtGo.anchorMin = Vector2.zero; closeTxtGo.anchorMax = Vector2.one;
             closeTxtGo.offsetMin = closeTxtGo.offsetMax = Vector2.zero;
             var closeTxt = closeTxtGo.GetComponent<Text>();
-            closeTxt.font = GetRobustFont(); closeTxt.fontSize = 22; closeTxt.fontStyle = FontStyle.Bold;
+            closeTxt.font = GetRobustFont(); closeTxt.fontSize = 20; closeTxt.fontStyle = FontStyle.Bold;
             closeTxt.alignment = TextAnchor.MiddleCenter; closeTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
             closeTxt.text = "RETURN TO GAME";
 
@@ -1842,8 +2077,12 @@ namespace TheAlchemistsCrypt.UI
             startBtnTxt.fontSize = 24;
             startBtnTxt.fontStyle = FontStyle.Bold;
             startBtnTxt.alignment = TextAnchor.MiddleCenter;
-            startBtnTxt.color = new Color(1f, 0.95f, 0.8f, 1f); // Bright ivory high-contrast text!
+            startBtnTxt.color = new Color(0.95f, 0.8f, 0.2f, 1f); // Bright premium gold text
             startBtnTxt.text = "START VOYAGE";
+
+            var startBtnTextOutline = startBtnTextGo.gameObject.AddComponent<Outline>();
+            startBtnTextOutline.effectColor = Color.black;
+            startBtnTextOutline.effectDistance = new Vector2(2, -2);
 
             var startHelper = startBtnGo.gameObject.AddComponent<ButtonInputHelper>();
             startHelper.onDown = () =>
@@ -1887,8 +2126,12 @@ namespace TheAlchemistsCrypt.UI
             quitBtnTxt.fontSize = 24;
             quitBtnTxt.fontStyle = FontStyle.Bold;
             quitBtnTxt.alignment = TextAnchor.MiddleCenter;
-            quitBtnTxt.color = new Color(1f, 0.95f, 0.8f, 1f); // Bright ivory high-contrast text!
+            quitBtnTxt.color = new Color(0.95f, 0.8f, 0.2f, 1f); // Bright premium gold text
             quitBtnTxt.text = "QUIT GAME";
+
+            var quitBtnTextOutline = quitBtnTextGo.gameObject.AddComponent<Outline>();
+            quitBtnTextOutline.effectColor = Color.black;
+            quitBtnTextOutline.effectDistance = new Vector2(2, -2);
 
             var quitHelper = quitBtnGo.gameObject.AddComponent<ButtonInputHelper>();
             quitHelper.onDown = () =>

@@ -485,9 +485,11 @@ namespace TheAlchemistsCrypt.Editor
                 AlignToGroundAndAddCollider(cObj2, stackedPos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f, false);
                 cObj2.isStatic = true;
 
-                // 35% chance to spawn Medicine above the crate stack!
+                // 35% chance to spawn Medicine on the ground nearby!
                 if (Random.value < 0.35f) {
-                    SpawnMedicine(parent, cObj2.transform.position + Vector3.up * 0.6f); // Calibrated height
+                    Vector3 medPos = pos + new Vector3(15f, 0f, 9f);
+                    medPos.y = GetTerrainHeight(medPos) + 0.6f;
+                    SpawnMedicine(parent, medPos);
                 }
             }
 
@@ -506,9 +508,11 @@ namespace TheAlchemistsCrypt.Editor
                 AlignToGroundAndAddCollider(bObj2, barrelPos2, Quaternion.Euler(-90f, 0f, 0f), 0f);
                 bObj2.isStatic = true;
 
-                // 35% chance to spawn Medicine above the first barrel!
+                // 35% chance to spawn Medicine on the ground nearby!
                 if (Random.value < 0.35f) {
-                    SpawnMedicine(parent, bObj.transform.position + Vector3.up * 0.9f); // Calibrated height
+                    Vector3 medPos = pos + new Vector3(-15f, 0f, -9f);
+                    medPos.y = GetTerrainHeight(medPos) + 0.6f;
+                    SpawnMedicine(parent, medPos);
                 }
             }
         }
@@ -584,6 +588,45 @@ namespace TheAlchemistsCrypt.Editor
             return 0f;
         }
 
+        private float GetMeshBottomY(GameObject obj)
+        {
+            float localMinY = float.MaxValue;
+            var filters = obj.GetComponentsInChildren<MeshFilter>(true);
+            foreach (var filter in filters)
+            {
+                if (filter.sharedMesh == null) continue;
+                Vector3[] vertices = filter.sharedMesh.vertices;
+                foreach (var v in vertices)
+                {
+                    // Transform local vertex to parent-object local space
+                    Vector3 worldV = filter.transform.TransformPoint(v);
+                    Vector3 parentLocalV = obj.transform.InverseTransformPoint(worldV);
+                    if (parentLocalV.y < localMinY)
+                    {
+                        localMinY = parentLocalV.y;
+                    }
+                }
+            }
+            if (localMinY != float.MaxValue)
+            {
+                return localMinY;
+            }
+            
+            // Fallback to renderer bounds if no meshes found
+            var renderers = obj.GetComponentsInChildren<Renderer>(true);
+            float minY = float.MaxValue;
+            foreach (var r in renderers)
+            {
+                if (r is ParticleSystemRenderer) continue;
+                if (r.bounds.min.y < minY) minY = r.bounds.min.y;
+            }
+            if (minY != float.MaxValue)
+            {
+                return obj.transform.InverseTransformPoint(new Vector3(0f, minY, 0f)).y;
+            }
+            return 0f;
+        }
+
         private void AlignToGroundAndAddCollider(GameObject obj, Vector3 basePos, Quaternion targetRot, float offsetAdjustment, bool alignToTerrain = true)
         {
             // DYNAMIC URP SHADER CONVERTER
@@ -629,22 +672,11 @@ namespace TheAlchemistsCrypt.Editor
             obj.transform.position = targetPos; 
             obj.transform.rotation = targetRot;
             
-            // Robust alignment using world space renderer bounds
-            var renderers = obj.GetComponentsInChildren<Renderer>(true);
-            if (renderers.Length > 0)
-            {
-                float minY = float.MaxValue;
-                foreach (var r in renderers)
-                {
-                    if (r is ParticleSystemRenderer) continue;
-                    if (r.bounds.min.y < minY) minY = r.bounds.min.y;
-                }
-                if (minY != float.MaxValue)
-                {
-                    float yOffset = targetPos.y - minY + offsetAdjustment;
-                    obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset, targetPos.z);
-                }
-            }
+            // Precise grounding using local mesh vertices
+            float localMinY = GetMeshBottomY(obj);
+            Vector3 worldBottom = obj.transform.TransformPoint(new Vector3(0f, localMinY, 0f));
+            float yOffset = targetPos.y - worldBottom.y + offsetAdjustment;
+            obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset, targetPos.z);
 
             foreach (var col in obj.GetComponentsInChildren<Collider>(true)) DestroyImmediate(col);
             var filters = obj.GetComponentsInChildren<MeshFilter>(true);
