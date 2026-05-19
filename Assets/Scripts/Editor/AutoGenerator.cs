@@ -11,7 +11,7 @@ namespace TheAlchemistsCrypt.Editor
             // Run automatically on compile/load to ensure the gorgeous procedural terrain, 
             // dune bumps, and breakable yard crates are instantly populated in the active scene!
             EditorApplication.delayCall += () => {
-                if (!EditorApplication.isPlaying && !EditorApplication.isPlayingOrWillPlay)
+                if (!EditorApplication.isPlaying)
                 {
                     Debug.Log("[AutoGenerator] Automatically regenerating the gorgeous procedural Egyptian City...");
                     StaticEgyptianCityGenerator.QuickRegen();
