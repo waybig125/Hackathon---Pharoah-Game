@@ -154,7 +154,7 @@ namespace TheAlchemistsCrypt.AI
             SetStatusColor(new Color(0.85f, 0.3f, 1.0f)); // Sparkling crystalline royal purple/violet
         }
 
-        private void Start()
+        protected virtual void Start()
         {
             agent = GetComponent<NavMeshAgent>();
             if (agent == null) agent = gameObject.AddComponent<NavMeshAgent>();
@@ -230,7 +230,7 @@ namespace TheAlchemistsCrypt.AI
             PlayAnimation("Attack");
         }
 
-        private void Update()
+        protected virtual void Update()
         {
             UpdateHealthBar();
 
@@ -393,7 +393,7 @@ namespace TheAlchemistsCrypt.AI
             transform.localRotation = Quaternion.Euler(0f, rot.y, 0f);
         }
 
-        public void TakeDamage(float damage)
+        public virtual void TakeDamage(float damage)
         {
             if (isDead) return;
 

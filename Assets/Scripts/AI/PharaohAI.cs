@@ -9,25 +9,22 @@ namespace TheAlchemistsCrypt.AI
         public float spellCooldown = 5.0f;
         private float lastSpellTime = 0f;
         
-        private new void Start()
+        protected override void Start()
         {
             // Boost boss stats
             maxHealth = 300f; // Boss health
             currentHealth = maxHealth;
             vulnerableElement = "none"; // Boss is immune to basic stuns
             
-            // Re-invoke base class initialization logic without its start
-            // Wait, we can't easily call base.Start() without it resetting our stats if we don't do it carefully.
-            // Let's just boost it directly in Update or Awake.
-            base.SendMessage("Start");
+            base.Start();
             
             maxHealth *= 3f;
             currentHealth = maxHealth;
         }
 
-        private new void Update()
+        protected override void Update()
         {
-            base.SendMessage("Update"); // Let base logic handle movement
+            base.Update(); // Let base logic handle movement
 
             if (IsDead) return;
 
@@ -41,7 +38,7 @@ namespace TheAlchemistsCrypt.AI
         }
         
         // Override damage to make it tougher
-        public new void TakeDamage(float damage)
+        public override void TakeDamage(float damage)
         {
             base.TakeDamage(damage * 0.33f); // Takes 1/3rd damage
         }

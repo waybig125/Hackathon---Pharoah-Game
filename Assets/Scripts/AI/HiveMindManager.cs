@@ -244,23 +244,37 @@ namespace TheAlchemistsCrypt.AI
                             else if (tactic.Contains("mercy")) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_mercy");
 
                             // Health/Element specific voices
-                            int hp = pState.health;
+                            int hp = 100;
+                            string activeElement = "sulfur";
+                            var playerObj = GameObject.FindGameObjectWithTag("Player");
+                            if (playerObj == null) {
+                                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                                if (character != null) playerObj = character.gameObject;
+                            }
+                            if (playerObj != null)
+                            {
+                                var pHealth = playerObj.GetComponent<TheAlchemistsCrypt.Player.PlayerHealth>();
+                                if (pHealth != null) hp = Mathf.RoundToInt(pHealth.currentHealth);
+                                var w = playerObj.GetComponentInChildren<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+                                if (w != null) activeElement = w.CurrentMode.ToString().ToLower();
+                            }
+
                             if (hp < 25)
                             {
                                 string[] lowHpVoices = { "Voice/vo_tactical_lowhealth_01", "Voice/vo_tactical_lowhealth_02" };
                                 TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(lowHpVoices[UnityEngine.Random.Range(0, 2)]);
                             }
-                            else if (pState.active_element == "sulfur")
+                            else if (activeElement == "sulfur")
                             {
                                 string[] sulfurVoices = { "Voice/vo_sulfur_01", "Voice/vo_sulfur_02" };
                                 TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(sulfurVoices[UnityEngine.Random.Range(0, 2)]);
                             }
-                            else if (pState.active_element == "mercury")
+                            else if (activeElement == "mercury")
                             {
                                 string[] mercuryVoices = { "Voice/vo_mercury_01", "Voice/vo_mercury_02" };
                                 TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(mercuryVoices[UnityEngine.Random.Range(0, 2)]);
                             }
-                            else if (pState.active_element == "salt")
+                            else if (activeElement == "salt")
                             {
                                 string[] saltVoices = { "Voice/vo_salt_01", "Voice/vo_salt_02" };
                                 TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(saltVoices[UnityEngine.Random.Range(0, 2)]);
