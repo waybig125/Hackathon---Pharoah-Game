@@ -18,26 +18,41 @@ namespace TheAlchemistsCrypt.UI
         private bool isZoomedOut = false;
 
         private Transform playerTransform;
+        private RectTransform mapRotator;
         private RectTransform mapContent;
         private RectTransform minimapFrame;
         private RectTransform compassRing;
         private RectTransform playerIndicator;
+        private RectTransform radarSweep;
         
         // Icon assets generated procedurally
         private Sprite obsidianSprite;
         private Sprite goldBorderSprite;
         private Sprite playerArrowSprite;
-        private Sprite greenDotSprite;
         private Sprite brownDotSprite;
         private Sprite buildingSprite;
+        
+        // Premium Minimap procedural assets
+        private Sprite minimapBgSprite;
+        private Sprite radarSweepSprite;
+        private Sprite zombieDotSprite;
+        private Sprite medicineDotSprite;
 
         // Track dynamic indicators
         private List<ZombieIndicator> zombieIndicators = new List<ZombieIndicator>();
+        private List<MedicineIndicator> medicineIndicators = new List<MedicineIndicator>();
         private List<StaticElementIndicator> staticIndicators = new List<StaticElementIndicator>();
 
         private class ZombieIndicator
         {
             public GameObject zombieGo;
+            public RectTransform iconRect;
+            public Image iconImage;
+        }
+
+        private class MedicineIndicator
+        {
+            public GameObject medicineGo;
             public RectTransform iconRect;
             public Image iconImage;
         }
@@ -73,11 +88,16 @@ namespace TheAlchemistsCrypt.UI
             playerArrowSprite = CreatePlayerArrowSprite(64, 64, new Color(0.95f, 0.8f, 0.2f, 0.95f));
             
             // Dynamic Indicators
-            greenDotSprite = CreateSolidCircleSprite(16, new Color(0.1f, 0.9f, 0.1f, 0.95f)); // Glowing Green Zombie
             brownDotSprite = CreateSolidCircleSprite(12, new Color(0.6f, 0.4f, 0.2f, 0.8f)); // Crate/Barrel
             
             // Building block sprite
             buildingSprite = CreateSolidBarSprite(32, 32, new Color(0.85f, 0.7f, 0.4f, 0.65f)); // Sandy Yellow
+
+            // Premium background grid, radar sweep, and indicators
+            minimapBgSprite = CreateMinimapBackgroundSprite(240);
+            radarSweepSprite = CreateRadarSweepSprite(220, new Color(0.95f, 0.8f, 0.2f, 0.15f));
+            zombieDotSprite = CreateWarningTriangleSprite(20, new Color(0.9f, 0.1f, 0.1f, 0.95f));
+            medicineDotSprite = CreateMedicineIconSprite(20, new Color(0.1f, 0.9f, 0.3f, 0.95f));
         }
 
         private void BuildMinimapUI()
@@ -91,7 +111,8 @@ namespace TheAlchemistsCrypt.UI
             minimapFrame.sizeDelta = new Vector2(240, 240);
 
             // Frame Image (Black Obsidian Base)
-            var frameImage = gameObject.AddComponent<Image>();
+            var frameImage = gameObject.GetComponent<Image>();
+            if (frameImage == null) frameImage = gameObject.AddComponent<Image>();
             frameImage.sprite = obsidianSprite;
             frameImage.color = Color.white;
             frameImage.raycastTarget = true; // To receive clicks/taps for zooming!
@@ -107,28 +128,48 @@ namespace TheAlchemistsCrypt.UI
             maskImg.sprite = CreateCircleSprite(228, Color.white);
             maskGo.GetComponent<Mask>().showMaskGraphic = false;
 
-            // Map Content (Holds all translating & rotating indicators)
+            // Map Rotator (Rotates the map content & compass ring with player yaw)
+            var mapRotatorGo = new GameObject("MapRotator", typeof(RectTransform));
+            mapRotator = mapRotatorGo.GetComponent<RectTransform>();
+            mapRotator.SetParent(maskRect, false);
+            mapRotator.anchorMin = mapRotator.anchorMax = new Vector2(0.5f, 0.5f);
+            mapRotator.anchoredPosition = Vector2.zero;
+            mapRotator.sizeDelta = new Vector2(220, 220);
+
+            // Background Grid Image
+            var bgGridGo = new GameObject("MinimapBackgroundGrid", typeof(RectTransform), typeof(Image));
+            var bgGridRect = bgGridGo.GetComponent<RectTransform>();
+            bgGridRect.SetParent(mapRotator, false);
+            bgGridRect.anchorMin = bgGridRect.anchorMax = new Vector2(0.5f, 0.5f);
+            bgGridRect.anchoredPosition = Vector2.zero;
+            bgGridRect.sizeDelta = new Vector2(220, 220);
+            var bgImg = bgGridGo.GetComponent<Image>();
+            bgImg.sprite = minimapBgSprite;
+            bgImg.color = Color.white;
+            bgImg.raycastTarget = false;
+
+            // Map Content (Holds all translating static/dynamic indicators)
             var mapContentGo = new GameObject("MapContent", typeof(RectTransform));
             mapContent = mapContentGo.GetComponent<RectTransform>();
-            mapContent.SetParent(maskRect, false);
+            mapContent.SetParent(mapRotator, false);
             mapContent.anchorMin = mapContent.anchorMax = new Vector2(0.5f, 0.5f);
             mapContent.anchoredPosition = Vector2.zero;
             mapContent.sizeDelta = new Vector2(2000, 2000); // Massive coordinate space
 
-            // Compass Ring (rotates, but does not translate)
+            // Compass Ring (Placed in mapRotator so letters stay placed relative to the world coordinates)
             var compassRingGo = new GameObject("CompassRing", typeof(RectTransform));
             compassRing = compassRingGo.GetComponent<RectTransform>();
-            compassRing.SetParent(maskRect, false);
+            compassRing.SetParent(mapRotator, false);
             compassRing.anchorMin = compassRing.anchorMax = new Vector2(0.5f, 0.5f);
             compassRing.anchoredPosition = Vector2.zero;
             compassRing.sizeDelta = new Vector2(220, 220);
 
             // Add N, E, S, W text labels
-            string[] directions = { "N", ".", ".", "." };
+            string[] directions = { "N", "E", "S", "W" };
             Vector2[] positions = { new Vector2(0, 85), new Vector2(85, 0), new Vector2(0, -85), new Vector2(-85, 0) };
             for (int i = 0; i < 4; i++)
             {
-                var dirGo = new GameObject("Label_" + (i == 0 ? "N" : "Dot_" + i), typeof(RectTransform), typeof(Text));
+                var dirGo = new GameObject("Label_" + directions[i], typeof(RectTransform), typeof(Text));
                 var dirRect = dirGo.GetComponent<RectTransform>();
                 dirRect.SetParent(compassRing, false);
                 dirRect.anchorMin = dirRect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -138,12 +179,24 @@ namespace TheAlchemistsCrypt.UI
                 var txt = dirGo.GetComponent<Text>();
                 txt.text = directions[i];
                 txt.font = GetRobustFont();
-                txt.fontSize = directions[i] == "N" ? 14 : 24; // Draw larger beautiful dots!
+                txt.fontSize = 15;
                 txt.fontStyle = FontStyle.Bold;
                 txt.alignment = TextAnchor.MiddleCenter;
                 txt.color = directions[i] == "N" ? new Color(1f, 0.3f, 0.3f, 0.95f) : new Color(0.95f, 0.8f, 0.2f, 0.9f);
                 txt.raycastTarget = false;
             }
+
+            // Radar Sweep line overlay (Attached to maskRect directly, does not translate or rotate with map)
+            var sweepGo = new GameObject("RadarSweep", typeof(RectTransform), typeof(Image));
+            radarSweep = sweepGo.GetComponent<RectTransform>();
+            radarSweep.SetParent(maskRect, false);
+            radarSweep.anchorMin = radarSweep.anchorMax = new Vector2(0.5f, 0.5f);
+            radarSweep.anchoredPosition = Vector2.zero;
+            radarSweep.sizeDelta = new Vector2(220, 220);
+            var sweepImg = sweepGo.GetComponent<Image>();
+            sweepImg.sprite = radarSweepSprite;
+            sweepImg.color = Color.white;
+            sweepImg.raycastTarget = false;
 
             // Frame Gold Border Ring (layered on top)
             var borderGo = new GameObject("BorderRing", typeof(RectTransform), typeof(Image));
@@ -157,10 +210,10 @@ namespace TheAlchemistsCrypt.UI
             borderImg.color = Color.white;
             borderImg.raycastTarget = false;
 
-            // Player indicator (Centered, rotates to represent players world rotation)
+            // Player indicator (Centered, points straight UP because the map rotates around it)
             var playerGo = new GameObject("PlayerIndicator", typeof(RectTransform), typeof(Image));
             playerIndicator = playerGo.GetComponent<RectTransform>();
-            playerIndicator.SetParent(minimapFrame, false); // Directly on frame, does not translate!
+            playerIndicator.SetParent(minimapFrame, false); // Directly on frame, does not translate or rotate with map!
             playerIndicator.anchorMin = playerIndicator.anchorMax = new Vector2(0.5f, 0.5f);
             playerIndicator.anchoredPosition = Vector2.zero;
             playerIndicator.sizeDelta = new Vector2(32, 32);
@@ -182,7 +235,7 @@ namespace TheAlchemistsCrypt.UI
 
             currentScale = isZoomedOut ? scaleZoomedOut : scaleNormal;
 
-            // 1. Scan for Pyramids and Buildings
+            // Scan for Pyramids and Buildings
             var allGo = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
             foreach (var go in allGo)
             {
@@ -244,33 +297,43 @@ namespace TheAlchemistsCrypt.UI
                 if (playerTransform == null) return;
             }
 
-            // Update Map translation relative to the player
             Vector3 playerPos = playerTransform.position;
             Vector3 playerRot = playerTransform.eulerAngles;
 
-            mapContent.anchoredPosition = new Vector2(-playerPos.x * currentScale, -playerPos.z * currentScale);
-            mapContent.localEulerAngles = Vector3.zero; // Static, non-rotating map
+            // Translate map content to position player at center
+            if (mapContent != null)
+            {
+                mapContent.anchoredPosition = new Vector2(-playerPos.x * currentScale, -playerPos.z * currentScale);
+                mapContent.localEulerAngles = Vector3.zero;
+            }
             
+            // Rotate the mapRotator around center by player yaw so "forward is up"
+            if (mapRotator != null)
+            {
+                mapRotator.localEulerAngles = new Vector3(0, 0, playerRot.y);
+            }
+
+            // Player arrow blip stays pointing straight up
             if (playerIndicator != null)
             {
-                playerIndicator.localEulerAngles = new Vector3(0, 0, -playerRot.y); // Rotate player arrow blip directly
+                playerIndicator.localEulerAngles = Vector3.zero;
             }
 
-            if (compassRing != null)
+            // Animate dynamic radar sweep rotation
+            if (radarSweep != null)
             {
-                compassRing.localEulerAngles = Vector3.zero; // Compass letters stay fixed (North is UP)
+                radarSweep.Rotate(Vector3.forward, -60f * Time.deltaTime);
             }
 
-            // Update dynamic zombie indicators
+            // Update dynamic indicators
             UpdateZombieIndicators();
+            UpdateMedicineIndicators();
         }
 
         private void UpdateZombieIndicators()
         {
-            // Find active zombies
             var zombies = Object.FindObjectsByType<ZombieAI>(FindObjectsInactive.Exclude);
             
-            // Match indicator pool
             // 1. Disable all indicators first
             foreach (var ind in zombieIndicators)
             {
@@ -283,7 +346,6 @@ namespace TheAlchemistsCrypt.UI
                 var z = zombies[i];
                 if (z == null || !z.gameObject.activeInHierarchy) continue;
 
-                // Find or create indicator
                 ZombieIndicator indicator = null;
                 if (i < zombieIndicators.Count)
                 {
@@ -296,10 +358,10 @@ namespace TheAlchemistsCrypt.UI
                     indicator.iconRect = go.GetComponent<RectTransform>();
                     indicator.iconRect.SetParent(mapContent, false);
                     indicator.iconRect.anchorMin = indicator.iconRect.anchorMax = new Vector2(0.5f, 0.5f);
-                    indicator.iconRect.sizeDelta = new Vector2(16, 16);
+                    indicator.iconRect.sizeDelta = new Vector2(20, 20);
                     
                     indicator.iconImage = go.GetComponent<Image>();
-                    indicator.iconImage.sprite = greenDotSprite;
+                    indicator.iconImage.sprite = zombieDotSprite;
                     indicator.iconImage.color = Color.white;
                     indicator.iconImage.raycastTarget = false;
 
@@ -309,9 +371,62 @@ namespace TheAlchemistsCrypt.UI
                 indicator.zombieGo = z.gameObject;
                 indicator.iconRect.gameObject.SetActive(true);
                 
-                // Position relative to mapContent (world position)
                 Vector3 zPos = z.transform.position;
                 indicator.iconRect.anchoredPosition = new Vector2(zPos.x * currentScale, zPos.z * currentScale);
+
+                // Compensate for map rotation so triangles point straight up on screen
+                float mapRot = mapRotator != null ? mapRotator.localEulerAngles.z : 0f;
+                indicator.iconRect.localEulerAngles = new Vector3(0, 0, -mapRot);
+            }
+        }
+
+        private void UpdateMedicineIndicators()
+        {
+            var medicines = Object.FindObjectsByType<MedicinePickup>(FindObjectsInactive.Exclude);
+            
+            // 1. Disable all indicators first
+            foreach (var ind in medicineIndicators)
+            {
+                if (ind.iconRect != null) ind.iconRect.gameObject.SetActive(false);
+            }
+
+            // 2. Map active medicines to indicators
+            for (int i = 0; i < medicines.Length; i++)
+            {
+                var m = medicines[i];
+                if (m == null || !m.gameObject.activeInHierarchy) continue;
+
+                MedicineIndicator indicator = null;
+                if (i < medicineIndicators.Count)
+                {
+                    indicator = medicineIndicators[i];
+                }
+                else
+                {
+                    indicator = new MedicineIndicator();
+                    var go = new GameObject("MedicineIndicator", typeof(RectTransform), typeof(Image));
+                    indicator.iconRect = go.GetComponent<RectTransform>();
+                    indicator.iconRect.SetParent(mapContent, false);
+                    indicator.iconRect.anchorMin = indicator.iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+                    indicator.iconRect.sizeDelta = new Vector2(20, 20);
+                    
+                    indicator.iconImage = go.GetComponent<Image>();
+                    indicator.iconImage.sprite = medicineDotSprite;
+                    indicator.iconImage.color = Color.white;
+                    indicator.iconImage.raycastTarget = false;
+
+                    medicineIndicators.Add(indicator);
+                }
+
+                indicator.medicineGo = m.gameObject;
+                indicator.iconRect.gameObject.SetActive(true);
+                
+                Vector3 mPos = m.transform.position;
+                indicator.iconRect.anchoredPosition = new Vector2(mPos.x * currentScale, mPos.z * currentScale);
+
+                // Compensate for map rotation so health crosses point straight up on screen
+                float mapRot = mapRotator != null ? mapRotator.localEulerAngles.z : 0f;
+                indicator.iconRect.localEulerAngles = new Vector3(0, 0, -mapRot);
             }
         }
 
@@ -329,6 +444,18 @@ namespace TheAlchemistsCrypt.UI
                 minimapFrame.anchoredPosition = isZoomedOut ? new Vector2(-280, -340) : new Vector2(-160, -220);
             }
 
+            if (mapRotator != null)
+            {
+                mapRotator.sizeDelta = isZoomedOut ? new Vector2(440, 440) : new Vector2(220, 220);
+                var bgGrid = mapRotator.Find("MinimapBackgroundGrid") as RectTransform;
+                if (bgGrid != null) bgGrid.sizeDelta = isZoomedOut ? new Vector2(440, 440) : new Vector2(220, 220);
+            }
+
+            if (radarSweep != null)
+            {
+                radarSweep.sizeDelta = isZoomedOut ? new Vector2(440, 440) : new Vector2(220, 220);
+            }
+
             if (compassRing != null)
             {
                 compassRing.sizeDelta = isZoomedOut ? new Vector2(440, 440) : new Vector2(220, 220);
@@ -339,9 +466,9 @@ namespace TheAlchemistsCrypt.UI
                     if (labelRect != null)
                     {
                         if (child.name == "Label_N") labelRect.anchoredPosition = new Vector2(0, labelRadius);
-                        else if (child.name == "Label_Dot_1") labelRect.anchoredPosition = new Vector2(labelRadius, 0);
-                        else if (child.name == "Label_Dot_2") labelRect.anchoredPosition = new Vector2(0, -labelRadius);
-                        else if (child.name == "Label_Dot_3") labelRect.anchoredPosition = new Vector2(-labelRadius, 0);
+                        else if (child.name == "Label_E") labelRect.anchoredPosition = new Vector2(labelRadius, 0);
+                        else if (child.name == "Label_S") labelRect.anchoredPosition = new Vector2(0, -labelRadius);
+                        else if (child.name == "Label_W") labelRect.anchoredPosition = new Vector2(-labelRadius, 0);
                     }
                 }
             }
@@ -424,6 +551,148 @@ namespace TheAlchemistsCrypt.UI
             }
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateMinimapBackgroundSprite(int size)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color baseBg = new Color(0.04f, 0.04f, 0.04f, 0.85f);
+            Color gridColor = new Color(0.95f, 0.8f, 0.2f, 0.12f); // Soft gold lines
+            Color gridColorBright = new Color(0.95f, 0.8f, 0.2f, 0.28f);
+            
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (float)(x - size / 2) / (size / 2);
+                    float dy = (float)(y - size / 2) / (size / 2);
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    
+                    if (dist > 1.0f)
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                        continue;
+                    }
+                    
+                    Color pixelColor = baseBg;
+                    
+                    // Concentric rings at 0.33, 0.66, 0.98
+                    float epsilon = 0.012f;
+                    if (Mathf.Abs(dist - 0.33f) < epsilon || Mathf.Abs(dist - 0.66f) < epsilon || Mathf.Abs(dist - 0.98f) < epsilon)
+                    {
+                        pixelColor = Color.Lerp(pixelColor, gridColorBright, 0.75f);
+                    }
+                    // Horizontal and vertical grid lines
+                    else if (Mathf.Abs(dx) < 0.01f || Mathf.Abs(dy) < 0.01f)
+                    {
+                        pixelColor = Color.Lerp(pixelColor, gridColor, 0.55f);
+                    }
+                    // Diagonal lines
+                    else if (Mathf.Abs(Mathf.Abs(dx) - Mathf.Abs(dy)) < 0.015f)
+                    {
+                        pixelColor = Color.Lerp(pixelColor, gridColor, 0.35f);
+                    }
+                    
+                    tex.SetPixel(x, y, pixelColor);
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateRadarSweepSprite(int size, Color col)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (float)(x - size / 2) / (size / 2);
+                    float dy = (float)(y - size / 2) / (size / 2);
+                    float dist = dx * dx + dy * dy;
+                    
+                    if (dist <= 0.98f)
+                    {
+                        // Calculate angle in radians from -PI to PI, then map to 0 to 1
+                        float angle = Mathf.Atan2(dy, dx); 
+                        if (angle < 0) angle += 2f * Mathf.PI;
+                        
+                        float progress = angle / (2f * Mathf.PI);
+                        float alpha = Mathf.Pow(progress, 3.5f); // Sharp fading sector
+                        
+                        tex.SetPixel(x, y, new Color(col.r, col.g, col.b, col.a * alpha * (1f - dist * 0.25f)));
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateWarningTriangleSprite(int size, Color col)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float px = (float)(x - size / 2) / (size / 2);
+                    float py = (float)(y - size / 2) / (size / 2);
+                    
+                    // Triangle bounds: py from -0.8 to 0.8
+                    float absX = Mathf.Abs(px);
+                    float width = (0.8f - py) * 0.6f;
+                    
+                    if (py > -0.8f && py < 0.8f && absX <= width)
+                    {
+                        tex.SetPixel(x, y, col);
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateMedicineIconSprite(int size, Color col)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (float)(x - size / 2) / (size / 2);
+                    float dy = (float)(y - size / 2) / (size / 2);
+                    float dist = dx * dx + dy * dy;
+                    
+                    if (dist <= 0.9f)
+                    {
+                        float absX = Mathf.Abs(dx);
+                        float absY = Mathf.Abs(dy);
+                        bool isCross = (absX < 0.22f && absY < 0.65f) || (absY < 0.22f && absX < 0.65f);
+                        if (isCross)
+                        {
+                            tex.SetPixel(x, y, Color.white);
+                        }
+                        else
+                        {
+                            tex.SetPixel(x, y, col);
+                        }
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
         }
 
         private Sprite CreatePlayerArrowSprite(int w, int h, Color col)

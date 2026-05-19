@@ -20,54 +20,21 @@ namespace TheAlchemistsCrypt.Gameplay
         {
             startPos = transform.position;
 
-            // Procedurally build a beautiful glowing Emerald Crystal diamond if no custom mesh exists
-            crystalVisual = new GameObject("CrystalVisual");
+            // Create a gorgeous glowing alchemical sphere/orb
+            crystalVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            var col = crystalVisual.GetComponent<Collider>();
+            if (col != null) Destroy(col);
             crystalVisual.transform.SetParent(transform, false);
             crystalVisual.transform.localPosition = Vector3.zero;
+            crystalVisual.transform.localScale = Vector3.one * 0.45f;
 
-            // Generate an elegant double-pyramid crystal mesh
-            MeshFilter filter = crystalVisual.AddComponent<MeshFilter>();
-            MeshRenderer renderer = crystalVisual.AddComponent<MeshRenderer>();
-
-            Mesh mesh = new Mesh();
-            mesh.name = "AlchemicalCrystal";
-
-            // 6 vertices: 4 around the equator, 1 top tip, 1 bottom tip
-            Vector3[] vertices = new Vector3[]
-            {
-                new Vector3(0, 0.4f, 0),    // 0: Top tip
-                new Vector3(0.2f, 0, 0.2f),  // 1: Equator front-right
-                new Vector3(-0.2f, 0, 0.2f), // 2: Equator front-left
-                new Vector3(-0.2f, 0, -0.2f),// 3: Equator back-left
-                new Vector3(0.2f, 0, -0.2f), // 4: Equator back-right
-                new Vector3(0, -0.4f, 0)    // 5: Bottom tip
-            };
-
-            // Triangles for double pyramid (8 faces)
-            int[] triangles = new int[]
-            {
-                // Top pyramid
-                0, 1, 2,
-                0, 2, 3,
-                0, 3, 4,
-                0, 4, 1,
-                // Bottom pyramid
-                5, 2, 1,
-                5, 3, 2,
-                5, 4, 3,
-                5, 1, 4
-            };
-
-            mesh.vertices = vertices;
-            mesh.triangles = triangles;
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-            filter.mesh = mesh;
+            MeshRenderer renderer = crystalVisual.GetComponent<MeshRenderer>();
 
             // Setup custom glowing alchemical material (Emerald/Jade)
             Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             mat.SetColor("_BaseColor", new Color(0.1f, 0.9f, 0.3f, 1f));
-            mat.SetColor("_EmissionColor", new Color(0.05f, 0.6f, 0.15f, 1f) * 2f);
+            mat.SetColor("_Color", new Color(0.1f, 0.9f, 0.3f, 1f));
+            mat.SetColor("_EmissionColor", new Color(0.05f, 0.6f, 0.15f, 1f) * 3f);
             mat.EnableKeyword("_EMISSION");
             mat.SetFloat("_Smoothness", 0.9f);
             renderer.material = mat;
@@ -112,6 +79,8 @@ namespace TheAlchemistsCrypt.Gameplay
                 sparkGo.transform.position = transform.position;
                 var system = sparkGo.AddComponent<ParticleSystem>();
                 
+                system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
                 var main = system.main;
                 main.startColor = new Color(0.2f, 1f, 0.4f);
                 main.startSize = 0.15f;
@@ -124,12 +93,47 @@ namespace TheAlchemistsCrypt.Gameplay
                 emission.burstCount = 1;
                 emission.SetBurst(0, new ParticleSystem.Burst(0f, 25));
 
+                var renderer = sparkGo.GetComponent<ParticleSystemRenderer>();
+                if (renderer != null)
+                {
+                    renderer.sharedMaterial = CreateParticleMaterial(new Color(0.2f, 1f, 0.4f));
+                }
+
                 system.Play();
                 Destroy(sparkGo, 1.0f);
 
                 // Destroy the pickup
                 Destroy(gameObject);
             }
+        }
+
+        private Material CreateParticleMaterial(Color baseColor)
+        {
+            Shader uShared = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (uShared == null) uShared = Shader.Find("Standard");
+            
+            Material mat = new Material(uShared);
+            mat.SetColor("_BaseColor", baseColor);
+            mat.SetColor("_Color", baseColor);
+            
+            // Create a gorgeous soft anti-aliased circular brush texture
+            Texture2D tex = new Texture2D(16, 16, TextureFormat.RGBA32, false);
+            for (int y = 0; y < 16; y++)
+            {
+                for (int x = 0; x < 16; x++)
+                {
+                    float dx = x - 7.5f;
+                    float dy = y - 7.5f;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    float alpha = Mathf.Clamp01(1f - (dist / 7.5f));
+                    alpha = Mathf.Pow(alpha, 2.5f); // Smooth falloff gradient
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            tex.Apply();
+            mat.SetTexture("_BaseMap", tex);
+            mat.mainTexture = tex;
+            return mat;
         }
     }
 }

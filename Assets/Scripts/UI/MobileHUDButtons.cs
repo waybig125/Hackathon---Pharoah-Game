@@ -771,17 +771,28 @@ namespace TheAlchemistsCrypt.UI
             onScreenStick.controlPath = "<Gamepad>/leftStick"; 
 
             // --- ACTION BUTTONS (Circular translucent gold themed, identical to fd582c0) ---
+            string currentPreset = PlayerPrefs.GetString("HUD_Preset", "DEFAULT");
+            bool isLefty = (currentPreset == "LEFTY");
+
             var btnContainer = new GameObject("ButtonContainer", typeof(RectTransform)).GetComponent<RectTransform>();
             btnContainer.SetParent(root, false);
-            btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0);
-            btnContainer.anchoredPosition = new Vector2(20, 50); // Shifted to the right!
+            if (isLefty)
+            {
+                btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(0, 0);
+                btnContainer.anchoredPosition = new Vector2(50, 50);
+            }
+            else
+            {
+                btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0);
+                btnContainer.anchoredPosition = new Vector2(-50, 50);
+            }
 
-            Vector2 firePos = GetButtonPosition("FIRE", new Vector2(-280, 280));
-            Vector2 reloadPos = GetButtonPosition("RELOAD", new Vector2(-500, 120));
-            Vector2 swapPos = GetButtonPosition("SWAP", new Vector2(-420, 560));
-            Vector2 sprintPos = GetButtonPosition("SPRINT", new Vector2(-580, 240));
-            Vector2 focusPos = GetButtonPosition("FOCUS", new Vector2(-520, 440));
-            Vector2 jumpPos = GetButtonPosition("JUMP", new Vector2(-150, 580));
+            Vector2 firePos = GetButtonPosition("FIRE", isLefty ? new Vector2(250, 250) : new Vector2(-250, 250));
+            Vector2 reloadPos = GetButtonPosition("RELOAD", isLefty ? new Vector2(480, 150) : new Vector2(-480, 150));
+            Vector2 swapPos = GetButtonPosition("SWAP", isLefty ? new Vector2(360, 520) : new Vector2(-360, 520));
+            Vector2 sprintPos = GetButtonPosition("SPRINT", isLefty ? new Vector2(580, 280) : new Vector2(-580, 280));
+            Vector2 focusPos = GetButtonPosition("FOCUS", isLefty ? new Vector2(450, 380) : new Vector2(-450, 380));
+            Vector2 jumpPos = GetButtonPosition("JUMP", isLefty ? new Vector2(150, 480) : new Vector2(-150, 480));
 
             CreateButton(btnContainer, "FIRE", firePos, 380, fireIcon, () => SetFire(true), () => SetFire(false));
             CreateButton(btnContainer, "RELOAD", reloadPos, 200, reloadIcon, () => Reload());
@@ -1302,33 +1313,41 @@ namespace TheAlchemistsCrypt.UI
             
             if (presetName == "DEFAULT")
             {
-                SaveButtonPos("FIRE", new Vector2(-280, 280));
-                SaveButtonPos("RELOAD", new Vector2(-500, 120));
-                SaveButtonPos("SWAP", new Vector2(-420, 560));
-                SaveButtonPos("SPRINT", new Vector2(-580, 240));
-                SaveButtonPos("FOCUS", new Vector2(-520, 440));
-                SaveButtonPos("JUMP", new Vector2(-150, 580));
+                SaveButtonPos("FIRE", new Vector2(-250, 250));
+                SaveButtonPos("RELOAD", new Vector2(-480, 150));
+                SaveButtonPos("SWAP", new Vector2(-360, 520));
+                SaveButtonPos("SPRINT", new Vector2(-580, 280));
+                SaveButtonPos("FOCUS", new Vector2(-450, 380));
+                SaveButtonPos("JUMP", new Vector2(-150, 480));
             }
             else if (presetName == "COMPACT")
             {
-                SaveButtonPos("FIRE", new Vector2(-220, 220));
-                SaveButtonPos("RELOAD", new Vector2(-360, 100));
-                SaveButtonPos("SWAP", new Vector2(-300, 440));
-                SaveButtonPos("SPRINT", new Vector2(-440, 200));
-                SaveButtonPos("FOCUS", new Vector2(-400, 320));
-                SaveButtonPos("JUMP", new Vector2(-120, 440));
+                SaveButtonPos("FIRE", new Vector2(-200, 200));
+                SaveButtonPos("RELOAD", new Vector2(-380, 120));
+                SaveButtonPos("SWAP", new Vector2(-290, 400));
+                SaveButtonPos("SPRINT", new Vector2(-460, 220));
+                SaveButtonPos("FOCUS", new Vector2(-360, 300));
+                SaveButtonPos("JUMP", new Vector2(-120, 380));
             }
             else if (presetName == "LEFTY")
             {
-                SaveButtonPos("FIRE", new Vector2(-580, 280));
-                SaveButtonPos("RELOAD", new Vector2(-200, 120));
-                SaveButtonPos("SWAP", new Vector2(-280, 560));
-                SaveButtonPos("SPRINT", new Vector2(-120, 240));
-                SaveButtonPos("FOCUS", new Vector2(-180, 440));
-                SaveButtonPos("JUMP", new Vector2(-150, 580));
+                SaveButtonPos("FIRE", new Vector2(250, 250));
+                SaveButtonPos("RELOAD", new Vector2(480, 150));
+                SaveButtonPos("SWAP", new Vector2(360, 520));
+                SaveButtonPos("SPRINT", new Vector2(580, 280));
+                SaveButtonPos("FOCUS", new Vector2(450, 380));
+                SaveButtonPos("JUMP", new Vector2(150, 480));
             }
             PlayerPrefs.Save();
-            BuildHUD();
+
+            if (IsCustomizingHUD)
+            {
+                UpdateHUDButtonPositionsOnScreen();
+            }
+            else
+            {
+                BuildHUD();
+            }
         }
 
         private void ResetToFactoryDefaults()
@@ -1347,7 +1366,15 @@ namespace TheAlchemistsCrypt.UI
             PlayerPrefs.DeleteKey("ButtonPos_JUMP_X");
             PlayerPrefs.DeleteKey("ButtonPos_JUMP_Y");
             PlayerPrefs.Save();
-            BuildHUD();
+
+            if (IsCustomizingHUD)
+            {
+                UpdateHUDButtonPositionsOnScreen();
+            }
+            else
+            {
+                BuildHUD();
+            }
         }
 
         private void StartHUDCustomization()
@@ -1363,47 +1390,91 @@ namespace TheAlchemistsCrypt.UI
 
             var canvas = transform.GetComponent<RectTransform>();
             
+            // Add customRoot to HUD_Root so it blocks under-layers (joystick, looking) but sits behind the buttons
             var customRoot = new GameObject("HUDCustomizerOverlay", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            customRoot.SetParent(canvas, false); customRoot.SetAsLastSibling();
+            customRoot.SetParent(hudRootGo != null ? hudRootGo.transform : canvas, false);
             customRoot.anchorMin = Vector2.zero; customRoot.anchorMax = Vector2.one;
             customRoot.offsetMin = customRoot.offsetMax = Vector2.zero;
-            customRoot.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.4f);
+            customRoot.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.45f);
+
+            // Put button container in front of the overlay
+            var btnContainer = hudRootGo != null ? hudRootGo.transform.Find("ButtonContainer") : null;
+            if (btnContainer != null)
+            {
+                btnContainer.SetAsLastSibling();
+            }
 
             var textGo = new GameObject("Instructions", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             textGo.SetParent(customRoot, false);
-            textGo.anchoredPosition = new Vector2(0, 200);
+            textGo.anchoredPosition = new Vector2(0, 180);
             textGo.sizeDelta = new Vector2(900, 100);
             var txt = textGo.GetComponent<Text>();
             txt.font = GetRobustFont(); txt.fontSize = 28; txt.fontStyle = FontStyle.Bold;
             txt.alignment = TextAnchor.MiddleCenter;
             txt.color = new Color(0.95f, 0.85f, 0.2f);
-            txt.text = "MOBILE HUD EDITOR ACTIVE\nDrag any action button to place it. Click SAVE to finish.";
+            txt.text = "MOBILE HUD EDITOR ACTIVE\nDrag any action button to place it. Select a preset or SAVE.";
 
-            var saveBtn = new GameObject("SaveButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            saveBtn.SetParent(customRoot, false);
-            saveBtn.anchoredPosition = new Vector2(0, 100);
-            saveBtn.sizeDelta = new Vector2(250, 60);
-            saveBtn.GetComponent<Image>().sprite = charcoalSprite;
+            // Add beautiful preset selection action buttons inside the overlay
+            CreateSettingsActionButton(customRoot, "DEFAULT PRESET", new Vector2(-220, 60), new Vector2(200, 50),
+                () => ApplyPreset("DEFAULT"), new Color(0.95f, 0.8f, 0.2f, 0.15f));
 
-            var saveHighlight = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            saveHighlight.SetParent(saveBtn, false); saveHighlight.anchorMin = Vector2.zero; saveHighlight.anchorMax = Vector2.one;
-            saveHighlight.offsetMin = saveHighlight.offsetMax = Vector2.zero;
-            saveHighlight.GetComponent<Image>().color = new Color(0.1f, 0.9f, 0.3f, 0.15f);
+            CreateSettingsActionButton(customRoot, "COMPACT PRESET", new Vector2(0, 60), new Vector2(200, 50),
+                () => ApplyPreset("COMPACT"), new Color(0.95f, 0.8f, 0.2f, 0.15f));
 
-            var saveTxtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            saveTxtGo.SetParent(saveBtn, false);
-            saveTxtGo.anchorMin = Vector2.zero; saveTxtGo.anchorMax = Vector2.one;
-            saveTxtGo.offsetMin = saveTxtGo.offsetMax = Vector2.zero;
-            var saveTxt = saveTxtGo.GetComponent<Text>();
-            saveTxt.font = GetRobustFont(); saveTxt.fontSize = 22; saveTxt.fontStyle = FontStyle.Bold;
-            saveTxt.alignment = TextAnchor.MiddleCenter; saveTxt.color = new Color(0.1f, 0.9f, 0.3f);
-            saveTxt.text = "SAVE & EXIT";
+            CreateSettingsActionButton(customRoot, "LEFTY PRESET", new Vector2(220, 60), new Vector2(200, 50),
+                () => ApplyPreset("LEFTY"), new Color(0.95f, 0.8f, 0.2f, 0.15f));
 
-            saveBtn.gameObject.AddComponent<ButtonInputHelper>().onUp = () => {
-                IsCustomizingHUD = false;
-                Destroy(customRoot.gameObject);
-                OpenSettingsModal(canvas);
-            };
+            CreateSettingsActionButton(customRoot, "RESET TO FACTORY", new Vector2(0, -20), new Vector2(260, 50),
+                () => ResetToFactoryDefaults(), new Color(0.9f, 0.2f, 0.2f, 0.15f));
+
+            CreateSettingsActionButton(customRoot, "SAVE & EXIT", new Vector2(0, -110), new Vector2(280, 60),
+                () => {
+                    IsCustomizingHUD = false;
+                    Destroy(customRoot.gameObject);
+                    OpenSettingsModal(canvas);
+                    // Rebuild the HUD to fully restore gameplay input handling
+                    BuildHUD();
+                }, new Color(0.1f, 0.9f, 0.3f, 0.2f));
+        }
+
+        private void UpdateHUDButtonPositionsOnScreen()
+        {
+            if (hudRootGo == null) return;
+            string currentPreset = PlayerPrefs.GetString("HUD_Preset", "DEFAULT");
+            bool isLefty = (currentPreset == "LEFTY");
+            
+            var btnContainer = hudRootGo.transform.Find("ButtonContainer") as RectTransform;
+            if (btnContainer != null)
+            {
+                if (isLefty)
+                {
+                    btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(0, 0);
+                    btnContainer.anchoredPosition = new Vector2(50, 50);
+                }
+                else
+                {
+                    btnContainer.anchorMin = btnContainer.anchorMax = new Vector2(1, 0);
+                    btnContainer.anchoredPosition = new Vector2(-50, 50);
+                }
+
+                foreach (Transform btn in btnContainer)
+                {
+                    Vector2 defaultPos = Vector2.zero;
+                    if (btn.name == "FIRE") defaultPos = isLefty ? new Vector2(250, 250) : new Vector2(-250, 250);
+                    else if (btn.name == "RELOAD") defaultPos = isLefty ? new Vector2(480, 150) : new Vector2(-480, 150);
+                    else if (btn.name == "SWAP") defaultPos = isLefty ? new Vector2(360, 520) : new Vector2(-360, 520);
+                    else if (btn.name == "SPRINT") defaultPos = isLefty ? new Vector2(580, 280) : new Vector2(-580, 280);
+                    else if (btn.name == "FOCUS") defaultPos = isLefty ? new Vector2(450, 380) : new Vector2(-450, 380);
+                    else if (btn.name == "JUMP") defaultPos = isLefty ? new Vector2(150, 480) : new Vector2(-150, 480);
+
+                    Vector2 savedPos = GetButtonPosition(btn.name, defaultPos);
+                    var rect = btn.GetComponent<RectTransform>();
+                    if (rect != null)
+                    {
+                        rect.anchoredPosition = savedPos;
+                    }
+                }
+            }
         }
 
         private GameObject CreateSettingsActionButton(RectTransform parent, string labelText, Vector2 pos, Vector2 size, System.Action onClick, Color highlightColor)
