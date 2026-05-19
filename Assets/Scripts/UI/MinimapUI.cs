@@ -108,7 +108,7 @@ namespace TheAlchemistsCrypt.UI
             if (minimapFrame == null) minimapFrame = gameObject.AddComponent<RectTransform>();
             
             minimapFrame.anchorMin = minimapFrame.anchorMax = new Vector2(1, 1);
-            minimapFrame.anchoredPosition = new Vector2(-160, -220); // Safe distance below top-right settings button
+            minimapFrame.anchoredPosition = new Vector2(-180, -240); // Safe distance below top-right settings button
             minimapFrame.sizeDelta = new Vector2(240, 240);
 
             // Frame Image (Black Obsidian Base)
@@ -442,7 +442,7 @@ namespace TheAlchemistsCrypt.UI
             if (minimapFrame != null)
             {
                 minimapFrame.sizeDelta = isZoomedOut ? new Vector2(480, 480) : new Vector2(240, 240);
-                minimapFrame.anchoredPosition = isZoomedOut ? new Vector2(-280, -340) : new Vector2(-160, -220);
+                minimapFrame.anchoredPosition = isZoomedOut ? new Vector2(-280, -340) : new Vector2(-180, -240);
             }
 
             if (mapRotator != null)

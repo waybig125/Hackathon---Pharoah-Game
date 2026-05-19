@@ -31,8 +31,11 @@ namespace TheAlchemistsCrypt.AI
             var renderer = visual.GetComponent<MeshRenderer>();
             if (renderer != null)
             {
-                Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                Shader litShader = Shader.Find("Universal Render Pipeline/Lit");
+                if (litShader == null) litShader = Shader.Find("Standard");
+                Material mat = new Material(litShader);
                 mat.color = new Color(0.95f, 0.6f, 0.1f, 1f); // Warm alchemical amber
+                if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", new Color(0.95f, 0.6f, 0.1f, 1f));
                 mat.SetColor("_EmissionColor", new Color(0.95f, 0.5f, 0.05f) * 4f);
                 mat.EnableKeyword("_EMISSION");
                 renderer.sharedMaterial = mat;
@@ -59,8 +62,11 @@ namespace TheAlchemistsCrypt.AI
             trail.endWidth = 0.0f;
             
             // Set trail material and colors
-            var trailMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Shader trailShader = Shader.Find("Universal Render Pipeline/Lit");
+            if (trailShader == null) trailShader = Shader.Find("Standard");
+            var trailMat = new Material(trailShader);
             trailMat.color = new Color(0.9f, 0.7f, 0.2f, 0.6f);
+            if (trailMat.HasProperty("_BaseColor")) trailMat.SetColor("_BaseColor", new Color(0.9f, 0.7f, 0.2f, 0.6f));
             trailMat.SetColor("_EmissionColor", new Color(0.9f, 0.6f, 0.1f) * 2f);
             trailMat.EnableKeyword("_EMISSION");
             trail.sharedMaterial = trailMat;
@@ -141,12 +147,12 @@ namespace TheAlchemistsCrypt.AI
 
         private Material CreateParticleMaterial(Color baseColor)
         {
-            Shader uShared = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (uShared == null) uShared = Shader.Find("Standard");
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
             
-            Material mat = new Material(uShared);
-            mat.SetColor("_BaseColor", baseColor);
+            Material mat = new Material(shader);
             mat.SetColor("_Color", baseColor);
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", baseColor);
             
             // Create a gorgeous soft anti-aliased circular brush texture
             Texture2D tex = new Texture2D(16, 16, TextureFormat.RGBA32, false);
@@ -163,8 +169,9 @@ namespace TheAlchemistsCrypt.AI
                 }
             }
             tex.Apply();
-            mat.SetTexture("_BaseMap", tex);
             mat.mainTexture = tex;
+            if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+            if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", tex);
             return mat;
         }
     }

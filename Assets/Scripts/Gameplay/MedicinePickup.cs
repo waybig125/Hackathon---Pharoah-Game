@@ -31,9 +31,11 @@ namespace TheAlchemistsCrypt.Gameplay
             MeshRenderer renderer = crystalVisual.GetComponent<MeshRenderer>();
 
             // Setup custom glowing alchemical material (Emerald/Jade)
-            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Shader litShader = Shader.Find("Universal Render Pipeline/Lit");
+            if (litShader == null) litShader = Shader.Find("Standard");
+            Material mat = new Material(litShader);
             mat.SetColor("_BaseColor", new Color(0.1f, 0.9f, 0.3f, 1f));
-            mat.SetColor("_Color", new Color(0.1f, 0.9f, 0.3f, 1f));
+            if (mat.HasProperty("_Color")) mat.SetColor("_Color", new Color(0.1f, 0.9f, 0.3f, 1f));
             mat.SetColor("_EmissionColor", new Color(0.05f, 0.6f, 0.15f, 1f) * 3f);
             mat.EnableKeyword("_EMISSION");
             mat.SetFloat("_Smoothness", 0.9f);
@@ -109,12 +111,12 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private Material CreateParticleMaterial(Color baseColor)
         {
-            Shader uShared = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (uShared == null) uShared = Shader.Find("Standard");
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
             
-            Material mat = new Material(uShared);
-            mat.SetColor("_BaseColor", baseColor);
+            Material mat = new Material(shader);
             mat.SetColor("_Color", baseColor);
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", baseColor);
             
             // Create a gorgeous soft anti-aliased circular brush texture
             Texture2D tex = new Texture2D(16, 16, TextureFormat.RGBA32, false);
@@ -131,8 +133,9 @@ namespace TheAlchemistsCrypt.Gameplay
                 }
             }
             tex.Apply();
-            mat.SetTexture("_BaseMap", tex);
             mat.mainTexture = tex;
+            if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+            if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", tex);
             return mat;
         }
     }

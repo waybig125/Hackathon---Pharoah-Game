@@ -116,8 +116,7 @@ namespace TheAlchemistsCrypt.Weapons
             }
 
             bool isFiringInput = (MobileInputManager.Instance != null && MobileInputManager.Instance.IsFiring) || 
-                                 ((UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.isPressed) || 
-                                  (UnityEngine.InputSystem.Pointer.current != null && UnityEngine.InputSystem.Pointer.current.press.isPressed));
+                                 (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.isPressed);
             if (isFiringInput && Time.time >= nextFireTime)
             {
                 if (currentAmmo > 0)

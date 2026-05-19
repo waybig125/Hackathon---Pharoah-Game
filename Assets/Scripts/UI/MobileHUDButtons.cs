@@ -766,9 +766,10 @@ namespace TheAlchemistsCrypt.UI
             visualImage.color = Color.white; visualImage.raycastTarget = false;
             if (joystickKnobSprite != null) visualImage.sprite = joystickKnobSprite;
 
-            var onScreenStick = joystickHandle.gameObject.AddComponent<UnityEngine.InputSystem.OnScreen.OnScreenStick>();
-            onScreenStick.movementRange = 180f; 
-            onScreenStick.controlPath = "<Gamepad>/leftStick"; 
+            var dragHandler = joystickHandle.gameObject.AddComponent<JoystickDragHandler>();
+            dragHandler.backgroundRing = joystickBg;
+            dragHandler.knobVisual = knobVisual;
+            dragHandler.movementRange = 180f;
 
             // --- ACTION BUTTONS (Circular translucent gold themed, identical to fd582c0) ---
             string currentPreset = PlayerPrefs.GetString("HUD_Preset", "DEFAULT");
@@ -787,12 +788,12 @@ namespace TheAlchemistsCrypt.UI
                 btnContainer.anchoredPosition = new Vector2(-50, 50);
             }
 
-            Vector2 firePos = GetButtonPosition("FIRE", isLefty ? new Vector2(250, 250) : new Vector2(-250, 250));
-            Vector2 reloadPos = GetButtonPosition("RELOAD", isLefty ? new Vector2(480, 150) : new Vector2(-480, 150));
-            Vector2 swapPos = GetButtonPosition("SWAP", isLefty ? new Vector2(360, 520) : new Vector2(-360, 520));
-            Vector2 sprintPos = GetButtonPosition("SPRINT", isLefty ? new Vector2(580, 280) : new Vector2(-580, 280));
-            Vector2 focusPos = GetButtonPosition("FOCUS", isLefty ? new Vector2(450, 380) : new Vector2(-450, 380));
-            Vector2 jumpPos = GetButtonPosition("JUMP", isLefty ? new Vector2(150, 480) : new Vector2(-150, 480));
+            Vector2 firePos = GetButtonPosition("FIRE", isLefty ? new Vector2(220, 220) : new Vector2(-220, 220));
+            Vector2 reloadPos = GetButtonPosition("RELOAD", isLefty ? new Vector2(520, 150) : new Vector2(-520, 150));
+            Vector2 swapPos = GetButtonPosition("SWAP", isLefty ? new Vector2(360, 620) : new Vector2(-360, 620));
+            Vector2 sprintPos = GetButtonPosition("SPRINT", isLefty ? new Vector2(650, 300) : new Vector2(-650, 300));
+            Vector2 focusPos = GetButtonPosition("FOCUS", isLefty ? new Vector2(450, 420) : new Vector2(-450, 420));
+            Vector2 jumpPos = GetButtonPosition("JUMP", isLefty ? new Vector2(150, 520) : new Vector2(-150, 520));
 
             CreateButton(btnContainer, "FIRE", firePos, 380, fireIcon, () => SetFire(true), () => SetFire(false));
             CreateButton(btnContainer, "RELOAD", reloadPos, 200, reloadIcon, () => Reload());
@@ -1313,30 +1314,30 @@ namespace TheAlchemistsCrypt.UI
             
             if (presetName == "DEFAULT")
             {
-                SaveButtonPos("FIRE", new Vector2(-250, 250));
-                SaveButtonPos("RELOAD", new Vector2(-480, 150));
-                SaveButtonPos("SWAP", new Vector2(-360, 520));
-                SaveButtonPos("SPRINT", new Vector2(-580, 280));
-                SaveButtonPos("FOCUS", new Vector2(-450, 380));
-                SaveButtonPos("JUMP", new Vector2(-150, 480));
+                SaveButtonPos("FIRE", new Vector2(-220, 220));
+                SaveButtonPos("RELOAD", new Vector2(-520, 150));
+                SaveButtonPos("SWAP", new Vector2(-360, 620));
+                SaveButtonPos("SPRINT", new Vector2(-650, 300));
+                SaveButtonPos("FOCUS", new Vector2(-450, 420));
+                SaveButtonPos("JUMP", new Vector2(-150, 520));
             }
             else if (presetName == "COMPACT")
             {
-                SaveButtonPos("FIRE", new Vector2(-200, 200));
-                SaveButtonPos("RELOAD", new Vector2(-380, 120));
-                SaveButtonPos("SWAP", new Vector2(-290, 400));
-                SaveButtonPos("SPRINT", new Vector2(-460, 220));
-                SaveButtonPos("FOCUS", new Vector2(-360, 300));
-                SaveButtonPos("JUMP", new Vector2(-120, 380));
+                SaveButtonPos("FIRE", new Vector2(-180, 180));
+                SaveButtonPos("RELOAD", new Vector2(-420, 120));
+                SaveButtonPos("SWAP", new Vector2(-290, 500));
+                SaveButtonPos("SPRINT", new Vector2(-520, 240));
+                SaveButtonPos("FOCUS", new Vector2(-360, 340));
+                SaveButtonPos("JUMP", new Vector2(-120, 420));
             }
             else if (presetName == "LEFTY")
             {
-                SaveButtonPos("FIRE", new Vector2(250, 250));
-                SaveButtonPos("RELOAD", new Vector2(480, 150));
-                SaveButtonPos("SWAP", new Vector2(360, 520));
-                SaveButtonPos("SPRINT", new Vector2(580, 280));
-                SaveButtonPos("FOCUS", new Vector2(450, 380));
-                SaveButtonPos("JUMP", new Vector2(150, 480));
+                SaveButtonPos("FIRE", new Vector2(220, 220));
+                SaveButtonPos("RELOAD", new Vector2(520, 150));
+                SaveButtonPos("SWAP", new Vector2(360, 620));
+                SaveButtonPos("SPRINT", new Vector2(650, 300));
+                SaveButtonPos("FOCUS", new Vector2(450, 420));
+                SaveButtonPos("JUMP", new Vector2(150, 520));
             }
             PlayerPrefs.Save();
 
@@ -1431,9 +1432,17 @@ namespace TheAlchemistsCrypt.UI
                 () => {
                     IsCustomizingHUD = false;
                     Destroy(customRoot.gameObject);
-                    OpenSettingsModal(canvas);
+                    if (settingsModalInstance != null)
+                    {
+                        Destroy(settingsModalInstance);
+                        settingsModalInstance = null;
+                    }
                     // Rebuild the HUD to fully restore gameplay input handling
                     BuildHUD();
+                    Time.timeScale = 1f; // RESUME THE GAME!
+                    if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
+                    Cursor.lockState = CursorLockMode.Locked;
+                    Cursor.visible = false;
                 }, new Color(0.1f, 0.9f, 0.3f, 0.2f));
         }
 
@@ -1460,12 +1469,12 @@ namespace TheAlchemistsCrypt.UI
                 foreach (Transform btn in btnContainer)
                 {
                     Vector2 defaultPos = Vector2.zero;
-                    if (btn.name == "FIRE") defaultPos = isLefty ? new Vector2(250, 250) : new Vector2(-250, 250);
-                    else if (btn.name == "RELOAD") defaultPos = isLefty ? new Vector2(480, 150) : new Vector2(-480, 150);
-                    else if (btn.name == "SWAP") defaultPos = isLefty ? new Vector2(360, 520) : new Vector2(-360, 520);
-                    else if (btn.name == "SPRINT") defaultPos = isLefty ? new Vector2(580, 280) : new Vector2(-580, 280);
-                    else if (btn.name == "FOCUS") defaultPos = isLefty ? new Vector2(450, 380) : new Vector2(-450, 380);
-                    else if (btn.name == "JUMP") defaultPos = isLefty ? new Vector2(150, 480) : new Vector2(-150, 480);
+                    if (btn.name == "FIRE") defaultPos = isLefty ? new Vector2(220, 220) : new Vector2(-220, 220);
+                    else if (btn.name == "RELOAD") defaultPos = isLefty ? new Vector2(520, 150) : new Vector2(-520, 150);
+                    else if (btn.name == "SWAP") defaultPos = isLefty ? new Vector2(360, 620) : new Vector2(-360, 620);
+                    else if (btn.name == "SPRINT") defaultPos = isLefty ? new Vector2(650, 300) : new Vector2(-650, 300);
+                    else if (btn.name == "FOCUS") defaultPos = isLefty ? new Vector2(450, 420) : new Vector2(-450, 420);
+                    else if (btn.name == "JUMP") defaultPos = isLefty ? new Vector2(150, 520) : new Vector2(-150, 520);
 
                     Vector2 savedPos = GetButtonPosition(btn.name, defaultPos);
                     var rect = btn.GetComponent<RectTransform>();
@@ -2557,14 +2566,21 @@ namespace TheAlchemistsCrypt.UI
         public RectTransform backgroundRing;
         public RectTransform knobVisual;
         public float movementRange = 180f;
+        private int trackedPointerId = -1;
 
         public void OnPointerDown(PointerEventData eventData)
         {
-            OnDrag(eventData);
+            if (trackedPointerId == -1)
+            {
+                trackedPointerId = eventData.pointerId;
+                OnDrag(eventData);
+            }
         }
 
         public void OnDrag(PointerEventData eventData)
         {
+            if (eventData.pointerId != trackedPointerId) return;
+
             Vector2 localPoint;
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(backgroundRing, eventData.position, eventData.pressEventCamera, out localPoint))
             {
@@ -2584,10 +2600,14 @@ namespace TheAlchemistsCrypt.UI
 
         public void OnPointerUp(PointerEventData eventData)
         {
-            knobVisual.anchoredPosition = Vector2.zero;
-            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+            if (eventData.pointerId == trackedPointerId)
             {
-                TheAlchemistsCrypt.Input.MobileInputManager.Instance.VirtualJoystickInput = Vector2.zero;
+                trackedPointerId = -1;
+                knobVisual.anchoredPosition = Vector2.zero;
+                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
+                {
+                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.VirtualJoystickInput = Vector2.zero;
+                }
             }
         }
     }

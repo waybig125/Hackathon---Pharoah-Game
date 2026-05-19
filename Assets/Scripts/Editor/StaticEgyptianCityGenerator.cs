@@ -445,16 +445,14 @@ namespace TheAlchemistsCrypt.Editor
                     if (windowMat == litWindowMat) {
                         var lightGo = new GameObject("WindowLight");
                         lightGo.transform.SetParent(win.transform);
-                        lightGo.transform.localPosition = new Vector3(0f, 0f, -0.6f);
-                        lightGo.transform.localRotation = Quaternion.Euler(30f, 180f, 0f); // Point outward and 30 degrees downward
+                        lightGo.transform.localPosition = new Vector3(0f, 0f, -0.8f); // Offset outward slightly
+                        lightGo.transform.localRotation = Quaternion.identity;
                         var l = lightGo.AddComponent<Light>();
-                        l.type = LightType.Spot;
-                        l.spotAngle = 120f;
-                        l.innerSpotAngle = 60f;
-                        l.color = new Color(1.0f, 0.72f, 0.28f); // Warm atmospheric amber
-                        l.range = 14f;
-                        l.intensity = 8.0f;
-                        l.shadows = LightShadows.None; // Disable shadows to solve URP shadow map limits & warning spam
+                        l.type = LightType.Point;
+                        l.color = new Color(1.0f, 0.72f, 0.28f); // Warm atmospheric amber lamp glow
+                        l.range = 18f;
+                        l.intensity = 15.0f;
+                        l.shadows = LightShadows.None;
                     }
                 }
             }
@@ -588,9 +586,9 @@ namespace TheAlchemistsCrypt.Editor
             return 0f;
         }
 
-        private float GetMeshBottomY(GameObject obj)
+        private float GetMeshBottomWorldY(GameObject obj)
         {
-            float localMinY = float.MaxValue;
+            float worldMinY = float.MaxValue;
             var filters = obj.GetComponentsInChildren<MeshFilter>(true);
             foreach (var filter in filters)
             {
@@ -598,18 +596,16 @@ namespace TheAlchemistsCrypt.Editor
                 Vector3[] vertices = filter.sharedMesh.vertices;
                 foreach (var v in vertices)
                 {
-                    // Transform local vertex to parent-object local space
                     Vector3 worldV = filter.transform.TransformPoint(v);
-                    Vector3 parentLocalV = obj.transform.InverseTransformPoint(worldV);
-                    if (parentLocalV.y < localMinY)
+                    if (worldV.y < worldMinY)
                     {
-                        localMinY = parentLocalV.y;
+                        worldMinY = worldV.y;
                     }
                 }
             }
-            if (localMinY != float.MaxValue)
+            if (worldMinY != float.MaxValue)
             {
-                return localMinY;
+                return worldMinY;
             }
             
             // Fallback to renderer bounds if no meshes found
@@ -622,9 +618,9 @@ namespace TheAlchemistsCrypt.Editor
             }
             if (minY != float.MaxValue)
             {
-                return obj.transform.InverseTransformPoint(new Vector3(0f, minY, 0f)).y;
+                return minY;
             }
-            return 0f;
+            return obj.transform.position.y;
         }
 
         private void AlignToGroundAndAddCollider(GameObject obj, Vector3 basePos, Quaternion targetRot, float offsetAdjustment, bool alignToTerrain = true)
@@ -672,10 +668,9 @@ namespace TheAlchemistsCrypt.Editor
             obj.transform.position = targetPos; 
             obj.transform.rotation = targetRot;
             
-            // Precise grounding using local mesh vertices
-            float localMinY = GetMeshBottomY(obj);
-            Vector3 worldBottom = obj.transform.TransformPoint(new Vector3(0f, localMinY, 0f));
-            float yOffset = targetPos.y - worldBottom.y + offsetAdjustment;
+            // Precise grounding using world-space mesh vertices
+            float worldMinY = GetMeshBottomWorldY(obj);
+            float yOffset = (targetPos.y + offsetAdjustment) - worldMinY;
             obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset, targetPos.z);
 
             foreach (var col in obj.GetComponentsInChildren<Collider>(true)) DestroyImmediate(col);
