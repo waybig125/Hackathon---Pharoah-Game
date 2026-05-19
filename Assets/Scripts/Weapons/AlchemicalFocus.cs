@@ -61,6 +61,25 @@ namespace TheAlchemistsCrypt.Weapons
                 lastMode = currentMode;
                 UpdateWeaponColor();
                 TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_element_switch");
+
+                // Play voice lines immediately on element switch
+                string[] voiceClips = null;
+                switch (currentMode)
+                {
+                    case FireMode.Sulfur:
+                        voiceClips = new string[] { "Voice/vo_sulfur_01", "Voice/vo_sulfur_02" };
+                        break;
+                    case FireMode.Mercury:
+                        voiceClips = new string[] { "Voice/vo_mercury_01", "Voice/vo_mercury_02" };
+                        break;
+                    case FireMode.Salt:
+                        voiceClips = new string[] { "Voice/vo_salt_01", "Voice/vo_salt_02" };
+                        break;
+                }
+                if (voiceClips != null)
+                {
+                    TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(voiceClips[Random.Range(0, voiceClips.Length)]);
+                }
             }
         }
 

@@ -4,8 +4,25 @@ using System.IO;
 
 namespace TheAlchemistsCrypt.Editor
 {
+    [InitializeOnLoad]
     public static class BuildPrepEditor
     {
+        static BuildPrepEditor()
+        {
+            EditorApplication.delayCall += AutoGenerateIfMissing;
+        }
+
+        private static void AutoGenerateIfMissing()
+        {
+            string mummyPath = "Assets/Resources/Mummy_Dynamic_Prefab.prefab";
+            string pharaohPath = "Assets/Resources/Pharaoh_Prefab.prefab";
+            if (!File.Exists(mummyPath) || !File.Exists(pharaohPath))
+            {
+                Debug.Log("[BuildPrepEditor] Prefabs are missing in Resources. Auto-generating...");
+                GeneratePrefabs();
+            }
+        }
+
         [MenuItem("Tools/Generate AI Prefabs")]
         public static void GeneratePrefabs()
         {

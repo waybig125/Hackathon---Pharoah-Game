@@ -548,6 +548,10 @@ namespace TheAlchemistsCrypt.Editor
         {
             var p = GameObject.Find("Player"); if (p == null) return; p.tag = "Player";
             p.transform.position = new Vector3(0f, GetTerrainHeight(Vector3.zero) + 1.2f, 0f);
+            if (p.GetComponent<TheAlchemistsCrypt.Player.PlayerImmersiveBody>() == null)
+            {
+                p.AddComponent<TheAlchemistsCrypt.Player.PlayerImmersiveBody>();
+            }
             var inv = p.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>(); if (inv == null) return;
             Color[] colors = { new Color(1, 0.4f, 0), Color.white, new Color(0, 0.7f, 1) };
             int idx = 0;
