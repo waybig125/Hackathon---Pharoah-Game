@@ -553,52 +553,89 @@ namespace TheAlchemistsCrypt.Editor
                 var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
                 if (character != null) p = character.gameObject;
             }
-            if (p == null) { Debug.LogWarning("[CityGen] No Player object found — skipping player setup."); return; }
+
+            // ── 2. If no player exists at all, SPAWN the FPS character prefab ──
+            if (p == null)
+            {
+                Debug.LogWarning("[CityGen] No Player found — spawning P_LPSP_FP_CH prefab automatically.");
+                string fpCharPath = "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Prefabs/P_LPSP_FP_CH.prefab";
+                GameObject fpPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(fpCharPath);
+                if (fpPrefab != null)
+                {
+                    p = PrefabUtility.InstantiatePrefab(fpPrefab) as GameObject;
+                    p.name = "Player";
+
+                    // Also spawn the weapon inventory as a child
+                    string invPath = "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Prefabs/Weapons/P_LPSP_Inventory.prefab";
+                    GameObject invPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(invPath);
+                    if (invPrefab != null)
+                    {
+                        var inv = PrefabUtility.InstantiatePrefab(invPrefab) as GameObject;
+                        inv.name = "Inventory";
+                        inv.transform.SetParent(p.transform, false);
+                        inv.transform.localPosition = Vector3.zero;
+                    }
+
+                    // Spawn the HUD canvas (independent, not child of player)
+                    string uiPath = "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Prefabs/Interface/P_LPSP_UI_Canvas.prefab";
+                    GameObject uiPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(uiPath);
+                    if (uiPrefab != null)
+                    {
+                        var ui = PrefabUtility.InstantiatePrefab(uiPrefab) as GameObject;
+                        ui.name = "P_LPSP_UI_Canvas";
+                    }
+
+                    Debug.Log("[CityGen] FPS Character spawned from prefab.");
+                }
+                else
+                {
+                    Debug.LogError("[CityGen] P_LPSP_FP_CH prefab not found — cannot spawn player!");
+                    return;
+                }
+            }
 
             p.tag = "Player";
             p.transform.position = new Vector3(0f, GetTerrainHeight(Vector3.zero) + 1.2f, 0f);
 
-            // ── 2. Ensure PlayerImmersiveBody is attached ──
+            // ── 3. Ensure PlayerImmersiveBody is attached ──
             if (p.GetComponent<TheAlchemistsCrypt.Player.PlayerImmersiveBody>() == null)
                 p.AddComponent<TheAlchemistsCrypt.Player.PlayerImmersiveBody>();
 
-            // ── 3. CRITICAL: Find the Camera (child of player or anywhere) and make sure it's
-            //    enabled, tagged MainCamera, and set to Display 1 so Game view renders. ──
-            Camera mainCam = p.GetComponentInChildren<Camera>(true); // search inactive too
-            if (mainCam == null)
-                mainCam = Camera.main;
-            if (mainCam == null)
-                mainCam = GameObject.FindAnyObjectByType<Camera>();
+            // ── 4. Guarantee a Camera exists — find in children (incl inactive), then globally,
+            //       and as a last resort create one. This prevents "No cameras rendering" forever. ──
+            Camera mainCam = p.GetComponentInChildren<Camera>(true);
+            if (mainCam == null) mainCam = Camera.main;
+            if (mainCam == null) mainCam = GameObject.FindAnyObjectByType<Camera>();
 
             if (mainCam != null)
             {
                 mainCam.gameObject.SetActive(true);
                 mainCam.enabled = true;
                 mainCam.tag = "MainCamera";
-                mainCam.targetDisplay = 0; // Display 1 in Unity = index 0
-                Debug.Log($"[CityGen] Camera found and enabled: {mainCam.gameObject.name}");
+                mainCam.targetDisplay = 0;
+                Debug.Log($"[CityGen] Camera enabled: {mainCam.gameObject.name}");
             }
             else
             {
-                // Last resort: create a fallback camera at the player's eye level
-                Debug.LogWarning("[CityGen] No Camera found in scene! Creating an emergency fallback camera.");
-                var camGo = new GameObject("MainCamera_Fallback");
+                Debug.LogWarning("[CityGen] No camera found — creating emergency MainCamera.");
+                var camGo = new GameObject("Main Camera");
                 camGo.tag = "MainCamera";
                 camGo.transform.SetParent(p.transform);
                 camGo.transform.localPosition = new Vector3(0f, 1.7f, 0f);
                 var cam = camGo.AddComponent<Camera>();
                 cam.targetDisplay = 0;
-                cam.nearClipPlane = 0.05f;
-                cam.farClipPlane = 1000f;
+                cam.nearClipPlane = 0.01f;
+                cam.farClipPlane = 2000f;
+                cam.fieldOfView = 70f;
                 camGo.AddComponent<AudioListener>();
             }
 
-            // ── 4. Weapon coloring ──
-            var inv = p.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>();
-            if (inv == null) return;
+            // ── 5. Alchemical weapon coloring ──
+            var inv2 = p.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>();
+            if (inv2 == null) return;
             Color[] colors = { new Color(1, 0.4f, 0), Color.white, new Color(0, 0.7f, 1) };
             int idx = 0;
-            foreach (Transform t in inv.transform) {
+            foreach (Transform t in inv2.transform) {
                 if (t.name.ToLower().Contains("pistol") || t.name.ToLower().Contains("assault")) {
                     if (idx >= 3) { t.gameObject.SetActive(false); continue; }
                 }
