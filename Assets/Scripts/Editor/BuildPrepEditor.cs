@@ -179,9 +179,10 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             // 2. Animator
-            // NOTE: We will create the PharaohAnimatorController below and assign it.
+            RuntimeAnimatorController controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Mummy_Assets/MummyTestController.controller");
             var anim = instance.GetComponent<Animator>();
             if (anim == null) anim = instance.AddComponent<Animator>();
+            anim.runtimeAnimatorController = controller;
             
             Avatar avatar = null;
             var subAssets = AssetDatabase.LoadAllAssetsAtPath(fbxPath);
