@@ -60,7 +60,9 @@ namespace TheAlchemistsCrypt.AI
 
         private void SpawnSingleMummy(int id)
         {
+#if UNITY_EDITOR
             string fbxPath = "Assets/Mummy_Assets/mummy_base.fbx";
+#endif
             
             // Find player or camera to center spawn around
             var player = GameObject.FindGameObjectWithTag("Player");
