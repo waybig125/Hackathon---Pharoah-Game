@@ -60,6 +60,7 @@ namespace TheAlchemistsCrypt.Weapons
             {
                 lastMode = currentMode;
                 UpdateWeaponColor();
+                TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_element_switch");
             }
         }
 
@@ -173,6 +174,13 @@ namespace TheAlchemistsCrypt.Weapons
             {
                 case FireMode.Mercury: tag = mercuryPoolTag; break;
                 case FireMode.Salt: tag = saltPoolTag; break;
+            }
+
+            switch (currentMode)
+            {
+                case FireMode.Sulfur: TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_sulfur_shot"); break;
+                case FireMode.Mercury: TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mercury_shot"); break;
+                case FireMode.Salt: TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_salt_shot"); break;
             }
 
             if (ObjectPooler.Instance != null && firePoint != null)

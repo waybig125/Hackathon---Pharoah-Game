@@ -40,6 +40,8 @@ namespace TheAlchemistsCrypt.AI
         public SessionMetadata session_metadata;
         public PlayerState player;
         public List<MummyState> mummies;
+        public bool pharaoh_active;
+        public string nearby_environment;
     }
 
     [Serializable]
@@ -179,6 +181,22 @@ namespace TheAlchemistsCrypt.AI
             payload.player = pState;
             payload.mummies = mStates;
 
+            // Pharaoh Active flag
+            var pharaoh = GameObject.Find("Pharaoh_Prefab(Clone)");
+            if (pharaoh == null) pharaoh = GameObject.Find("Pharaoh_Prefab");
+            payload.pharaoh_active = (pharaoh != null);
+
+            // Check Environment using OverlapSphere
+            int treeCount = 0;
+            int houseCount = 0;
+            var colliders = Physics.OverlapSphere(playerObj.transform.position, 25f);
+            foreach (var col in colliders)
+            {
+                if (col.gameObject.name.ToLower().Contains("tree") || col.gameObject.name.ToLower().Contains("palm")) treeCount++;
+                if (col.gameObject.name.ToLower().Contains("house")) houseCount++;
+            }
+            payload.nearby_environment = $"{treeCount} trees, {houseCount} houses";
+
             string jsonPayload = JsonUtility.ToJson(payload);
 
             // 4. Send network request
@@ -217,6 +235,35 @@ namespace TheAlchemistsCrypt.AI
                                 {
                                     TheAlchemistsCrypt.UI.MobileHUDButtons.Instance.ShowNarration(response.narration);
                                 }
+                            }
+
+                            // Audio Tactics
+                            string tactic = response.hive_tactic != null ? response.hive_tactic.ToLower() : "";
+                            if (tactic.Contains("ambush")) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_ambush");
+                            else if (tactic.Contains("flank")) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_flank");
+                            else if (tactic.Contains("mercy")) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_mercy");
+
+                            // Health/Element specific voices
+                            int hp = pState.health;
+                            if (hp < 25)
+                            {
+                                string[] lowHpVoices = { "Voice/vo_tactical_lowhealth_01", "Voice/vo_tactical_lowhealth_02" };
+                                TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(lowHpVoices[UnityEngine.Random.Range(0, 2)]);
+                            }
+                            else if (pState.active_element == "sulfur")
+                            {
+                                string[] sulfurVoices = { "Voice/vo_sulfur_01", "Voice/vo_sulfur_02" };
+                                TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(sulfurVoices[UnityEngine.Random.Range(0, 2)]);
+                            }
+                            else if (pState.active_element == "mercury")
+                            {
+                                string[] mercuryVoices = { "Voice/vo_mercury_01", "Voice/vo_mercury_02" };
+                                TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(mercuryVoices[UnityEngine.Random.Range(0, 2)]);
+                            }
+                            else if (pState.active_element == "salt")
+                            {
+                                string[] saltVoices = { "Voice/vo_salt_01", "Voice/vo_salt_02" };
+                                TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(saltVoices[UnityEngine.Random.Range(0, 2)]);
                             }
                         }
                     }

@@ -29,11 +29,15 @@ namespace TheAlchemistsCrypt.AI
             StartCoroutine(AutoSpawnRoutine());
         }
 
+        [SerializeField] private int pharaohSpawnInterval = 4; // every 4th wave
+        private int waveCounter = 0;
+
         private IEnumerator AutoSpawnRoutine()
         {
             while (true)
             {
                 yield return new WaitForSeconds(spawnInterval);
+                waveCounter++;
 
                 var activeZombies = GameObject.FindObjectsByType<ZombieAI>(FindObjectsInactive.Exclude);
                 int aliveCount = 0;
@@ -53,17 +57,28 @@ namespace TheAlchemistsCrypt.AI
 
                 if (aliveCount < maxMummies)
                 {
-                    SpawnSingleMummy(maxExistingId + 1);
+                    if (waveCounter % pharaohSpawnInterval == 0)
+                    {
+                        // Boss Wave! Spawn Pharaoh + guards
+                        SpawnPharaoh(maxExistingId + 1);
+                        for (int i = 0; i < 6; i++)
+                        {
+                            if (aliveCount + 1 + i < maxMummies)
+                            {
+                                SpawnSingleMummy(maxExistingId + 2 + i);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        SpawnSingleMummy(maxExistingId + 1);
+                    }
                 }
             }
         }
 
         private void SpawnSingleMummy(int id)
         {
-#if UNITY_EDITOR
-            string fbxPath = "Assets/Mummy_Assets/mummy_base.fbx";
-#endif
-            
             // Find player or camera to center spawn around
             var player = GameObject.FindGameObjectWithTag("Player");
             if (player == null) {
@@ -73,17 +88,13 @@ namespace TheAlchemistsCrypt.AI
 
             Vector3 spawnCenter = player != null ? player.transform.position : Vector3.zero;
 
-            // Load animator controller
-            RuntimeAnimatorController controller = null;
-#if UNITY_EDITOR
-            controller = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Mummy_Assets/MummyTestController.controller");
-#endif
-
-            GameObject prefab = null;
-#if UNITY_EDITOR
-            prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
-#endif
-            if (prefab == null) return;
+            // Load prefab directly from Resources
+            GameObject prefab = Resources.Load<GameObject>("Mummy_Dynamic_Prefab");
+            if (prefab == null) 
+            {
+                Debug.LogWarning("[MummySpawner] Mummy_Dynamic_Prefab not found in Resources! Please run Tools > Generate AI Prefabs.");
+                return;
+            }
 
             // Choose a random spawn position around the player at a tactical distance of 30-45 units
             float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
@@ -95,75 +106,48 @@ namespace TheAlchemistsCrypt.AI
                 spawnPos = hit.position;
             }
 
-            GameObject go = Instantiate(prefab);
+            GameObject go = Instantiate(prefab, spawnPos, Quaternion.identity);
             go.name = "Mummy_Dynamic_" + id;
-            go.transform.position = spawnPos;
-            go.transform.localScale = new Vector3(1.6f, 1.6f, 1.6f);
-
-            // Programmatically assign high-fidelity URP Lit materials to ensure they are 100% visible and beautiful
-            Renderer[] renderers = go.GetComponentsInChildren<Renderer>(true);
-            Shader urpShader = Shader.Find("Universal Render Pipeline/Lit");
-            Texture2D diffTex = null;
-            Texture2D normTex = null;
-#if UNITY_EDITOR
-            diffTex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Mummy_Assets/texture/texture_diffuse.png");
-            normTex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Mummy_Assets/texture/texture_normal.png");
-#endif
-            foreach (Renderer r in renderers) {
-                if (r == null) continue;
-                Material[] sharedMats = r.sharedMaterials;
-                for (int j = 0; j < sharedMats.Length; j++) {
-                    if (urpShader != null) {
-                        Material uMat = new Material(urpShader);
-                        if (diffTex != null) uMat.SetTexture("_BaseMap", diffTex);
-                        if (normTex != null) {
-                            uMat.SetTexture("_BumpMap", normTex);
-                            uMat.EnableKeyword("_NORMALMAP");
-                        }
-                        sharedMats[j] = uMat;
-                    }
-                }
-                r.sharedMaterials = sharedMats;
-            }
-
-            var anim = go.GetComponent<Animator>();
-            if (anim == null) anim = go.AddComponent<Animator>();
-            anim.runtimeAnimatorController = controller;
-
-            Avatar avatar = null;
-#if UNITY_EDITOR
-            var subAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(fbxPath);
-            foreach (var asset in subAssets) {
-                if (asset is Avatar av) {
-                    avatar = av;
-                    break;
-                }
-            }
-#endif
-            if (avatar != null) anim.avatar = avatar;
-
-            var agent = go.GetComponent<UnityEngine.AI.NavMeshAgent>();
-            if (agent == null) agent = go.AddComponent<UnityEngine.AI.NavMeshAgent>();
-            agent.speed = 3.8f;
-            agent.stoppingDistance = 3.2f; // Adjusted for 1.6x scale
-            agent.height = 2.0f;
-            agent.radius = 0.4f;
-
-            var col = go.GetComponent<CapsuleCollider>();
-            if (col == null) col = go.AddComponent<CapsuleCollider>();
-            col.center = new Vector3(0, 1.0f, 0); 
-            col.height = 2.0f;
-            col.radius = 0.4f;
-
-            var rb = go.GetComponent<Rigidbody>();
-            if (rb == null) rb = go.AddComponent<Rigidbody>();
-            rb.isKinematic = true;
 
             var ai = go.GetComponent<ZombieAI>();
-            if (ai == null) ai = go.AddComponent<ZombieAI>();
-            ai.mummyId = id;
+            if (ai != null) ai.mummyId = id;
 
-            Debug.Log($"MummySpawner: Successfully spawned active dynamic mummy with ID {id} at {spawnPos}");
+            Debug.Log($"[MummySpawner] Successfully spawned active dynamic mummy with ID {id} at {spawnPos}");
+        }
+
+        private void SpawnPharaoh(int id)
+        {
+            var player = GameObject.FindGameObjectWithTag("Player");
+            if (player == null) {
+                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                if (character != null) player = character.gameObject;
+            }
+
+            Vector3 spawnCenter = player != null ? player.transform.position : Vector3.zero;
+
+            GameObject prefab = Resources.Load<GameObject>("Pharaoh_Prefab");
+            if (prefab == null) 
+            {
+                Debug.LogWarning("[MummySpawner] Pharaoh_Prefab not found in Resources! Please run Tools > Generate AI Prefabs.");
+                return;
+            }
+
+            float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+            float distance = Random.Range(30f, 45f);
+            Vector3 spawnPos = spawnCenter + new Vector3(Mathf.Cos(angle) * distance, 0.5f, Mathf.Sin(angle) * distance);
+
+            UnityEngine.AI.NavMeshHit hit;
+            if (UnityEngine.AI.NavMesh.SamplePosition(spawnPos, out hit, 50f, UnityEngine.AI.NavMesh.AllAreas)) {
+                spawnPos = hit.position;
+            }
+
+            GameObject go = Instantiate(prefab, spawnPos, Quaternion.identity);
+            go.name = "Pharaoh_Prefab";
+
+            var ai = go.GetComponent<ZombieAI>();
+            if (ai != null) ai.mummyId = id;
+
+            Debug.Log($"[MummySpawner] Boss Spawned: Pharaoh with ID {id} at {spawnPos}");
         }
     }
 }

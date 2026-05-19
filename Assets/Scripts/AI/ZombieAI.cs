@@ -13,6 +13,8 @@ namespace TheAlchemistsCrypt.AI
 
         private Animator animator;
         private string currentAnimState = "";
+        
+        private AudioSource audioSource;
 
         [Header("Tactical AI Settings")]
         public int mummyId = 0;
@@ -156,6 +158,11 @@ namespace TheAlchemistsCrypt.AI
         {
             agent = GetComponent<NavMeshAgent>();
             if (agent == null) agent = gameObject.AddComponent<NavMeshAgent>();
+            
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.spatialBlend = 1.0f;
+            audioSource.maxDistance = 25f;
+            audioSource.rolloffMode = AudioRolloffMode.Linear;
             
             // Decouple agent navigation steering from orientation so custom look-rotation works flawlessly
             agent.updateRotation = false;
@@ -420,6 +427,13 @@ namespace TheAlchemistsCrypt.AI
             orbObj.transform.position = transform.position + Vector3.up * 0.8f;
             orbObj.AddComponent<TheAlchemistsCrypt.Gameplay.HealthOrb>();
 
+            if (audioSource != null)
+            {
+                audioSource.Stop();
+                AudioClip deathClip = TheAlchemistsCrypt.Gameplay.AudioManager.LoadClip("sfx/sfx_mummy_death");
+                if (deathClip != null) audioSource.PlayOneShot(deathClip);
+            }
+
             // Attempt to trigger Die/Death animation
             PlayAnimation("Die");
             if (animator != null) {
@@ -433,6 +447,30 @@ namespace TheAlchemistsCrypt.AI
                 currentAnimState = stateName;
                 // Double fallback: some rigs use trigger, some use CrossFade. Explicitly specify layer 0 to avoid -1 layer warnings.
                 animator.CrossFadeInFixedTime(stateName, 0.2f, 0);
+
+                if (audioSource != null)
+                {
+                    if (stateName == "Walk")
+                    {
+                        AudioClip walkClip = TheAlchemistsCrypt.Gameplay.AudioManager.LoadClip("sfx/sfx_mummy_walk");
+                        if (walkClip != null)
+                        {
+                            audioSource.clip = walkClip;
+                            audioSource.loop = true;
+                            if (!audioSource.isPlaying) audioSource.Play();
+                        }
+                    }
+                    else
+                    {
+                        audioSource.Stop();
+                    }
+
+                    if (stateName == "Attack")
+                    {
+                        AudioClip attackClip = TheAlchemistsCrypt.Gameplay.AudioManager.LoadClip("sfx/sfx_mummy_attack");
+                        if (attackClip != null) audioSource.PlayOneShot(attackClip);
+                    }
+                }
             }
         }
     }

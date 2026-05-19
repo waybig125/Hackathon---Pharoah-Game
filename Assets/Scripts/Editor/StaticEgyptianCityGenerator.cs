@@ -674,13 +674,30 @@ namespace TheAlchemistsCrypt.Editor
             obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset, targetPos.z);
 
             foreach (var col in obj.GetComponentsInChildren<Collider>(true)) DestroyImmediate(col);
-            var filters = obj.GetComponentsInChildren<MeshFilter>(true);
-            if (filters.Length > 0) {
-                foreach (var filterObj in filters) {
-                    if (filterObj.sharedMesh == null) continue;
-                    var mc = filterObj.gameObject.AddComponent<MeshCollider>(); mc.sharedMesh = filterObj.sharedMesh;
-                }
-            } else obj.AddComponent<BoxCollider>();
+            
+            bool isDynamicProp = obj.name.ToLower().Contains("crate") || obj.name.ToLower().Contains("barrel");
+            
+            if (isDynamicProp)
+            {
+                // Dynamic physics objects
+                var boxCol = obj.AddComponent<BoxCollider>();
+                // Adjust box collider bounds slightly
+                var rb = obj.AddComponent<Rigidbody>();
+                rb.mass = 10f;
+                // Lift them slightly so physics drops them naturally on runtime
+                obj.transform.position += Vector3.up * 0.5f;
+            }
+            else
+            {
+                // Static environment objects
+                var filters = obj.GetComponentsInChildren<MeshFilter>(true);
+                if (filters.Length > 0) {
+                    foreach (var filterObj in filters) {
+                        if (filterObj.sharedMesh == null) continue;
+                        var mc = filterObj.gameObject.AddComponent<MeshCollider>(); mc.sharedMesh = filterObj.sharedMesh;
+                    }
+                } else obj.AddComponent<BoxCollider>();
+            }
         }
 
         private void CreateProceduralPyramid(GameObject root, Vector3 pos, float baseSize, float height, Material mat, Color glowColor)
