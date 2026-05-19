@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TheAlchemistsCrypt.AI;
+using TheAlchemistsCrypt.Gameplay;
 
 namespace TheAlchemistsCrypt.UI
 {
