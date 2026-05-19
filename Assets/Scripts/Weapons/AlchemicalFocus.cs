@@ -78,7 +78,7 @@ namespace TheAlchemistsCrypt.Weapons
                 }
                 if (voiceClips != null)
                 {
-                    TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(voiceClips[Random.Range(0, voiceClips.Length)]);
+                    TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(voiceClips[UnityEngine.Random.Range(0, voiceClips.Length)]);
                 }
             }
         }
