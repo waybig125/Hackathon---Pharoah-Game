@@ -154,6 +154,8 @@ namespace TheAlchemistsCrypt.AI
             SetStatusColor(new Color(0.85f, 0.3f, 1.0f)); // Sparkling crystalline royal purple/violet
         }
 
+        private bool combatMusicTriggered = false;
+
         protected virtual void Start()
         {
             agent = GetComponent<NavMeshAgent>();
@@ -329,6 +331,14 @@ namespace TheAlchemistsCrypt.AI
             }
 
             float distance = Vector3.Distance(transform.position, player.position);
+
+            // Dynamically switch to combat music when mummy closes within 20 units
+            if (!combatMusicTriggered && distance < 20f)
+            {
+                combatMusicTriggered = true;
+                TheAlchemistsCrypt.Gameplay.AudioManager.PlayCombatTheme();
+            }
+
             float vel = agent.velocity.magnitude;
             
             // Set Speed parameter safely only if it exists for automatic transitions
@@ -432,6 +442,26 @@ namespace TheAlchemistsCrypt.AI
                 audioSource.Stop();
                 AudioClip deathClip = TheAlchemistsCrypt.Gameplay.AudioManager.LoadClip("sfx/sfx_mummy_death");
                 if (deathClip != null) audioSource.PlayOneShot(deathClip);
+            }
+
+            // Switch back to main theme if no other mummies are nearby
+            var allMummies = GameObject.FindObjectsByType<ZombieAI>(FindObjectsInactive.Exclude);
+            bool anyNearby = false;
+            if (player != null)
+            {
+                foreach (var m in allMummies)
+                {
+                    if (m != null && !m.IsDead && m != this &&
+                        Vector3.Distance(m.transform.position, player.position) < 25f)
+                    {
+                        anyNearby = true;
+                        break;
+                    }
+                }
+            }
+            if (!anyNearby)
+            {
+                TheAlchemistsCrypt.Gameplay.AudioManager.PlayMainTheme();
             }
 
             // Attempt to trigger Die/Death animation

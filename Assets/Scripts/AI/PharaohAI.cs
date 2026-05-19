@@ -11,14 +11,13 @@ namespace TheAlchemistsCrypt.AI
         
         protected override void Start()
         {
-            // Boost boss stats
-            maxHealth = 300f; // Boss health
-            currentHealth = maxHealth;
-            vulnerableElement = "none"; // Boss is immune to basic stuns
+            // Boss is immune to elemental status effects
+            vulnerableElement = "none";
             
-            base.Start();
+            base.Start(); // Let base initialize agent, animator, etc.
             
-            maxHealth *= 3f;
+            // Override health AFTER base.Start() so currentHealth is correctly synced
+            maxHealth = 900f; // 3x base mummy health
             currentHealth = maxHealth;
         }
 

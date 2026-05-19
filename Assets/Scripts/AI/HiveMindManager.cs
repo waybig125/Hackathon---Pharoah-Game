@@ -242,6 +242,7 @@ namespace TheAlchemistsCrypt.AI
                             if (tactic.Contains("ambush")) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_ambush");
                             else if (tactic.Contains("flank")) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_flank");
                             else if (tactic.Contains("mercy")) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_mercy");
+                            else if (tactic.Contains("vision") || tactic.Contains("sight") || tactic.Contains("scan")) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_vision");
 
                             // Health/Element specific voices
                             int hp = 100;
