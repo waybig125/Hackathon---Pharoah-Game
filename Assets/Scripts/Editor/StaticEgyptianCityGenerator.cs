@@ -546,13 +546,56 @@ namespace TheAlchemistsCrypt.Editor
 
         private void FixPlayerAndWeapons()
         {
-            var p = GameObject.Find("Player"); if (p == null) return; p.tag = "Player";
-            p.transform.position = new Vector3(0f, GetTerrainHeight(Vector3.zero) + 1.2f, 0f);
-            if (p.GetComponent<TheAlchemistsCrypt.Player.PlayerImmersiveBody>() == null)
+            // ── 1. Find the Player object by name OR by the Infima Character component ──
+            var p = GameObject.Find("Player");
+            if (p == null)
             {
-                p.AddComponent<TheAlchemistsCrypt.Player.PlayerImmersiveBody>();
+                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                if (character != null) p = character.gameObject;
             }
-            var inv = p.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>(); if (inv == null) return;
+            if (p == null) { Debug.LogWarning("[CityGen] No Player object found — skipping player setup."); return; }
+
+            p.tag = "Player";
+            p.transform.position = new Vector3(0f, GetTerrainHeight(Vector3.zero) + 1.2f, 0f);
+
+            // ── 2. Ensure PlayerImmersiveBody is attached ──
+            if (p.GetComponent<TheAlchemistsCrypt.Player.PlayerImmersiveBody>() == null)
+                p.AddComponent<TheAlchemistsCrypt.Player.PlayerImmersiveBody>();
+
+            // ── 3. CRITICAL: Find the Camera (child of player or anywhere) and make sure it's
+            //    enabled, tagged MainCamera, and set to Display 1 so Game view renders. ──
+            Camera mainCam = p.GetComponentInChildren<Camera>(true); // search inactive too
+            if (mainCam == null)
+                mainCam = Camera.main;
+            if (mainCam == null)
+                mainCam = GameObject.FindAnyObjectByType<Camera>();
+
+            if (mainCam != null)
+            {
+                mainCam.gameObject.SetActive(true);
+                mainCam.enabled = true;
+                mainCam.tag = "MainCamera";
+                mainCam.targetDisplay = 0; // Display 1 in Unity = index 0
+                Debug.Log($"[CityGen] Camera found and enabled: {mainCam.gameObject.name}");
+            }
+            else
+            {
+                // Last resort: create a fallback camera at the player's eye level
+                Debug.LogWarning("[CityGen] No Camera found in scene! Creating an emergency fallback camera.");
+                var camGo = new GameObject("MainCamera_Fallback");
+                camGo.tag = "MainCamera";
+                camGo.transform.SetParent(p.transform);
+                camGo.transform.localPosition = new Vector3(0f, 1.7f, 0f);
+                var cam = camGo.AddComponent<Camera>();
+                cam.targetDisplay = 0;
+                cam.nearClipPlane = 0.05f;
+                cam.farClipPlane = 1000f;
+                camGo.AddComponent<AudioListener>();
+            }
+
+            // ── 4. Weapon coloring ──
+            var inv = p.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>();
+            if (inv == null) return;
             Color[] colors = { new Color(1, 0.4f, 0), Color.white, new Color(0, 0.7f, 1) };
             int idx = 0;
             foreach (Transform t in inv.transform) {

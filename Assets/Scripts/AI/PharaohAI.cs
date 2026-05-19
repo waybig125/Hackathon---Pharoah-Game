@@ -16,8 +16,8 @@ namespace TheAlchemistsCrypt.AI
             
             base.Start(); // Let base initialize agent, animator, etc.
             
-            // Override health AFTER base.Start() so currentHealth is correctly synced
-            maxHealth = 900f; // 3x base mummy health
+            // Match player health: 100f
+            maxHealth = 100f;
             currentHealth = maxHealth;
         }
 
@@ -36,10 +36,10 @@ namespace TheAlchemistsCrypt.AI
             }
         }
         
-        // Override damage to make it tougher
+        // Override damage - boss takes full damage, same as player HP 
         public override void TakeDamage(float damage)
         {
-            base.TakeDamage(damage * 0.33f); // Takes 1/3rd damage
+            base.TakeDamage(damage); // Full damage — 100 HP fight
         }
     }
 }
