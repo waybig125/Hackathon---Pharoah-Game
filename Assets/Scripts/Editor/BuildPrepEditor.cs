@@ -130,7 +130,7 @@ namespace TheAlchemistsCrypt.Editor
 
         private static void GeneratePharaohPrefab()
         {
-            string fbxPath = "Assets/Resources/Pharaoh/base_basic_shaded(3).fbx";
+            string fbxPath = "Assets/Resources/Pharaoh/base_basic_shaded (3).fbx";
             GameObject modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
             if (modelPrefab == null)
             {

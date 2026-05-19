@@ -25,6 +25,7 @@ namespace TheAlchemistsCrypt.Player
 
         private bool isLowHealthPlaying = false;
         private AudioSource lowHealthAudioSource;
+        private AudioSource heartbeatAudioSource;
 
         private void Start()
         {
@@ -34,6 +35,12 @@ namespace TheAlchemistsCrypt.Player
             lowHealthAudioSource.volume = 1.0f;
             AudioClip pantClip = TheAlchemistsCrypt.Gameplay.AudioManager.LoadClip("sfx/sfx_player_pant");
             if (pantClip != null) lowHealthAudioSource.clip = pantClip;
+
+            heartbeatAudioSource = gameObject.AddComponent<AudioSource>();
+            heartbeatAudioSource.loop = true;
+            heartbeatAudioSource.volume = 0.8f;
+            AudioClip lowHealthClip = TheAlchemistsCrypt.Gameplay.AudioManager.LoadClip("sfx/sfx_low_health");
+            if (lowHealthClip != null) heartbeatAudioSource.clip = lowHealthClip;
         }
 
         private void FindDamageOverlay()
@@ -88,11 +95,13 @@ namespace TheAlchemistsCrypt.Player
             {
                 isLowHealthPlaying = true;
                 if (lowHealthAudioSource != null && lowHealthAudioSource.clip != null) lowHealthAudioSource.Play();
+                if (heartbeatAudioSource != null && heartbeatAudioSource.clip != null) heartbeatAudioSource.Play();
             }
             else if (healthPct >= 0.3f && isLowHealthPlaying)
             {
                 isLowHealthPlaying = false;
                 if (lowHealthAudioSource != null) lowHealthAudioSource.Stop();
+                if (heartbeatAudioSource != null) heartbeatAudioSource.Stop();
             }
         }
 
@@ -100,6 +109,7 @@ namespace TheAlchemistsCrypt.Player
         {
             isDead = true;
             if (lowHealthAudioSource != null) lowHealthAudioSource.Stop();
+            if (heartbeatAudioSource != null) heartbeatAudioSource.Stop();
             StartCoroutine(DeathSequence());
         }
 

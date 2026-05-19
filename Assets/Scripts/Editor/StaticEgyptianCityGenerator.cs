@@ -473,7 +473,7 @@ namespace TheAlchemistsCrypt.Editor
                 cObj.name = "HouseCrate_1";
                 cObj.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f); // Calibrated scale
                 AlignToGroundAndAddCollider(cObj, cratePos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f);
-                cObj.isStatic = true;
+                cObj.isStatic = false;
 
                 // Stack a second crate on top!
                 Vector3 stackedPos = cObj.transform.position + Vector3.up * 0.70f; // Sits perfectly on top of aligned first crate
@@ -481,7 +481,7 @@ namespace TheAlchemistsCrypt.Editor
                 cObj2.name = "HouseCrate_2";
                 cObj2.transform.localScale = new Vector3(0.30f, 0.30f, 0.30f); // Calibrated scale
                 AlignToGroundAndAddCollider(cObj2, stackedPos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f, false);
-                cObj2.isStatic = true;
+                cObj2.isStatic = false;
 
                 // 35% chance to spawn Medicine on the ground nearby!
                 if (Random.value < 0.35f) {
@@ -497,14 +497,14 @@ namespace TheAlchemistsCrypt.Editor
                 bObj.name = "HouseBarrel_1";
                 bObj.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f); // Calibrated scale
                 AlignToGroundAndAddCollider(bObj, barrelPos, Quaternion.Euler(-90f, 0f, 0f), 0f);
-                bObj.isStatic = true;
+                bObj.isStatic = false;
 
                 Vector3 barrelPos2 = pos + new Vector3(-11f, 0f, -13f);
                 var bObj2 = (GameObject)PrefabUtility.InstantiatePrefab(barrel, parent);
                 bObj2.name = "HouseBarrel_2";
                 bObj2.transform.localScale = new Vector3(0.12f, 0.12f, 0.12f); // Calibrated scale
                 AlignToGroundAndAddCollider(bObj2, barrelPos2, Quaternion.Euler(-90f, 0f, 0f), 0f);
-                bObj2.isStatic = true;
+                bObj2.isStatic = false;
 
                 // 35% chance to spawn Medicine on the ground nearby!
                 if (Random.value < 0.35f) {
