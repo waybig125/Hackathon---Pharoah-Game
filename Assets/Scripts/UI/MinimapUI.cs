@@ -37,7 +37,8 @@ namespace TheAlchemistsCrypt.UI
         private RectTransform radarSweep;
         
         // Icon assets generated procedurally
-        private Sprite obsidianSprite;
+        private Sprite obsidianCircleSprite;
+        private Sprite obsidianRectSprite;
         private Sprite goldBorderSprite;
         private Sprite playerArrowSprite;
         private Sprite brownDotSprite;
@@ -104,7 +105,8 @@ namespace TheAlchemistsCrypt.UI
 
         private void GenerateSprites()
         {
-            obsidianSprite = CreateRectSprite(240, 240, new Color(0.04f, 0.04f, 0.04f, 0.93f));
+            obsidianCircleSprite = CreateCircleSprite(240, new Color(0.04f, 0.04f, 0.04f, 0.93f));
+            obsidianRectSprite = CreateRectSprite(240, 240, new Color(0.04f, 0.04f, 0.04f, 0.93f));
             goldBorderSprite = CreateRingSprite(240, 6, new Color(0.95f, 0.8f, 0.2f, 0.95f));
             
             // Player Arrow (64x64 for gorgeous detail)
@@ -137,7 +139,7 @@ namespace TheAlchemistsCrypt.UI
             // Frame Image (Black Obsidian Base)
             var frameImage = gameObject.GetComponent<Image>();
             if (frameImage == null) frameImage = gameObject.AddComponent<Image>();
-            frameImage.sprite = obsidianSprite;
+            frameImage.sprite = obsidianCircleSprite;
             frameImage.color = Color.white;
             frameImage.raycastTarget = true; 
 
@@ -440,18 +442,18 @@ namespace TheAlchemistsCrypt.UI
             // Update static icons based on radar proximity
             foreach (var s in staticIndicators)
             {
-                float dist = Vector3.Distance(playerPos, s.worldPos);
-                bool visible = dist <= radarWorldRadius;
-                s.iconRect.gameObject.SetActive(visible);
-                
-                if (visible)
+                if (s.isZone)
                 {
-                    if (s.isZone)
-                    {
-                        s.iconRect.sizeDelta = new Vector2(s.worldSize.x * radarScale, s.worldSize.y * radarScale);
-                    }
-                    s.iconRect.anchoredPosition = new Vector2(s.worldPos.x * radarScale, s.worldPos.z * radarScale);
+                    // Zones (Sea/Beach) are always active, the mask handles clipping
+                    s.iconRect.gameObject.SetActive(true);
+                    s.iconRect.sizeDelta = new Vector2(s.worldSize.x * radarScale, s.worldSize.y * radarScale);
                 }
+                else
+                {
+                    float dist = Vector3.Distance(playerPos, s.worldPos);
+                    s.iconRect.gameObject.SetActive(dist <= radarWorldRadius);
+                }
+                s.iconRect.anchoredPosition = new Vector2(s.worldPos.x * radarScale, s.worldPos.z * radarScale);
             }
         }
 
@@ -618,6 +620,7 @@ namespace TheAlchemistsCrypt.UI
             // Toggle UI overlays
             if (expanding)
             {
+                minimapFrame.GetComponent<Image>().sprite = obsidianRectSprite;
                 radarSweep.gameObject.SetActive(false);
                 compassRing.gameObject.SetActive(false);
                 maskContainer.GetComponent<Mask>().enabled = false;
@@ -647,6 +650,7 @@ namespace TheAlchemistsCrypt.UI
 
             if (!expanding)
             {
+                minimapFrame.GetComponent<Image>().sprite = obsidianCircleSprite;
                 radarSweep.gameObject.SetActive(true);
                 compassRing.gameObject.SetActive(true);
                 maskContainer.GetComponent<Mask>().enabled = true;

@@ -311,11 +311,12 @@ namespace TheAlchemistsCrypt.Editor
                     float baseDune = (dune1 + dune2 + ripple + 0.5f) * (0.1f + 0.9f * townFactor);
                     heights[i, j] = (baseDune + townBumps) * spawnFlatten;
 
-                    // SEA & COASTLINE: Flatten the south quarter (ty < 0.35) for sea level
-                    // Real-world Z roughly corresponds to ty.
-                    if (ty < 0.35f) {
+                    // SEA & COASTLINE: Flatten the south quarter (ty < 0.42) for sea level
+                    // Real-world Z roughly corresponds to ty. Z=-80 is ty ~= 0.42
+                    if (ty < 0.42f) {
                         float seaLevel = 0.0f;
-                        float shoreFactor = Mathf.SmoothStep(0.28f, 0.35f, ty);
+                        // Transition from dunes to sea between ty 0.38 and 0.42
+                        float shoreFactor = Mathf.SmoothStep(0.38f, 0.42f, ty);
                         heights[i, j] = Mathf.Lerp(seaLevel, heights[i, j], shoreFactor);
                     }
                 }
