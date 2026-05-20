@@ -192,6 +192,34 @@ namespace TheAlchemistsCrypt.AI
             // Same color mummies: backup and do not apply initial vulnerability tint!
             BackupOriginalColors();
             CreateHealthBar();
+
+            // ── NavMesh snap: ensure agent starts ON the nav mesh ──
+            // If spawned slightly off-mesh (floating, on steep slope), SetDestination silently
+            // fails and the mummy stands frozen. Snap to nearest valid surface within 5m.
+            StartCoroutine(SnapToNavMeshDelayed());
+        }
+
+        private System.Collections.IEnumerator SnapToNavMeshDelayed()
+        {
+            // Wait one frame for NavMesh to fully initialize after scene load
+            yield return null;
+            yield return null;
+
+            if (agent == null) yield break;
+
+            if (!agent.isOnNavMesh)
+            {
+                NavMeshHit hit;
+                if (NavMesh.SamplePosition(transform.position, out hit, 5f, NavMesh.AllAreas))
+                {
+                    agent.Warp(hit.position);
+                    Debug.Log($"[ZombieAI] Snapped {name} to NavMesh at {hit.position}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[ZombieAI] {name} could not find NavMesh within 5m — mummy will be inactive.");
+                }
+            }
         }
 
         private void FindPlayer()
@@ -309,7 +337,7 @@ namespace TheAlchemistsCrypt.AI
                 currentSpeed *= 0.3f; // 70% slow
             }
 
-            if (agent.isActiveAndEnabled) {
+            if (agent.isActiveAndEnabled && agent.isOnNavMesh) {
                 agent.speed = currentSpeed;
                 if (isStunned)
                 {
