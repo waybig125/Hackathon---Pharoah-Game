@@ -212,10 +212,10 @@ namespace TheAlchemistsCrypt.Editor
             
             // Reflective polished sandstone floor — creates the mirror-like desert floor look
             Material floorMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            floorMat.SetColor("_BaseColor", new Color(0.88f, 0.76f, 0.52f)); // Warm pale ochre
-            floorMat.SetFloat("_Metallic", 0.0f);
-            floorMat.SetFloat("_Smoothness", 0.72f);   // ← This creates the reflection
-            floorMat.SetColor("_EmissionColor", new Color(0.96f, 0.84f, 0.6f) * 0.08f);
+            floorMat.SetColor("_BaseColor", new Color(0.92f, 0.82f, 0.65f)); // Lighter/Brighter
+            floorMat.SetFloat("_Metallic", 0.1f);
+            floorMat.SetFloat("_Smoothness", 0.88f);   // ← High reflection
+            floorMat.SetColor("_EmissionColor", new Color(0.96f, 0.84f, 0.6f) * 0.05f);
             floorMat.EnableKeyword("_EMISSION");
 
             Material litWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
@@ -267,13 +267,37 @@ namespace TheAlchemistsCrypt.Editor
             TerrainLayer layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
             if (layer == null) {
                 layer = new TerrainLayer();
-                var sandTex = new Texture2D(2, 2);
-                sandTex.SetPixels(new Color[] { new Color(0.91f, 0.81f, 0.62f), new Color(0.91f, 0.81f, 0.62f), new Color(0.91f, 0.81f, 0.62f), new Color(0.91f, 0.81f, 0.62f) });
-                sandTex.Apply();
+
+                // Try to load a real sand texture from project assets first
+                Texture2D sandTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EgyptianAssets/desert_sand_albedo.png");
+                if (sandTex == null) sandTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EgyptianAssets/sand_diffuse.png");
+                if (sandTex == null) sandTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EgyptianAssets/sand.png");
+
+                if (sandTex == null) {
+                    // Fallback: create a 128×128 smooth gradient noise texture (no checkerboard)
+                    sandTex = new Texture2D(128, 128, TextureFormat.RGB24, true);
+                    Color baseColor = new Color(0.88f, 0.78f, 0.58f);
+                    Color[] pixels = new Color[128 * 128];
+                    for (int py = 0; py < 128; py++)
+                        for (int px = 0; px < 128; px++) {
+                            float n = Mathf.PerlinNoise(px * 0.12f, py * 0.12f);
+                            pixels[py * 128 + px] = Color.Lerp(baseColor * 0.88f, baseColor * 1.08f, n);
+                        }
+                    sandTex.SetPixels(pixels);
+                    sandTex.Apply(true);
+                    AssetDatabase.CreateAsset(sandTex, "Assets/EgyptianAssets/SandTexProc_128.asset");
+                }
+
                 layer.diffuseTexture = sandTex;
-                layer.tileSize = new Vector2(15f, 15f);
+                layer.tileSize = new Vector2(40f, 40f); // Large tile = no visible repetition
+                layer.specular = new Color(0.1f, 0.08f, 0.05f, 0f);
+                layer.smoothness = 0.45f; // Add some base smoothness to the desert
                 AssetDatabase.CreateAsset(layer, layerPath);
             }
+            // Always reassign tile size even on existing layers
+            layer.tileSize = new Vector2(40f, 40f);
+            layer.smoothness = 0.45f;
+            EditorUtility.SetDirty(layer);
             terrainData.terrainLayers = new TerrainLayer[] { layer };
 
             GameObject terrainGo = Terrain.CreateTerrainGameObject(terrainData);
@@ -348,25 +372,27 @@ namespace TheAlchemistsCrypt.Editor
             GameObject sea = GameObject.CreatePrimitive(PrimitiveType.Quad);
             sea.name = "SeaZone";
             sea.transform.SetParent(root.transform);
-            sea.transform.position = new Vector3(0f, 0.12f, -700f); // Far south, above flat terrain
+            sea.transform.position = new Vector3(0f, 0.15f, -450f);   // centered in the south flat zone
             sea.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            sea.transform.localScale = new Vector3(3000f, 1200f, 1f); // 3km wide, 1.2km deep
+            sea.transform.localScale = new Vector3(3000f, 700f, 1f);   // 3km wide, 700m depth (Z:-100 to -800)
 
             var seaMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            seaMat.SetColor("_BaseColor", new Color(0.03f, 0.18f, 0.38f)); // Deep navy
-            seaMat.SetFloat("_Metallic", 0.4f);
-            seaMat.SetFloat("_Smoothness", 0.92f); // Reflective water
-            seaMat.SetColor("_EmissionColor", new Color(0.04f, 0.30f, 0.52f) * 1.8f);
+            seaMat.SetColor("_BaseColor", new Color(0.02f, 0.25f, 0.55f));     // Rich ocean blue
+            seaMat.SetFloat("_Metallic", 0.0f);
+            seaMat.SetFloat("_Smoothness", 0.95f);                              // Near-mirror water surface
+            seaMat.SetColor("_EmissionColor", new Color(0.05f, 0.30f, 0.60f) * 1.5f);
             seaMat.EnableKeyword("_EMISSION");
+            seaMat.SetFloat("_Cull", 0f);                                       // Double-sided: visible from above AND below
+            seaMat.SetInt("_ZWrite", 1);
             sea.GetComponent<Renderer>().sharedMaterial = seaMat;
             sea.isStatic = true;
             DestroyImmediate(sea.GetComponent<Collider>());
 
-            // ── 2. SHALLOWS — tropical teal, 200m strip ──
+            // ── 2. SHALLOWS — tropical teal ──
             GameObject shallows = GameObject.CreatePrimitive(PrimitiveType.Quad);
             shallows.name = "SeaZone_Shallow";
             shallows.transform.SetParent(root.transform);
-            shallows.transform.position = new Vector3(0f, 0.14f, -250f);
+            shallows.transform.position = new Vector3(0f, 0.17f, -200f);
             shallows.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             shallows.transform.localScale = new Vector3(3000f, 200f, 1f);
 
@@ -384,7 +410,7 @@ namespace TheAlchemistsCrypt.Editor
             GameObject surf = GameObject.CreatePrimitive(PrimitiveType.Quad);
             surf.name = "SeaZone_Surf";
             surf.transform.SetParent(root.transform);
-            surf.transform.position = new Vector3(0f, 0.16f, -155f);
+            surf.transform.position = new Vector3(0f, 0.19f, -140f);
             surf.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             surf.transform.localScale = new Vector3(3000f, 50f, 1f);
 
@@ -401,9 +427,9 @@ namespace TheAlchemistsCrypt.Editor
             GameObject beach = GameObject.CreatePrimitive(PrimitiveType.Quad);
             beach.name = "BeachZone";
             beach.transform.SetParent(root.transform);
-            beach.transform.position = new Vector3(0f, 0.18f, -118f); // Just south of city buildings
+            beach.transform.position = new Vector3(0f, 0.21f, -110f);
             beach.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            beach.transform.localScale = new Vector3(3000f, 50f, 1f);
+            beach.transform.localScale = new Vector3(3000f, 40f, 1f);
 
             var beachMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             beachMat.SetColor("_BaseColor", new Color(0.96f, 0.89f, 0.64f)); // Warm cream sand
@@ -421,37 +447,50 @@ namespace TheAlchemistsCrypt.Editor
             bc.center = Vector3.zero;
             barrier.isStatic = true;
 
-            Debug.Log("[CityGen] Sea placed at Z=-155 to Z=-700 (outside city). Barrier at Z=-95.");
+            Debug.Log("[CityGen] Sea updated south of Z=-95. Barrier at Z=-95.");
         }
 
         private void SetupEnvironment()
         {
+            // NEW: Clear daytime Egyptian sky — bright azure blue
             var skyMat = new Material(Shader.Find("Skybox/Procedural"));
-            skyMat.SetFloat("_SunSize", 0.04f);
-            skyMat.SetFloat("_AtmosphereThickness", 0.9f);
-            skyMat.SetColor("_SkyTint", new Color(0.1f, 0.24f, 0.42f));
-            skyMat.SetColor("_GroundColor", new Color(0.78f, 0.47f, 0.25f));
-            skyMat.SetFloat("_Exposure", 1.3f);
+            skyMat.SetFloat("_SunSize", 0.05f);
+            skyMat.SetFloat("_SunSizeConvergence", 10f);
+            skyMat.SetFloat("_AtmosphereThickness", 1.1f);
+            skyMat.SetColor("_SkyTint", new Color(0.38f, 0.62f, 0.92f));       // ← Clear azure blue
+            skyMat.SetColor("_GroundColor", new Color(0.72f, 0.58f, 0.38f));   // Sandy dunes at horizon
+            skyMat.SetFloat("_Exposure", 1.6f);                                  // Bright midday sun
             RenderSettings.skybox = skyMat;
 
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor    = new Color(0.24f, 0.17f, 0.42f) * 0.6f;
-            RenderSettings.ambientEquatorColor = new Color(0.91f, 0.56f, 0.35f) * 0.8f;
-            RenderSettings.ambientGroundColor  = new Color(0.10f, 0.06f, 0.15f) * 0.4f;
+            RenderSettings.ambientSkyColor    = new Color(0.50f, 0.75f, 1.00f) * 0.65f;   // Bright sky bounce
+            RenderSettings.ambientEquatorColor = new Color(0.95f, 0.82f, 0.62f) * 0.90f;  // Warm wall bounce
+            RenderSettings.ambientGroundColor  = new Color(0.60f, 0.50f, 0.35f) * 0.40f;  // Sandy ground bounce
 
+            // NEW: Linear fog with long clear range (matches reference image)
             RenderSettings.fog = true;
-            // Egyptian golden-hour dusk: warm amber horizon with purple-violet undertone
-            RenderSettings.fogColor = new Color(0.82f, 0.58f, 0.32f);
-            RenderSettings.fogDensity = 0.0018f;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = new Color(0.92f, 0.84f, 0.68f);  // Warm sandy haze at horizon
+            RenderSettings.fogStartDistance = 120f;   // Clear up close
+            RenderSettings.fogEndDistance  = 400f;   // Fully fogged at 400m
             
             var sun = GameObject.Find("Directional Light")?.GetComponent<Light>();
             if (sun != null) {
-                sun.color = new Color(1f, 0.96f, 0.84f); sun.intensity = 1.4f;
-                sun.shadows = LightShadows.Hard; sun.shadowResolution = LightShadowResolution.High;
-                sun.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
+                sun.color = new Color(1f, 0.98f, 0.90f);   // Slightly warmer white
+                sun.intensity = 1.8f;                        // Brighter midday sun
+                sun.shadows = LightShadows.Soft;
+                sun.shadowResolution = LightShadowResolution.VeryHigh;
+                sun.shadowDistance = 150f;                   // Enough for city shadows
+                sun.transform.rotation = Quaternion.Euler(55f, -25f, 0f);  // Higher sun angle = shorter shadows
             }
 
             SetupPostProcessing();
+            
+            // Quality settings for shadows
+            QualitySettings.shadowDistance = 120f;
+            QualitySettings.shadowCascades = 2;
+            QualitySettings.shadowProjection = ShadowProjection.CloseFit;
+
             DynamicGI.UpdateEnvironment();
         }
 
@@ -466,8 +505,9 @@ namespace TheAlchemistsCrypt.Editor
             
             profile.Add<Bloom>().intensity.Override(0.35f);
             var colorAdj = profile.Add<ColorAdjustments>();
-            colorAdj.contrast.Override(15f); colorAdj.saturation.Override(12f);
-            colorAdj.colorFilter.Override(new Color(1f, 0.95f, 0.88f));
+            colorAdj.contrast.Override(8f);           // Less crushed blacks
+            colorAdj.saturation.Override(18f);        // More vibrant colors
+            colorAdj.colorFilter.Override(new Color(1f, 0.97f, 0.92f)); // Slight warm filter
             profile.Add<Tonemapping>().mode.Override(TonemappingMode.ACES);
             profile.Add<Vignette>().intensity.Override(0.25f);
 
@@ -517,19 +557,19 @@ namespace TheAlchemistsCrypt.Editor
             if (crate != null) {
                 Vector3 cratePos = pos + new Vector3(13f, 0f, 11f);
                 var cObj = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
-                cObj.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f);
+                cObj.transform.localScale = new Vector3(0.875f, 0.875f, 0.875f);
                 AlignToGroundAndAddCollider(cObj, cratePos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f);
                 
                 Vector3 stackedPos = cObj.transform.position + Vector3.up * 0.70f;
                 var cObj2 = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
-                cObj2.transform.localScale = new Vector3(0.30f, 0.30f, 0.30f);
+                cObj2.transform.localScale = new Vector3(0.75f, 0.75f, 0.75f);
                 AlignToGroundAndAddCollider(cObj2, stackedPos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f);
             }
 
             if (barrel != null) {
                 Vector3 barrelPos = pos + new Vector3(-13f, 0f, -11f);
                 var bObj = (GameObject)PrefabUtility.InstantiatePrefab(barrel, parent);
-                bObj.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f);
+                bObj.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f);
                 AlignToGroundAndAddCollider(bObj, barrelPos, Quaternion.Euler(-90f, 0f, 0f), 0f);
             }
         }
@@ -537,8 +577,18 @@ namespace TheAlchemistsCrypt.Editor
         private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab, Material floorMat = null)
         {
             var p = new GameObject("Plaza"); p.transform.SetParent(parent); p.transform.position = pos; p.isStatic = true;
-            // Note: no floor plane — terrain surface IS the floor. Adding a plane caused the
-            // yellow square artifact the user saw (high-smoothness material on small plane).
+            
+            if (floorMat != null) {
+                var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                floor.name = "PlazaFloor";
+                floor.transform.SetParent(p.transform);
+                // Position slightly above terrain to avoid Z-fighting, but low enough to look like ground
+                floor.transform.localPosition = new Vector3(0, 0.02f, 0); 
+                floor.transform.localScale = new Vector3(3.2f, 1f, 3.2f); // 32m x 32m
+                floor.GetComponent<Renderer>().sharedMaterial = floorMat;
+                floor.isStatic = true;
+            }
+
             if (columnPrefab != null) {
                 var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
                 colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
@@ -642,14 +692,17 @@ namespace TheAlchemistsCrypt.Editor
                         string mName = mat.name.ToLower();
                         
                         if (mName.Contains("body") || mName.Contains("frame") || mName.Contains("stock")) {
-                            mat.SetColor("_BaseColor", new Color(0.10f, 0.10f, 0.18f));
-                            mat.SetFloat("_Smoothness", 0.05f);
-                        } else if (mName.Contains("barrel") || mName.Contains("grip") || mName.Contains("trigger")) {
-                            mat.SetColor("_BaseColor", new Color(0.8f, 0.3f, 0.0f));
-                            mat.SetColor("_EmissionColor", new Color(1f, 0.4f, 0f) * 2.5f);
+                            mat.SetColor("_BaseColor", new Color(1.0f, 0.6f, 0.0f)); // Bright Alchemist Orange
+                            mat.SetFloat("_Smoothness", 0.85f);
+                            mat.SetFloat("_Metallic", 0.3f);
+                            mat.SetColor("_EmissionColor", new Color(1.0f, 0.4f, 0.0f) * 0.4f);
                             mat.EnableKeyword("_EMISSION");
+                        } else if (mName.Contains("barrel") || mName.Contains("grip") || mName.Contains("trigger")) {
+                            mat.SetColor("_BaseColor", new Color(0.15f, 0.15f, 0.15f)); // Dark contrast
+                            mat.SetFloat("_Smoothness", 0.9f);
                         } else {
-                            mat.SetColor("_EmissionColor", new Color(0f, 0.8f, 0.67f) * 2.0f);
+                            mat.SetColor("_BaseColor", new Color(1.0f, 0.8f, 0.2f)); // Golden accents
+                            mat.SetColor("_EmissionColor", new Color(1.0f, 0.7f, 0.1f) * 1.5f);
                             mat.EnableKeyword("_EMISSION");
                         }
                         mats[i] = mat;
@@ -720,6 +773,10 @@ namespace TheAlchemistsCrypt.Editor
                     }
                 }
                 if (changed) r.sharedMaterials = mats;
+                
+                // ── Enable shadows on all child renderers ──
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                r.receiveShadows = true;
             }
 
             Vector3 targetPos = basePos;
