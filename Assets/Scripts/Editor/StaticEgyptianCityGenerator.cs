@@ -312,13 +312,14 @@ namespace TheAlchemistsCrypt.Editor
                     float baseDune = (dune1 + dune2 + ripple + 0.5f) * (0.1f + 0.9f * townFactor);
                     heights[i, j] = (baseDune + townBumps) * spawnFlatten;
 
-                    // SEA & COASTLINE: Flatten the south quarter (ty < 0.42) for sea level
-                    // Real-world Z roughly corresponds to ty. Z=-80 is ty ~= 0.42
-                    if (ty < 0.42f) {
-                        float seaLevel = 0.0f;
-                        // Transition from dunes to sea between ty 0.38 and 0.42
-                        float shoreFactor = Mathf.SmoothStep(0.38f, 0.42f, ty);
-                        heights[i, j] = Mathf.Lerp(seaLevel, heights[i, j], shoreFactor);
+                    // SEA & COASTLINE: Flatten south zone so terrain sits below the sea plane
+                    // ty < 0.5 = south half. Real-world: terrain is 1000m, center at ty=0.5
+                    // We want everything south of Z=-60 (ty ~0.44) to be flat at nearly zero
+                    if (ty < 0.46f) {
+                        // Very gradual shore transition over just the beach strip
+                        float shoreFactor = Mathf.SmoothStep(0.42f, 0.46f, ty);
+                        // Force to near-zero so terrain is WELL below the sea quad at Y=2.5
+                        heights[i, j] = Mathf.Lerp(0.001f, heights[i, j], shoreFactor);
                     }
                 }
             }
@@ -405,37 +406,65 @@ namespace TheAlchemistsCrypt.Editor
 
         private void CreateSeaAndCoastline(GameObject root)
         {
-            // 1. Open Sea Zone (Z < -100)
+            // ── Sea & beach are placed at ROOT SCENE level (not child of root) ──
+            // This avoids any parent-transform scale/offset issues.
+            // Y = 2.5f sits well above the flattened south terrain (terrain max there ~0.015 * 15 = 0.22m)
+            // The terrain base is at y=-0.05, terrain height scale=15, so flattened south terrain top ~= -0.05 + 0.015*15 = 0.175f
+            // Our sea at Y=2.5f is clearly above it, creating a visible ocean plane.
+
+            // 1. ── OPEN SEA (large plane covering everything south of -100 world Z) ──
+            // Unity Quad is 1x1 unit. localScale.x = world X size, localScale.y = world Z size.
+            // City is 1000m wide (X: -500 to +500). Sea extends south to -1500 (far horizon).
             GameObject sea = GameObject.CreatePrimitive(PrimitiveType.Quad);
             sea.name = "SeaZone";
-            sea.transform.SetParent(root.transform);
-            // Raised Y to 0.4f to be clearly above terrain base
-            sea.transform.position = new Vector3(0f, 0.4f, -300f);
-            sea.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            sea.transform.localScale = new Vector3(2000f, 600f, 1f);
+            // ⚠ Parent to scene root (not city root) so no inherited scale
+            sea.transform.SetParent(null);
+            sea.transform.position  = new Vector3(0f, 2.5f, -800f);   // center of sea zone
+            sea.transform.rotation  = Quaternion.Euler(90f, 0f, 0f);  // flat horizontal
+            sea.transform.localScale = new Vector3(2000f, 1400f, 1f);  // 2000m wide, 1400m deep
 
             var seaMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            seaMat.color = new Color(0.04f, 0.24f, 0.42f); // Deep blue
-            seaMat.SetColor("_EmissionColor", new Color(0.1f, 0.47f, 0.68f) * 2.8f); // Glowing teal
+            seaMat.SetColor("_BaseColor", new Color(0.04f, 0.22f, 0.40f, 1f)); // Deep ocean blue
+            seaMat.SetColor("_EmissionColor", new Color(0.08f, 0.42f, 0.62f) * 2.2f);
             seaMat.EnableKeyword("_EMISSION");
+            seaMat.SetFloat("_Smoothness", 0.85f); // Reflective ocean surface
             sea.GetComponent<Renderer>().sharedMaterial = seaMat;
             sea.isStatic = true;
             DestroyImmediate(sea.GetComponent<Collider>());
 
-            // 2. Beach Strip (Z -40 to -100)
+            // 2. ── SHALLOW WATER / SURF ZONE (Z: -60 to -200, slightly lighter) ──
+            GameObject shallows = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            shallows.name = "SeaZone_Shallow";
+            shallows.transform.SetParent(null);
+            shallows.transform.position  = new Vector3(0f, 2.55f, -130f);  // just above sea, closer to shore
+            shallows.transform.rotation  = Quaternion.Euler(90f, 0f, 0f);
+            shallows.transform.localScale = new Vector3(2000f, 140f, 1f);   // 140m deep strip
+
+            var shallowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            shallowMat.SetColor("_BaseColor", new Color(0.12f, 0.52f, 0.72f, 1f)); // Lighter teal
+            shallowMat.SetColor("_EmissionColor", new Color(0.18f, 0.60f, 0.80f) * 1.8f);
+            shallowMat.EnableKeyword("_EMISSION");
+            shallowMat.SetFloat("_Smoothness", 0.75f);
+            shallows.GetComponent<Renderer>().sharedMaterial = shallowMat;
+            shallows.isStatic = true;
+            DestroyImmediate(shallows.GetComponent<Collider>());
+
+            // 3. ── BEACH STRIP (Z: -40 to -80) — sits just above terrain ──
             GameObject beach = GameObject.CreatePrimitive(PrimitiveType.Quad);
             beach.name = "BeachZone";
-            beach.transform.SetParent(root.transform);
-            // Raised Y to 0.45f to sit above sea
-            beach.transform.position = new Vector3(0f, 0.45f, -70f);
-            beach.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            beach.transform.localScale = new Vector3(2000f, 60f, 1f);
+            beach.transform.SetParent(null);
+            beach.transform.position  = new Vector3(0f, 2.6f, -60f);  // just above sea and shallows
+            beach.transform.rotation  = Quaternion.Euler(90f, 0f, 0f);
+            beach.transform.localScale = new Vector3(2000f, 40f, 1f);  // 40m wide beach strip
 
             var beachMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            beachMat.color = new Color(0.94f, 0.82f, 0.5f); // Light sand
+            beachMat.SetColor("_BaseColor", new Color(0.96f, 0.88f, 0.62f, 1f)); // Warm light sand
+            beachMat.SetFloat("_Smoothness", 0.1f); // Matte sand
             beach.GetComponent<Renderer>().sharedMaterial = beachMat;
             beach.isStatic = true;
             DestroyImmediate(beach.GetComponent<Collider>());
+
+            Debug.Log("[CityGen] Sea & coastline created — SeaZone at Y=2.5, BeachZone at Y=2.6");
         }
 
         private void SetupEnvironment()

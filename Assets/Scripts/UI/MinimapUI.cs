@@ -324,11 +324,19 @@ namespace TheAlchemistsCrypt.UI
 
                 if (lowerName == "seazone")
                 {
-                    CreateSeaZoneIcon(go.transform.position, new Vector2(1000f, 400f), ColorSea);
+                    // Deep sea: 2000m wide, 1400m deep, centered at Z=-800
+                    CreateSeaZoneIcon(go.transform.position, new Vector2(2000f, 1400f), ColorSea);
+                }
+                else if (lowerName == "seazone_shallow")
+                {
+                    // Shallow surf zone: 2000m wide, 140m deep, centered at Z=-130
+                    Color shallowCol = new Color(0.18f, 0.60f, 0.80f, 0.75f);
+                    CreateSeaZoneIcon(go.transform.position, new Vector2(2000f, 140f), shallowCol);
                 }
                 else if (lowerName == "beachzone")
                 {
-                    CreateSeaZoneIcon(go.transform.position, new Vector2(1000f, 20f), ColorBeach);
+                    // Beach strip: 2000m wide, 40m deep, centered at Z=-60
+                    CreateSeaZoneIcon(go.transform.position, new Vector2(2000f, 40f), ColorBeach);
                 }
                 else if (lowerName.Contains("pyramid"))
                 {
