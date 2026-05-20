@@ -178,7 +178,8 @@ namespace TheAlchemistsCrypt.Editor
                     lowerName.StartsWith("mummy") || lowerName.Contains("windowlight") || lowerName.Contains("crater") ||
                     lowerName.Contains("plaza") || lowerName.Contains("house") || lowerName.Contains("pyramid") ||
                     lowerName.Contains("seazone") || lowerName.Contains("beachzone") || lowerName.Contains("coastlinebarrier") ||
-                    lowerName.Contains("globalvolume")) 
+                    lowerName.Contains("globalvolume") || lowerName.Contains("reflectionprobe") ||
+                    lowerName.Contains("claritylight")) 
                 {
                     DestroyImmediate(go);
                 }
@@ -263,11 +264,10 @@ namespace TheAlchemistsCrypt.Editor
                     // SEA & COASTLINE: Flatten the SOUTH edge (tx = normalized Z, 0=south, 1=north)
                     // Terrain at (-500,-0.05,-500), size 1000m. world_Z = -500 + tx*1000.
                     // City grid stops at world Z=-40 → tx=0.46.
-                    // Sea starts at world Z=-118 (beach) → tx=0.382.
-                    // Flatten everything south of tx=0.42 (world Z=-80) fully flat by tx=0.32.
-                    // NOTE: tx is the FIRST index (i) = Z direction. ty is X. Don't mix them!
-                    if (tx < 0.42f) {
-                        float shoreFactor = Mathf.SmoothStep(0.32f, 0.42f, tx);
+                    // Barrier sits at Z=-105f so player cannot reach the drop.
+                    // Flatten everything south of tx=0.35 (world Z=-150) fully flat by tx=0.25.
+                    if (tx < 0.35f) {
+                        float shoreFactor = Mathf.SmoothStep(0.25f, 0.35f, tx);
                         heights[i, j] = Mathf.Lerp(0.001f, heights[i, j], shoreFactor);
                     }
                 }
@@ -373,39 +373,38 @@ namespace TheAlchemistsCrypt.Editor
             // ── COORDINATE GUIDE ──
             // Terrain: 1000m × 1000m, position at (-500, -0.05, -500). Player spawns at world (0,0,0).
             // City buildings stop at world Z = -40f (posZ < -40 is skipped in grid).
-            // Sea should appear SOUTH of Z = -100, well clear of any building.
-            // Terrain is flattened south of ty=0.38 → world Z = -500 + 0.38*1000 = -120f.
-            // So all sea quads at Z < -120 will sit above flattened terrain (Y≈-0.035f).
+            // Sea should appear SOUTH of Z = -150, well clear of any building.
+            // Terrain is flattened south of tx=0.35 → world Z = -150f.
             //
-            // Barrier sits at Z = -95f so player cannot enter the sea area.
+            // Barrier sits at Z = -105f so player cannot enter the beach drop.
 
-            // ── 1. DEEP OCEAN — fills the far south horizon ──
+            // ── 1. DEEP OCEAN ──
             GameObject sea = GameObject.CreatePrimitive(PrimitiveType.Quad);
             sea.name = "SeaZone";
             sea.transform.SetParent(root.transform);
-            sea.transform.position = new Vector3(0f, 0.15f, -450f);   // centered in the south flat zone
+            sea.transform.position = new Vector3(0f, 0.15f, -550f); 
             sea.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            sea.transform.localScale = new Vector3(3000f, 700f, 1f);   // 3km wide, 700m depth (Z:-100 to -800)
+            sea.transform.localScale = new Vector3(3000f, 700f, 1f); 
 
             var seaMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             seaMat.SetColor("_BaseColor", new Color(0.02f, 0.25f, 0.55f));     // Rich ocean blue
             seaMat.SetFloat("_Metallic", 0.0f);
-            seaMat.SetFloat("_Smoothness", 0.95f);                              // Near-mirror water surface
+            seaMat.SetFloat("_Smoothness", 0.95f);                              
             seaMat.SetColor("_EmissionColor", new Color(0.05f, 0.30f, 0.60f) * 1.5f);
             seaMat.EnableKeyword("_EMISSION");
-            seaMat.SetFloat("_Cull", 0f);                                       // Double-sided: visible from above AND below
+            seaMat.SetFloat("_Cull", 0f);                                       
             seaMat.SetInt("_ZWrite", 1);
             sea.GetComponent<Renderer>().sharedMaterial = seaMat;
             sea.isStatic = true;
             DestroyImmediate(sea.GetComponent<Collider>());
 
-            // ── 2. SHALLOWS — tropical teal ──
+            // ── 2. SHALLOWS ──
             GameObject shallows = GameObject.CreatePrimitive(PrimitiveType.Quad);
             shallows.name = "SeaZone_Shallow";
             shallows.transform.SetParent(root.transform);
-            shallows.transform.position = new Vector3(0f, 0.17f, -200f);
+            shallows.transform.position = new Vector3(0f, 0.17f, -300f);
             shallows.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            shallows.transform.localScale = new Vector3(3000f, 200f, 1f);
+            shallows.transform.localScale = new Vector3(3000f, 250f, 1f);
 
             var shallowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             shallowMat.SetColor("_BaseColor", new Color(0.08f, 0.42f, 0.65f));
@@ -417,13 +416,13 @@ namespace TheAlchemistsCrypt.Editor
             shallows.isStatic = true;
             DestroyImmediate(shallows.GetComponent<Collider>());
 
-            // ── 3. SURF FOAM — bright white-teal at shoreline ──
+            // ── 3. SURF FOAM ──
             GameObject surf = GameObject.CreatePrimitive(PrimitiveType.Quad);
             surf.name = "SeaZone_Surf";
             surf.transform.SetParent(root.transform);
-            surf.transform.position = new Vector3(0f, 0.19f, -140f);
+            surf.transform.position = new Vector3(0f, 0.19f, -170f);
             surf.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            surf.transform.localScale = new Vector3(3000f, 50f, 1f);
+            surf.transform.localScale = new Vector3(3000f, 60f, 1f);
 
             var surfMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             surfMat.SetColor("_BaseColor", new Color(0.55f, 0.82f, 0.92f));
@@ -434,13 +433,13 @@ namespace TheAlchemistsCrypt.Editor
             surf.isStatic = true;
             DestroyImmediate(surf.GetComponent<Collider>());
 
-            // ── 4. BEACH STRIP — warm sand, connects city to ocean ──
+            // ── 4. BEACH STRIP ──
             GameObject beach = GameObject.CreatePrimitive(PrimitiveType.Quad);
             beach.name = "BeachZone";
             beach.transform.SetParent(root.transform);
-            beach.transform.position = new Vector3(0f, 0.21f, -110f);
+            beach.transform.position = new Vector3(0f, 0.21f, -140f);
             beach.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            beach.transform.localScale = new Vector3(3000f, 40f, 1f);
+            beach.transform.localScale = new Vector3(3000f, 50f, 1f);
 
             var beachMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             beachMat.SetColor("_BaseColor", new Color(0.96f, 0.89f, 0.64f)); // Warm cream sand
@@ -449,16 +448,16 @@ namespace TheAlchemistsCrypt.Editor
             beach.isStatic = true;
             DestroyImmediate(beach.GetComponent<Collider>());
 
-            // ── 5. INVISIBLE BARRIER — stop player walking into sea ──
+            // ── 5. INVISIBLE BARRIER ──
             GameObject barrier = new GameObject("CoastlineBarrier");
             barrier.transform.SetParent(root.transform);
-            barrier.transform.position = new Vector3(0f, 5f, -95f); // Just south of beach, before shallows
+            barrier.transform.position = new Vector3(0f, 5f, -105f); // Barrier well BEFORE the drop starts
             var bc = barrier.AddComponent<BoxCollider>();
             bc.size   = new Vector3(3000f, 20f, 2f);
             bc.center = Vector3.zero;
             barrier.isStatic = true;
 
-            Debug.Log("[CityGen] Sea updated south of Z=-95. Barrier at Z=-95.");
+            Debug.Log("[CityGen] Sea moved south. Player barrier at Z=-105 (Safe).");
         }
 
         private void SetupEnvironment()
@@ -468,12 +467,18 @@ namespace TheAlchemistsCrypt.Editor
             skyMat.SetFloat("_SunSize", 0.05f);
             skyMat.SetFloat("_SunSizeConvergence", 10f);
             skyMat.SetFloat("_AtmosphereThickness", 1.1f);
-            skyMat.SetColor("_SkyTint", new Color(0.38f, 0.62f, 0.92f));       // ← Clear azure blue
-            skyMat.SetColor("_GroundColor", new Color(0.72f, 0.58f, 0.38f));   // Sandy dunes at horizon
-            skyMat.SetFloat("_Exposure", 1.6f);                                  // Bright midday sun
+            skyMat.SetColor("_SkyTint", new Color(0.38f, 0.62f, 0.92f));       // azure blue
+            skyMat.SetColor("_GroundColor", new Color(0.72f, 0.58f, 0.38f));   
+            skyMat.SetFloat("_Exposure", 1.6f);                                  
+            
+            // SAVE SKYBOX ASSET TO DISK to ensure it persists and can be seen by the renderer
+            if (!AssetDatabase.IsValidFolder("Assets/Materials")) AssetDatabase.CreateFolder("Assets", "Materials");
+            AssetDatabase.CreateAsset(skyMat, "Assets/Materials/DaytimeSkybox.mat");
+            skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/DaytimeSkybox.mat");
+            
             RenderSettings.skybox = skyMat;
 
-            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientMode = AmbientMode.Skybox; // Use skybox for ambient to ensure BLUE tint
             RenderSettings.ambientSkyColor    = new Color(0.50f, 0.75f, 1.00f) * 0.65f;   // Bright sky bounce
             RenderSettings.ambientEquatorColor = new Color(0.95f, 0.82f, 0.62f) * 0.90f;  // Warm wall bounce
             RenderSettings.ambientGroundColor  = new Color(0.60f, 0.50f, 0.35f) * 0.40f;  // Sandy ground bounce
@@ -607,6 +612,16 @@ namespace TheAlchemistsCrypt.Editor
             if (trees != null && trees.Length > 0) {
                 var t = (GameObject)PrefabUtility.InstantiatePrefab(trees[Random.Range(0, trees.Length)], p.transform);
                 t.transform.localScale = Vector3.one * 8f; AlignToGroundAndAddCollider(t, pos + new Vector3(8f, 0f, 8f), Quaternion.Euler(-90, 0, 0), -1.8f);
+
+                // LOW-POLY CONVERSION (Programmatic Decimation)
+                var filters = t.GetComponentsInChildren<MeshFilter>(true);
+                foreach (var mf in filters) {
+                    if (mf.sharedMesh == null) continue;
+                    var simplifier = new UnityMeshSimplifier.MeshSimplifier();
+                    simplifier.Initialize(mf.sharedMesh);
+                    simplifier.SimplifyMesh(0.2f); // 20% quality for extreme low poly look
+                    mf.sharedMesh = simplifier.ToMesh();
+                }
             }
         }
 
