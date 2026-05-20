@@ -224,7 +224,8 @@ namespace TheAlchemistsCrypt.Editor
                     lowerName.Contains("groundplane") || lowerName.Contains("desertterrain") ||
                     lowerName.Contains("player_copy") || lowerName.Contains("mobilehud") || lowerName.Contains("p_lpsp_ui_canvas") || 
                     lowerName.StartsWith("mummy") || lowerName.Contains("windowlight") || lowerName.Contains("crater") ||
-                    lowerName.Contains("plaza") || lowerName.Contains("house") || lowerName.Contains("pyramid")) 
+                    lowerName.Contains("plaza") || lowerName.Contains("house") || lowerName.Contains("pyramid") ||
+                    lowerName.Contains("seazone") || lowerName.Contains("beachzone")) 
                 {
                     DestroyImmediate(go);
                 }
@@ -339,8 +340,8 @@ namespace TheAlchemistsCrypt.Editor
                     float posX = -halfSpan + (x * spacing) + (spacing / 2f);
                     float posZ = -halfSpan + (z * spacing) + (spacing / 2f);
 
-                    // HOUSE SPAWN GUARD: Skip if in the sea/beach zone
-                    if (posZ < -80f) continue;
+                    // HOUSE SPAWN GUARD: Skip more rows to make room for beach and vista
+                    if (posZ < -40f) continue;
 
                     Vector3 pos = new Vector3(posX, 0, posZ);
                     pos.x += Random.Range(-2f, 2f); pos.z += Random.Range(-2f, 2f);
@@ -382,16 +383,16 @@ namespace TheAlchemistsCrypt.Editor
             surface.overrideVoxelSize = true; surface.voxelSize = 0.2f; 
             surface.BuildNavMesh();
 
-            // Relocate south pyramids to the north/east for the new coastline
-            CreateProceduralPyramid(root, new Vector3(-220f, 0f, 220f), 150f, 95f, wallMat, new Color(1f, 0.85f, 0.4f));
-            CreateProceduralPyramid(root, new Vector3(220f, 0f, 250f), 160f, 100f, wallMat, new Color(1f, 0.5f, 0.2f)); // Moved from Z -220
-            CreateProceduralPyramid(root, new Vector3(220f, 0f, 220f), 140f, 85f, wallMat, new Color(0.9f, 0.8f, 1f));
-            CreateProceduralPyramid(root, new Vector3(-250f, 0f, 200f), 170f, 110f, wallMat, new Color(1f, 0.7f, 0.3f)); // Moved from Z -220
+            // Create separate pyramid clusters with large separation
+            CreateProceduralPyramid(root, new Vector3(-400f, 0f, 400f), 150f, 95f, wallMat, new Color(1f, 0.85f, 0.4f));
+            CreateProceduralPyramid(root, new Vector3(400f, 0f, 400f), 160f, 100f, wallMat, new Color(1f, 0.5f, 0.2f)); 
+            CreateProceduralPyramid(root, new Vector3(450f, 0f, 120f), 140f, 85f, wallMat, new Color(0.9f, 0.8f, 1f));
+            CreateProceduralPyramid(root, new Vector3(-450f, 0f, 120f), 170f, 110f, wallMat, new Color(1f, 0.7f, 0.3f)); 
 
             CreateSeaAndCoastline(root);
 
             FixPlayerAndWeapons();
-            StaticBatchingUtility.Combine(root);
+            // REMOVED StaticBatchingUtility.Combine(root); - Physics fix for floating objects
             SetupMummyAnimations();
 
             // Mark Scene Dirty to fix persistence issue
@@ -408,26 +409,27 @@ namespace TheAlchemistsCrypt.Editor
             GameObject sea = GameObject.CreatePrimitive(PrimitiveType.Quad);
             sea.name = "SeaZone";
             sea.transform.SetParent(root.transform);
-            // Giant horizontal quad at sea level
-            sea.transform.position = new Vector3(0f, -0.3f, -300f);
+            // Raised Y to 0.4f to be clearly above terrain base
+            sea.transform.position = new Vector3(0f, 0.4f, -300f);
             sea.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            sea.transform.localScale = new Vector3(1000f, 400f, 1f);
+            sea.transform.localScale = new Vector3(2000f, 600f, 1f);
 
             var seaMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             seaMat.color = new Color(0.04f, 0.24f, 0.42f); // Deep blue
-            seaMat.SetColor("_EmissionColor", new Color(0.1f, 0.47f, 0.68f) * 2.5f); // Glowing teal
+            seaMat.SetColor("_EmissionColor", new Color(0.1f, 0.47f, 0.68f) * 2.8f); // Glowing teal
             seaMat.EnableKeyword("_EMISSION");
             sea.GetComponent<Renderer>().sharedMaterial = seaMat;
             sea.isStatic = true;
             DestroyImmediate(sea.GetComponent<Collider>());
 
-            // 2. Beach Strip (Z -80 to -100)
+            // 2. Beach Strip (Z -40 to -100)
             GameObject beach = GameObject.CreatePrimitive(PrimitiveType.Quad);
             beach.name = "BeachZone";
             beach.transform.SetParent(root.transform);
-            beach.transform.position = new Vector3(0f, 0.02f, -90f);
+            // Raised Y to 0.45f to sit above sea
+            beach.transform.position = new Vector3(0f, 0.45f, -70f);
             beach.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            beach.transform.localScale = new Vector3(1000f, 20f, 1f);
+            beach.transform.localScale = new Vector3(2000f, 60f, 1f);
 
             var beachMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             beachMat.color = new Color(0.94f, 0.82f, 0.5f); // Light sand
