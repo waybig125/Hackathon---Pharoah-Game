@@ -458,7 +458,7 @@ public void GeneratePolishedCity()
             GameObject sea = GameObject.CreatePrimitive(PrimitiveType.Quad);
             sea.name = "SeaZone";
             sea.transform.SetParent(root.transform);
-            sea.transform.position = new Vector3(0f, 0.8f, -800f); 
+            sea.transform.position = new Vector3(0f, 0.8f, -600f); 
             sea.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             sea.transform.localScale = new Vector3(3000f, 1000f, 1f); 
 
@@ -473,7 +473,7 @@ public void GeneratePolishedCity()
             GameObject shallows = GameObject.CreatePrimitive(PrimitiveType.Quad);
             shallows.name = "SeaZone_Shallow";
             shallows.transform.SetParent(root.transform);
-            shallows.transform.position = new Vector3(0f, 0.85f, -600f);
+            shallows.transform.position = new Vector3(0f, 0.85f, -400f);
             shallows.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             shallows.transform.localScale = new Vector3(3000f, 400f, 1f);
 
@@ -487,7 +487,7 @@ public void GeneratePolishedCity()
             GameObject beach = GameObject.CreatePrimitive(PrimitiveType.Quad);
             beach.name = "BeachZone";
             beach.transform.SetParent(root.transform);
-            beach.transform.position = new Vector3(0f, 0.9f, -520f);
+            beach.transform.position = new Vector3(0f, 0.9f, -320f);
             beach.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             beach.transform.localScale = new Vector3(3000f, 100f, 1f);
 
@@ -500,12 +500,12 @@ public void GeneratePolishedCity()
 
             GameObject barrier = new GameObject("CoastlineBarrier");
             barrier.transform.SetParent(root.transform);
-            barrier.transform.position = new Vector3(0f, 5f, -480f); 
+            barrier.transform.position = new Vector3(0f, 5f, -280f); 
             var bc = barrier.AddComponent<BoxCollider>();
             bc.size   = new Vector3(3000f, 20f, 2f);
             barrier.isStatic = true;
 
-            Debug.Log("[CityGen] Sea visible and reflective. Barrier at Z=-480.");
+            Debug.Log("[CityGen] Sea visible and reflective. Barrier at Z=-280.");
         }
 
         private Shader GetLitShader()

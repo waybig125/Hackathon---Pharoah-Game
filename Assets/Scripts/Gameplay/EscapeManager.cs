@@ -44,14 +44,14 @@ namespace TheAlchemistsCrypt.Gameplay
             Vector3 chosenLoc = spawnLocations[Random.Range(0, spawnLocations.Length)];
             
             var terrain = Terrain.activeTerrain;
-            if (terrain != null) chosenLoc.y = terrain.SampleHeight(chosenLoc) + 0.3f;
+            if (terrain != null) chosenLoc.y = terrain.SampleHeight(chosenLoc) + 0.8f; // Lifted from 0.3f to 0.8f
 
             // Load custom model
             GameObject prefab = Resources.Load<GameObject>("papyrus");
             if (prefab != null)
             {
                 keyObj = Instantiate(prefab, chosenLoc, Quaternion.identity);
-                keyObj.transform.localScale = Vector3.one * 2f;
+                keyObj.transform.localScale = Vector3.one * 2.5f; // Slightly larger for visibility
             }
             else
             {
@@ -77,7 +77,7 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            Vector3 spawnPos = new Vector3(0f, 0.5f, -540f);
+            Vector3 spawnPos = new Vector3(0f, 0.5f, -340f); // Moved from -540f to -340f to match beach at -320f
             
             // Load custom boat model
             GameObject prefab = Resources.Load<GameObject>("boat");
