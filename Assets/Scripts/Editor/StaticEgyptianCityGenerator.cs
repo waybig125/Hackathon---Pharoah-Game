@@ -405,7 +405,8 @@ namespace TheAlchemistsCrypt.Editor
         }
 
         private void CreateSeaAndCoastline(GameObject root)
-                 // ── KEY MATH ──
+        {
+            // ── KEY MATH ──
             // Terrain base Y = -0.05f. Height scale = 15f.
             // Flattened south terrain: normalized height = 0.001 → world Y = -0.05 + 0.001*15 = -0.035f.
             // ⚠ All sea/beach quads MUST be above Y = -0.035f or terrain renders on top.
