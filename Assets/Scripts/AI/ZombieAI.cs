@@ -22,6 +22,12 @@ namespace TheAlchemistsCrypt.AI
         [HideInInspector] public float tacticalSpeedMult = 1f;
         [HideInInspector] public bool hasTacticalTarget = false;
 
+        // ── Wander / Patrol fallback (when no tactical target & player is far) ──
+        private float wanderTimer = 0f;
+        private float wanderInterval = 4f;  // Pick a new wander point every 4 seconds
+        private Vector3 wanderTarget = Vector3.zero;
+        private bool hasWanderTarget = false;
+
         [Header("Ranged Attack Settings")]
         public float shootCooldown = 3.0f;
         public float shootMinRange = 2.5f;
@@ -301,11 +307,41 @@ namespace TheAlchemistsCrypt.AI
             Vector3 currentTargetPos = player.position;
             float currentSpeed = 2.2f;
 
-            // Focus completely on chasing player at close proximity to prevent turning away
             float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-            if (hasTacticalTarget && distanceToPlayer > 4.0f) {
+
+            // ── Priority 1: HiveMind tactical target (if set and valid, not self-position) ──
+            bool hasMeaningfulTactical = hasTacticalTarget &&
+                                         Vector3.Distance(tacticalTarget, transform.position) > 1.5f;
+
+            if (hasMeaningfulTactical && distanceToPlayer > 4.0f) {
                 currentTargetPos = tacticalTarget;
-                currentSpeed = 2.2f * tacticalSpeedMult;
+                currentSpeed = 2.2f * Mathf.Max(tacticalSpeedMult, 0.5f);
+            }
+            // ── Priority 2: When player is far (>15m), wander toward random patrol points ──
+            else if (distanceToPlayer > 15f && !hasMeaningfulTactical)
+            {
+                wanderTimer -= Time.deltaTime;
+                if (wanderTimer <= 0f || !hasWanderTarget)
+                {
+                    // Pick a random point on the NavMesh within 25m
+                    Vector3 randDir = UnityEngine.Random.insideUnitSphere * 25f;
+                    randDir += transform.position;
+                    NavMeshHit navHit;
+                    if (NavMesh.SamplePosition(randDir, out navHit, 25f, NavMesh.AllAreas))
+                    {
+                        wanderTarget = navHit.position;
+                        hasWanderTarget = true;
+                    }
+                    wanderTimer = wanderInterval + UnityEngine.Random.Range(-1f, 1f);
+                }
+                if (hasWanderTarget)
+                {
+                    currentTargetPos = wanderTarget;
+                    currentSpeed = 1.5f; // Slow patrol walk
+                    // Stop wandering once we reach the wander point
+                    if (Vector3.Distance(transform.position, wanderTarget) < 2f)
+                        hasWanderTarget = false;
+                }
             }
 
             // Handle ranged shooting anim stop duration

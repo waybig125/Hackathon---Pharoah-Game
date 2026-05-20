@@ -315,14 +315,25 @@ namespace TheAlchemistsCrypt.AI
                 {
                     if (z != null && z.mummyId == inst.id && !z.IsDead)
                     {
-                        Vector3 targetPos = z.transform.position;
+                        // Only apply a tactical target if the API returned real coordinates
+                        // (target list has 3 elements AND the position is not the mummy's own position)
                         if (inst.target != null && inst.target.Count >= 3)
                         {
-                            targetPos = new Vector3(inst.target[0], inst.target[1], inst.target[2]);
+                            Vector3 targetPos = new Vector3(inst.target[0], inst.target[1], inst.target[2]);
+                            // Skip if API returned the mummy's own position (default/null target)
+                            if (Vector3.Distance(targetPos, z.transform.position) > 1.5f)
+                            {
+                                z.tacticalTarget = targetPos;
+                                z.tacticalSpeedMult = Mathf.Max(inst.speed_mult, 0.5f);
+                                z.hasTacticalTarget = true;
+                            }
                         }
-                        z.tacticalTarget = targetPos;
-                        z.tacticalSpeedMult = inst.speed_mult;
-                        z.hasTacticalTarget = true;
+                        else
+                        {
+                            // No target from API — let wander behavior take over
+                            z.hasTacticalTarget = false;
+                            z.tacticalSpeedMult = Mathf.Max(inst.speed_mult, 0.5f);
+                        }
                     }
                 }
             }
