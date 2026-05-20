@@ -480,7 +480,6 @@ namespace TheAlchemistsCrypt.Editor
                 sun.intensity = 1.8f;                        // Brighter midday sun
                 sun.shadows = LightShadows.Soft;
                 sun.shadowResolution = LightShadowResolution.VeryHigh;
-                sun.shadowDistance = 150f;                   // Enough for city shadows
                 sun.transform.rotation = Quaternion.Euler(55f, -25f, 0f);  // Higher sun angle = shorter shadows
             }
 
