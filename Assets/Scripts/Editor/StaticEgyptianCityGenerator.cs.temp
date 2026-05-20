@@ -1,0 +1,36 @@
+        private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab, Material floorMat = null)
+        {
+            var p = new GameObject("Plaza"); p.transform.SetParent(parent); p.transform.position = pos; p.isStatic = true;
+            
+            if (floorMat != null) {
+                var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                floor.name = "PlazaFloor";
+                floor.transform.SetParent(p.transform);
+                // Position slightly above terrain to avoid Z-fighting, but low enough to look like ground
+                floor.transform.localPosition = new Vector3(0, 0.02f, 0); 
+                floor.transform.localScale = new Vector3(3.2f, 1f, 3.2f); // 32m x 32m
+                floor.GetComponent<Renderer>().sharedMaterial = floorMat;
+                floor.isStatic = true;
+            }
+
+            if (columnPrefab != null) {
+                var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
+                colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
+                AlignToGroundAndAddCollider(colObj, pos + new Vector3(-8f, 0f, -8f), Quaternion.Euler(-90f, 0f, 0f), 0f);
+            }
+            
+            if (trees != null && trees.Length > 0) {
+                var t = (GameObject)PrefabUtility.InstantiatePrefab(trees[Random.Range(0, trees.Length)], p.transform);
+                t.transform.localScale = Vector3.one * 8f; AlignToGroundAndAddCollider(t, pos + new Vector3(8f, 0f, 8f), Quaternion.Euler(-90, 0, 0), -1.8f);
+
+                // LOW-POLY CONVERSION (Programmatic Decimation)
+                var filters = t.GetComponentsInChildren<MeshFilter>(true);
+                foreach (var mf in filters) {
+                    if (mf.sharedMesh == null) continue;
+                    var simplifier = new UnityMeshSimplifier.MeshSimplifier();
+                    simplifier.Initialize(mf.sharedMesh);
+                    simplifier.SimplifyMesh(0.2f); // 20% quality for extreme low poly look
+                    mf.sharedMesh = simplifier.ToMesh();
+                }
+            }
+        }

@@ -942,7 +942,7 @@ namespace TheAlchemistsCrypt.UI
             settingsImg.sprite = CreateSettingsMedallionSprite(80, 80);
             
             var sHelper = settingsBtnGo.gameObject.AddComponent<ButtonInputHelper>();
-            sHelper.onUp = () => OpenSettingsModal(root);
+            sHelper.onClick = () => OpenSettingsModal(root);
 
             // --- TARGETING RETICLE ---
             var reticleGo = new GameObject("TargetingReticle", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
@@ -1123,8 +1123,8 @@ namespace TheAlchemistsCrypt.UI
             }
         }
 
-        private class ButtonInputHelper : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler {
-            public System.Action onDown; public System.Action onUp;
+        private class ButtonInputHelper : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler, IDragHandler {
+            public System.Action onDown; public System.Action onUp; public System.Action onClick;
             private RectTransform rectTransform;
 
             private void Awake()
@@ -1141,7 +1141,15 @@ namespace TheAlchemistsCrypt.UI
             public void OnPointerUp(PointerEventData data)
             {
                 if (IsCustomizingHUD) return;
-                onUp?.Invoke();
+                // Standard onUp (if onClick is not explicitly handled, OnPointerClick will also trigger)
+                if (onClick == null) onUp?.Invoke();
+            }
+
+            public void OnPointerClick(PointerEventData data)
+            {
+                if (IsCustomizingHUD) return;
+                if (onClick != null) onClick.Invoke();
+                else if (onUp != null) { /* onUp already handled in OnPointerUp */ }
             }
 
             public void OnDrag(PointerEventData data)
@@ -1506,7 +1514,7 @@ namespace TheAlchemistsCrypt.UI
             txt.alignment = TextAnchor.MiddleCenter; txt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
             txt.text = labelText;
 
-            btnGo.gameObject.AddComponent<ButtonInputHelper>().onUp = onClick;
+            btnGo.gameObject.AddComponent<ButtonInputHelper>().onClick = onClick;
             return btnGo.gameObject;
         }
 
@@ -1634,9 +1642,18 @@ namespace TheAlchemistsCrypt.UI
                 new Color(0.9f, 0.2f, 0.2f, 0.15f)
             );
 
+            CreateSettingsActionButton(dialog, "MAIN MENU / HOME", new Vector2(-160, -250), new Vector2(300, 50),
+                () => {
+                    Time.timeScale = 1f;
+                    HasStartedGame = false;
+                    UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+                },
+                new Color(0.2f, 0.5f, 0.8f, 0.15f)
+            );
+
             // Close Button
             var closeGo = new GameObject("CloseButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            closeGo.SetParent(dialog, false); closeGo.anchoredPosition = new Vector2(0, -250); closeGo.sizeDelta = new Vector2(250, 50);
+            closeGo.SetParent(dialog, false); closeGo.anchoredPosition = new Vector2(160, -250); closeGo.sizeDelta = new Vector2(300, 50);
             closeGo.GetComponent<Image>().sprite = charcoalSprite;
             
             // Add gold highlights to the close button
@@ -2047,20 +2064,16 @@ namespace TheAlchemistsCrypt.UI
 
         private void CreateStartScreen()
         {
-            // Set scale to 0 to pause game
             Time.timeScale = 0f;
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
 
-            // Disable mobile input manager temporarily
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance)
             {
                 TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = false;
             }
 
-            // Create Canvas
             var startCanvasGo = new GameObject("StartScreenOverlay", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-
             var canvas = startCanvasGo.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 1000;
@@ -2070,161 +2083,83 @@ namespace TheAlchemistsCrypt.UI
             scaler.referenceResolution = new Vector2(1920, 1080);
             scaler.matchWidthOrHeight = 1.0f;
 
-            // Background
             var bgGo = new GameObject("StartBackground", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             bgGo.SetParent(startCanvasGo.transform, false);
             bgGo.anchorMin = Vector2.zero; bgGo.anchorMax = Vector2.one;
             bgGo.offsetMin = bgGo.offsetMax = Vector2.zero;
             var bgImg = bgGo.GetComponent<Image>();
             var bgSprite = Resources.Load<Sprite>("egyptian_items/GameStartImage");
-            if (bgSprite != null)
-            {
-                bgImg.sprite = bgSprite;
-            }
-            else
-            {
-                bgImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.08f, 0.04f, 0f, 1f), new Color(0.02f, 0.01f, 0f, 1f));
-            }
+            if (bgSprite != null) bgImg.sprite = bgSprite;
+            else bgImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.08f, 0.04f, 0f, 1f), new Color(0.02f, 0.01f, 0f, 1f));
             bgImg.color = Color.white;
-            bgImg.preserveAspect = false;
 
-            // --- SINGLE-LINE DUAL-LAYER GLOWING ETCHED HEADLINE AT BOTTOM CENTER ---
-            var glowGo = new GameObject("HeadlineGlow", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            glowGo.SetParent(startCanvasGo.transform, false);
-            glowGo.anchorMin = glowGo.anchorMax = new Vector2(0.5f, 0f);
-            glowGo.pivot = new Vector2(0.5f, 0f);
-            glowGo.anchoredPosition = new Vector2(0, 100);
-            glowGo.sizeDelta = new Vector2(1500, 100);
-            var glowTxt = glowGo.GetComponent<Text>();
-            glowTxt.font = GetTitleFont();
-            glowTxt.fontSize = 62;
-            glowTxt.fontStyle = FontStyle.Bold;
-            glowTxt.alignment = TextAnchor.MiddleCenter;
-            glowTxt.color = new Color(1.0f, 0.45f, 0.0f, 0.35f); // Diffuse warm orange backing glow
-            glowTxt.text = "THE ALCHEMIST'S CRYPT";
+            var bottomActionGo = new GameObject("BottomActionPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            bottomActionGo.SetParent(startCanvasGo.transform, false);
+            bottomActionGo.anchorMin = bottomActionGo.anchorMax = new Vector2(0.5f, 0f);
+            bottomActionGo.pivot = new Vector2(0.5f, 0f);
+            bottomActionGo.anchoredPosition = new Vector2(0, 100);
+            bottomActionGo.sizeDelta = new Vector2(1000, 200);
+            bottomActionGo.GetComponent<Image>().color = Color.clear;
 
-            var glowShadow = glowGo.gameObject.AddComponent<Shadow>();
-            glowShadow.effectColor = new Color(1.0f, 0.55f, 0.0f, 0.4f);
-            glowShadow.effectDistance = new Vector2(4, -4);
-
-            var mainGo = new GameObject("HeadlineMain", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            mainGo.SetParent(startCanvasGo.transform, false);
-            mainGo.anchorMin = mainGo.anchorMax = new Vector2(0.5f, 0f);
-            mainGo.pivot = new Vector2(0.5f, 0f);
-            mainGo.anchoredPosition = new Vector2(0, 100);
-            mainGo.sizeDelta = new Vector2(1500, 100);
-            var mainTxt = mainGo.GetComponent<Text>();
-            mainTxt.font = GetTitleFont();
-            mainTxt.fontSize = 62;
-            mainTxt.fontStyle = FontStyle.Bold;
-            mainTxt.alignment = TextAnchor.MiddleCenter;
-            mainTxt.color = new Color(1.0f, 0.84f, 0.0f, 0.98f); // Premium solid bright gold
-            mainTxt.text = "THE ALCHEMIST'S CRYPT";
-
-            var outline = mainGo.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.18f, 0.02f, 0.01f, 0.95f); // Deep blood-amber dark etch outline
-            outline.effectDistance = new Vector2(3, -3);
-
-            // Right Action Panel (Positions kept but styled beautifully with Slate-Green buttons)
-            var rightActionGo = new GameObject("RightActionPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            rightActionGo.SetParent(startCanvasGo.transform, false);
-            rightActionGo.anchorMin = rightActionGo.anchorMax = new Vector2(1f, 0.5f);
-            rightActionGo.pivot = new Vector2(1f, 0.5f);
-            rightActionGo.anchoredPosition = new Vector2(-150, 0);
-            rightActionGo.sizeDelta = new Vector2(450, 800);
-            rightActionGo.GetComponent<Image>().color = Color.clear;
-
-            // START Button (Beautiful semi-translucent deep slate-green with premium gold border)
             var startBtnGo = new GameObject("StartButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            startBtnGo.SetParent(rightActionGo, false);
+            startBtnGo.SetParent(bottomActionGo, false);
             startBtnGo.anchorMin = startBtnGo.anchorMax = new Vector2(0.5f, 0.5f);
-            startBtnGo.anchoredPosition = new Vector2(0, 80);
-            startBtnGo.sizeDelta = new Vector2(380, 80);
+            startBtnGo.anchoredPosition = new Vector2(-220, 0);
+            startBtnGo.sizeDelta = new Vector2(380, 100);
             var startBtnImg = startBtnGo.GetComponent<Image>();
-            startBtnImg.sprite = charcoalSprite;
-            startBtnImg.color = new Color(0.04f, 0.04f, 0.04f, 0.92f); // Deep obsidian background
-
-            var startOutline = startBtnGo.gameObject.AddComponent<Outline>();
-            startOutline.effectColor = new Color(0.95f, 0.8f, 0.2f, 0.9f); // Premium gold outline
-            startOutline.effectDistance = new Vector2(3, 3);
+            startBtnImg.color = new Color(0.95f, 0.8f, 0.2f, 1f);
 
             var startBtnTextGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             startBtnTextGo.SetParent(startBtnGo, false);
             startBtnTextGo.anchorMin = Vector2.zero; startBtnTextGo.anchorMax = Vector2.one;
-            startBtnTextGo.offsetMin = startBtnTextGo.offsetMax = Vector2.zero;
             var startBtnTxt = startBtnTextGo.GetComponent<Text>();
             startBtnTxt.font = GetTitleFont();
-            startBtnTxt.fontSize = 24;
+            startBtnTxt.fontSize = 32;
             startBtnTxt.fontStyle = FontStyle.Bold;
             startBtnTxt.alignment = TextAnchor.MiddleCenter;
-            startBtnTxt.color = new Color(0.95f, 0.8f, 0.2f, 1f); // Bright premium gold text
+            startBtnTxt.color = Color.black;
             startBtnTxt.text = "START VOYAGE";
 
-            var startBtnTextOutline = startBtnTextGo.gameObject.AddComponent<Outline>();
-            startBtnTextOutline.effectColor = Color.black;
-            startBtnTextOutline.effectDistance = new Vector2(2, -2);
-
             var startHelper = startBtnGo.gameObject.AddComponent<ButtonInputHelper>();
-            startHelper.onDown = () =>
+            startHelper.onClick = () =>
             {
-                startBtnGo.localScale = new Vector3(0.96f, 0.96f, 1f);
-            };
-            startHelper.onUp = () =>
-            {
-                startBtnGo.localScale = new Vector3(1f, 1f, 1f);
                 HasStartedGame = true;
                 Time.timeScale = 1f;
                 Cursor.visible = false;
                 Cursor.lockState = CursorLockMode.Locked;
-                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance)
-                {
-                    TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
-                }
+                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
                 Destroy(startCanvasGo);
             };
 
-            // QUIT Button (Beautiful semi-translucent deep slate-green with premium gold border)
             var quitBtnGo = new GameObject("QuitButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            quitBtnGo.SetParent(rightActionGo, false);
+            quitBtnGo.SetParent(bottomActionGo, false);
             quitBtnGo.anchorMin = quitBtnGo.anchorMax = new Vector2(0.5f, 0.5f);
-            quitBtnGo.anchoredPosition = new Vector2(0, -50);
-            quitBtnGo.sizeDelta = new Vector2(380, 80);
+            quitBtnGo.anchoredPosition = new Vector2(220, 0);
+            quitBtnGo.sizeDelta = new Vector2(380, 100);
             var quitBtnImg = quitBtnGo.GetComponent<Image>();
-            quitBtnImg.sprite = charcoalSprite;
-            quitBtnImg.color = new Color(0.04f, 0.04f, 0.04f, 0.92f); // Deep obsidian background
-
-            var quitOutline = quitBtnGo.gameObject.AddComponent<Outline>();
-            quitOutline.effectColor = new Color(0.95f, 0.8f, 0.2f, 0.9f); // Premium gold outline
-            quitOutline.effectDistance = new Vector2(3, 3);
+            quitBtnImg.color = new Color(0.95f, 0.8f, 0.2f, 1f);
 
             var quitBtnTextGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             quitBtnTextGo.SetParent(quitBtnGo, false);
             quitBtnTextGo.anchorMin = Vector2.zero; quitBtnTextGo.anchorMax = Vector2.one;
-            quitBtnTextGo.offsetMin = quitBtnTextGo.offsetMax = Vector2.zero;
             var quitBtnTxt = quitBtnTextGo.GetComponent<Text>();
             quitBtnTxt.font = GetTitleFont();
-            quitBtnTxt.fontSize = 24;
+            quitBtnTxt.fontSize = 32;
             quitBtnTxt.fontStyle = FontStyle.Bold;
             quitBtnTxt.alignment = TextAnchor.MiddleCenter;
-            quitBtnTxt.color = new Color(0.95f, 0.8f, 0.2f, 1f); // Bright premium gold text
-            quitBtnTxt.text = "QUIT GAME";
-
-            var quitBtnTextOutline = quitBtnTextGo.gameObject.AddComponent<Outline>();
-            quitBtnTextOutline.effectColor = Color.black;
-            quitBtnTextOutline.effectDistance = new Vector2(2, -2);
+            quitBtnTxt.color = Color.black;
+            quitBtnTxt.text = "ABANDON SHIP";
 
             var quitHelper = quitBtnGo.gameObject.AddComponent<ButtonInputHelper>();
-            quitHelper.onDown = () =>
+            quitHelper.onClick = () =>
             {
-                quitBtnGo.localScale = new Vector3(0.96f, 0.96f, 1f);
-            };
-            quitHelper.onUp = () =>
-            {
-                quitBtnGo.localScale = new Vector3(1f, 1f, 1f);
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.isPlaying = false;
+#else
                 Application.Quit();
+#endif
             };
 
-            // Set UI layer
             SetLayerRecursively(startCanvasGo, 5);
         }
 
@@ -2444,62 +2379,108 @@ namespace TheAlchemistsCrypt.UI
             descGo.anchorMin = descGo.anchorMax = new Vector2(0.5f, 0.5f);
             descGo.pivot = new Vector2(0.5f, 0.5f);
             descGo.anchoredPosition = new Vector2(0, -10);
-            descGo.sizeDelta = new Vector2(600, 160);
+            descGo.sizeDelta = new Vector2(650, 160);
 
             var descText = descGo.GetComponent<Text>();
             descText.font = GetTitleFont();
-            descText.fontSize = 22;
+            descText.fontSize = 24;
             descText.alignment = TextAnchor.MiddleCenter;
-            descText.lineSpacing = 1.3f;
-            descText.color = new Color(0.92f, 0.92f, 0.88f, 0.9f); // Elegant warm white cream
-            descText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            descText.text = "The shifting dunes of Egypt reclaim another lost soul.\n\nYour elements have decayed, and the Alchemist's Crypt has locked your fate in eternal stone. Will you restart your voyage or let the sands consume you?";
+            descText.color = new Color(0.9f, 0.9f, 0.9f, 0.9f);
+            descText.text = "The shifting dunes of Egypt reclaim another lost soul.\n\nYour elements have decayed, and the Alchemist's Crypt has locked your fate in eternal stone.";
 
-            // Restart Voyage Button
-            var btnGo = new GameObject("RestartButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            btnGo.SetParent(modalGo, false);
-            btnGo.anchorMin = btnGo.anchorMax = new Vector2(0.5f, 0f);
-            btnGo.pivot = new Vector2(0.5f, 0f);
-            btnGo.anchoredPosition = new Vector2(0, 50);
-            btnGo.sizeDelta = new Vector2(360, 80);
-
-            var btnImg = btnGo.GetComponent<Image>();
-            btnImg.sprite = obsidianSprite;
-            btnImg.color = Color.white;
-
-            // Gold button border outline
-            var btnBorder = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            btnBorder.SetParent(btnGo, false);
-            btnBorder.anchorMin = Vector2.zero; btnBorder.anchorMax = Vector2.one;
-            btnBorder.offsetMin = new Vector2(-3, -3); btnBorder.offsetMax = new Vector2(3, 3);
-            var btnBorderImg = btnBorder.GetComponent<Image>();
-            btnBorderImg.color = new Color(0.95f, 0.8f, 0.2f, 0.9f);
-            btnBorderImg.sprite = null;
-            btnBorder.SetAsFirstSibling();
-
-            var btnTextGo = new GameObject("ButtonText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            btnTextGo.SetParent(btnGo, false);
-            btnTextGo.anchorMin = Vector2.zero; btnTextGo.anchorMax = Vector2.one;
-            btnTextGo.offsetMin = btnTextGo.offsetMax = Vector2.zero;
-            var btnText = btnTextGo.GetComponent<Text>();
-            btnText.font = GetTitleFont();
-            btnText.fontSize = 24;
-            btnText.fontStyle = FontStyle.Bold;
-            btnText.alignment = TextAnchor.MiddleCenter;
-            btnText.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
-            btnText.text = "RESTART VOYAGE";
-
-            var helper = btnGo.gameObject.AddComponent<ButtonInputHelper>();
-            helper.onDown = () => {
-                btnGo.localScale = new Vector3(0.96f, 0.96f, 1f);
-            };
-            helper.onUp = () => {
-                btnGo.localScale = new Vector3(1f, 1f, 1f);
+            // Respawn Button
+            CreateSettingsActionButton(modalGo, "RESTART VOYAGE", new Vector2(-160, -160), new Vector2(300, 70), () => {
                 Time.timeScale = 1f;
-                UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
-            };
+                UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+            }, new Color(0.6f, 0.1f, 0.1f, 1f));
 
-            SetLayerRecursively(deathCanvasGo, 5);
+            CreateSettingsActionButton(modalGo, "MAIN MENU", new Vector2(160, -160), new Vector2(300, 70), () => {
+                Time.timeScale = 1f;
+                HasStartedGame = false;
+                UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+            }, new Color(0.2f, 0.3f, 0.6f, 1f));
+        }
+
+        public void ShowVictoryScreen()
+        {
+            if (deathPanelInstance != null) return;
+            if (hudRootGo != null) hudRootGo.SetActive(false);
+
+            Time.timeScale = 0f;
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance)
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = false;
+
+            var victoryCanvasGo = new GameObject("VictoryCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            var victoryCanvas = victoryCanvasGo.GetComponent<Canvas>();
+            victoryCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            victoryCanvas.sortingOrder = 1100;
+
+            var scaler = victoryCanvasGo.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = 1f;
+
+            deathPanelInstance = victoryCanvasGo; // We reuse this tracking variable
+
+            var panelGo = new GameObject("VictoryPanelOverlay", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            panelGo.SetParent(victoryCanvasGo.transform, false);
+            panelGo.anchorMin = Vector2.zero; panelGo.anchorMax = Vector2.one;
+            panelGo.offsetMin = panelGo.offsetMax = Vector2.zero;
+            var panelImg = panelGo.GetComponent<Image>();
+            panelImg.color = new Color(0f, 0.1f, 0.2f, 0.85f); // Deep blue victory tint
+
+            var modalGo = new GameObject("VictoryCard", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            modalGo.SetParent(panelGo, false);
+            modalGo.anchorMin = modalGo.anchorMax = new Vector2(0.5f, 0.5f);
+            modalGo.anchoredPosition = Vector2.zero;
+            modalGo.sizeDelta = new Vector2(800, 500);
+            
+            var modalImg = modalGo.GetComponent<Image>();
+            modalImg.sprite = charcoalSprite;
+            modalImg.color = Color.white;
+
+            var titleGo = new GameObject("TitleText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            titleGo.SetParent(modalGo, false);
+            titleGo.anchorMin = titleGo.anchorMax = new Vector2(0.5f, 1f);
+            titleGo.pivot = new Vector2(0.5f, 1f);
+            titleGo.anchoredPosition = new Vector2(0, -60);
+            titleGo.sizeDelta = new Vector2(650, 90);
+
+            var titleText = titleGo.GetComponent<Text>();
+            titleText.font = GetTitleFont();
+            titleText.fontSize = 64;
+            titleText.fontStyle = FontStyle.Bold;
+            titleText.alignment = TextAnchor.MiddleCenter;
+            titleText.color = new Color(0.2f, 0.8f, 1f, 1f); // Bright Alchemical Blue
+            titleText.text = "ESCAPED!";
+
+            var descGo = new GameObject("DescriptionText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            descGo.SetParent(modalGo, false);
+            descGo.anchorMin = descGo.anchorMax = new Vector2(0.5f, 0.5f);
+            descGo.pivot = new Vector2(0.5f, 0.5f);
+            descGo.anchoredPosition = new Vector2(0, -10);
+            descGo.sizeDelta = new Vector2(650, 160);
+
+            var descText = descGo.GetComponent<Text>();
+            descText.font = GetTitleFont();
+            descText.fontSize = 28;
+            descText.alignment = TextAnchor.MiddleCenter;
+            descText.color = new Color(0.9f, 0.9f, 0.9f, 0.9f);
+            descText.text = "You successfully retrieved the Pharaoh's Key and reached the boat.\nThe Alchemist's Crypt is finally behind you.";
+
+            CreateSettingsActionButton(modalGo, "PLAY AGAIN", new Vector2(-160, -160), new Vector2(300, 70), () => {
+                Time.timeScale = 1f;
+                UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+            }, new Color(0.1f, 0.5f, 0.2f, 1f));
+
+            CreateSettingsActionButton(modalGo, "MAIN MENU", new Vector2(160, -160), new Vector2(300, 70), () => {
+                Time.timeScale = 1f;
+                HasStartedGame = false;
+                UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+            }, new Color(0.2f, 0.3f, 0.6f, 1f));
         }
 
         private bool hasTintedWeapons = false;

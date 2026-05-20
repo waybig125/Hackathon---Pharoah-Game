@@ -77,8 +77,9 @@ namespace TheAlchemistsCrypt.AI
     public class HiveMindManager : MonoBehaviour
     {
         [Header("Backend Connection")]
-        [SerializeField] private string primaryEndpoint = "https://alchemists-crypt-ai-production.up.railway.app/api/v1/hive-mind";
-        [SerializeField] private string baselineEndpoint = "https://alchemists-crypt-ai-production.up.railway.app/api/v1/hive-mind/baseline";
+        // Updated API base to Render deployment
+        [SerializeField] private string primaryEndpoint = "https://alchemists-crypt-backend.onrender.com/api/v1/hive-mind";
+        [SerializeField] private string baselineEndpoint = "https://alchemists-crypt-backend.onrender.com/api/v1/hive-mind/baseline";
         [SerializeField] private float pollInterval = 2.0f;
 
         private int currentTick = 0;
@@ -237,48 +238,61 @@ namespace TheAlchemistsCrypt.AI
                                 }
                             }
 
-                            // Audio Tactics
+                            // Audio Tactics - Priority System
                             string tactic = response.hive_tactic != null ? response.hive_tactic.ToLower() : "";
-                            if (tactic.Contains("ambush")) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_ambush");
-                            else if (tactic.Contains("flank")) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_flank");
-                            else if (tactic.Contains("mercy")) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_mercy");
-                            else if (tactic.Contains("vision") || tactic.Contains("sight") || tactic.Contains("scan")) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_vision");
+                            string selectedVoice = null;
 
-                            // Health/Element specific voices
-                            int hp = 100;
-                            string activeElement = "sulfur";
-                            var playerObj = GameObject.FindGameObjectWithTag("Player");
-                            if (playerObj == null) {
-                                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
-                                if (character != null) playerObj = character.gameObject;
-                            }
-                            if (playerObj != null)
+                            if (tactic.Contains("ambush")) selectedVoice = "Voice/vo_tactical_ambush";
+                            else if (tactic.Contains("flank")) selectedVoice = "Voice/vo_tactical_flank";
+                            else if (tactic.Contains("mercy")) selectedVoice = "Voice/vo_tactical_mercy";
+                            else if (tactic.Contains("vision") || tactic.Contains("sight") || tactic.Contains("scan")) selectedVoice = "Voice/vo_tactical_vision";
+
+                            // If no tactic voice, check for health/element voices
+                            if (string.IsNullOrEmpty(selectedVoice))
                             {
-                                var pHealth = playerObj.GetComponent<TheAlchemistsCrypt.Player.PlayerHealth>();
-                                if (pHealth != null) hp = Mathf.RoundToInt(pHealth.currentHealth);
-                                var w = playerObj.GetComponentInChildren<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
-                                if (w != null) activeElement = w.CurrentMode.ToString().ToLower();
+                                int hp = 100;
+                                string activeElement = "sulfur";
+                                var playerObj = GameObject.FindGameObjectWithTag("Player");
+                                if (playerObj == null) {
+                                    var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                                    if (character != null) playerObj = character.gameObject;
+                                }
+                                if (playerObj != null)
+                                {
+                                    var pHealth = playerObj.GetComponent<TheAlchemistsCrypt.Player.PlayerHealth>();
+                                    if (pHealth != null) hp = Mathf.RoundToInt(pHealth.currentHealth);
+                                    var w = playerObj.GetComponentInChildren<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+                                    if (w != null) activeElement = w.CurrentMode.ToString().ToLower();
+                                }
+
+                                if (hp < 25)
+                                {
+                                    string[] lowHpVoices = { "Voice/vo_tactical_lowhealth_01", "Voice/vo_tactical_lowhealth_02" };
+                                    selectedVoice = lowHpVoices[UnityEngine.Random.Range(0, 2)];
+                                }
+                                else if (UnityEngine.Random.value < 0.3f) // Only play element voices 30% of the time to avoid spam
+                                {
+                                    if (activeElement == "sulfur")
+                                    {
+                                        string[] sulfurVoices = { "Voice/vo_sulfur_01", "Voice/vo_sulfur_02" };
+                                        selectedVoice = sulfurVoices[UnityEngine.Random.Range(0, 2)];
+                                    }
+                                    else if (activeElement == "mercury")
+                                    {
+                                        string[] mercuryVoices = { "Voice/vo_mercury_01", "Voice/vo_mercury_02" };
+                                        selectedVoice = mercuryVoices[UnityEngine.Random.Range(0, 2)];
+                                    }
+                                    else if (activeElement == "salt")
+                                    {
+                                        string[] saltVoices = { "Voice/vo_salt_01", "Voice/vo_salt_02" };
+                                        selectedVoice = saltVoices[UnityEngine.Random.Range(0, 2)];
+                                    }
+                                }
                             }
 
-                            if (hp < 25)
+                            if (!string.IsNullOrEmpty(selectedVoice))
                             {
-                                string[] lowHpVoices = { "Voice/vo_tactical_lowhealth_01", "Voice/vo_tactical_lowhealth_02" };
-                                TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(lowHpVoices[UnityEngine.Random.Range(0, 2)]);
-                            }
-                            else if (activeElement == "sulfur")
-                            {
-                                string[] sulfurVoices = { "Voice/vo_sulfur_01", "Voice/vo_sulfur_02" };
-                                TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(sulfurVoices[UnityEngine.Random.Range(0, 2)]);
-                            }
-                            else if (activeElement == "mercury")
-                            {
-                                string[] mercuryVoices = { "Voice/vo_mercury_01", "Voice/vo_mercury_02" };
-                                TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(mercuryVoices[UnityEngine.Random.Range(0, 2)]);
-                            }
-                            else if (activeElement == "salt")
-                            {
-                                string[] saltVoices = { "Voice/vo_salt_01", "Voice/vo_salt_02" };
-                                TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(saltVoices[UnityEngine.Random.Range(0, 2)]);
+                                TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(selectedVoice);
                             }
                         }
                     }
@@ -330,12 +344,14 @@ namespace TheAlchemistsCrypt.AI
                         if (inst.target != null && inst.target.Count >= 3)
                         {
                             Vector3 targetPos = new Vector3(inst.target[0], inst.target[1], inst.target[2]);
+                            // Enforce world boundary: do not accept instructions that push mummies into the sea area
+                            if (targetPos.z < -105f) targetPos.z = -105f;
                             if (Vector3.Distance(targetPos, z.transform.position) > 3f)
                             {
                                 z.tacticalTarget = targetPos;
                                 z.tacticalSpeedMult = Mathf.Max(inst.speed_mult, 0.5f);
                                 z.hasTacticalTarget = true;
-                                Debug.Log($"[HiveMind] Mummy {z.mummyId} ordered to {action} → {targetPos}");
+                                Debug.Log($"[HiveMind] Mummy {z.mummyId} ordered to {action} -> {targetPos}");
                             }
                             else
                             {

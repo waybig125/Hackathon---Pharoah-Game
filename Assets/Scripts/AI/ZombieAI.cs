@@ -170,6 +170,7 @@ namespace TheAlchemistsCrypt.AI
             audioSource = gameObject.AddComponent<AudioSource>();
             audioSource.spatialBlend = 1.0f;
             audioSource.maxDistance = 25f;
+            audioSource.volume = 0.4f; // Lowered from default 1.0
             audioSource.rolloffMode = AudioRolloffMode.Linear;
             
             // Decouple agent navigation steering from orientation so custom look-rotation works flawlessly
@@ -346,7 +347,10 @@ namespace TheAlchemistsCrypt.AI
             if (hasMeaningfulTactical && distanceToPlayer > 4.0f)
             {
                 // HiveMind gave a real flanking/ambush target — go there
-                currentTargetPos = tacticalTarget;
+                // Enforce world Z boundary so mummies never get instructions that send them into the sea
+                Vector3 bounded = tacticalTarget;
+                if (bounded.z < -105f) bounded.z = -105f;
+                currentTargetPos = bounded;
                 currentSpeed = 2.2f * Mathf.Max(tacticalSpeedMult, 0.5f);
             }
             else if (distanceToPlayer <= 15f)
@@ -379,13 +383,16 @@ namespace TheAlchemistsCrypt.AI
                     }
                     wanderTimer = wanderInterval + UnityEngine.Random.Range(-1f, 1f);
                 }
-                if (hasWanderTarget)
-                {
-                    currentTargetPos = wanderTarget;
-                    currentSpeed = 1.5f;
-                    if (Vector3.Distance(transform.position, wanderTarget) < 2f)
-                        hasWanderTarget = false;
-                }
+                    if (hasWanderTarget)
+                    {
+                        // Enforce coastline boundary for wander targets as well
+                        Vector3 bounded = wanderTarget;
+                        if (bounded.z < -105f) bounded.z = -105f;
+                        currentTargetPos = bounded;
+                        currentSpeed = 1.5f;
+                        if (Vector3.Distance(transform.position, wanderTarget) < 2f)
+                            hasWanderTarget = false;
+                    }
                 else
                 {
                     // NavMesh.SamplePosition failed — drift slowly toward player as fallback
@@ -554,8 +561,8 @@ namespace TheAlchemistsCrypt.AI
             if (audioSource != null)
             {
                 audioSource.Stop();
-                AudioClip deathClip = TheAlchemistsCrypt.Gameplay.AudioManager.LoadClip("sfx/sfx_mummy_death");
-                if (deathClip != null) audioSource.PlayOneShot(deathClip);
+                // Use throttled global SFX for death too
+                TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mummy_death", false, 0.6f, 0.2f);
             }
 
             // Switch back to main theme if no other mummies are nearby
@@ -611,8 +618,8 @@ namespace TheAlchemistsCrypt.AI
 
                     if (stateName == "Attack")
                     {
-                        AudioClip attackClip = TheAlchemistsCrypt.Gameplay.AudioManager.LoadClip("sfx/sfx_mummy_attack");
-                        if (attackClip != null) audioSource.PlayOneShot(attackClip);
+                        // Use throttled global SFX to prevent "wall of noise" when many mummies attack at once
+                        TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mummy_attack", false, 0.5f, 0.4f);
                     }
                 }
             }

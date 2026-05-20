@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using System.Collections.Generic;
+using UnityMeshSimplifier;
 
 namespace TheAlchemistsCrypt.Editor
 {
@@ -29,6 +30,8 @@ namespace TheAlchemistsCrypt.Editor
         {
             EditorGUILayout.HelpBox("V5.2 AESTHETIC OVERHAUL: stack floors, terra-cotta walls, purple shadows, gradient sky disc, emissive artifacts.", MessageType.Info);
             seed = EditorGUILayout.IntField("Seed", seed);
+            gridSize = EditorGUILayout.IntField("Grid Size", gridSize);
+
             if (GUILayout.Button("▶ GENERATE & SETUP CITY GAME", GUILayout.Height(40))) {
                 Purge();
                 GeneratePolishedCity();
@@ -139,6 +142,22 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             Debug.Log("Mummy Animator Setup with Transitions & Looping Attack!");
+
+            // Apply 80% Mesh Decimation to Mummies for Mobile Performance
+            var mummies = GameObject.FindObjectsByType<TheAlchemistsCrypt.AI.ZombieAI>(FindObjectsInactive.Include);
+            foreach (var m in mummies) {
+                DecimateMesh(m.gameObject, 0.8f);
+            }
+
+            // Also decimate the prefabs in Resources to ensure spawned ones are optimized
+            string[] resourcePrefabs = { "Assets/Resources/Mummy_Dynamic_Prefab.prefab", "Assets/Resources/Pharaoh_Prefab.prefab" };
+            foreach (var path in resourcePrefabs) {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab != null) {
+                    DecimateMesh(prefab, 0.8f);
+                    EditorUtility.SetDirty(prefab);
+                }
+            }
         }
 
         private UnityEditor.Animations.AnimatorState GetOrAddState(UnityEditor.Animations.AnimatorStateMachine sm, string name, AnimationClip clip) {
@@ -171,7 +190,7 @@ namespace TheAlchemistsCrypt.Editor
             var all = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
             foreach (var go in all) {
                 if (go == null) continue; 
-                string lowerName = go.name.ToLower();
+                string lowerName = go.name.ToLower().Replace(" ", ""); // Remove spaces for more robust matching
                 if (lowerName.Contains("egyptiancity") || lowerName.Contains("desertfloor") || lowerName.Contains("floorground") ||
                     lowerName.Contains("groundplane") || lowerName.Contains("desertterrain") ||
                     lowerName.Contains("player_copy") || lowerName.Contains("mobilehud") || lowerName.Contains("p_lpsp_ui_canvas") || 
@@ -179,14 +198,49 @@ namespace TheAlchemistsCrypt.Editor
                     lowerName.Contains("plaza") || lowerName.Contains("house") || lowerName.Contains("pyramid") ||
                     lowerName.Contains("seazone") || lowerName.Contains("beachzone") || lowerName.Contains("coastlinebarrier") ||
                     lowerName.Contains("globalvolume") || lowerName.Contains("reflectionprobe") ||
-                    lowerName.Contains("claritylight")) 
+                    lowerName.Contains("claritylight") || lowerName.Contains("environmentvolume") ||
+                    lowerName.Contains("audiomanager") || lowerName.Contains("hivemindmanager") || lowerName.Contains("mummyspawner")) 
                 {
                     DestroyImmediate(go);
                 }
             }
         }
 
-        public void GeneratePolishedCity()
+        private void SetupManagers(GameObject root)
+        {
+            var am = new GameObject("AudioManager");
+            am.transform.SetParent(root.transform);
+            am.AddComponent<TheAlchemistsCrypt.Gameplay.AudioManager>();
+
+            var hm = new GameObject("HiveMindManager");
+            hm.transform.SetParent(root.transform);
+            hm.AddComponent<TheAlchemistsCrypt.AI.HiveMindManager>();
+
+            var ms = new GameObject("MummySpawner");
+            ms.transform.SetParent(root.transform);
+            ms.AddComponent<TheAlchemistsCrypt.AI.MummySpawner>();
+
+            var em = new GameObject("EscapeManager");
+            em.transform.SetParent(root.transform);
+            em.AddComponent<TheAlchemistsCrypt.Gameplay.EscapeManager>();
+            
+            Debug.Log("[CityGen] AudioManager, HiveMindManager, MummySpawner, and EscapeManager injected into scene.");
+        }
+
+                private void DecimateMesh(GameObject obj, float quality)
+        {
+            var filters = obj.GetComponentsInChildren<MeshFilter>();
+            foreach (var mf in filters) {
+                if (mf.sharedMesh == null) continue;
+                try {
+                    var simplifier = new MeshSimplifier();
+                    simplifier.Initialize(mf.sharedMesh);
+                    simplifier.SimplifyMesh(quality);
+                    mf.sharedMesh = simplifier.ToMesh();
+                } catch {}
+            }
+        }
+public void GeneratePolishedCity()
         {
             Random.InitState(seed);
             Purge();
@@ -204,19 +258,20 @@ namespace TheAlchemistsCrypt.Editor
             if (columnPrefab == null) columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_pillar_column.glb");
             
             // ── AESTHETIC PALETTE ──
-            Material wallMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Material wallMat = new Material(GetLitShader());
             wallMat.SetColor("_BaseColor", new Color(0.78f, 0.52f, 0.35f)); // Terracotta Ochre
-            wallMat.SetFloat("_Smoothness", 0.05f);
+            wallMat.SetFloat("_Smoothness", 0.0f);   // Matte finish
             
-            Material woodMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Material woodMat = new Material(GetLitShader());
             woodMat.SetColor("_BaseColor", new Color(0.25f, 0.15f, 0.08f));
             
-            // Reflective polished sandstone floor — creates the mirror-like desert floor look
-            Material floorMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            floorMat.SetColor("_BaseColor", new Color(0.96f, 0.90f, 0.75f)); // Even Brighter/Whiter gold
-            floorMat.SetFloat("_Metallic", 0.2f);
-            floorMat.SetFloat("_Smoothness", 0.95f);   // ← Maximum reflection
-            floorMat.SetColor("_EmissionColor", new Color(1.0f, 0.95f, 0.8f) * 0.02f);
+            // Ground / plaza floor material - keep rough, low reflectivity for realistic sand/plaza
+            Material floorMat = new Material(GetLitShader());
+            floorMat.SetColor("_BaseColor", new Color(0.91f, 0.81f, 0.62f)); // Pale Pastel Sand
+            floorMat.SetFloat("_Metallic", 0.0f);
+            // Keep smoothness low so floors and plazas don't become mirror-like
+            floorMat.SetFloat("_Smoothness", 0.12f);
+            floorMat.SetColor("_EmissionColor", new Color(1.0f, 0.95f, 0.8f) * 0.01f);
             floorMat.EnableKeyword("_EMISSION");
 
             Material litWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
@@ -227,22 +282,38 @@ namespace TheAlchemistsCrypt.Editor
             Material darkWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             darkWindowMat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.15f));
 
-            SetupEnvironment();
+            SetupEnvironment(root);
+            SetupManagers(root);
             
             // ── Global Reflection Probe ──
             var probeGo = new GameObject("GlobalReflectionProbe");
             probeGo.transform.SetParent(root.transform);
             var probe = probeGo.AddComponent<ReflectionProbe>();
-            probe.mode = ReflectionProbeMode.Realtime;
-            probe.refreshMode = ReflectionProbeRefreshMode.ViaScripting; // We will bake it once
+            // Use Baked probe to avoid URP Render Graph null-reference crashes in Edit Mode
+            probe.mode = ReflectionProbeMode.Baked;
+            probe.refreshMode = ReflectionProbeRefreshMode.ViaScripting;
             probe.renderDynamicObjects = true;
             probe.size = new Vector3(2000f, 500f, 2000f);
             probe.importance = 1;
-            probe.RenderProbe();
+
+            // Bake the reflection probe to disk to create a stable cubemap asset for URP
+            try {
+                string exrPath = "Assets/Materials/GlobalReflectionProbe.exr";
+                if (!System.IO.Directory.Exists("Assets/Materials")) System.IO.Directory.CreateDirectory("Assets/Materials");
+                // Request bake and save to exr. Lightmapping.BakeReflectionProbe exists but is Editor-only API.
+#if UNITY_EDITOR
+                UnityEditor.Lightmapping.BakeReflectionProbe(probe, exrPath);
+                Debug.Log($"[CityGen] Baked GlobalReflectionProbe to {exrPath}");
+#else
+                Debug.Log("[CityGen] Reflection probe baking is editor-only; skipping at runtime.");
+#endif
+            } catch (System.Exception e) {
+                Debug.LogWarning($"[CityGen] Failed to bake GlobalReflectionProbe: {e.Message}");
+            }
 
             TerrainData terrainData = new TerrainData();
             terrainData.heightmapResolution = 513;
-            terrainData.size = new Vector3(1000f, 15f, 1000f);
+            terrainData.size = new Vector3(1000f, 10f, 1000f); // Lower height for even smoother movement
 
             int resolution = terrainData.heightmapResolution;
             float[,] heights = new float[resolution, resolution];
@@ -250,25 +321,23 @@ namespace TheAlchemistsCrypt.Editor
                 for (int j = 0; j < resolution; j++) {
                     float tx = (float)i / (resolution - 1);
                     float ty = (float)j / (resolution - 1);
-                    float dune1 = Mathf.Sin(tx * 12f + ty * 8f) * 0.35f;
-                    float ripple = Mathf.Sin(tx * 120f + ty * 80f) * 0.005f;
-                    float townBumps = Mathf.Sin(tx * 35f) * Mathf.Cos(ty * 35f) * 0.045f;
+                    
+                    // Ultra-smooth multi-octave Perlin
+                    float dune1 = Mathf.PerlinNoise(tx * 3f, ty * 3f) * 0.6f;
+                    float dune2 = Mathf.PerlinNoise(tx * 8f + 10f, ty * 8f + 10f) * 0.12f;
+                    float baseDune = dune1 + dune2;
 
                     float distFromCenter = Mathf.Sqrt((tx - 0.5f) * (tx - 0.5f) + (ty - 0.5f) * (ty - 0.5f));
-                    float spawnFlatten = Mathf.SmoothStep(0f, 1f, distFromCenter * 20f);
-                    float townFactor = Mathf.SmoothStep(0.12f, 1f, distFromCenter * 4.5f);
+                    // Aggressive flattening at spawn (center 0,0,0)
+                    float spawnFlatten = Mathf.SmoothStep(0f, 1f, (distFromCenter - 0.02f) * 25f);
+                    if (distFromCenter < 0.02f) spawnFlatten = 0f;
                     
-                    float baseDune = (dune1 + ripple + 0.5f) * (0.1f + 0.9f * townFactor);
-                    heights[i, j] = (baseDune + townBumps) * spawnFlatten;
+                    heights[i, j] = baseDune * spawnFlatten;
 
-                    // SEA & COASTLINE: Flatten the SOUTH edge (tx = normalized Z, 0=south, 1=north)
-                    // Terrain at (-500,-0.05,-500), size 1000m. world_Z = -500 + tx*1000.
-                    // City grid stops at world Z=-40 → tx=0.46.
-                    // Barrier sits at Z=-105f so player cannot reach the drop.
-                    // Flatten everything south of tx=0.35 (world Z=-150) fully flat by tx=0.25.
-                    if (tx < 0.35f) {
-                        float shoreFactor = Mathf.SmoothStep(0.25f, 0.35f, tx);
-                        heights[i, j] = Mathf.Lerp(0.001f, heights[i, j], shoreFactor);
+                    // SEA & COASTLINE: Aggressive smoothing on south edge
+                    if (tx < 0.4f) {
+                        float shoreFactor = Mathf.SmoothStep(0.28f, 0.4f, tx);
+                        heights[i, j] *= shoreFactor;
                     }
                 }
             }
@@ -285,29 +354,36 @@ namespace TheAlchemistsCrypt.Editor
                 if (sandTex == null) sandTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EgyptianAssets/sand.png");
 
                 if (sandTex == null) {
-                    // Fallback: create a 128×128 smooth gradient noise texture (no checkerboard)
-                    sandTex = new Texture2D(128, 128, TextureFormat.RGB24, true);
-                    Color baseColor = new Color(0.88f, 0.78f, 0.58f);
-                    Color[] pixels = new Color[128 * 128];
-                    for (int py = 0; py < 128; py++)
-                        for (int px = 0; px < 128; px++) {
-                            float n = Mathf.PerlinNoise(px * 0.12f, py * 0.12f);
-                            pixels[py * 128 + px] = Color.Lerp(baseColor * 0.88f, baseColor * 1.08f, n);
-                        }
+                    // Fallback: create a smooth vertical gradient texture (no repeat) to avoid tiling artifacts
+                    int texSize = 1024;
+                    sandTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
+                    sandTex.wrapMode = TextureWrapMode.Clamp; // clamp to prevent repeating pattern
+                    sandTex.filterMode = FilterMode.Trilinear;
+                    sandTex.anisoLevel = 2;
+                    Color topColor = new Color(0.98f, 0.90f, 0.72f);
+                    Color bottomColor = new Color(0.86f, 0.75f, 0.55f);
+                    Color[] pixels = new Color[texSize * texSize];
+                    for (int y = 0; y < texSize; y++) {
+                        float t = (float)y / (texSize - 1);
+                        Color rowColor = Color.Lerp(bottomColor, topColor, t);
+                        for (int x = 0; x < texSize; x++) pixels[y * texSize + x] = rowColor;
+                    }
                     sandTex.SetPixels(pixels);
                     sandTex.Apply(true);
-                    AssetDatabase.CreateAsset(sandTex, "Assets/EgyptianAssets/SandTexProc_128.asset");
+                    AssetDatabase.CreateAsset(sandTex, "Assets/EgyptianAssets/SandTexGradient_1024.asset");
                 }
 
                 layer.diffuseTexture = sandTex;
-                layer.tileSize = new Vector2(40f, 40f); // Large tile = no visible repetition
-                layer.specular = new Color(0.1f, 0.08f, 0.05f, 0f);
-                layer.smoothness = 0.45f; // Add some base smoothness to the desert
+                layer.tileSize = new Vector2(80f, 80f); // Larger tile to reduce visible tiling artifacts
+                // Reduce specular and smoothness to make sand look dry and non-reflective
+                layer.specular = new Color(0.03f, 0.03f, 0.02f, 0f);
+                layer.smoothness = 0.12f;
                 AssetDatabase.CreateAsset(layer, layerPath);
             }
             // Always reassign tile size even on existing layers
-            layer.tileSize = new Vector2(40f, 40f);
-            layer.smoothness = 0.65f; // Even more reflective desert
+            layer.tileSize = new Vector2(80f, 80f);
+            // Ensure existing layers are not highly reflective
+            layer.smoothness = 0.12f;
             EditorUtility.SetDirty(layer);
             terrainData.terrainLayers = new TerrainLayer[] { layer };
 
@@ -316,6 +392,13 @@ namespace TheAlchemistsCrypt.Editor
             terrainGo.transform.SetParent(root.transform);
             terrainGo.transform.position = new Vector3(-500f, -0.05f, -500f);
             terrainGo.isStatic = true;
+
+            // Improve visual fidelity at distance — increase basemapDistance so the terrain uses splatmap textures instead of a low-res basemap
+            var terrainComp = terrainGo.GetComponent<Terrain>();
+            if (terrainComp != null) {
+                terrainComp.basemapDistance = 2000f; // keep terrain detail far away
+                terrainComp.drawInstanced = true;
+            }
 
             float spacing = 32f;
             float halfSpan = (gridSize * spacing) / 2f;
@@ -355,7 +438,8 @@ namespace TheAlchemistsCrypt.Editor
 
             CreateProceduralPyramid(root, new Vector3(-450f, 0f, 400f), 150f, 95f, wallMat, new Color(1f, 0.85f, 0.4f));
             CreateProceduralPyramid(root, new Vector3(450f, 0f, 400f), 160f, 100f, wallMat, new Color(1f, 0.5f, 0.2f)); 
-            CreateProceduralPyramid(root, new Vector3(450f, 0f, 120f), 140f, 85f, wallMat, new Color(0.9f, 0.8f, 1f));
+            // Use warm emissive tones for pyramids (avoid purple tint)
+            CreateProceduralPyramid(root, new Vector3(450f, 0f, 120f), 140f, 85f, wallMat, new Color(1f, 0.82f, 0.45f));
             CreateProceduralPyramid(root, new Vector3(-450f, 0f, 120f), 170f, 110f, wallMat, new Color(1f, 0.7f, 0.3f)); 
 
             CreateSeaAndCoastline(root);
@@ -365,166 +449,133 @@ namespace TheAlchemistsCrypt.Editor
             var activeScene = SceneManager.GetActiveScene();
             EditorSceneManager.MarkSceneDirty(activeScene);
             EditorSceneManager.SaveScene(activeScene);
+            
             Debug.Log("Polished Egyptian City V5.2 Aesthetic Overhaul Regenerated!");
         }
 
         private void CreateSeaAndCoastline(GameObject root)
         {
-            // ── COORDINATE GUIDE ──
-            // Terrain: 1000m × 1000m, position at (-500, -0.05, -500). Player spawns at world (0,0,0).
-            // City buildings stop at world Z = -40f (posZ < -40 is skipped in grid).
-            // Sea should appear SOUTH of Z = -150, well clear of any building.
-            // Terrain is flattened south of tx=0.35 → world Z = -150f.
-            //
-            // Barrier sits at Z = -105f so player cannot enter the beach drop.
-
-            // ── 1. DEEP OCEAN ──
             GameObject sea = GameObject.CreatePrimitive(PrimitiveType.Quad);
             sea.name = "SeaZone";
             sea.transform.SetParent(root.transform);
-            sea.transform.position = new Vector3(0f, 0.15f, -550f); 
+            sea.transform.position = new Vector3(0f, 0.8f, -800f); 
             sea.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            sea.transform.localScale = new Vector3(3000f, 700f, 1f); 
+            sea.transform.localScale = new Vector3(3000f, 1000f, 1f); 
 
-            var seaMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            seaMat.SetColor("_BaseColor", new Color(0.02f, 0.25f, 0.55f));     // Rich ocean blue
-            seaMat.SetFloat("_Metallic", 0.0f);
-            seaMat.SetFloat("_Smoothness", 0.95f);                              
-            seaMat.SetColor("_EmissionColor", new Color(0.05f, 0.30f, 0.60f) * 1.5f);
-            seaMat.EnableKeyword("_EMISSION");
-            seaMat.SetFloat("_Cull", 0f);                                       
-            seaMat.SetInt("_ZWrite", 1);
+            var seaMat = new Material(GetLitShader());
+            seaMat.SetColor("_BaseColor", new Color(0.01f, 0.08f, 0.25f, 0.98f)); 
+            seaMat.SetFloat("_Smoothness", 0.95f); 
+            seaMat.SetFloat("_Metallic", 0.3f);
             sea.GetComponent<Renderer>().sharedMaterial = seaMat;
             sea.isStatic = true;
             DestroyImmediate(sea.GetComponent<Collider>());
 
-            // ── 2. SHALLOWS ──
             GameObject shallows = GameObject.CreatePrimitive(PrimitiveType.Quad);
             shallows.name = "SeaZone_Shallow";
             shallows.transform.SetParent(root.transform);
-            shallows.transform.position = new Vector3(0f, 0.17f, -300f);
+            shallows.transform.position = new Vector3(0f, 0.85f, -600f);
             shallows.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            shallows.transform.localScale = new Vector3(3000f, 250f, 1f);
+            shallows.transform.localScale = new Vector3(3000f, 400f, 1f);
 
-            var shallowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            shallowMat.SetColor("_BaseColor", new Color(0.08f, 0.42f, 0.65f));
-            shallowMat.SetFloat("_Metallic", 0.2f);
-            shallowMat.SetFloat("_Smoothness", 0.80f);
-            shallowMat.SetColor("_EmissionColor", new Color(0.10f, 0.50f, 0.75f) * 1.4f);
-            shallowMat.EnableKeyword("_EMISSION");
+            var shallowMat = new Material(GetLitShader());
+            shallowMat.SetColor("_BaseColor", new Color(0.05f, 0.2f, 0.4f, 0.95f));
+            shallowMat.SetFloat("_Smoothness", 0.9f);
             shallows.GetComponent<Renderer>().sharedMaterial = shallowMat;
             shallows.isStatic = true;
             DestroyImmediate(shallows.GetComponent<Collider>());
 
-            // ── 3. SURF FOAM ──
-            GameObject surf = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            surf.name = "SeaZone_Surf";
-            surf.transform.SetParent(root.transform);
-            surf.transform.position = new Vector3(0f, 0.19f, -170f);
-            surf.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            surf.transform.localScale = new Vector3(3000f, 60f, 1f);
-
-            var surfMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            surfMat.SetColor("_BaseColor", new Color(0.55f, 0.82f, 0.92f));
-            surfMat.SetFloat("_Smoothness", 0.5f);
-            surfMat.SetColor("_EmissionColor", new Color(0.6f, 0.88f, 1.0f) * 1.2f);
-            surfMat.EnableKeyword("_EMISSION");
-            surf.GetComponent<Renderer>().sharedMaterial = surfMat;
-            surf.isStatic = true;
-            DestroyImmediate(surf.GetComponent<Collider>());
-
-            // ── 4. BEACH STRIP ──
             GameObject beach = GameObject.CreatePrimitive(PrimitiveType.Quad);
             beach.name = "BeachZone";
             beach.transform.SetParent(root.transform);
-            beach.transform.position = new Vector3(0f, 0.21f, -140f);
+            beach.transform.position = new Vector3(0f, 0.9f, -520f);
             beach.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            beach.transform.localScale = new Vector3(3000f, 50f, 1f);
+            beach.transform.localScale = new Vector3(3000f, 100f, 1f);
 
-            var beachMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            beachMat.SetColor("_BaseColor", new Color(0.96f, 0.89f, 0.64f)); // Warm cream sand
-            beachMat.SetFloat("_Smoothness", 0.05f);
+            var beachMat = new Material(GetLitShader());
+            beachMat.SetColor("_BaseColor", new Color(0.65f, 0.6f, 0.5f, 1f)); 
+            beachMat.SetFloat("_Smoothness", 0.1f);
             beach.GetComponent<Renderer>().sharedMaterial = beachMat;
             beach.isStatic = true;
             DestroyImmediate(beach.GetComponent<Collider>());
 
-            // ── 5. INVISIBLE BARRIER ──
             GameObject barrier = new GameObject("CoastlineBarrier");
             barrier.transform.SetParent(root.transform);
-            barrier.transform.position = new Vector3(0f, 5f, -105f); // Barrier well BEFORE the drop starts
+            barrier.transform.position = new Vector3(0f, 5f, -480f); 
             var bc = barrier.AddComponent<BoxCollider>();
             bc.size   = new Vector3(3000f, 20f, 2f);
-            bc.center = Vector3.zero;
             barrier.isStatic = true;
 
-            Debug.Log("[CityGen] Sea moved south. Player barrier at Z=-105 (Safe).");
+            Debug.Log("[CityGen] Sea visible and reflective. Barrier at Z=-480.");
         }
 
-        private void SetupEnvironment()
+        private Shader GetLitShader()
         {
-            // NEW: Clear daytime Egyptian sky — bright azure blue
+            var s = Shader.Find("Universal Render Pipeline/Lit");
+            if (s == null) s = Shader.Find("URP/Lit");
+            if (s == null) s = Shader.Find("Lit");
+            return s;
+        }
+
+        private void SetupEnvironment(GameObject root)
+        {
             var skyMat = new Material(Shader.Find("Skybox/Procedural"));
-            skyMat.SetFloat("_SunSize", 0.05f);
-            skyMat.SetFloat("_SunSizeConvergence", 10f);
-            skyMat.SetFloat("_AtmosphereThickness", 1.1f);
-            skyMat.SetColor("_SkyTint", new Color(0.38f, 0.62f, 0.92f));       // azure blue
-            skyMat.SetColor("_GroundColor", new Color(0.72f, 0.58f, 0.38f));   
-            skyMat.SetFloat("_Exposure", 1.6f);                                  
-            
-            // SAVE SKYBOX ASSET TO DISK to ensure it persists and can be seen by the renderer
-            if (!AssetDatabase.IsValidFolder("Assets/Materials")) AssetDatabase.CreateFolder("Assets", "Materials");
-            AssetDatabase.CreateAsset(skyMat, "Assets/Materials/DaytimeSkybox.mat");
-            skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/DaytimeSkybox.mat");
+            skyMat.SetColor("_SkyTint", new Color(0.01f, 0.03f, 0.12f)); 
+            skyMat.SetColor("_GroundColor", new Color(0.02f, 0.05f, 0.15f));
+            skyMat.SetFloat("_AtmosphereThickness", 0.6f);
+            skyMat.SetFloat("_Exposure", 0.8f);
             
             RenderSettings.skybox = skyMat;
+            RenderSettings.ambientMode = AmbientMode.Trilight; 
+            RenderSettings.ambientSkyColor    = new Color(0.05f, 0.15f, 0.35f);
+            RenderSettings.ambientEquatorColor = new Color(0.02f, 0.1f, 0.25f);
+            RenderSettings.ambientGroundColor  = new Color(0.01f, 0.03f, 0.1f);
 
-            RenderSettings.ambientMode = AmbientMode.Skybox; // Use skybox for ambient to ensure BLUE tint
-            RenderSettings.ambientSkyColor    = new Color(0.50f, 0.75f, 1.00f) * 0.65f;   // Bright sky bounce
-            RenderSettings.ambientEquatorColor = new Color(0.95f, 0.82f, 0.62f) * 0.90f;  // Warm wall bounce
-            RenderSettings.ambientGroundColor  = new Color(0.60f, 0.50f, 0.35f) * 0.40f;  // Sandy ground bounce
-
-            // NEW: Linear fog with long clear range (matches reference image)
             RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.92f, 0.84f, 0.68f);  // Warm sandy haze at horizon
-            RenderSettings.fogStartDistance = 120f;   // Clear up close
-            RenderSettings.fogEndDistance  = 400f;   // Fully fogged at 400m
+            RenderSettings.fogColor = new Color(0.02f, 0.05f, 0.15f);
+            RenderSettings.fogStartDistance = 40f;   
+            RenderSettings.fogEndDistance  = 1000f;   
             
             var sun = GameObject.Find("Directional Light")?.GetComponent<Light>();
             if (sun != null) {
-                sun.color = new Color(1f, 0.98f, 0.90f);   // Slightly warmer white
-                sun.intensity = 1.8f;                        // Brighter midday sun
-                sun.shadows = LightShadows.Soft;
-                sun.shadowResolution = LightShadowResolution.VeryHigh;
-                sun.transform.rotation = Quaternion.Euler(55f, -25f, 0f);  // Higher sun angle = shorter shadows
+                sun.color = new Color(0.6f, 0.8f, 1.0f); 
+                sun.intensity = 0.9f;
+                sun.transform.rotation = Quaternion.Euler(35f, 160f, 0f); 
             }
-
-            SetupPostProcessing();
-            
-            // Quality settings for shadows
-            QualitySettings.shadowDistance = 120f;
-            QualitySettings.shadowCascades = 2;
-            QualitySettings.shadowProjection = ShadowProjection.CloseFit;
-
-            DynamicGI.UpdateEnvironment();
+            SetupPostProcessing(root.transform);
         }
 
-        private void SetupPostProcessing()
+        private void SetupPostProcessing(Transform parent)
         {
             var volGo = new GameObject("GlobalVolume");
+            volGo.transform.SetParent(parent);
             var vol = volGo.AddComponent<Volume>();
             vol.isGlobal = true; vol.priority = 10;
             
             var profile = ScriptableObject.CreateInstance<VolumeProfile>();
             profile.name = "VisualOverhaulProfile";
             
-            profile.Add<Bloom>().intensity.Override(0.35f);
-            var colorAdj = profile.Add<ColorAdjustments>();
-            colorAdj.contrast.Override(8f);           // Less crushed blacks
-            colorAdj.saturation.Override(18f);        // More vibrant colors
-            colorAdj.colorFilter.Override(new Color(1f, 0.97f, 0.92f)); // Slight warm filter
-            profile.Add<Tonemapping>().mode.Override(TonemappingMode.ACES);
-            profile.Add<Vignette>().intensity.Override(0.25f);
+            if (!profile.TryGet<Bloom>(out var bloom)) bloom = profile.Add<Bloom>();
+            bloom.intensity.Override(0.5f);
+            bloom.threshold.Override(0.85f);
+            bloom.scatter.Override(0.6f);
+
+            if (!profile.TryGet<ColorAdjustments>(out var colorAdj)) colorAdj = profile.Add<ColorAdjustments>();
+            colorAdj.contrast.Override(12f);
+            colorAdj.saturation.Override(5f);
+            colorAdj.postExposure.Override(0f);
+            colorAdj.colorFilter.Override(new Color(0.85f, 0.9f, 1f)); 
+
+            if (!profile.TryGet<Tonemapping>(out var tone)) tone = profile.Add<Tonemapping>();
+            tone.mode.Override(TonemappingMode.ACES);
+            
+            if (!profile.TryGet<Vignette>(out var vignette)) vignette = profile.Add<Vignette>();
+            vignette.intensity.Override(0.35f);
+            vignette.color.Override(new Color(0.02f, 0.05f, 0.1f)); 
+
+            if (!profile.TryGet<LiftGammaGain>(out var lgg)) lgg = profile.Add<LiftGammaGain>();
+            lgg.lift.Override(new Vector4(0.01f, 0.01f, 0.05f, 0f));
+            lgg.gamma.Override(new Vector4(0.9f, 0.95f, 1f, 0f));
+            lgg.gain.Override(new Vector4(0.95f, 1.0f, 1.05f, 0f));
 
             vol.sharedProfile = profile;
         }
@@ -593,34 +644,28 @@ namespace TheAlchemistsCrypt.Editor
         {
             var p = new GameObject("Plaza"); p.transform.SetParent(parent); p.transform.position = pos; p.isStatic = true;
             
-            if (floorMat != null) {
-                var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
-                floor.name = "PlazaFloor";
-                floor.transform.SetParent(p.transform);
-                // Position slightly above terrain to avoid Z-fighting, but low enough to look like ground
-                floor.transform.localPosition = new Vector3(0, 0.02f, 0); 
-                floor.transform.localScale = new Vector3(3.2f, 1f, 3.2f); // 32m x 32m
-                floor.GetComponent<Renderer>().sharedMaterial = floorMat;
-                floor.isStatic = true;
-            }
-
             if (columnPrefab != null) {
                 var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
                 colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
                 AlignToGroundAndAddCollider(colObj, pos + new Vector3(-8f, 0f, -8f), Quaternion.Euler(-90f, 0f, 0f), 0f);
             }
+            
             if (trees != null && trees.Length > 0) {
                 var t = (GameObject)PrefabUtility.InstantiatePrefab(trees[Random.Range(0, trees.Length)], p.transform);
                 t.transform.localScale = Vector3.one * 8f; AlignToGroundAndAddCollider(t, pos + new Vector3(8f, 0f, 8f), Quaternion.Euler(-90, 0, 0), -1.8f);
 
-                // LOW-POLY CONVERSION (Programmatic Decimation)
-                var filters = t.GetComponentsInChildren<MeshFilter>(true);
+                // Programmatic Mesh Decimation for Mobile Performance
+                var filters = t.GetComponentsInChildren<MeshFilter>();
                 foreach (var mf in filters) {
                     if (mf.sharedMesh == null) continue;
-                    var simplifier = new UnityMeshSimplifier.MeshSimplifier();
-                    simplifier.Initialize(mf.sharedMesh);
-                    simplifier.SimplifyMesh(0.2f); // 20% quality for extreme low poly look
-                    mf.sharedMesh = simplifier.ToMesh();
+                    try {
+                        var simplifier = new MeshSimplifier();
+                        simplifier.Initialize(mf.sharedMesh);
+                        simplifier.SimplifyMesh(0.80f); // 80% quality for palms (less aggressive low-poly decimation)
+                        mf.sharedMesh = simplifier.ToMesh();
+                    } catch (System.Exception e) {
+                        Debug.LogWarning($"[CityGen] Failed to decimate tree mesh: {mf.name} - {e.Message}");
+                    }
                 }
             }
         }
@@ -689,6 +734,8 @@ namespace TheAlchemistsCrypt.Editor
                 mainCam.enabled = true;
                 mainCam.tag = "MainCamera";
                 mainCam.targetDisplay = 0;
+                // Ensure camera far plane is large enough to see the distant sea
+                try { mainCam.farClipPlane = Mathf.Max(mainCam.farClipPlane, 4000f); } catch { }
             }
             else
             {
@@ -716,20 +763,32 @@ namespace TheAlchemistsCrypt.Editor
                         var mat = new Material(mats[i]);
                         string mName = mat.name.ToLower();
                         
+                        // Make primary weapon bodies metallic and reflective (metallic finish)
                         if (mName.Contains("body") || mName.Contains("frame") || mName.Contains("stock")) {
-                            mat.SetColor("_BaseColor", new Color(1.0f, 0.65f, 0.05f)); // Vibrant Alchemist Gold/Orange
-                            mat.SetFloat("_Smoothness", 0.92f);
-                            mat.SetFloat("_Metallic", 0.5f);
-                            mat.SetColor("_EmissionColor", new Color(1.0f, 0.5f, 0.0f) * 0.8f);
-                            mat.EnableKeyword("_EMISSION");
+                            mat.SetColor("_BaseColor", new Color(0.08f, 0.08f, 0.10f)); // Dark neutral metal base
+                            mat.SetFloat("_Smoothness", 0.85f);
+                            mat.SetFloat("_Metallic", 1.0f);
                         } else if (mName.Contains("barrel") || mName.Contains("grip") || mName.Contains("trigger")) {
-                            mat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.12f)); // Deep dark contrast
-                            mat.SetFloat("_Smoothness", 0.95f);
-                            mat.SetFloat("_Metallic", 0.8f);
+                            // metallic accents
+                            mat.SetColor("_BaseColor", new Color(0.12f, 0.12f, 0.12f));
+                            mat.SetFloat("_Smoothness", 0.9f);
+                            mat.SetFloat("_Metallic", 1.0f);
+                            // reduce cartoonish emission unless materials intentionally include emissive accents
+                            if (mat.HasProperty("_EmissionColor")) {
+                                var emis = mat.GetColor("_EmissionColor");
+                                // tone down emission to avoid glow artifacts
+                                mat.SetColor("_EmissionColor", emis * 0.25f);
+                                if (emis.maxColorComponent > 0.01f) mat.EnableKeyword("_EMISSION");
+                            }
                         } else {
-                            mat.SetColor("_BaseColor", new Color(1.0f, 0.9f, 0.4f)); // Brightest accents
-                            mat.SetColor("_EmissionColor", new Color(1.0f, 0.85f, 0.2f) * 2.2f);
-                            mat.EnableKeyword("_EMISSION");
+                            // Default: keep small accents slightly emissive but not overpowering
+                            if (mat.HasProperty("_EmissionColor")) {
+                                var emis = mat.GetColor("_EmissionColor");
+                                mat.SetColor("_EmissionColor", emis * 0.5f);
+                                if (emis.maxColorComponent > 0.01f) mat.EnableKeyword("_EMISSION");
+                            }
+                            mat.SetFloat("_Smoothness", 0.6f);
+                            mat.SetFloat("_Metallic", 0.6f);
                         }
                         mats[i] = mat;
                     }

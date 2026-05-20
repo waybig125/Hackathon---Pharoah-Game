@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace TheAlchemistsCrypt.Gameplay
 {
+    [ExecuteAlways]
     public class AudioManager : MonoBehaviour
     {
         public static AudioManager Instance { get; private set; }
@@ -22,45 +23,65 @@ namespace TheAlchemistsCrypt.Gameplay
             if (Instance == null)
             {
                 Instance = this;
-                DontDestroyOnLoad(gameObject);
+                if (Application.isPlaying) DontDestroyOnLoad(gameObject);
                 InitializeSources();
             }
-            else
+            else if (Instance != this)
             {
-                Destroy(gameObject);
+                if (Application.isPlaying) Destroy(gameObject);
             }
+        }
+
+        private void Update()
+        {
+            if (Instance == null) Instance = this;
+            if (voiceSource == null) InitializeSources();
         }
 
         private void InitializeSources()
         {
-            mainMusicSource = gameObject.AddComponent<AudioSource>();
-            mainMusicSource.loop = true;
-            mainMusicSource.volume = 0.6f;
-            
-            combatMusicSource = gameObject.AddComponent<AudioSource>();
-            combatMusicSource.loop = true;
-            combatMusicSource.volume = 0.7f;
-            
-            ambientSource = gameObject.AddComponent<AudioSource>();
-            ambientSource.loop = true;
-            ambientSource.volume = 0.25f;
-            
-            sfxSource = gameObject.AddComponent<AudioSource>();
-            sfxSource.volume = 0.9f;
-            
-            voiceSource = gameObject.AddComponent<AudioSource>();
-            voiceSource.volume = 1.0f;
-
-            // Start base ambiance and music
-            PlayMainTheme();
-            AudioClip ambient = LoadClip("ambient/amb_sand_fog_loop");
-            if (ambient != null)
-            {
-                ambientSource.clip = ambient;
-                ambientSource.Play();
+            // Clean up existing sources if they exist (to avoid duplicates in editor)
+            var existing = GetComponents<AudioSource>();
+            foreach (var s in existing) {
+                // We keep them if they are assigned, otherwise we might double up
             }
 
-            StartCoroutine(RandomTauntRoutine());
+            if (mainMusicSource == null) mainMusicSource = gameObject.AddComponent<AudioSource>();
+            mainMusicSource.loop = true;
+            mainMusicSource.volume = 0.35f; // Lowered from 0.6
+            mainMusicSource.spatialBlend = 0f; // 2D
+            
+            if (combatMusicSource == null) combatMusicSource = gameObject.AddComponent<AudioSource>();
+            combatMusicSource.loop = true;
+            combatMusicSource.volume = 0.45f; // Lowered from 0.7
+            combatMusicSource.spatialBlend = 0f;
+            
+            if (ambientSource == null) ambientSource = gameObject.AddComponent<AudioSource>();
+            ambientSource.loop = true;
+            ambientSource.volume = 0.15f; // Lowered from 0.25
+            ambientSource.spatialBlend = 0f;
+            
+            if (sfxSource == null) sfxSource = gameObject.AddComponent<AudioSource>();
+            sfxSource.volume = 0.6f; // Lowered from 0.9
+            sfxSource.spatialBlend = 0f; // Global SFX
+            
+            if (voiceSource == null) voiceSource = gameObject.AddComponent<AudioSource>();
+            voiceSource.volume = 0.8f; // Lowered from 1.0
+            voiceSource.spatialBlend = 0f; // Global Voice
+
+            if (Application.isPlaying)
+            {
+                // Start base ambiance and music
+                PlayMainTheme();
+                AudioClip ambient = LoadClip("ambient/amb_sand_fog_loop");
+                if (ambient != null)
+                {
+                    ambientSource.clip = ambient;
+                    ambientSource.Play();
+                }
+
+                StartCoroutine(RandomTauntRoutine());
+            }
         }
 
         public static AudioClip LoadClip(string relativePath)
@@ -77,8 +98,8 @@ namespace TheAlchemistsCrypt.Gameplay
         public static void PlayMainTheme()
         {
             if (Instance == null) return;
-            if (Instance.combatMusicSource.isPlaying) Instance.combatMusicSource.Stop();
-            if (!Instance.mainMusicSource.isPlaying)
+            if (Instance.combatMusicSource != null && Instance.combatMusicSource.isPlaying) Instance.combatMusicSource.Stop();
+            if (Instance.mainMusicSource != null && !Instance.mainMusicSource.isPlaying)
             {
                 Instance.mainMusicSource.clip = LoadClip("music/bgm_tomb_main");
                 if (Instance.mainMusicSource.clip != null) Instance.mainMusicSource.Play();
@@ -88,42 +109,49 @@ namespace TheAlchemistsCrypt.Gameplay
         public static void PlayCombatTheme()
         {
             if (Instance == null) return;
-            if (Instance.mainMusicSource.isPlaying) Instance.mainMusicSource.Stop();
-            if (!Instance.combatMusicSource.isPlaying)
+            if (Instance.mainMusicSource != null && Instance.mainMusicSource.isPlaying) Instance.mainMusicSource.Stop();
+            if (Instance.combatMusicSource != null && !Instance.combatMusicSource.isPlaying)
             {
                 Instance.combatMusicSource.clip = LoadClip("music/bgm_tomb_combat");
                 if (Instance.combatMusicSource.clip != null) Instance.combatMusicSource.Play();
             }
         }
 
-        public static void PlaySFX(string clipPath, bool loop = false, float volumeScale = 1.0f)
+        private static Dictionary<string, float> sfxThrottles = new Dictionary<string, float>();
+
+        public static void PlaySFX(string clipPath, bool loop = false, float volumeScale = 1.0f, float throttleTime = 0f)
         {
             if (Instance == null) return;
+
+            if (throttleTime > 0f)
+            {
+                if (sfxThrottles.TryGetValue(clipPath, out float lastTime))
+                {
+                    if (Time.time < lastTime + throttleTime) return;
+                }
+                sfxThrottles[clipPath] = Time.time;
+            }
+
             AudioClip clip = LoadClip(clipPath);
             if (clip == null) return;
 
-            if (loop)
-            {
-                // Create a temporary AudioSource for looped SFX if needed, 
-                // but usually better to manage loops on specific objects.
-                // We'll just play one shot on the main SFX source for simple usage.
-                Instance.sfxSource.PlayOneShot(clip, volumeScale); 
-            }
-            else
-            {
-                Instance.sfxSource.PlayOneShot(clip, volumeScale);
-            }
+            Instance.sfxSource.PlayOneShot(clip, volumeScale);
         }
 
-        public static void PlayVoiceLine(string clipPath)
+        public static void PlayVoiceLine(string clipPath, bool interrupt = true)
         {
             if (Instance == null) return;
+            
+            // If we shouldn't interrupt and something is playing, skip
+            if (!interrupt && Instance.voiceSource.isPlaying) return;
+
             AudioClip clip = LoadClip(clipPath);
             if (clip == null) return;
 
             Instance.voiceSource.Stop();
             Instance.voiceSource.clip = clip;
             Instance.voiceSource.Play();
+            Debug.Log($"[AudioManager] Playing voice line: {clipPath}");
         }
 
         private IEnumerator RandomTauntRoutine()
