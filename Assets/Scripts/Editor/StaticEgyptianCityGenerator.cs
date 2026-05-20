@@ -234,7 +234,6 @@ namespace TheAlchemistsCrypt.Editor
             var probe = probeGo.AddComponent<ReflectionProbe>();
             probe.mode = ReflectionProbeMode.Realtime;
             probe.refreshMode = ReflectionProbeRefreshMode.ViaScripting; // We will bake it once
-            probe.timeSlicing = ReflectionProbeTimeSlicing.IndividualFaces;
             probe.renderDynamicObjects = true;
             probe.size = new Vector3(2000f, 500f, 2000f);
             probe.importance = 1;
@@ -580,7 +579,7 @@ namespace TheAlchemistsCrypt.Editor
             if (barrel != null) {
                 Vector3 barrelPos = pos + new Vector3(-13f, 0f, -11f);
                 var bObj = (GameObject)PrefabUtility.InstantiatePrefab(barrel, parent);
-                bObj.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f);
+                bObj.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f);
                 AlignToGroundAndAddCollider(bObj, barrelPos, Quaternion.Euler(-90f, 0f, 0f), 0f);
             }
         }
