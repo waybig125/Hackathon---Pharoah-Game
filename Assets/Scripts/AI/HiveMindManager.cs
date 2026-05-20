@@ -315,22 +315,37 @@ namespace TheAlchemistsCrypt.AI
                 {
                     if (z != null && z.mummyId == inst.id && !z.IsDead)
                     {
-                        // Only apply a tactical target if the API returned real coordinates
-                        // (target list has 3 elements AND the position is not the mummy's own position)
+                        // If API returned "idle" action → clear tactical target so wander takes over.
+                        // This is the "Standard Patrol" fallback response from the server.
+                        string action = (inst.action ?? "").ToLower();
+                        if (action == "idle" || action == "patrol" || action == "standard patrol")
+                        {
+                            z.hasTacticalTarget = false;
+                            continue;
+                        }
+
+                        // Apply a real tactical target only if:
+                        //  - target coords are provided (3 floats)
+                        //  - target is NOT the mummy's own position (> 3m away)
                         if (inst.target != null && inst.target.Count >= 3)
                         {
                             Vector3 targetPos = new Vector3(inst.target[0], inst.target[1], inst.target[2]);
-                            // Skip if API returned the mummy's own position (default/null target)
-                            if (Vector3.Distance(targetPos, z.transform.position) > 1.5f)
+                            if (Vector3.Distance(targetPos, z.transform.position) > 3f)
                             {
                                 z.tacticalTarget = targetPos;
                                 z.tacticalSpeedMult = Mathf.Max(inst.speed_mult, 0.5f);
                                 z.hasTacticalTarget = true;
+                                Debug.Log($"[HiveMind] Mummy {z.mummyId} ordered to {action} → {targetPos}");
+                            }
+                            else
+                            {
+                                // Target is own position — API gave no real instruction
+                                z.hasTacticalTarget = false;
                             }
                         }
                         else
                         {
-                            // No target from API — let wander behavior take over
+                            // No target coordinates at all — let wander take over
                             z.hasTacticalTarget = false;
                             z.tacticalSpeedMult = Mathf.Max(inst.speed_mult, 0.5f);
                         }

@@ -204,12 +204,20 @@ namespace TheAlchemistsCrypt.Editor
             
             // ── AESTHETIC PALETTE ──
             Material wallMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            wallMat.SetColor("_BaseColor", new Color(0.78f, 0.52f, 0.35f)); // Terracotta Ochre #C8845A
-            wallMat.SetFloat("_Smoothness", 0.0f);
+            wallMat.SetColor("_BaseColor", new Color(0.78f, 0.52f, 0.35f)); // Terracotta Ochre
+            wallMat.SetFloat("_Smoothness", 0.05f);
             
             Material woodMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             woodMat.SetColor("_BaseColor", new Color(0.25f, 0.15f, 0.08f));
             
+            // Reflective polished sandstone floor — creates the mirror-like desert floor look
+            Material floorMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            floorMat.SetColor("_BaseColor", new Color(0.88f, 0.76f, 0.52f)); // Warm pale ochre
+            floorMat.SetFloat("_Metallic", 0.0f);
+            floorMat.SetFloat("_Smoothness", 0.72f);   // ← This creates the reflection
+            floorMat.SetColor("_EmissionColor", new Color(0.96f, 0.84f, 0.6f) * 0.08f);
+            floorMat.EnableKeyword("_EMISSION");
+
             Material litWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             litWindowMat.SetColor("_BaseColor", new Color(1f, 0.75f, 0.3f));
             litWindowMat.SetColor("_EmissionColor", new Color(1f, 0.65f, 0.2f) * 3.5f);
@@ -241,9 +249,12 @@ namespace TheAlchemistsCrypt.Editor
                     float baseDune = (dune1 + ripple + 0.5f) * (0.1f + 0.9f * townFactor);
                     heights[i, j] = (baseDune + townBumps) * spawnFlatten;
 
-                    // SEA & COASTLINE FIX
-                    if (ty < 0.42f) {
-                        float shoreFactor = Mathf.SmoothStep(0.38f, 0.42f, ty);
+                    // SEA & COASTLINE: Flatten the SOUTH edge (ty < 0.38 = south of city)
+                    // City buildings end at posZ=-40 → world Z=-40, terrain Z=-500+ty*1000
+                    // ty=0.46 → world Z=-40.  ty=0.30 → world Z=-200 (sea starts here)
+                    // We flatten from ty=0.30 inward so terrain sits BELOW the sea quads.
+                    if (ty < 0.38f) {
+                        float shoreFactor = Mathf.SmoothStep(0.28f, 0.38f, ty);
                         heights[i, j] = Mathf.Lerp(0.001f, heights[i, j], shoreFactor);
                     }
                 }
@@ -284,11 +295,11 @@ namespace TheAlchemistsCrypt.Editor
 
                     if (pos.magnitude > 25f) {
                         if (Random.value < 0.75f) {
-                            BuildHouse(root.transform, pos, wallMat, woodMat, litWindowMat, darkWindowMat, crate, barrel);
+                            BuildHouse(root.transform, pos, wallMat, woodMat, litWindowMat, darkWindowMat, crate, barrel, floorMat);
                         } else {
-                            PlacePlaza(root.transform, pos, trees, columnPrefab);
+                            PlacePlaza(root.transform, pos, trees, columnPrefab, floorMat);
                         }
-                    } else PlacePlaza(root.transform, pos, trees, columnPrefab);
+                    } else PlacePlaza(root.transform, pos, trees, columnPrefab, floorMat);
 
                     if (enemyPrefab != null && Random.value < 0.15f) {
                         var e = (GameObject)PrefabUtility.InstantiatePrefab(enemyPrefab, root.transform);
@@ -322,31 +333,93 @@ namespace TheAlchemistsCrypt.Editor
 
         private void CreateSeaAndCoastline(GameObject root)
         {
+            // ── COORDINATE GUIDE ──
+            // Terrain: 1000m × 1000m, position at (-500, -0.05, -500). Player spawns at world (0,0,0).
+            // City buildings stop at world Z = -40f (posZ < -40 is skipped in grid).
+            // Sea should appear SOUTH of Z = -100, well clear of any building.
+            // Terrain is flattened south of ty=0.38 → world Z = -500 + 0.38*1000 = -120f.
+            // So all sea quads at Z < -120 will sit above flattened terrain (Y≈-0.035f).
+            //
+            // Barrier sits at Z = -95f so player cannot enter the sea area.
+
+            // ── 1. DEEP OCEAN — fills the far south horizon ──
             GameObject sea = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            sea.name = "SeaZone"; sea.transform.SetParent(root.transform);
-            sea.transform.position = new Vector3(0f, 0.1f, -600f);
+            sea.name = "SeaZone";
+            sea.transform.SetParent(root.transform);
+            sea.transform.position = new Vector3(0f, 0.12f, -700f); // Far south, above flat terrain
             sea.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            sea.transform.localScale = new Vector3(2000f, 1000f, 1f);
+            sea.transform.localScale = new Vector3(3000f, 1200f, 1f); // 3km wide, 1.2km deep
 
             var seaMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            seaMat.SetColor("_BaseColor", new Color(0.04f, 0.24f, 0.42f)); 
-            seaMat.SetColor("_EmissionColor", new Color(0.1f, 0.47f, 0.68f) * 2.8f);
+            seaMat.SetColor("_BaseColor", new Color(0.03f, 0.18f, 0.38f)); // Deep navy
+            seaMat.SetFloat("_Metallic", 0.4f);
+            seaMat.SetFloat("_Smoothness", 0.92f); // Reflective water
+            seaMat.SetColor("_EmissionColor", new Color(0.04f, 0.30f, 0.52f) * 1.8f);
             seaMat.EnableKeyword("_EMISSION");
             sea.GetComponent<Renderer>().sharedMaterial = seaMat;
             sea.isStatic = true;
             DestroyImmediate(sea.GetComponent<Collider>());
 
+            // ── 2. SHALLOWS — tropical teal, 200m strip ──
+            GameObject shallows = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            shallows.name = "SeaZone_Shallow";
+            shallows.transform.SetParent(root.transform);
+            shallows.transform.position = new Vector3(0f, 0.14f, -250f);
+            shallows.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            shallows.transform.localScale = new Vector3(3000f, 200f, 1f);
+
+            var shallowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            shallowMat.SetColor("_BaseColor", new Color(0.08f, 0.42f, 0.65f));
+            shallowMat.SetFloat("_Metallic", 0.2f);
+            shallowMat.SetFloat("_Smoothness", 0.80f);
+            shallowMat.SetColor("_EmissionColor", new Color(0.10f, 0.50f, 0.75f) * 1.4f);
+            shallowMat.EnableKeyword("_EMISSION");
+            shallows.GetComponent<Renderer>().sharedMaterial = shallowMat;
+            shallows.isStatic = true;
+            DestroyImmediate(shallows.GetComponent<Collider>());
+
+            // ── 3. SURF FOAM — bright white-teal at shoreline ──
+            GameObject surf = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            surf.name = "SeaZone_Surf";
+            surf.transform.SetParent(root.transform);
+            surf.transform.position = new Vector3(0f, 0.16f, -155f);
+            surf.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            surf.transform.localScale = new Vector3(3000f, 50f, 1f);
+
+            var surfMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            surfMat.SetColor("_BaseColor", new Color(0.55f, 0.82f, 0.92f));
+            surfMat.SetFloat("_Smoothness", 0.5f);
+            surfMat.SetColor("_EmissionColor", new Color(0.6f, 0.88f, 1.0f) * 1.2f);
+            surfMat.EnableKeyword("_EMISSION");
+            surf.GetComponent<Renderer>().sharedMaterial = surfMat;
+            surf.isStatic = true;
+            DestroyImmediate(surf.GetComponent<Collider>());
+
+            // ── 4. BEACH STRIP — warm sand, connects city to ocean ──
             GameObject beach = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            beach.name = "BeachZone"; beach.transform.SetParent(root.transform);
-            beach.transform.position = new Vector3(0f, 0.15f, -70f);
+            beach.name = "BeachZone";
+            beach.transform.SetParent(root.transform);
+            beach.transform.position = new Vector3(0f, 0.18f, -118f); // Just south of city buildings
             beach.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            beach.transform.localScale = new Vector3(2000f, 60f, 1f);
+            beach.transform.localScale = new Vector3(3000f, 50f, 1f);
 
             var beachMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            beachMat.SetColor("_BaseColor", new Color(0.94f, 0.82f, 0.5f));
+            beachMat.SetColor("_BaseColor", new Color(0.96f, 0.89f, 0.64f)); // Warm cream sand
+            beachMat.SetFloat("_Smoothness", 0.05f);
             beach.GetComponent<Renderer>().sharedMaterial = beachMat;
             beach.isStatic = true;
             DestroyImmediate(beach.GetComponent<Collider>());
+
+            // ── 5. INVISIBLE BARRIER — stop player walking into sea ──
+            GameObject barrier = new GameObject("CoastlineBarrier");
+            barrier.transform.SetParent(root.transform);
+            barrier.transform.position = new Vector3(0f, 5f, -95f); // Just south of beach, before shallows
+            var bc = barrier.AddComponent<BoxCollider>();
+            bc.size   = new Vector3(3000f, 20f, 2f);
+            bc.center = Vector3.zero;
+            barrier.isStatic = true;
+
+            Debug.Log("[CityGen] Sea placed at Z=-155 to Z=-700 (outside city). Barrier at Z=-95.");
         }
 
         private void SetupEnvironment()
@@ -398,7 +471,7 @@ namespace TheAlchemistsCrypt.Editor
             vol.sharedProfile = profile;
         }
 
-        private void BuildHouse(Transform parent, Vector3 pos, Material wall, Material wood, Material litWindowMat, Material darkWindowMat, GameObject crate, GameObject barrel)
+        private void BuildHouse(Transform parent, Vector3 pos, Material wall, Material wood, Material litWindowMat, Material darkWindowMat, GameObject crate, GameObject barrel, Material floorMat = null)
         {
             var h = new GameObject("House"); h.transform.SetParent(parent); h.transform.position = pos; h.isStatic = true;
             int floors = (Random.value < 0.2f) ? 1 : (Random.value < 0.7f ? 2 : 3);
@@ -458,9 +531,21 @@ namespace TheAlchemistsCrypt.Editor
             }
         }
 
-        private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab)
+        private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab, Material floorMat = null)
         {
             var p = new GameObject("Plaza"); p.transform.SetParent(parent); p.transform.position = pos; p.isStatic = true;
+
+            // Reflective stone floor tile for the plaza
+            if (floorMat != null) {
+                var tile = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                tile.name = "PlazaFloor"; tile.transform.SetParent(p.transform);
+                tile.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+                tile.transform.localScale = new Vector3(2.2f, 1f, 2.2f); // ~22m x 22m tile
+                tile.GetComponent<Renderer>().sharedMaterial = floorMat;
+                DestroyImmediate(tile.GetComponent<Collider>());
+                tile.isStatic = true;
+            }
+
             if (columnPrefab != null) {
                 var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
                 colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);

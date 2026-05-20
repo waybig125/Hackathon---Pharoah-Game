@@ -309,22 +309,39 @@ namespace TheAlchemistsCrypt.AI
 
             float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
-            // ── Priority 1: HiveMind tactical target (if set and valid, not self-position) ──
+            // ── Priority 1: HiveMind tactical target ──
+            // API "Standard Patrol/idle" fallback returns target = mummy's own coords,
+            // so we reject any target within 3m of self (raised from 1.5m).
             bool hasMeaningfulTactical = hasTacticalTarget &&
-                                         Vector3.Distance(tacticalTarget, transform.position) > 1.5f;
+                                         Vector3.Distance(tacticalTarget, transform.position) > 3f;
 
-            if (hasMeaningfulTactical && distanceToPlayer > 4.0f) {
+            if (hasMeaningfulTactical && distanceToPlayer > 4.0f)
+            {
+                // HiveMind gave a real flanking/ambush target — go there
                 currentTargetPos = tacticalTarget;
                 currentSpeed = 2.2f * Mathf.Max(tacticalSpeedMult, 0.5f);
             }
-            // ── Priority 2: When player is far (>15m), wander toward random patrol points ──
-            else if (distanceToPlayer > 15f && !hasMeaningfulTactical)
+            else if (distanceToPlayer <= 15f)
             {
+                // ── Priority 2: Player is close — chase them ──
+                NavMeshHit playerHit;
+                currentTargetPos = NavMesh.SamplePosition(player.position, out playerHit, 15f, NavMesh.AllAreas)
+                    ? playerHit.position
+                    : player.position;
+                currentSpeed = 2.2f;
+            }
+            else
+            {
+                // ── Priority 3: Player is far AND no HiveMind target — wander patrol ──
+                // This runs when:
+                //   a) HiveMind returned "idle" with own-position target (rejected above), OR
+                //   b) HiveMind returned no instructions at all.
+                // Mummies now always move; they never stand frozen.
                 wanderTimer -= Time.deltaTime;
                 if (wanderTimer <= 0f || !hasWanderTarget)
                 {
-                    // Pick a random point on the NavMesh within 25m
                     Vector3 randDir = UnityEngine.Random.insideUnitSphere * 25f;
+                    randDir.y = 0f;
                     randDir += transform.position;
                     NavMeshHit navHit;
                     if (NavMesh.SamplePosition(randDir, out navHit, 25f, NavMesh.AllAreas))
@@ -337,29 +354,15 @@ namespace TheAlchemistsCrypt.AI
                 if (hasWanderTarget)
                 {
                     currentTargetPos = wanderTarget;
-                    currentSpeed = 1.5f; // Slow patrol walk
-                    // Stop wandering once we reach the wander point
+                    currentSpeed = 1.5f;
                     if (Vector3.Distance(transform.position, wanderTarget) < 2f)
                         hasWanderTarget = false;
                 }
                 else
                 {
-                    // Default to standing still at current position if no wander target is found
-                    currentTargetPos = transform.position;
-                    currentSpeed = 0f;
-                }
-            }
-            else
-            {
-                // Chase player. Sample player position to handle off-mesh player situations.
-                NavMeshHit playerHit;
-                if (NavMesh.SamplePosition(player.position, out playerHit, 15f, NavMesh.AllAreas))
-                {
-                    currentTargetPos = playerHit.position;
-                }
-                else
-                {
+                    // NavMesh.SamplePosition failed — drift slowly toward player as fallback
                     currentTargetPos = player.position;
+                    currentSpeed = 1.0f;
                 }
             }
 
