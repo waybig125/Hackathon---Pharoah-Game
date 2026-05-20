@@ -212,10 +212,10 @@ namespace TheAlchemistsCrypt.Editor
             
             // Reflective polished sandstone floor — creates the mirror-like desert floor look
             Material floorMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            floorMat.SetColor("_BaseColor", new Color(0.92f, 0.82f, 0.65f)); // Lighter/Brighter
-            floorMat.SetFloat("_Metallic", 0.1f);
-            floorMat.SetFloat("_Smoothness", 0.88f);   // ← High reflection
-            floorMat.SetColor("_EmissionColor", new Color(0.96f, 0.84f, 0.6f) * 0.05f);
+            floorMat.SetColor("_BaseColor", new Color(0.96f, 0.90f, 0.75f)); // Even Brighter/Whiter gold
+            floorMat.SetFloat("_Metallic", 0.2f);
+            floorMat.SetFloat("_Smoothness", 0.95f);   // ← Maximum reflection
+            floorMat.SetColor("_EmissionColor", new Color(1.0f, 0.95f, 0.8f) * 0.02f);
             floorMat.EnableKeyword("_EMISSION");
 
             Material litWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
@@ -227,6 +227,18 @@ namespace TheAlchemistsCrypt.Editor
             darkWindowMat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.15f));
 
             SetupEnvironment();
+            
+            // ── Global Reflection Probe ──
+            var probeGo = new GameObject("GlobalReflectionProbe");
+            probeGo.transform.SetParent(root.transform);
+            var probe = probeGo.AddComponent<ReflectionProbe>();
+            probe.mode = ReflectionProbeMode.Realtime;
+            probe.refreshMode = ReflectionProbeRefreshMode.ViaScripting; // We will bake it once
+            probe.timeSlicing = ReflectionProbeTimeSlicing.IndividualFaces;
+            probe.renderDynamicObjects = true;
+            probe.size = new Vector3(2000f, 500f, 2000f);
+            probe.importance = 1;
+            probe.RenderProbe();
 
             TerrainData terrainData = new TerrainData();
             terrainData.heightmapResolution = 513;
@@ -296,7 +308,7 @@ namespace TheAlchemistsCrypt.Editor
             }
             // Always reassign tile size even on existing layers
             layer.tileSize = new Vector2(40f, 40f);
-            layer.smoothness = 0.45f;
+            layer.smoothness = 0.65f; // Even more reflective desert
             EditorUtility.SetDirty(layer);
             terrainData.terrainLayers = new TerrainLayer[] { layer };
 
@@ -691,17 +703,18 @@ namespace TheAlchemistsCrypt.Editor
                         string mName = mat.name.ToLower();
                         
                         if (mName.Contains("body") || mName.Contains("frame") || mName.Contains("stock")) {
-                            mat.SetColor("_BaseColor", new Color(1.0f, 0.6f, 0.0f)); // Bright Alchemist Orange
-                            mat.SetFloat("_Smoothness", 0.85f);
-                            mat.SetFloat("_Metallic", 0.3f);
-                            mat.SetColor("_EmissionColor", new Color(1.0f, 0.4f, 0.0f) * 0.4f);
+                            mat.SetColor("_BaseColor", new Color(1.0f, 0.65f, 0.05f)); // Vibrant Alchemist Gold/Orange
+                            mat.SetFloat("_Smoothness", 0.92f);
+                            mat.SetFloat("_Metallic", 0.5f);
+                            mat.SetColor("_EmissionColor", new Color(1.0f, 0.5f, 0.0f) * 0.8f);
                             mat.EnableKeyword("_EMISSION");
                         } else if (mName.Contains("barrel") || mName.Contains("grip") || mName.Contains("trigger")) {
-                            mat.SetColor("_BaseColor", new Color(0.15f, 0.15f, 0.15f)); // Dark contrast
-                            mat.SetFloat("_Smoothness", 0.9f);
+                            mat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.12f)); // Deep dark contrast
+                            mat.SetFloat("_Smoothness", 0.95f);
+                            mat.SetFloat("_Metallic", 0.8f);
                         } else {
-                            mat.SetColor("_BaseColor", new Color(1.0f, 0.8f, 0.2f)); // Golden accents
-                            mat.SetColor("_EmissionColor", new Color(1.0f, 0.7f, 0.1f) * 1.5f);
+                            mat.SetColor("_BaseColor", new Color(1.0f, 0.9f, 0.4f)); // Brightest accents
+                            mat.SetColor("_EmissionColor", new Color(1.0f, 0.85f, 0.2f) * 2.2f);
                             mat.EnableKeyword("_EMISSION");
                         }
                         mats[i] = mat;

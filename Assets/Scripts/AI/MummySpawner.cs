@@ -96,9 +96,9 @@ namespace TheAlchemistsCrypt.AI
                 return;
             }
 
-            // Choose a random spawn position around the player at a tactical distance of 30-45 units
+            // Choose a random spawn position around the player at a tactical distance of 35-55 units
             float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-            float distance = Random.Range(30f, 45f);
+            float distance = Random.Range(35f, 55f);
             Vector3 spawnPos = spawnCenter + new Vector3(Mathf.Cos(angle) * distance, 0.5f, Mathf.Sin(angle) * distance);
 
             // Snap to NavMesh, then reject positions south of the beach barrier (Z < -80)

@@ -186,7 +186,9 @@ namespace TheAlchemistsCrypt.AI
             
             // Higher quality avoidance to prevent overlap and clipping
             agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
-            agent.radius = 0.6f;
+            agent.radius = 0.5f;
+            agent.acceleration = 12f;
+            agent.angularSpeed = 240f;
             
             currentHealth = maxHealth;
             FindPlayer();
@@ -266,6 +268,9 @@ namespace TheAlchemistsCrypt.AI
             PlayAnimation("Attack");
         }
 
+        private float stuckTimer = 0f;
+        private Vector3 lastPos;
+
         protected virtual void Update()
         {
             UpdateHealthBar();
@@ -283,6 +288,29 @@ namespace TheAlchemistsCrypt.AI
                 if (timer >= checkInterval) { FindPlayer(); timer = 0; }
                 return;
             }
+
+            // Stuck detection: if we are supposed to move but haven't changed position much
+            if (Vector3.Distance(transform.position, lastPos) < 0.05f && !isStunned && !isDead && agent.hasPath)
+            {
+                stuckTimer += Time.deltaTime;
+                if (stuckTimer > 2.5f) // Stuck for 2.5 seconds
+                {
+                    // Force a warp slightly towards the current destination to break free
+                    NavMeshHit hit;
+                    Vector3 warpDir = (agent.destination - transform.position).normalized;
+                    if (NavMesh.SamplePosition(transform.position + warpDir * 1.5f, out hit, 4f, NavMesh.AllAreas))
+                    {
+                        agent.Warp(hit.position);
+                        Debug.Log($"[ZombieAI] {name} was stuck, warping to {hit.position}");
+                    }
+                    stuckTimer = 0f;
+                }
+            }
+            else
+            {
+                stuckTimer = 0f;
+            }
+            lastPos = transform.position;
 
             // Update status timers
             if (isStunned)
@@ -442,7 +470,7 @@ namespace TheAlchemistsCrypt.AI
                 PlayAnimation("Attack");
                 if (animator != null) animator.speed = 1.0f;
             }
-            else if (vel > 0.1f) {
+            else if (vel > 0.4f) { // Increased threshold to avoid jittery walk in place
                 PlayAnimation("Walk");
                 if (animator != null) animator.speed = 1.2f; 
             }
