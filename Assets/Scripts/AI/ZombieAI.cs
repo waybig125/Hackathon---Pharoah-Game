@@ -342,6 +342,25 @@ namespace TheAlchemistsCrypt.AI
                     if (Vector3.Distance(transform.position, wanderTarget) < 2f)
                         hasWanderTarget = false;
                 }
+                else
+                {
+                    // Default to standing still at current position if no wander target is found
+                    currentTargetPos = transform.position;
+                    currentSpeed = 0f;
+                }
+            }
+            else
+            {
+                // Chase player. Sample player position to handle off-mesh player situations.
+                NavMeshHit playerHit;
+                if (NavMesh.SamplePosition(player.position, out playerHit, 15f, NavMesh.AllAreas))
+                {
+                    currentTargetPos = playerHit.position;
+                }
+                else
+                {
+                    currentTargetPos = player.position;
+                }
             }
 
             // Handle ranged shooting anim stop duration
