@@ -249,12 +249,14 @@ namespace TheAlchemistsCrypt.Editor
                     float baseDune = (dune1 + ripple + 0.5f) * (0.1f + 0.9f * townFactor);
                     heights[i, j] = (baseDune + townBumps) * spawnFlatten;
 
-                    // SEA & COASTLINE: Flatten the SOUTH edge (ty < 0.38 = south of city)
-                    // City buildings end at posZ=-40 → world Z=-40, terrain Z=-500+ty*1000
-                    // ty=0.46 → world Z=-40.  ty=0.30 → world Z=-200 (sea starts here)
-                    // We flatten from ty=0.30 inward so terrain sits BELOW the sea quads.
-                    if (ty < 0.38f) {
-                        float shoreFactor = Mathf.SmoothStep(0.28f, 0.38f, ty);
+                    // SEA & COASTLINE: Flatten the SOUTH edge (tx = normalized Z, 0=south, 1=north)
+                    // Terrain at (-500,-0.05,-500), size 1000m. world_Z = -500 + tx*1000.
+                    // City grid stops at world Z=-40 → tx=0.46.
+                    // Sea starts at world Z=-118 (beach) → tx=0.382.
+                    // Flatten everything south of tx=0.42 (world Z=-80) fully flat by tx=0.32.
+                    // NOTE: tx is the FIRST index (i) = Z direction. ty is X. Don't mix them!
+                    if (tx < 0.42f) {
+                        float shoreFactor = Mathf.SmoothStep(0.32f, 0.42f, tx);
                         heights[i, j] = Mathf.Lerp(0.001f, heights[i, j], shoreFactor);
                     }
                 }
@@ -438,8 +440,9 @@ namespace TheAlchemistsCrypt.Editor
             RenderSettings.ambientGroundColor  = new Color(0.10f, 0.06f, 0.15f) * 0.4f;
 
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.96f, 0.78f, 0.58f); 
-            RenderSettings.fogDensity = 0.0015f;
+            // Egyptian golden-hour dusk: warm amber horizon with purple-violet undertone
+            RenderSettings.fogColor = new Color(0.82f, 0.58f, 0.32f);
+            RenderSettings.fogDensity = 0.0018f;
             
             var sun = GameObject.Find("Directional Light")?.GetComponent<Light>();
             if (sun != null) {
@@ -534,18 +537,8 @@ namespace TheAlchemistsCrypt.Editor
         private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab, Material floorMat = null)
         {
             var p = new GameObject("Plaza"); p.transform.SetParent(parent); p.transform.position = pos; p.isStatic = true;
-
-            // Reflective stone floor tile for the plaza
-            if (floorMat != null) {
-                var tile = GameObject.CreatePrimitive(PrimitiveType.Plane);
-                tile.name = "PlazaFloor"; tile.transform.SetParent(p.transform);
-                tile.transform.localPosition = new Vector3(0f, 0.02f, 0f);
-                tile.transform.localScale = new Vector3(2.2f, 1f, 2.2f); // ~22m x 22m tile
-                tile.GetComponent<Renderer>().sharedMaterial = floorMat;
-                DestroyImmediate(tile.GetComponent<Collider>());
-                tile.isStatic = true;
-            }
-
+            // Note: no floor plane — terrain surface IS the floor. Adding a plane caused the
+            // yellow square artifact the user saw (high-smoothness material on small plane).
             if (columnPrefab != null) {
                 var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
                 colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);

@@ -101,9 +101,25 @@ namespace TheAlchemistsCrypt.AI
             float distance = Random.Range(30f, 45f);
             Vector3 spawnPos = spawnCenter + new Vector3(Mathf.Cos(angle) * distance, 0.5f, Mathf.Sin(angle) * distance);
 
+            // Snap to NavMesh, then reject positions south of the beach barrier (Z < -80)
+            // This prevents mummies from spawning on the sea/beach area.
             UnityEngine.AI.NavMeshHit hit;
-            if (UnityEngine.AI.NavMesh.SamplePosition(spawnPos, out hit, 50f, UnityEngine.AI.NavMesh.AllAreas)) {
-                spawnPos = hit.position;
+            int attempts = 0;
+            while (attempts < 10)
+            {
+                if (UnityEngine.AI.NavMesh.SamplePosition(spawnPos, out hit, 50f, UnityEngine.AI.NavMesh.AllAreas))
+                {
+                    if (hit.position.z >= -80f) // Valid city-side position
+                    {
+                        spawnPos = hit.position;
+                        break;
+                    }
+                }
+                // Retry with a new random direction (bias north: clamp angle away from south)
+                angle = Random.Range(30f, 330f) * Mathf.Deg2Rad; // avoid pure south angles
+                distance = Random.Range(30f, 45f);
+                spawnPos = spawnCenter + new Vector3(Mathf.Cos(angle) * distance, 0.5f, Mathf.Sin(angle) * distance);
+                attempts++;
             }
 
             GameObject go = Instantiate(prefab, spawnPos, Quaternion.identity);
@@ -113,6 +129,7 @@ namespace TheAlchemistsCrypt.AI
             if (ai != null) ai.mummyId = id;
 
             Debug.Log($"[MummySpawner] Successfully spawned active dynamic mummy with ID {id} at {spawnPos}");
+
         }
 
         private void SpawnPharaoh(int id)
