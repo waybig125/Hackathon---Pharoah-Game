@@ -156,8 +156,9 @@ namespace TheAlchemistsCrypt.Gameplay
                 if (interactPressed)
                 {
                     hasKey = true;
-                    Destroy(keyObj);
-                    promptUiGo.SetActive(false);
+                    if (keyObj != null) Destroy(keyObj);
+                    promptUiGo.SetActive(true);
+                    promptText.text = "ANCIENT PAPYRUS COLLECTED! FIND THE BOAT!";
                     TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_taunt_01");
                 }
             }
@@ -179,7 +180,8 @@ namespace TheAlchemistsCrypt.Gameplay
             }
             else
             {
-                promptUiGo.SetActive(false);
+                // Only hide if it's not the collected message
+                if (!promptText.text.Contains("COLLECTED")) promptUiGo.SetActive(false);
             }
         }
 

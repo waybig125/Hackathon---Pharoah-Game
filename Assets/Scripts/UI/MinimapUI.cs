@@ -96,6 +96,7 @@ private Sprite buildingSprite;
             radarScale = radarPixelRadius / radarWorldRadius;
             expandedScale = (Screen.width * 0.45f) / 500f;
             GenerateSprites();
+            BuildMinimapUI();
         }
 
         private void Start()
@@ -104,7 +105,6 @@ private Sprite buildingSprite;
             var movement = Object.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Movement>();
             if (movement != null) playerTransform = movement.transform;
 
-            BuildMinimapUI();
             CacheStaticElements();
         }
 
@@ -151,7 +151,8 @@ medicineDotSprite = CreateMedicineIconSprite(20, new Color(0.1f, 0.9f, 0.3f, 0.9
             
             var maskImg = maskGo.GetComponent<Image>();
             maskImg.sprite = null; 
-            maskImg.color = new Color(0, 0, 0, 0); // Ensure mask image is invisible
+            maskImg.color = Color.white; 
+            maskImg.raycastTarget = false;
             maskGo.GetComponent<Mask>().showMaskGraphic = false;
 
             var mapRotatorGo = new GameObject("MapRotator", typeof(RectTransform));

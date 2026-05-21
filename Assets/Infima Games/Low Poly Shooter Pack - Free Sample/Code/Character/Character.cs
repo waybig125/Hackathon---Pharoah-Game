@@ -210,8 +210,8 @@ namespace InfimaGames.LowPolyShooterPack
                 mobileAiming = mob.IsAiming;
                 mobileRunning = mob.IsSprinting;
                 
-                // Robust Gating: Use manager's state OR native touch count
-                isTouchActive = mob.IsTouchActive || UnityEngine.Input.touchCount > 0;
+                // Robust Gating: Use manager's state
+                isTouchActive = mob.IsTouchActive;
                 
                 // Atomic events
                 if (mob.IsSwappingWeapon) {
@@ -338,7 +338,7 @@ namespace InfimaGames.LowPolyShooterPack
 		public override Vector2 GetInputLook()
 		{
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null &&
-                (TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsTouchActive || UnityEngine.Input.touchCount > 0))
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsTouchActive)
             {
                 // Let the mobile manager handle the accumulation/consumption logic
                 return TheAlchemistsCrypt.Input.MobileInputManager.Instance.ConsumeLook();
