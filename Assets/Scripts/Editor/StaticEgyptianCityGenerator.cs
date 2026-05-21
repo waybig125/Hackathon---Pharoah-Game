@@ -463,12 +463,12 @@ public void GeneratePolishedCity()
             sea.transform.localScale = new Vector3(3000f, 1000f, 1f); 
 
             var seaMat = new Material(GetLitShader());
-            Color seaColor = new Color(0.01f, 0.2f, 0.6f, 1f); 
-            seaMat.SetColor("_BaseColor", seaColor); 
-            seaMat.SetColor("_EmissionColor", seaColor * 2f);
+            Color deepBlue = new Color(0f, 0.3f, 0.9f, 1f);
+            seaMat.SetColor("_BaseColor", deepBlue); 
+            seaMat.SetColor("_EmissionColor", deepBlue * 4f); // Extra bright emission
             seaMat.EnableKeyword("_EMISSION");
             seaMat.SetFloat("_Smoothness", 0.98f); 
-            seaMat.SetFloat("_Metallic", 0.8f);
+            seaMat.SetFloat("_Metallic", 0.9f);
             sea.GetComponent<Renderer>().sharedMaterial = seaMat;
             sea.isStatic = true;
             DestroyImmediate(sea.GetComponent<Collider>());
@@ -481,9 +481,9 @@ public void GeneratePolishedCity()
             shallows.transform.localScale = new Vector3(3000f, 400f, 1f);
 
             var shallowMat = new Material(GetLitShader());
-            Color shallowColor = new Color(0.05f, 0.4f, 0.8f, 0.95f);
-            shallowMat.SetColor("_BaseColor", shallowColor);
-            shallowMat.SetColor("_EmissionColor", shallowColor * 1.5f);
+            Color shallowBlue = new Color(0.1f, 0.6f, 1f, 0.95f);
+            shallowMat.SetColor("_BaseColor", shallowBlue);
+            shallowMat.SetColor("_EmissionColor", shallowBlue * 2f);
             shallowMat.EnableKeyword("_EMISSION");
             shallowMat.SetFloat("_Smoothness", 0.95f);
             shallows.GetComponent<Renderer>().sharedMaterial = shallowMat;
@@ -498,7 +498,7 @@ public void GeneratePolishedCity()
             beach.transform.localScale = new Vector3(3000f, 100f, 1f);
 
             var beachMat = new Material(GetLitShader());
-            beachMat.SetColor("_BaseColor", new Color(0.65f, 0.6f, 0.5f, 1f)); 
+            beachMat.SetColor("_BaseColor", new Color(0.85f, 0.75f, 0.6f, 1f)); 
             beachMat.SetFloat("_Smoothness", 0.1f);
             beach.GetComponent<Renderer>().sharedMaterial = beachMat;
             beach.isStatic = true;
@@ -511,7 +511,7 @@ public void GeneratePolishedCity()
             bc.size   = new Vector3(3000f, 20f, 2f);
             barrier.isStatic = true;
 
-            Debug.Log("[CityGen] Sea visible and reflective. Barrier at Z=-280.");
+            Debug.Log("[CityGen] Sea visible and extra reflective. Barrier at Z=-280.");
         }
 
         private Shader GetLitShader()

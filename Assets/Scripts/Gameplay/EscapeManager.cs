@@ -36,9 +36,9 @@ namespace TheAlchemistsCrypt.Gameplay
         {
             Vector3[] spawnLocations = new Vector3[]
             {
-                new Vector3(100f, 0f, 150f), 
-                new Vector3(-120f, 0f, 100f), 
-                new Vector3(40f, 0f, 250f)    
+                new Vector3(350f, 0f, 350f), 
+                new Vector3(-350f, 0f, 400f), 
+                new Vector3(0f, 0f, 480f)    
             };
 
             Vector3 chosenLoc = spawnLocations[Random.Range(0, spawnLocations.Length)];
@@ -84,13 +84,14 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            Vector3 spawnPos = new Vector3(0f, 1.2f, -310f);
+            // Moved closer so player can reach it before the barrier at -280
+            Vector3 spawnPos = new Vector3(0f, 1.2f, -270f);
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
             {
                 boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(0, 180f, 0));
-                boatObj.transform.localScale = Vector3.one * 3.5f;
+                boatObj.transform.localScale = Vector3.one * 1.8f; // Scaled down from 3.5
             }
             else
             {
@@ -163,7 +164,7 @@ namespace TheAlchemistsCrypt.Gameplay
             float distToBoat = boatObj != null ? Vector3.Distance(player.transform.position, boatObj.transform.position) : 9999f;
 
             nearKey = !hasKey && distToKey < 15f; 
-            nearBoat = distToBoat < 12f;
+            nearBoat = distToBoat < 15f;
 
             bool interactPressed = false;
             if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.eKey.wasPressedThisFrame) interactPressed = true;
@@ -176,13 +177,13 @@ namespace TheAlchemistsCrypt.Gameplay
                 {
                     hasKey = true;
                     if (keyObj != null) Destroy(keyObj);
-                    promptText.text = "ANCIENT PAPYRUS COLLECTED! FIND THE BOAT!";
+                    promptText.text = "ANCIENT PAPYRUS COLLECTED! RUN TO THE BOAT!";
                     TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_taunt_01");
                     TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_pickup", false, 0.8f);
                 }
                 else
                 {
-                    promptText.text = "ANCIENT PAPYRUS SPOTTED! MOVE CLOSER TO PICK IT UP";
+                    promptText.text = "ANCIENT PAPYRUS DETECTED! MOVE CLOSER TO AUTO-PICKUP";
                 }
             }
             else if (nearBoat)
@@ -190,7 +191,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 promptUiGo.SetActive(true);
                 if (hasKey)
                 { 
-                    promptText.text = "BOAT REACHED! TAP OR PRESS [E] TO ESCAPE!";
+                    promptText.text = "YOU REACHED THE BOAT! TAP OR PRESS [E] TO BOARD AND ESCAPE!";
                     if (interactPressed)
                     {
                         WinGame();
@@ -198,7 +199,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 }
                 else
                 {
-                    promptText.text = "FIND THE ANCIENT PAPYRUS TO ESCAPE ON THIS BOAT.";
+                    promptText.text = "THE ANCIENT BOAT. YOU NEED THE PAPYRUS TO DEPART.";
                 }
             }
             else
