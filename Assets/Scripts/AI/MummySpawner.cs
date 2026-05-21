@@ -101,7 +101,7 @@ namespace TheAlchemistsCrypt.AI
             float distance = Random.Range(35f, 55f);
             Vector3 spawnPos = spawnCenter + new Vector3(Mathf.Cos(angle) * distance, 0.5f, Mathf.Sin(angle) * distance);
 
-            // Snap to NavMesh, then reject positions south of the beach barrier (Z < -80)
+            // Snap to NavMesh, then reject positions south of the beach barrier (Z < -270)
             // This prevents mummies from spawning on the sea/beach area.
             UnityEngine.AI.NavMeshHit hit;
             int attempts = 0;
@@ -109,7 +109,7 @@ namespace TheAlchemistsCrypt.AI
             {
                 if (UnityEngine.AI.NavMesh.SamplePosition(spawnPos, out hit, 50f, UnityEngine.AI.NavMesh.AllAreas))
                 {
-                    if (hit.position.z >= -80f) // Valid city-side position
+                    if (hit.position.z >= -270f) // Valid city-side position
                     {
                         spawnPos = hit.position;
                         break;

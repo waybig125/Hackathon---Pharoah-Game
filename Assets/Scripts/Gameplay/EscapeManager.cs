@@ -36,9 +36,9 @@ namespace TheAlchemistsCrypt.Gameplay
         {
             Vector3[] spawnLocations = new Vector3[]
             {
-                new Vector3(350f, 0f, 350f), 
-                new Vector3(-350f, 0f, 400f), 
-                new Vector3(0f, 0f, 480f)    
+                new Vector3(250f, 0f, 350f), 
+                new Vector3(-280f, 0f, 250f), 
+                new Vector3(80f, 0f, 450f)    
             };
 
             Vector3 chosenLoc = spawnLocations[Random.Range(0, spawnLocations.Length)];
@@ -84,20 +84,21 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            // Moved closer so player can reach it before the barrier at -280
-            Vector3 spawnPos = new Vector3(0f, 1.2f, -270f);
+            // Moved to Z=-275 (on beach sand) and scaled to 0.18f (human-sized relative to player)
+            Vector3 spawnPos = new Vector3(0f, 1.2f, -275f);
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
             {
-                boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(0, 180f, 0));
-                boatObj.transform.localScale = Vector3.one * 1.8f; // Scaled down from 3.5
+                // Applied -90 on X (standard GLB/Blender fix) and 90 on Y to align "straight" with the coastline
+                boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(-90f, 90f, 0f));
+                boatObj.transform.localScale = Vector3.one * 0.18f; 
             }
             else
             {
                 boatObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 boatObj.transform.position = spawnPos;
-                boatObj.transform.localScale = new Vector3(4f, 2f, 10f);
+                boatObj.transform.localScale = new Vector3(2f, 1f, 4f);
             }
             boatObj.name = "EscapeBoat";
 

@@ -51,7 +51,8 @@ namespace TheAlchemistsCrypt.Editor
                 "Assets/Mummy_Assets/mummy_idle.fbx",
                 "Assets/Mummy_Assets/new_Walking.fbx",
                 "Assets/Mummy_Assets/mummy_attack.fbx",
-                "Assets/Mummy_Assets/mummy_death.fbx"
+                "Assets/Mummy_Assets/mummy_death.fbx",
+                "Assets/Resources/Pharaoh/base_basic_shaded (3).fbx"
             };
             foreach (var p in fbxPaths) {
                 ConfigureFbxToHumanoid(p);
@@ -80,47 +81,13 @@ namespace TheAlchemistsCrypt.Editor
                 System.IO.Directory.CreateDirectory("Assets/Mummy_Assets");
             }
 
-            System.Func<string, string, bool, AnimationClip> getOrCreateClip = (fbxPath, animName, loopTime) => {
-                var assets = AssetDatabase.LoadAllAssetsAtPath(fbxPath);
-                AnimationClip sourceClip = null;
-                foreach (var a in assets) {
-                    if (a is AnimationClip) {
-                        var clip = (AnimationClip)a;
-                        if (clip.name.Contains("__preview__")) continue;
-                        sourceClip = clip;
-                        if (clip.name.Contains("mixamo.com")) { sourceClip = clip; break; }
-                    }
-                }
-                if (sourceClip == null) return null;
-
-                string destPath = "Assets/Mummy_Assets/" + animName + "_loop.anim";
-                AnimationClip destClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(destPath);
-                if (destClip == null) {
-                    destClip = new AnimationClip();
-                    EditorUtility.CopySerialized(sourceClip, destClip);
-                    destClip.name = animName + "_loop";
-                    AssetDatabase.CreateAsset(destClip, destPath);
-                } else {
-                    EditorUtility.CopySerialized(sourceClip, destClip);
-                }
-
-                var settings = AnimationUtility.GetAnimationClipSettings(destClip);
-                settings.loopTime = loopTime;
-                AnimationUtility.SetAnimationClipSettings(destClip, settings);
-                EditorUtility.SetDirty(destClip);
-                AssetDatabase.SaveAssets();
-                return destClip;
-            };
-
-            var idleClip = getOrCreateClip("Assets/Mummy_Assets/mummy_idle.fbx", "mummy_idle", true);
-            var walkClip = getOrCreateClip("Assets/Mummy_Assets/new_Walking.fbx", "new_Walking", true);
-            var attackClip = getOrCreateClip("Assets/Mummy_Assets/mummy_attack.fbx", "mummy_attack", true);
-            var deathClip = getOrCreateClip("Assets/Mummy_Assets/mummy_death.fbx", "mummy_death", false);
+            var idleClip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Mummy_Assets/mummy_idle.fbx");
+            var walkClip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Mummy_Assets/new_Walking.fbx");
+            var attackClip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Mummy_Assets/mummy_attack.fbx");
 
             var idleState = GetOrAddState(rootStateMachine, "Idle", idleClip);
             var walkState = GetOrAddState(rootStateMachine, "Walk", walkClip);
             var attackState = GetOrAddState(rootStateMachine, "Attack", attackClip);
-            var dieState = GetOrAddState(rootStateMachine, "Die", deathClip);
 
             if (idleState.transitions.Length == 0) {
                 var t = idleState.AddTransition(walkState);
@@ -141,7 +108,7 @@ namespace TheAlchemistsCrypt.Editor
                 t.duration = 0.1f;
             }
 
-            Debug.Log("Mummy Animator Setup with Transitions & Looping Attack!");
+            Debug.Log("Mummy & Pharaoh Animator Setup with Transitions!");
 
             // Apply 80% Mesh Decimation to Mummies for Mobile Performance
             var mummies = GameObject.FindObjectsByType<TheAlchemistsCrypt.AI.ZombieAI>(FindObjectsInactive.Include);
@@ -463,12 +430,12 @@ public void GeneratePolishedCity()
             sea.transform.localScale = new Vector3(3000f, 1000f, 1f); 
 
             var seaMat = new Material(GetLitShader());
-            Color deepBlue = new Color(0f, 0.3f, 0.9f, 1f);
-            seaMat.SetColor("_BaseColor", deepBlue); 
-            seaMat.SetColor("_EmissionColor", deepBlue * 4f); // Extra bright emission
+            Color ultraBlue = new Color(0f, 0.4f, 1f, 1f);
+            seaMat.SetColor("_BaseColor", ultraBlue); 
+            seaMat.SetColor("_EmissionColor", ultraBlue * 6f); 
             seaMat.EnableKeyword("_EMISSION");
-            seaMat.SetFloat("_Smoothness", 0.98f); 
-            seaMat.SetFloat("_Metallic", 0.9f);
+            seaMat.SetFloat("_Smoothness", 0.99f); 
+            seaMat.SetFloat("_Metallic", 0.95f);
             sea.GetComponent<Renderer>().sharedMaterial = seaMat;
             sea.isStatic = true;
             DestroyImmediate(sea.GetComponent<Collider>());
@@ -506,12 +473,12 @@ public void GeneratePolishedCity()
 
             GameObject barrier = new GameObject("CoastlineBarrier");
             barrier.transform.SetParent(root.transform);
-            barrier.transform.position = new Vector3(0f, 5f, -280f); 
+            barrier.transform.position = new Vector3(0f, 10f, -280f); 
             var bc = barrier.AddComponent<BoxCollider>();
-            bc.size   = new Vector3(3000f, 20f, 2f);
+            bc.size = new Vector3(5000f, 30f, 5f); // Taller and thicker to block all movement
             barrier.isStatic = true;
 
-            Debug.Log("[CityGen] Sea visible and extra reflective. Barrier at Z=-280.");
+            Debug.Log("[CityGen] Sea visible and ultra reflective. Substantial barrier at Z=-280.");
         }
 
         private Shader GetLitShader()
