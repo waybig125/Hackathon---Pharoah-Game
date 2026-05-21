@@ -463,9 +463,12 @@ public void GeneratePolishedCity()
             sea.transform.localScale = new Vector3(3000f, 1000f, 1f); 
 
             var seaMat = new Material(GetLitShader());
-            seaMat.SetColor("_BaseColor", new Color(0.01f, 0.08f, 0.25f, 0.98f)); 
-            seaMat.SetFloat("_Smoothness", 0.95f); 
-            seaMat.SetFloat("_Metallic", 0.3f);
+            Color seaColor = new Color(0.01f, 0.2f, 0.6f, 1f); 
+            seaMat.SetColor("_BaseColor", seaColor); 
+            seaMat.SetColor("_EmissionColor", seaColor * 2f);
+            seaMat.EnableKeyword("_EMISSION");
+            seaMat.SetFloat("_Smoothness", 0.98f); 
+            seaMat.SetFloat("_Metallic", 0.8f);
             sea.GetComponent<Renderer>().sharedMaterial = seaMat;
             sea.isStatic = true;
             DestroyImmediate(sea.GetComponent<Collider>());
@@ -478,8 +481,11 @@ public void GeneratePolishedCity()
             shallows.transform.localScale = new Vector3(3000f, 400f, 1f);
 
             var shallowMat = new Material(GetLitShader());
-            shallowMat.SetColor("_BaseColor", new Color(0.05f, 0.2f, 0.4f, 0.95f));
-            shallowMat.SetFloat("_Smoothness", 0.9f);
+            Color shallowColor = new Color(0.05f, 0.4f, 0.8f, 0.95f);
+            shallowMat.SetColor("_BaseColor", shallowColor);
+            shallowMat.SetColor("_EmissionColor", shallowColor * 1.5f);
+            shallowMat.EnableKeyword("_EMISSION");
+            shallowMat.SetFloat("_Smoothness", 0.95f);
             shallows.GetComponent<Renderer>().sharedMaterial = shallowMat;
             shallows.isStatic = true;
             DestroyImmediate(shallows.GetComponent<Collider>());

@@ -44,25 +44,32 @@ namespace TheAlchemistsCrypt.Gameplay
             Vector3 chosenLoc = spawnLocations[Random.Range(0, spawnLocations.Length)];
             
             var terrain = Terrain.activeTerrain;
-            if (terrain != null) chosenLoc.y = terrain.SampleHeight(chosenLoc) + 0.8f; // Lifted from 0.3f to 0.8f
+            if (terrain != null) chosenLoc.y = terrain.SampleHeight(chosenLoc) + 0.8f;
 
-            // Load custom model
             GameObject prefab = Resources.Load<GameObject>("papyrus");
             if (prefab != null)
             {
                 keyObj = Instantiate(prefab, chosenLoc, Quaternion.identity);
-                keyObj.transform.localScale = Vector3.one * 2.5f; // Slightly larger for visibility
+                keyObj.transform.localScale = Vector3.one * 0.4f;
             }
             else
             {
                 keyObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder); 
                 keyObj.transform.position = chosenLoc;
-                keyObj.transform.localScale = new Vector3(0.5f, 0.8f, 0.5f);
+                keyObj.transform.localScale = new Vector3(0.2f, 0.4f, 0.2f);
                 keyObj.transform.rotation = Quaternion.Euler(0, 0, 90f); 
             }
             keyObj.name = "AncientPapyrus";
 
-            // Register with Minimap
+            var lightGo = new GameObject("PapyrusLight", typeof(Light));
+            lightGo.transform.SetParent(keyObj.transform);
+            lightGo.transform.localPosition = Vector3.up * 0.5f;
+            var l = lightGo.GetComponent<Light>();
+            l.type = LightType.Point;
+            l.color = new Color(1f, 0.9f, 0.5f);
+            l.intensity = 5f;
+            l.range = 5f;
+
             if (TheAlchemistsCrypt.UI.MinimapUI.Instance != null)
             {
                 TheAlchemistsCrypt.UI.MinimapUI.Instance.RegisterDynamicStaticIcon(keyObj, new Vector2(16, 16), TheAlchemistsCrypt.UI.MinimapUI.Instance.keySprite);
@@ -77,14 +84,13 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            Vector3 spawnPos = new Vector3(0f, 0.5f, -340f); // Moved from -540f to -340f to match beach at -320f
+            Vector3 spawnPos = new Vector3(0f, 1.2f, -310f);
             
-            // Load custom boat model
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
             {
                 boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(0, 180f, 0));
-                boatObj.transform.localScale = Vector3.one * 5f;
+                boatObj.transform.localScale = Vector3.one * 8f;
             }
             else
             {
@@ -94,7 +100,16 @@ namespace TheAlchemistsCrypt.Gameplay
             }
             boatObj.name = "EscapeBoat";
 
-            // Register with Minimap
+            // Add a beacon light to the boat
+            var boatLightGo = new GameObject("BoatBeacon", typeof(Light));
+            boatLightGo.transform.SetParent(boatObj.transform);
+            boatLightGo.transform.localPosition = Vector3.up * 3f;
+            var bl = boatLightGo.GetComponent<Light>();
+            bl.type = LightType.Point;
+            bl.color = Color.blue;
+            bl.intensity = 15f;
+            bl.range = 20f;
+
             if (TheAlchemistsCrypt.UI.MinimapUI.Instance != null)
             {
                 TheAlchemistsCrypt.UI.MinimapUI.Instance.RegisterDynamicStaticIcon(boatObj, new Vector2(24, 24), TheAlchemistsCrypt.UI.MinimapUI.Instance.boatSprite);
@@ -141,8 +156,8 @@ namespace TheAlchemistsCrypt.Gameplay
             float distToKey = keyObj != null ? Vector3.Distance(player.transform.position, keyObj.transform.position) : 9999f;
             float distToBoat = boatObj != null ? Vector3.Distance(player.transform.position, boatObj.transform.position) : 9999f;
 
-            nearKey = !hasKey && distToKey < 5f;
-            nearBoat = distToBoat < 8f;
+            nearKey = !hasKey && distToKey < 3.5f;
+            nearBoat = distToBoat < 10f;
 
             bool interactPressed = false;
             if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.eKey.wasPressedThisFrame) interactPressed = true;
@@ -150,24 +165,19 @@ namespace TheAlchemistsCrypt.Gameplay
 
             if (nearKey)
             {
+                hasKey = true;
+                if (keyObj != null) Destroy(keyObj);
                 promptUiGo.SetActive(true);
-                promptText.text = "Tap or Press [E] to collect the Ancient Papyrus";
-                
-                if (interactPressed)
-                {
-                    hasKey = true;
-                    if (keyObj != null) Destroy(keyObj);
-                    promptUiGo.SetActive(true);
-                    promptText.text = "ANCIENT PAPYRUS COLLECTED! FIND THE BOAT!";
-                    TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_taunt_01");
-                }
+                promptText.text = "ANCIENT PAPYRUS COLLECTED! FIND THE BOAT!";
+                TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_taunt_01");
+                TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_pickup", false, 0.8f);
             }
             else if (nearBoat)
             {
                 promptUiGo.SetActive(true);
                 if (hasKey)
-                {
-                    promptText.text = "Tap or Press [E] to Escape on the Boat!";
+                { 
+                    promptText.text = "ANCIENT BOAT REACHED! TAP OR PRESS [E] TO ESCAPE!";
                     if (interactPressed)
                     {
                         WinGame();
@@ -175,12 +185,11 @@ namespace TheAlchemistsCrypt.Gameplay
                 }
                 else
                 {
-                    promptText.text = "You need the Ancient Papyrus to escape on the boat.";
+                    promptText.text = "FIND THE ANCIENT PAPYRUS TO ESCAPE ON THIS BOAT.";
                 }
             }
             else
             {
-                // Only hide if it's not the collected message
                 if (!promptText.text.Contains("COLLECTED")) promptUiGo.SetActive(false);
             }
         }
