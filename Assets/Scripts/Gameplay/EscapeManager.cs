@@ -36,9 +36,9 @@ namespace TheAlchemistsCrypt.Gameplay
         {
             Vector3[] spawnLocations = new Vector3[]
             {
-                new Vector3(0f, 0f, 25f), 
-                new Vector3(30f, 0f, 0f), 
-                new Vector3(-30f, 0f, 0f)    
+                new Vector3(100f, 0f, 150f), 
+                new Vector3(-120f, 0f, 100f), 
+                new Vector3(40f, 0f, 250f)    
             };
 
             Vector3 chosenLoc = spawnLocations[Random.Range(0, spawnLocations.Length)];
@@ -68,7 +68,7 @@ namespace TheAlchemistsCrypt.Gameplay
             l.type = LightType.Point;
             l.color = new Color(1f, 0.9f, 0.5f);
             l.intensity = 5f;
-            l.range = 5f;
+            l.range = 8f;
 
             if (TheAlchemistsCrypt.UI.MinimapUI.Instance != null)
             {
@@ -90,7 +90,7 @@ namespace TheAlchemistsCrypt.Gameplay
             if (prefab != null)
             {
                 boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(0, 180f, 0));
-                boatObj.transform.localScale = Vector3.one * 8f;
+                boatObj.transform.localScale = Vector3.one * 3.5f;
             }
             else
             {
@@ -100,7 +100,6 @@ namespace TheAlchemistsCrypt.Gameplay
             }
             boatObj.name = "EscapeBoat";
 
-            // Add a beacon light to the boat
             var boatLightGo = new GameObject("BoatBeacon", typeof(Light));
             boatLightGo.transform.SetParent(boatObj.transform);
             boatLightGo.transform.localPosition = Vector3.up * 3f;
@@ -108,7 +107,7 @@ namespace TheAlchemistsCrypt.Gameplay
             bl.type = LightType.Point;
             bl.color = Color.blue;
             bl.intensity = 15f;
-            bl.range = 20f;
+            bl.range = 25f;
 
             if (TheAlchemistsCrypt.UI.MinimapUI.Instance != null)
             {
@@ -128,20 +127,27 @@ namespace TheAlchemistsCrypt.Gameplay
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 1000;
 
+            var scaler = canvasGo.GetComponent<UnityEngine.UI.CanvasScaler>();
+            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+
             promptUiGo = new GameObject("PromptText", typeof(RectTransform), typeof(Text));
             promptUiGo.transform.SetParent(canvasGo.transform, false);
             var rt = promptUiGo.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0.5f, 0.5f);
-            rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(0, -150);
-            rt.sizeDelta = new Vector2(800, 100);
+            rt.anchorMin = new Vector2(0.5f, 0.5f); rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(0, 150);
+            rt.sizeDelta = new Vector2(1000, 100);
 
             promptText = promptUiGo.GetComponent<Text>();
             promptText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             promptText.fontSize = 42;
+            promptText.fontStyle = FontStyle.Bold;
             promptText.alignment = TextAnchor.MiddleCenter;
             promptText.color = Color.white;
             
+            var outline = promptUiGo.AddComponent<UnityEngine.UI.Outline>();
+            outline.effectColor = Color.black;
+            outline.effectDistance = new Vector2(2, -2);
+
             promptUiGo.SetActive(false);
         }
 
@@ -156,8 +162,8 @@ namespace TheAlchemistsCrypt.Gameplay
             float distToKey = keyObj != null ? Vector3.Distance(player.transform.position, keyObj.transform.position) : 9999f;
             float distToBoat = boatObj != null ? Vector3.Distance(player.transform.position, boatObj.transform.position) : 9999f;
 
-            nearKey = !hasKey && distToKey < 3.5f;
-            nearBoat = distToBoat < 10f;
+            nearKey = !hasKey && distToKey < 15f; 
+            nearBoat = distToBoat < 12f;
 
             bool interactPressed = false;
             if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.eKey.wasPressedThisFrame) interactPressed = true;
@@ -165,19 +171,26 @@ namespace TheAlchemistsCrypt.Gameplay
 
             if (nearKey)
             {
-                hasKey = true;
-                if (keyObj != null) Destroy(keyObj);
                 promptUiGo.SetActive(true);
-                promptText.text = "ANCIENT PAPYRUS COLLECTED! FIND THE BOAT!";
-                TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_taunt_01");
-                TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_pickup", false, 0.8f);
+                if (distToKey < 3.5f)
+                {
+                    hasKey = true;
+                    if (keyObj != null) Destroy(keyObj);
+                    promptText.text = "ANCIENT PAPYRUS COLLECTED! FIND THE BOAT!";
+                    TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_taunt_01");
+                    TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_pickup", false, 0.8f);
+                }
+                else
+                {
+                    promptText.text = "ANCIENT PAPYRUS SPOTTED! MOVE CLOSER TO PICK IT UP";
+                }
             }
             else if (nearBoat)
             {
                 promptUiGo.SetActive(true);
                 if (hasKey)
                 { 
-                    promptText.text = "ANCIENT BOAT REACHED! TAP OR PRESS [E] TO ESCAPE!";
+                    promptText.text = "BOAT REACHED! TAP OR PRESS [E] TO ESCAPE!";
                     if (interactPressed)
                     {
                         WinGame();
@@ -190,7 +203,8 @@ namespace TheAlchemistsCrypt.Gameplay
             }
             else
             {
-                if (!promptText.text.Contains("COLLECTED")) promptUiGo.SetActive(false);
+                if (promptText.text.Contains("COLLECTED")) { if (distToBoat > 40f && distToKey > 40f) promptUiGo.SetActive(false); }
+                else promptUiGo.SetActive(false);
             }
         }
 

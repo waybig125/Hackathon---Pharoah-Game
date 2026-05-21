@@ -362,6 +362,13 @@ namespace TheAlchemistsCrypt.AI
                     : player.position;
                 currentSpeed = 2.2f;
             }
+
+            // Apply Papyrus Speed Buff: If player has the scroll, mummies become 1.5x faster!
+            if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null && TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.hasKey)
+            {
+                currentSpeed *= 1.5f;
+            }
+
             else
             {
                 // ── Priority 3: Player is far AND no HiveMind target — wander patrol ──
