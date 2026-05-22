@@ -199,8 +199,8 @@ namespace TheAlchemistsCrypt.AI
                 }
             }
 
-            // Slower speed for realism and Mummy thematic movement
-            agent.speed = 2.2f;
+            // Slower speed for realism and Mummy thematic movement (buffed 1.2x)
+            agent.speed = 2.64f;
             agent.stoppingDistance = attackDistance;
             
             // Higher quality avoidance to prevent overlap and clipping
@@ -358,7 +358,7 @@ namespace TheAlchemistsCrypt.AI
             }
 
             Vector3 currentTargetPos = player.position;
-            float currentSpeed = 2.2f;
+            float currentSpeed = 2.64f;
 
             float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
@@ -373,9 +373,9 @@ namespace TheAlchemistsCrypt.AI
                 // HiveMind gave a real flanking/ambush target — go there
                 // Enforce world Z boundary so mummies never get instructions that send them into the sea
                 Vector3 bounded = tacticalTarget;
-                if (bounded.z < -105f) bounded.z = -105f;
+                if (bounded.z < -95f) bounded.z = -95f;
                 currentTargetPos = bounded;
-                currentSpeed = 2.2f * Mathf.Max(tacticalSpeedMult, 0.5f);
+                currentSpeed = 2.64f * Mathf.Max(tacticalSpeedMult, 0.5f);
             }
             else if (distanceToPlayer <= 15f)
             {
@@ -384,7 +384,7 @@ namespace TheAlchemistsCrypt.AI
                 currentTargetPos = NavMesh.SamplePosition(player.position, out playerHit, 15f, NavMesh.AllAreas)
                     ? playerHit.position
                     : player.position;
-                currentSpeed = 2.2f;
+                currentSpeed = 2.64f;
             }
 
             // Apply Papyrus Speed Buff: If player has the scroll, mummies become 1.5x faster!
@@ -418,9 +418,9 @@ namespace TheAlchemistsCrypt.AI
                     {
                         // Enforce coastline boundary for wander targets as well
                         Vector3 bounded = wanderTarget;
-                        if (bounded.z < -105f) bounded.z = -105f;
+                        if (bounded.z < -95f) bounded.z = -95f;
                         currentTargetPos = bounded;
-                        currentSpeed = 1.5f;
+                        currentSpeed = 1.8f;
                         if (Vector3.Distance(transform.position, wanderTarget) < 2f)
                             hasWanderTarget = false;
                     }
@@ -428,7 +428,7 @@ namespace TheAlchemistsCrypt.AI
                 {
                     // NavMesh.SamplePosition failed — drift slowly toward player as fallback
                     currentTargetPos = player.position;
-                    currentSpeed = 1.0f;
+                    currentSpeed = 1.2f;
                 }
             }
 
@@ -557,6 +557,21 @@ namespace TheAlchemistsCrypt.AI
             // This prevents them from falling or tilting during physics/agent movement
             Vector3 rot = transform.localEulerAngles;
             transform.localRotation = Quaternion.Euler(0f, rot.y, 0f);
+
+            // Prevent mummies from going past the coastline (Z = -95f)
+            if (transform.position.z < -95f)
+            {
+                Vector3 pos = transform.position;
+                pos.z = -95f;
+                if (agent != null && agent.isActiveAndEnabled)
+                {
+                    agent.Warp(pos);
+                }
+                else
+                {
+                    transform.position = pos;
+                }
+            }
         }
 
         public virtual void TakeDamage(float damage)
