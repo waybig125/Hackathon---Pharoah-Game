@@ -455,12 +455,20 @@ namespace TheAlchemistsCrypt.Editor
             beach.isStatic = true;
             DestroyImmediate(beach.GetComponent<Collider>());
 
-            GameObject barrier = new GameObject("CoastlineBarrier");
-            barrier.transform.SetParent(root.transform);
-            barrier.transform.position = new Vector3(0f, 10f, -100f); 
-            var bc = barrier.AddComponent<BoxCollider>();
-            bc.size = new Vector3(5000f, 30f, 5f); 
-            barrier.isStatic = true;
+            // Split the coastline barrier into a left section and a right section to leave a gap at X = 0
+            GameObject barrierLeft = new GameObject("CoastlineBarrierLeft");
+            barrierLeft.transform.SetParent(root.transform);
+            barrierLeft.transform.position = new Vector3(-2504f, 10f, -100f);
+            var bcLeft = barrierLeft.AddComponent<BoxCollider>();
+            bcLeft.size = new Vector3(5000f, 30f, 5f);
+            barrierLeft.isStatic = true;
+
+            GameObject barrierRight = new GameObject("CoastlineBarrierRight");
+            barrierRight.transform.SetParent(root.transform);
+            barrierRight.transform.position = new Vector3(2504f, 10f, -100f);
+            var bcRight = barrierRight.AddComponent<BoxCollider>();
+            bcRight.size = new Vector3(5000f, 30f, 5f);
+            barrierRight.isStatic = true;
 
             Debug.Log("[CityGen] Sea visible and ultra reflective. Substantial barrier at Z=-100.");
         }
@@ -873,18 +881,27 @@ namespace TheAlchemistsCrypt.Editor
             
             float worldMinY = GetMeshBottomWorldY(obj);
             float yOffset = (targetPos.y + offsetAdjustment) - worldMinY;
-            obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset, targetPos.z);
-
-            foreach (var col in obj.GetComponentsInChildren<Collider>(true)) DestroyImmediate(col);
             
             bool isDynamic = obj.name.ToLower().Contains("crate") || obj.name.ToLower().Contains("barrel");
             if (isDynamic) {
-                obj.isStatic = true;
+                obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset + 1.0f, targetPos.z);
+            } else {
+                obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset, targetPos.z);
+            }
+
+            foreach (var col in obj.GetComponentsInChildren<Collider>(true)) DestroyImmediate(col);
+            
+            if (isDynamic) {
+                obj.isStatic = false;
                 foreach (Transform t in obj.GetComponentsInChildren<Transform>(true)) {
-                    t.gameObject.isStatic = true;
+                    t.gameObject.isStatic = false;
                 }
                 var rb = obj.GetComponent<Rigidbody>();
-                if (rb != null) DestroyImmediate(rb);
+                if (rb == null) rb = obj.AddComponent<Rigidbody>();
+                rb.mass = 10f;
+                rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+                rb.linearDamping = 0.5f;
+                rb.angularDamping = 0.5f;
                 
                 Bounds bounds = new Bounds(Vector3.zero, Vector3.zero);
                 bool first = true;

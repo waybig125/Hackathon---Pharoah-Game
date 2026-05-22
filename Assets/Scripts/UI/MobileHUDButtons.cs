@@ -91,8 +91,8 @@ namespace TheAlchemistsCrypt.UI
 
         private void LoadSprites()
         {
-            joystickRingSprite = null; // Force procedural ring with glowing cyan runes
-            joystickKnobSprite = null; // Force procedural knob with central magenta gem
+            joystickRingSprite = LoadThemedSprite("joystick_outer", "egypt_themed_icons/joystick_outer");
+            joystickKnobSprite = LoadThemedSprite("joystick_knob", "egypt_themed_icons/joystick_knob");
             
             fireIcon = LoadThemedSprite("fire", "UI/Icons/Inspiration/bullet");
             reloadIcon = LoadThemedSprite("reload_ammo", "UI/Icons/Inspiration/reload");
@@ -827,6 +827,17 @@ namespace TheAlchemistsCrypt.UI
             knobVisual.SetParent(joystickHandle, false);
             knobVisual.anchoredPosition = Vector2.zero;
             knobVisual.sizeDelta = new Vector2(200, 200); 
+
+            // Add glow behind the knobVisual
+            var knobGlow = new GameObject("KnobGlow", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            knobGlow.SetParent(knobVisual, false);
+            knobGlow.anchoredPosition = Vector2.zero;
+            knobGlow.sizeDelta = new Vector2(260, 260); // 1.3x scaling
+            knobGlow.transform.SetAsFirstSibling();
+            var glowImage = knobGlow.GetComponent<Image>();
+            glowImage.color = new Color(1f, 0.6f, 0.1f, 0.5f); // translucent warm orange/gold glow
+            glowImage.raycastTarget = false;
+            if (joystickKnobSprite != null) glowImage.sprite = joystickKnobSprite;
 
             var visualImage = knobVisual.GetComponent<Image>();
             visualImage.color = Color.white; visualImage.raycastTarget = false;

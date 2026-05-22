@@ -14,6 +14,9 @@ namespace TheAlchemistsCrypt.AI
             // Boss is immune to elemental status effects
             vulnerableElement = "none";
             
+            // Pharaoh is 1.5x the base speed of mummies (1.5 * 3.2 = 4.8)
+            baseSpeed = 4.8f;
+            
             base.Start(); // Let base initialize agent, animator, etc.
             
             // Match player health: 100f

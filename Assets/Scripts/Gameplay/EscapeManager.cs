@@ -157,7 +157,7 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            Vector3 spawnPos = new Vector3(0f, 0.45f, -112f);
+            Vector3 spawnPos = new Vector3(0f, 0.85f, -112f);
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)

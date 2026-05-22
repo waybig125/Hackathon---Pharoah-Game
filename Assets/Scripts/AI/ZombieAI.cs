@@ -388,10 +388,10 @@ namespace TheAlchemistsCrypt.AI
                 currentSpeed = baseSpeed;
             }
 
-            // Apply Papyrus Speed Buff: If player has the scroll, mummies become 1.5x faster!
+            // Apply Papyrus Speed Buff: If player has the scroll, mummies become 3.0x faster!
             if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null && TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.hasKey)
             {
-                currentSpeed *= 1.5f;
+                currentSpeed *= 3.0f;
             }
 
             else
