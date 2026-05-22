@@ -16,8 +16,8 @@ namespace TheAlchemistsCrypt.Environment
         public Color ambientSkyColor = new Color(0.35f, 0.40f, 0.60f); // Cool purple-blue shadows
         public Color ambientEquatorColor = new Color(0.85f, 0.68f, 0.52f); // Warm peach transition
         public Color ambientGroundColor = new Color(0.25f, 0.20f, 0.22f); // Cool dark ground
-        public Color sunColor = new Color(1.0f, 0.82f, 0.62f, 1.0f); // Warm golden light
-        public float sunIntensity = 1.4f; 
+        public Color sunColor = new Color(1.0f, 0.86f, 0.72f, 1.0f); // Warm sunset light
+        public float sunIntensity = 1.8f; 
 
         private void Start()
         {
@@ -66,7 +66,7 @@ namespace TheAlchemistsCrypt.Environment
                 sun.color = sunColor;
                 sun.intensity = sunIntensity;
                 // Sunset low angle matching the editor setup
-                sun.transform.rotation = Quaternion.Euler(22f, 215f, 0f);
+                sun.transform.rotation = Quaternion.Euler(25f, 220f, 0f);
                 RenderSettings.sun = sun;
             }
         }

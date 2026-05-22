@@ -91,8 +91,8 @@ namespace TheAlchemistsCrypt.UI
 
         private void LoadSprites()
         {
-            joystickRingSprite = LoadThemedSprite("joystick_outer", "UI/Icons/joystick_ring_fallback");
-            joystickKnobSprite = LoadThemedSprite("joystick_knob", "UI/Icons/joystick_knob_fallback");
+            joystickRingSprite = null; // Force procedural ring with glowing cyan runes
+            joystickKnobSprite = null; // Force procedural knob with central magenta gem
             
             fireIcon = LoadThemedSprite("fire", "UI/Icons/Inspiration/bullet");
             reloadIcon = LoadThemedSprite("reload_ammo", "UI/Icons/Inspiration/reload");
@@ -613,16 +613,54 @@ namespace TheAlchemistsCrypt.UI
             Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
-                    float dx = (float)(x - width / 2) / (width / 2); float dy = (float)(y - height / 2) / (height / 2);
+                    float dx = (float)(x - width / 2) / (width / 2); 
+                    float dy = (float)(y - height / 2) / (height / 2);
                     float dist = Mathf.Sqrt(dx * dx + dy * dy);
-                    if (dist >= 0.85f && dist <= 1f) {
-                        float alpha = (dist > 0.95f) ? (1f - dist) / 0.05f : ((dist < 0.9f) ? (dist - 0.85f) / 0.05f : 1f);
-                        tex.SetPixel(x, y, new Color(0.95f, 0.8f, 0.2f, alpha * 0.45f));
-                    } else if (dist < 0.85f) tex.SetPixel(x, y, new Color(0.05f, 0.05f, 0.05f, 0.15f));
-                    else tex.SetPixel(x, y, Color.clear);
+                    
+                    // Outer glow halo (from dist 1.0 to 1.15)
+                    if (dist > 1.0f && dist <= 1.15f) {
+                        float glowAlpha = (1.15f - dist) / 0.15f;
+                        tex.SetPixel(x, y, new Color(0.0f, 0.85f, 0.95f, glowAlpha * 0.25f));
+                    }
+                    // Ring structure (from dist 0.78 to 1.0)
+                    else if (dist >= 0.78f && dist <= 1.0f) {
+                        Color stoneCol = new Color(0.2f, 0.24f, 0.26f, 0.85f);
+                        
+                        float angle = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
+                        if (angle < 0) angle += 360f;
+                        
+                        float sector = angle / 30f;
+                        float fraction = sector - Mathf.Floor(sector);
+                        
+                        bool isGlyph = false;
+                        if (dist >= 0.84f && dist <= 0.94f) {
+                            int sectorInt = Mathf.FloorToInt(sector);
+                            if (fraction > 0.15f && fraction < 0.85f) {
+                                if (sectorInt % 3 == 0) {
+                                    isGlyph = Mathf.Abs(fraction - 0.5f) < 0.08f || Mathf.Abs(dist - 0.89f) < 0.02f;
+                                } else if (sectorInt % 3 == 1) {
+                                    isGlyph = Mathf.Abs(fraction - 0.3f) < 0.08f || Mathf.Abs(fraction - 0.7f) < 0.08f;
+                                } else {
+                                    isGlyph = Mathf.Abs(dist - 0.89f) < 0.04f && (fraction < 0.4f || fraction > 0.6f);
+                                }
+                            }
+                        }
+                        
+                        if (isGlyph) {
+                            tex.SetPixel(x, y, new Color(0.1f, 0.95f, 1.0f, 1.0f));
+                        } else {
+                            float rim = (dist > 0.96f || dist < 0.82f) ? 0.6f : 1.0f;
+                            tex.SetPixel(x, y, new Color(stoneCol.r * rim, stoneCol.g * rim, stoneCol.b * rim, stoneCol.a));
+                        }
+                    } else if (dist < 0.78f && dist >= 0.75f) {
+                        tex.SetPixel(x, y, new Color(0.1f, 0.12f, 0.13f, 0.9f));
+                    } else {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
                 }
             }
-            tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+            tex.Apply(); 
+            return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
         }
 
         private Sprite CreateKnobSprite()
@@ -630,19 +668,40 @@ namespace TheAlchemistsCrypt.UI
             int width = 256, height = 256;
             Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
             for (int y = 0; y < height; y++) {
-                float t = (float)y / height;
-                Color goldColor = Color.Lerp(new Color(0.95f, 0.8f, 0.2f, 0.95f), new Color(1f, 0.95f, 0.6f, 0.95f), t);
                 for (int x = 0; x < width; x++) {
-                    float dx = (float)(x - width / 2) / (width / 2); float dy = (float)(y - height / 2) / (height / 2);
+                    float dx = (float)(x - width / 2) / (width / 2); 
+                    float dy = (float)(y - height / 2) / (height / 2);
                     float dist = Mathf.Sqrt(dx * dx + dy * dy);
-                    if (dist <= 1f) {
-                        float alpha = Mathf.Clamp01((1f - dist) * 10f);
-                        if (dist >= 0.4f && dist <= 0.5f) tex.SetPixel(x, y, new Color(0.6f, 0.45f, 0.1f, alpha * 0.95f));
-                        else tex.SetPixel(x, y, new Color(goldColor.r, goldColor.g, goldColor.b, goldColor.a * alpha));
-                    } else tex.SetPixel(x, y, Color.clear);
+                    
+                    if (dist <= 1.0f) {
+                        float alpha = Mathf.Clamp01((1.0f - dist) * 12f);
+                        
+                        if (dist <= 0.25f) {
+                            float highlight = Mathf.Clamp01(1.0f - (Mathf.Sqrt((dx - 0.08f) * (dx - 0.08f) + (dy - 0.08f) * (dy - 0.08f)) / 0.3f));
+                            Color gemCol = Color.Lerp(new Color(0.7f, 0.0f, 0.35f, 1.0f), new Color(1.0f, 0.2f, 0.6f, 1.0f), highlight);
+                            tex.SetPixel(x, y, new Color(gemCol.r, gemCol.g, gemCol.b, gemCol.a * alpha));
+                        }
+                        else if (dist <= 0.35f) {
+                            Color frameCol = new Color(0.12f, 0.12f, 0.12f, 1.0f);
+                            tex.SetPixel(x, y, new Color(frameCol.r, frameCol.g, frameCol.b, frameCol.a * alpha));
+                        }
+                        else {
+                            Color stoneCol = new Color(0.35f, 0.38f, 0.4f, 0.95f);
+                            float shade = 1.0f;
+                            if (dist >= 0.78f && dist <= 0.88f) {
+                                shade = 0.75f;
+                            } else if (dist > 0.9f) {
+                                shade = 0.65f;
+                            }
+                            tex.SetPixel(x, y, new Color(stoneCol.r * shade, stoneCol.g * shade, stoneCol.b * shade, stoneCol.a * alpha));
+                        }
+                    } else {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
                 }
             }
-            tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+            tex.Apply(); 
+            return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
         }
 
         private Sprite CreateCharcoalSprite(int w, int h)

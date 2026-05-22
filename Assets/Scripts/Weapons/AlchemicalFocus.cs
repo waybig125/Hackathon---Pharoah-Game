@@ -111,7 +111,7 @@ namespace TheAlchemistsCrypt.Weapons
                     }
                     if (m.HasProperty("_EmissionColor"))
                     {
-                        m.SetColor("_EmissionColor", glowColor * 3.5f); // Make it glow!
+                        m.SetColor("_EmissionColor", glowColor * 8.0f); // Make it glow!
                         m.EnableKeyword("_EMISSION");
                     }
                 }
