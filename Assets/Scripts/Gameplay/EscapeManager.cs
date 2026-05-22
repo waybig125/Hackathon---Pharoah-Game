@@ -129,7 +129,7 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            Vector3 spawnPos = new Vector3(0f, 1.2f, -275f);
+            Vector3 spawnPos = new Vector3(0f, 1.2f, -70f);
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
@@ -185,26 +185,26 @@ namespace TheAlchemistsCrypt.Gameplay
 
             if (nearKey)
             {
-                promptUiGo.SetActive(true);
+                if (promptUiGo != null) promptUiGo.SetActive(true);
                 if (distToKey < 3.5f)
                 {
                     hasKey = true;
                     if (keyObj != null) Destroy(keyObj);
-                    promptText.text = "ANCIENT PAPYRUS COLLECTED! RUN TO THE BOAT!";
+                    if (promptText != null) promptText.text = "ANCIENT PAPYRUS COLLECTED! RUN TO THE BOAT!";
                     TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_taunt_01");
                     TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_pickup", false, 0.8f);
                 }
                 else
                 {
-                    promptText.text = "ANCIENT PAPYRUS DETECTED! MOVE CLOSER TO AUTO-PICKUP";
+                    if (promptText != null) promptText.text = "ANCIENT PAPYRUS DETECTED! MOVE CLOSER TO AUTO-PICKUP";
                 }
             }
             else if (nearBoat)
             {
-                promptUiGo.SetActive(true);
+                if (promptUiGo != null) promptUiGo.SetActive(true);
                 if (hasKey)
                 { 
-                    promptText.text = "YOU REACHED THE BOAT! TAP OR PRESS [E] TO BOARD AND ESCAPE!";
+                    if (promptText != null) promptText.text = "YOU REACHED THE BOAT! TAP OR PRESS [E] TO BOARD AND ESCAPE!";
                     if (interactPressed)
                     {
                         WinGame();
@@ -212,13 +212,16 @@ namespace TheAlchemistsCrypt.Gameplay
                 }
                 else
                 {
-                    promptText.text = "THE ANCIENT BOAT. YOU NEED THE PAPYRUS TO DEPART.";
+                    if (promptText != null) promptText.text = "THE ANCIENT BOAT. YOU NEED THE PAPYRUS TO DEPART.";
                 }
             }
             else
             {
-                if (promptText.text.Contains("COLLECTED")) { if (distToBoat > 40f && distToKey > 40f) promptUiGo.SetActive(false); }
-                else promptUiGo.SetActive(false);
+                if (promptUiGo != null && promptText != null)
+                {
+                    if (promptText.text.Contains("COLLECTED")) { if (distToBoat > 40f && distToKey > 40f) promptUiGo.SetActive(false); }
+                    else promptUiGo.SetActive(false);
+                }
             }
         }
 

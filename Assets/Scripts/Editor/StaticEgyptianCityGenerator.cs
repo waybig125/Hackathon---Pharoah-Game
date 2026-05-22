@@ -409,9 +409,9 @@ namespace TheAlchemistsCrypt.Editor
             GameObject sea = GameObject.CreatePrimitive(PrimitiveType.Quad);
             sea.name = "SeaZone";
             sea.transform.SetParent(root.transform);
-            sea.transform.position = new Vector3(0f, 0.8f, -400f); 
+            sea.transform.position = new Vector3(0f, 0.8f, -300f); 
             sea.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            sea.transform.localScale = new Vector3(3000f, 600f, 1f); 
+            sea.transform.localScale = new Vector3(3000f, 400f, 1f); 
 
             var seaMat = new Material(GetLitShader());
             Color ultraBlue = new Color(0f, 0.4f, 1f, 1f);
@@ -427,9 +427,9 @@ namespace TheAlchemistsCrypt.Editor
             GameObject shallows = GameObject.CreatePrimitive(PrimitiveType.Quad);
             shallows.name = "SeaZone_Shallow";
             shallows.transform.SetParent(root.transform);
-            shallows.transform.position = new Vector3(0f, 0.85f, -200f);
+            shallows.transform.position = new Vector3(0f, 0.85f, -100f);
             shallows.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            shallows.transform.localScale = new Vector3(3000f, 200f, 1f);
+            shallows.transform.localScale = new Vector3(3000f, 40f, 1f);
 
             var shallowMat = new Material(GetLitShader());
             Color shallowBlue = new Color(0.1f, 0.6f, 1f, 0.95f);
@@ -444,9 +444,9 @@ namespace TheAlchemistsCrypt.Editor
             GameObject beach = GameObject.CreatePrimitive(PrimitiveType.Quad);
             beach.name = "BeachZone";
             beach.transform.SetParent(root.transform);
-            beach.transform.position = new Vector3(0f, 0.9f, -120f);
+            beach.transform.position = new Vector3(0f, 0.9f, -60f);
             beach.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            beach.transform.localScale = new Vector3(3000f, 50f, 1f);
+            beach.transform.localScale = new Vector3(3000f, 40f, 1f);
 
             var beachMat = new Material(GetLitShader());
             beachMat.SetColor("_BaseColor", new Color(0.85f, 0.75f, 0.6f, 1f)); 
@@ -457,12 +457,12 @@ namespace TheAlchemistsCrypt.Editor
 
             GameObject barrier = new GameObject("CoastlineBarrier");
             barrier.transform.SetParent(root.transform);
-            barrier.transform.position = new Vector3(0f, 10f, -100f); 
+            barrier.transform.position = new Vector3(0f, 10f, -85f); 
             var bc = barrier.AddComponent<BoxCollider>();
             bc.size = new Vector3(5000f, 30f, 5f); 
             barrier.isStatic = true;
 
-            Debug.Log("[CityGen] Sea visible and ultra reflective. Substantial barrier at Z=-100.");
+            Debug.Log("[CityGen] Sea visible and ultra reflective. Substantial barrier at Z=-85.");
         }
 
         private Shader GetLitShader()
@@ -476,27 +476,27 @@ namespace TheAlchemistsCrypt.Editor
         private void SetupEnvironment(GameObject root)
         {
             var skyMat = new Material(Shader.Find("Skybox/Procedural"));
-            skyMat.SetColor("_SkyTint", new Color(0.45f, 0.6f, 0.75f)); 
-            skyMat.SetColor("_GroundColor", new Color(0.85f, 0.70f, 0.55f));
-            skyMat.SetFloat("_AtmosphereThickness", 1.0f);
-            skyMat.SetFloat("_Exposure", 1.2f);
+            skyMat.SetColor("_SkyTint", new Color(0.5f, 0.7f, 0.9f)); 
+            skyMat.SetColor("_GroundColor", new Color(1.0f, 0.6f, 0.5f)); // Pinkish horizon
+            skyMat.SetFloat("_AtmosphereThickness", 1.1f);
+            skyMat.SetFloat("_Exposure", 1.3f);
             
             RenderSettings.skybox = skyMat;
             RenderSettings.ambientMode = AmbientMode.Trilight; 
-            RenderSettings.ambientSkyColor    = new Color(0.5f, 0.55f, 0.65f);
-            RenderSettings.ambientEquatorColor = new Color(0.75f, 0.65f, 0.55f);
-            RenderSettings.ambientGroundColor  = new Color(0.4f, 0.35f, 0.3f);
+            RenderSettings.ambientSkyColor    = new Color(0.6f, 0.7f, 0.8f);
+            RenderSettings.ambientEquatorColor = new Color(1.0f, 0.6f, 0.5f);
+            RenderSettings.ambientGroundColor  = new Color(0.5f, 0.4f, 0.3f);
 
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.88f, 0.8f, 0.7f);
+            RenderSettings.fogColor = new Color(0.95f, 0.75f, 0.65f);
             RenderSettings.fogStartDistance = 60f;   
             RenderSettings.fogEndDistance  = 1200f;   
             
             var sun = GameObject.Find("Directional Light")?.GetComponent<Light>();
             if (sun != null) {
-                sun.color = new Color(1.0f, 0.88f, 0.75f); 
-                sun.intensity = 1.3f;
-                sun.transform.rotation = Quaternion.Euler(22f, 215f, 0f); 
+                sun.color = new Color(1.0f, 0.9f, 0.8f); 
+                sun.intensity = 1.4f;
+                sun.transform.rotation = Quaternion.Euler(15f, 220f, 0f); // Lower angle for sunset
             }
             SetupPostProcessing(root.transform);
         }
