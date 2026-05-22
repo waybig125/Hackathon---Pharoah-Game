@@ -226,7 +226,7 @@ public void GeneratePolishedCity()
             
             // ── AESTHETIC PALETTE ──
             Material wallMat = new Material(GetLitShader());
-            wallMat.SetColor("_BaseColor", new Color(0.78f, 0.52f, 0.35f)); // Terracotta Ochre
+            wallMat.SetColor("_BaseColor", new Color(0.55f, 0.40f, 0.62f)); // Dusky Purple Ochre
             wallMat.SetFloat("_Smoothness", 0.0f);   // Matte finish
             
             Material woodMat = new Material(GetLitShader());
@@ -425,9 +425,9 @@ public void GeneratePolishedCity()
             GameObject sea = GameObject.CreatePrimitive(PrimitiveType.Quad);
             sea.name = "SeaZone";
             sea.transform.SetParent(root.transform);
-            sea.transform.position = new Vector3(0f, 0.8f, -600f); 
+            sea.transform.position = new Vector3(0f, 0.8f, -400f); 
             sea.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            sea.transform.localScale = new Vector3(3000f, 1000f, 1f); 
+            sea.transform.localScale = new Vector3(3000f, 600f, 1f); 
 
             var seaMat = new Material(GetLitShader());
             Color ultraBlue = new Color(0f, 0.4f, 1f, 1f);
@@ -443,9 +443,9 @@ public void GeneratePolishedCity()
             GameObject shallows = GameObject.CreatePrimitive(PrimitiveType.Quad);
             shallows.name = "SeaZone_Shallow";
             shallows.transform.SetParent(root.transform);
-            shallows.transform.position = new Vector3(0f, 0.85f, -400f);
+            shallows.transform.position = new Vector3(0f, 0.85f, -200f);
             shallows.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            shallows.transform.localScale = new Vector3(3000f, 400f, 1f);
+            shallows.transform.localScale = new Vector3(3000f, 200f, 1f);
 
             var shallowMat = new Material(GetLitShader());
             Color shallowBlue = new Color(0.1f, 0.6f, 1f, 0.95f);
@@ -460,9 +460,9 @@ public void GeneratePolishedCity()
             GameObject beach = GameObject.CreatePrimitive(PrimitiveType.Quad);
             beach.name = "BeachZone";
             beach.transform.SetParent(root.transform);
-            beach.transform.position = new Vector3(0f, 0.9f, -320f);
+            beach.transform.position = new Vector3(0f, 0.9f, -120f);
             beach.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            beach.transform.localScale = new Vector3(3000f, 100f, 1f);
+            beach.transform.localScale = new Vector3(3000f, 50f, 1f);
 
             var beachMat = new Material(GetLitShader());
             beachMat.SetColor("_BaseColor", new Color(0.85f, 0.75f, 0.6f, 1f)); 
@@ -473,12 +473,12 @@ public void GeneratePolishedCity()
 
             GameObject barrier = new GameObject("CoastlineBarrier");
             barrier.transform.SetParent(root.transform);
-            barrier.transform.position = new Vector3(0f, 10f, -280f); 
+            barrier.transform.position = new Vector3(0f, 10f, -100f); 
             var bc = barrier.AddComponent<BoxCollider>();
             bc.size = new Vector3(5000f, 30f, 5f); // Taller and thicker to block all movement
             barrier.isStatic = true;
 
-            Debug.Log("[CityGen] Sea visible and ultra reflective. Substantial barrier at Z=-280.");
+            Debug.Log("[CityGen] Sea visible and ultra reflective. Substantial barrier at Z=-100.");
         }
 
         private Shader GetLitShader()
@@ -595,7 +595,7 @@ public void GeneratePolishedCity()
             }
 
             if (crate != null) {
-                Vector3 cratePos = pos + new Vector3(13f, 0f, 11f);
+                Vector3 cratePos = pos + new Vector3(15f, 0f, 13f);
                 var cObj = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
                 cObj.transform.localScale = new Vector3(0.875f, 0.875f, 0.875f);
                 AlignToGroundAndAddCollider(cObj, cratePos, Quaternion.Euler(-90f, Random.Range(0f, 360f), 0f), 0f);
@@ -607,7 +607,7 @@ public void GeneratePolishedCity()
             }
 
             if (barrel != null) {
-                Vector3 barrelPos = pos + new Vector3(-13f, 0f, -11f);
+                Vector3 barrelPos = pos + new Vector3(-15f, 0f, -13f);
                 var bObj = (GameObject)PrefabUtility.InstantiatePrefab(barrel, parent);
                 bObj.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f);
                 AlignToGroundAndAddCollider(bObj, barrelPos, Quaternion.Euler(-90f, 0f, 0f), 0f);
@@ -641,6 +641,17 @@ public void GeneratePolishedCity()
                         Debug.LogWarning($"[CityGen] Failed to decimate tree mesh: {mf.name} - {e.Message}");
                     }
                 }
+            }
+
+            // Spawn Medicine Pickup in plazas programmatically
+            if (Random.value < 0.35f || pos.magnitude < 30f) { // Always spawn one near center, 35% elsewhere
+                Vector3 medPos = pos + new Vector3(Random.Range(-5f, 5f), 1f, Random.Range(-5f, 5f));
+                medPos.y = GetTerrainHeight(medPos) + 0.5f;
+                var medGo = new GameObject("MedicinePickup");
+                medGo.transform.SetParent(p.transform);
+                medGo.transform.position = medPos;
+                var pickup = medGo.AddComponent<TheAlchemistsCrypt.Gameplay.MedicinePickup>();
+                pickup.healAmount = 25f;
             }
         }
 
@@ -874,7 +885,9 @@ public void GeneratePolishedCity()
             mesh.RecalculateNormals(); mesh.RecalculateBounds();
             pGo.AddComponent<MeshFilter>().sharedMesh = mesh;
             var renderer = pGo.AddComponent<MeshRenderer>();
-            var pMat = new Material(mat); pMat.SetColor("_EmissionColor", glowColor * 1.5f); pMat.EnableKeyword("_EMISSION"); renderer.sharedMaterial = pMat;
+            var pMat = new Material(mat);
+            pMat.SetColor("_BaseColor", new Color(0.78f, 0.52f, 0.35f)); // Keep pyramids warm terracotta ochre
+            pMat.SetColor("_EmissionColor", glowColor * 1.5f); pMat.EnableKeyword("_EMISSION"); renderer.sharedMaterial = pMat;
             pGo.AddComponent<MeshCollider>().sharedMesh = mesh;
         }
     }
