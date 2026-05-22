@@ -286,6 +286,16 @@ namespace InfimaGames.LowPolyShooterPack
                 }
 			}
 
+            // Auto reload when ammo is 0 (excluding punch combat)
+            if (equippedWeapon != null && 
+                equippedWeapon.GetComponent<PunchCombat>() == null && 
+                equippedWeapon.GetAmmunitionTotal() > 0 &&
+                equippedWeapon.GetAmmunitionCurrent() == 0 && 
+                CanReload())
+            {
+                PlayReloadAnimation();
+            }
+
 			UpdateAnimator();
 		}
 
