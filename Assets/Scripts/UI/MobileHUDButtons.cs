@@ -54,6 +54,10 @@ namespace TheAlchemistsCrypt.UI
         private Image ammoIconImage;
         private Text sprintButtonText;
 
+        private RectTransform guideArrowRect;
+        private CanvasGroup guideArrowCanvasGroup;
+        private Sprite guideArrowSprite;
+
         private void Awake()
         {
             Instance = this;
@@ -955,6 +959,23 @@ namespace TheAlchemistsCrypt.UI
             reticleImg.raycastTarget = false;
 
             new GameObject("MinimapCanvasContainer", typeof(RectTransform), typeof(MinimapUI)).transform.SetParent(root, false);
+
+            // --- GUIDE ARROW TO PAPYRUS ---
+            guideArrowSprite = CreateProceduralArrowSprite(128);
+            var arrowGo = new GameObject("HUD_GuideArrow", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            arrowGo.transform.SetParent(root, false);
+            guideArrowRect = arrowGo.GetComponent<RectTransform>();
+            guideArrowRect.anchorMin = guideArrowRect.anchorMax = new Vector2(0.5f, 0.5f);
+            guideArrowRect.anchoredPosition = new Vector2(0f, -220f); // Positioned nicely below the center crosshair
+            guideArrowRect.sizeDelta = new Vector2(100f, 100f);
+            
+            var arrowImg = arrowGo.GetComponent<Image>();
+            arrowImg.sprite = guideArrowSprite;
+            arrowImg.color = Color.white;
+            arrowImg.raycastTarget = false;
+            
+            guideArrowCanvasGroup = arrowGo.GetComponent<CanvasGroup>();
+            guideArrowCanvasGroup.alpha = 0f; // Start hidden
         }
 
         private void CreateBlockButton(Transform parent, string label, Vector2 pos, Vector2 size, Sprite iconSprite, System.Action onDown, System.Action onUp = null)
@@ -1294,6 +1315,102 @@ namespace TheAlchemistsCrypt.UI
             UpdateAmmo(current, total);
             var health = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Player.PlayerHealth>();
             if (health != null) UpdateHealth(health.currentHealth);
+            UpdateGuideArrow();
+        }
+
+        private Sprite CreateProceduralArrowSprite(int size)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float half = size * 0.5f;
+            Color gold = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    float px = (x - half) / half;
+                    float py = (y - half) / half;
+                    
+                    // Draw a sleek arrow pointing up (V > 0)
+                    // Stem: px is narrow, py is negative to mid
+                    bool isStem = Mathf.Abs(px) < 0.15f && py >= -0.7f && py <= 0.1f;
+                    // Head: py is high, px <= (1 - py)
+                    bool isHead = py > 0.1f && py <= 0.8f && Mathf.Abs(px) <= (0.8f - py) * 1.2f;
+                    
+                    if (isStem || isHead)
+                    {
+                        tex.SetPixel(x, y, gold);
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private void UpdateGuideArrow()
+        {
+            if (guideArrowCanvasGroup == null || guideArrowRect == null) return;
+
+            // Find key (Papyrus)
+            var papyrus = GameObject.Find("AncientPapyrus");
+            if (papyrus == null)
+            {
+                // If papyrus is already collected/destroyed, fade out
+                guideArrowCanvasGroup.alpha = Mathf.MoveTowards(guideArrowCanvasGroup.alpha, 0f, Time.deltaTime * 3f);
+                return;
+            }
+
+            // Find player
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player == null)
+            {
+                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>(FindObjectsInactive.Include);
+                if (character != null) player = character.gameObject;
+            }
+
+            if (player == null)
+            {
+                guideArrowCanvasGroup.alpha = Mathf.MoveTowards(guideArrowCanvasGroup.alpha, 0f, Time.deltaTime * 3f);
+                return;
+            }
+
+            // Determine if the player is moving
+            bool isMoving = false;
+            
+            // Check touch joystick input
+            if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null &&
+                TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput.sqrMagnitude > 0.01f)
+            {
+                isMoving = true;
+            }
+            // Check WASD/Keyboard movement input
+            else if (UnityEngine.InputSystem.Keyboard.current != null)
+            {
+                var k = UnityEngine.InputSystem.Keyboard.current;
+                if (k.wKey.isPressed || k.sKey.isPressed || k.aKey.isPressed || k.dKey.isPressed ||
+                    k.upArrowKey.isPressed || k.downArrowKey.isPressed || k.leftArrowKey.isPressed || k.rightArrowKey.isPressed)
+                {
+                    isMoving = true;
+                }
+            }
+
+            // Fade in if moving, fade out if stationary
+            float targetAlpha = isMoving ? 1f : 0f;
+            guideArrowCanvasGroup.alpha = Mathf.MoveTowards(guideArrowCanvasGroup.alpha, targetAlpha, Time.deltaTime * 3f);
+
+            if (guideArrowCanvasGroup.alpha > 0.01f)
+            {
+                // Calculate direction to Papyrus in world space
+                Vector3 toPapyrus = papyrus.transform.position - player.transform.position;
+                toPapyrus.y = 0f; // Ignore height difference
+
+                // Angle of target relative to player's forward vector
+                float angle = Vector3.SignedAngle(player.transform.forward, toPapyrus, Vector3.up);
+
+                // Rotate the arrow UI (counteract SignedAngle rotation directions)
+                guideArrowRect.localEulerAngles = new Vector3(0f, 0f, -angle);
+            }
         }
 
         private void SetAiming(bool s) => TheAlchemistsCrypt.Input.MobileInputManager.Instance?.SetAiming(s);
