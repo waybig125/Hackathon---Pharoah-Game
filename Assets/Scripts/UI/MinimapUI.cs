@@ -444,14 +444,43 @@ medicineDotSprite = CreateMedicineIconSprite(20, new Color(0.1f, 0.9f, 0.3f, 0.9
                 {
                     s.iconRect.gameObject.SetActive(true);
                     s.iconRect.sizeDelta = new Vector2(s.worldSize.x * radarScale, s.worldSize.y * radarScale);
+                    s.iconRect.anchoredPosition = new Vector2(s.worldPos.x * radarScale, s.worldPos.z * radarScale);
                 }
                 else
                 {
                     s.worldPos = s.sourceGo.transform.position;
-                    float dist = Vector3.Distance(playerPos, s.worldPos);
-                    s.iconRect.gameObject.SetActive(dist <= radarWorldRadius * 2f); 
+                    
+                    if (s.name == "AncientPapyrus")
+                    {
+                        s.iconRect.gameObject.SetActive(true);
+                        
+                        // Calculate position relative to player
+                        Vector3 relPos = s.worldPos - playerPos;
+                        Vector2 localPos = new Vector2(relPos.x, relPos.z) * radarScale;
+                        
+                        // Clamp to radar radius minus a small margin to keep it inside the frame
+                        float maxRad = radarPixelRadius - 12f;
+                        if (localPos.magnitude > maxRad)
+                        {
+                            localPos = localPos.normalized * maxRad;
+                        }
+                        
+                        // In mapContent coordinates (which is translated by -playerPos * radarScale):
+                        // playerPos * radarScale + localPos resolves relative to center of radar
+                        s.iconRect.anchoredPosition = new Vector2(playerPos.x * radarScale, playerPos.z * radarScale) + localPos;
+                        
+                        // Keep upright by compensating for player rotation
+                        float mapRot = mapRotator != null ? mapRotator.localEulerAngles.z : 0f;
+                        s.iconRect.localEulerAngles = new Vector3(0f, 0f, -mapRot);
+                    }
+                    else
+                    {
+                        float dist = Vector3.Distance(playerPos, s.worldPos);
+                        s.iconRect.gameObject.SetActive(dist <= radarWorldRadius * 2f); 
+                        s.iconRect.anchoredPosition = new Vector2(s.worldPos.x * radarScale, s.worldPos.z * radarScale);
+                        s.iconRect.localEulerAngles = Vector3.zero;
+                    }
                 }
-                s.iconRect.anchoredPosition = new Vector2(s.worldPos.x * radarScale, s.worldPos.z * radarScale);
             }
         }
 
@@ -476,6 +505,7 @@ medicineDotSprite = CreateMedicineIconSprite(20, new Color(0.1f, 0.9f, 0.3f, 0.9
                     s.iconRect.sizeDelta = new Vector2(s.worldSize.x * expandedScale, s.worldSize.y * expandedScale);
                 }
                 s.iconRect.anchoredPosition = new Vector2(s.worldPos.x * expandedScale, s.worldPos.z * expandedScale);
+                s.iconRect.localEulerAngles = Vector3.zero;
             }
         }
 
