@@ -120,22 +120,23 @@ namespace TheAlchemistsCrypt.AI
             Vector3 vel = rb != null ? rb.linearVelocity : Vector3.zero;
             pState.vel = new List<float> { vel.x, vel.y, vel.z };
 
-            string activeElement = "sulfur";
-            var focus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+            string activeElement = "sulphur";
+            var focus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>(FindObjectsInactive.Include);
             if (focus != null)
             {
                 activeElement = focus.CurrentMode.ToString().ToLower();
+                if (activeElement == "sulfur") activeElement = "sulphur";
             }
             else
             {
-                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>(FindObjectsInactive.Include);
                 if (character != null)
                 {
                     var weapon = character.GetEquippedWeapon();
                     if (weapon != null)
                     {
                         string wName = weapon.name.ToLower();
-                        if (wName.Contains("sulfur")) activeElement = "sulfur";
+                        if (wName.Contains("sulfur") || wName.Contains("sulphur")) activeElement = "sulphur";
                         else if (wName.Contains("mercury")) activeElement = "mercury";
                         else if (wName.Contains("salt")) activeElement = "salt";
                     }
@@ -251,18 +252,22 @@ namespace TheAlchemistsCrypt.AI
                             if (string.IsNullOrEmpty(selectedVoice))
                             {
                                 int hp = 100;
-                                string activeElement = "sulfur";
+                                string activeElement = "sulphur";
                                 var playerObj = GameObject.FindGameObjectWithTag("Player");
                                 if (playerObj == null) {
-                                    var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                                    var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>(FindObjectsInactive.Include);
                                     if (character != null) playerObj = character.gameObject;
                                 }
                                 if (playerObj != null)
                                 {
                                     var pHealth = playerObj.GetComponent<TheAlchemistsCrypt.Player.PlayerHealth>();
                                     if (pHealth != null) hp = Mathf.RoundToInt(pHealth.currentHealth);
-                                    var w = playerObj.GetComponentInChildren<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
-                                    if (w != null) activeElement = w.CurrentMode.ToString().ToLower();
+                                    var w = playerObj.GetComponentInChildren<TheAlchemistsCrypt.Weapons.AlchemicalFocus>(true);
+                                    if (w != null)
+                                    {
+                                        activeElement = w.CurrentMode.ToString().ToLower();
+                                        if (activeElement == "sulfur") activeElement = "sulphur";
+                                    }
                                 }
 
                                 if (hp < 25)
@@ -272,7 +277,7 @@ namespace TheAlchemistsCrypt.AI
                                 }
                                 else if (UnityEngine.Random.value < 0.3f) // Only play element voices 30% of the time to avoid spam
                                 {
-                                    if (activeElement == "sulfur")
+                                    if (activeElement == "sulfur" || activeElement == "sulphur")
                                     {
                                         string[] sulfurVoices = { "Voice/vo_sulfur_01", "Voice/vo_sulfur_02" };
                                         selectedVoice = sulfurVoices[UnityEngine.Random.Range(0, 2)];
@@ -345,7 +350,7 @@ namespace TheAlchemistsCrypt.AI
                         {
                             Vector3 targetPos = new Vector3(inst.target[0], inst.target[1], inst.target[2]);
                             // Enforce world boundary: do not accept instructions that push mummies into the sea area
-                            if (targetPos.z < -105f) targetPos.z = -105f;
+                            if (targetPos.z < -95f) targetPos.z = -95f;
                             if (Vector3.Distance(targetPos, z.transform.position) > 3f)
                             {
                                 z.tacticalTarget = targetPos;
