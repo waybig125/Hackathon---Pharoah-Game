@@ -59,6 +59,7 @@ namespace TheAlchemistsCrypt.UI
         private Sprite guideArrowSprite;
         private Text guideArrowText;
         private Image guideArrowImage;
+        private Image guideArrowOutlineImage;
 
         private void Awake()
         {
@@ -973,12 +974,39 @@ namespace TheAlchemistsCrypt.UI
             guideArrowCanvasGroup = guideContainer.GetComponent<CanvasGroup>();
             guideArrowCanvasGroup.alpha = 0f;
 
-            var arrowGo = new GameObject("HUD_GuideArrow", typeof(RectTransform), typeof(Image));
+            var arrowGo = new GameObject("HUD_GuideArrow", typeof(RectTransform));
             arrowGo.transform.SetParent(guideContainer.transform, false);
             guideArrowRect = arrowGo.GetComponent<RectTransform>();
             guideArrowRect.anchoredPosition = new Vector2(0f, 25f);
             guideArrowRect.sizeDelta = new Vector2(90f, 90f);
-            guideArrowImage = arrowGo.GetComponent<Image>();
+
+            var bgGo = new GameObject("HUD_GuideBg", typeof(RectTransform), typeof(Image));
+            bgGo.transform.SetParent(arrowGo.transform, false);
+            var bgRect = bgGo.GetComponent<RectTransform>();
+            bgRect.anchorMin = bgRect.anchorMax = new Vector2(0.5f, 0.5f);
+            bgRect.anchoredPosition = Vector2.zero;
+            bgRect.sizeDelta = new Vector2(90f, 90f);
+            var bgImg = bgGo.GetComponent<Image>();
+            bgImg.sprite = CreateSolidCircleSprite(128, new Color(0f, 0f, 0f, 0.5f));
+            bgImg.raycastTarget = false;
+
+            var outlineGo = new GameObject("HUD_GuideOutline", typeof(RectTransform), typeof(Image));
+            outlineGo.transform.SetParent(arrowGo.transform, false);
+            var outlineRect = outlineGo.GetComponent<RectTransform>();
+            outlineRect.anchorMin = outlineRect.anchorMax = new Vector2(0.5f, 0.5f);
+            outlineRect.anchoredPosition = Vector2.zero;
+            outlineRect.sizeDelta = new Vector2(90f, 90f);
+            guideArrowOutlineImage = outlineGo.GetComponent<Image>();
+            guideArrowOutlineImage.sprite = CreateProceduralRingSprite(128);
+            guideArrowOutlineImage.raycastTarget = false;
+
+            var chevronGo = new GameObject("HUD_Chevron", typeof(RectTransform), typeof(Image));
+            chevronGo.transform.SetParent(arrowGo.transform, false);
+            var chevronRect = chevronGo.GetComponent<RectTransform>();
+            chevronRect.anchorMin = chevronRect.anchorMax = new Vector2(0.5f, 0.5f);
+            chevronRect.anchoredPosition = Vector2.zero;
+            chevronRect.sizeDelta = new Vector2(90f, 90f);
+            guideArrowImage = chevronGo.GetComponent<Image>();
             guideArrowImage.sprite = guideArrowSprite;
             guideArrowImage.raycastTarget = false;
 
@@ -1346,11 +1374,14 @@ namespace TheAlchemistsCrypt.UI
                     float px = (x - half) / half;
                     float py = (y - half) / half;
 
-                    // Draw a sleek double-chevron racing-style arrow pointing up
-                    // Lower chevron
-                    bool c1 = Mathf.Abs(px) <= (py + 0.4f) && Mathf.Abs(px) >= (py + 0.1f) && py >= -0.4f && py <= 0.3f;
+                    // Double chevron pointing UP
                     // Upper chevron
-                    bool c2 = Mathf.Abs(px) <= (py - 0.1f) && Mathf.Abs(px) >= (py - 0.4f) && py >= 0.1f && py <= 0.8f;
+                    float val1 = py + Mathf.Abs(px) * 0.8f;
+                    bool c1 = val1 <= 0.5f && val1 >= 0.25f && py >= -0.1f && py <= 0.5f && Mathf.Abs(px) <= 0.5f;
+
+                    // Lower chevron
+                    float val2 = py + Mathf.Abs(px) * 0.8f;
+                    bool c2 = val2 <= 0.0f && val2 >= -0.25f && py >= -0.6f && py <= 0.0f && Mathf.Abs(px) <= 0.5f;
 
                     if (c1 || c2) tex.SetPixel(x, y, Color.white);
                     else tex.SetPixel(x, y, Color.clear);
@@ -1359,16 +1390,62 @@ namespace TheAlchemistsCrypt.UI
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
         }
+
+        private Sprite CreateProceduralRingSprite(int size)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float half = size * 0.5f;
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    float dx = (x - half) / half;
+                    float dy = (y - half) / half;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (dist >= 0.88f && dist <= 0.98f) {
+                        float alpha = 1f;
+                        if (dist < 0.91f) alpha = (dist - 0.88f) / 0.03f;
+                        else if (dist > 0.95f) alpha = (0.98f - dist) / 0.03f;
+                        tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                    } else {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
         private void UpdateGuideArrow()
         {
             if (guideArrowCanvasGroup == null || guideArrowRect == null) return;
 
-            // Target Priority: Ancient Papyrus, then Escape Boat
-            GameObject target = GameObject.Find("AncientPapyrus");
+            // Target Priority: EscapeManager's active task target
+            GameObject target = null;
             bool isBoat = false;
-            if (target == null) {
-                target = GameObject.Find("EscapeBoat");
-                isBoat = true;
+
+            if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null)
+            {
+                var em = TheAlchemistsCrypt.Gameplay.EscapeManager.Instance;
+                if (!em.hasKey)
+                {
+                    target = em.keyObj;
+                    isBoat = false;
+                }
+                else
+                {
+                    target = em.boatObj;
+                    isBoat = true;
+                }
+            }
+
+            // Fallback if EscapeManager is not initialized or null
+            if (target == null)
+            {
+                target = GameObject.Find("AncientPapyrus");
+                isBoat = false;
+                if (target == null)
+                {
+                    target = GameObject.Find("EscapeBoat");
+                    isBoat = true;
+                }
             }
 
             if (target == null) {
@@ -1395,6 +1472,7 @@ namespace TheAlchemistsCrypt.UI
                 Color indicatorCol = isBoat ? new Color(1f, 0.75f, 0.1f) : new Color(0.2f, 0.9f, 1f); // Gold vs Cyan
                 guideArrowText.color = indicatorCol;
                 if (guideArrowImage != null) guideArrowImage.color = indicatorCol;
+                if (guideArrowOutlineImage != null) guideArrowOutlineImage.color = indicatorCol;
             }
 
             // Determine if the player is moving

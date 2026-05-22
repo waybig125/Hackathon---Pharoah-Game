@@ -18,8 +18,8 @@ namespace TheAlchemistsCrypt.Gameplay
         private GameObject victoryUiGo;
         private GameObject deathUiGo;
 
-        private GameObject keyObj;
-        private GameObject boatObj;
+        public GameObject keyObj;
+        public GameObject boatObj;
         private bool nearKey = false;
         private bool nearBoat = false;
 
@@ -103,6 +103,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 keyObj.transform.rotation = Quaternion.Euler(0, 0, 90f); 
             }
             keyObj.name = "AncientPapyrus";
+            keyObj.SetActive(true);
 
             // Add a point light to the papyrus so it glows and is visible
             var lightGo = new GameObject("PapyrusLight", typeof(Light));
@@ -129,7 +130,7 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            Vector3 spawnPos = new Vector3(0f, 1.2f, -70f);
+            Vector3 spawnPos = new Vector3(0f, 1.2f, -106f);
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
@@ -144,6 +145,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 boatObj.transform.localScale = new Vector3(2f, 1f, 4f);
             }
             boatObj.name = "EscapeBoat";
+            boatObj.SetActive(true);
 
             var boatLightGo = new GameObject("BoatBeacon", typeof(Light));
             boatLightGo.transform.SetParent(boatObj.transform);

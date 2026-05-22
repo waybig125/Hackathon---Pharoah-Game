@@ -228,7 +228,7 @@ namespace TheAlchemistsCrypt.Editor
             
             // ── AESTHETIC PALETTE (Warm Sunset Desert) ──
             Material wallMat = new Material(GetLitShader());
-            wallMat.SetColor("_BaseColor", new Color(0.92f, 0.86f, 0.76f)); // Sandy Cream/Beige
+            wallMat.SetColor("_BaseColor", new Color(0.78f, 0.7f, 0.85f)); // Purplish Dusty Lavender
             wallMat.SetFloat("_Smoothness", 0.0f);   // Matte finish
             
             Material woodMat = new Material(GetLitShader());
@@ -457,12 +457,12 @@ namespace TheAlchemistsCrypt.Editor
 
             GameObject barrier = new GameObject("CoastlineBarrier");
             barrier.transform.SetParent(root.transform);
-            barrier.transform.position = new Vector3(0f, 10f, -85f); 
+            barrier.transform.position = new Vector3(0f, 10f, -100f); 
             var bc = barrier.AddComponent<BoxCollider>();
             bc.size = new Vector3(5000f, 30f, 5f); 
             barrier.isStatic = true;
 
-            Debug.Log("[CityGen] Sea visible and ultra reflective. Substantial barrier at Z=-85.");
+            Debug.Log("[CityGen] Sea visible and ultra reflective. Substantial barrier at Z=-100.");
         }
 
         private Shader GetLitShader()
@@ -476,27 +476,27 @@ namespace TheAlchemistsCrypt.Editor
         private void SetupEnvironment(GameObject root)
         {
             var skyMat = new Material(Shader.Find("Skybox/Procedural"));
-            skyMat.SetColor("_SkyTint", new Color(0.5f, 0.7f, 0.9f)); 
-            skyMat.SetColor("_GroundColor", new Color(1.0f, 0.6f, 0.5f)); // Pinkish horizon
-            skyMat.SetFloat("_AtmosphereThickness", 1.1f);
-            skyMat.SetFloat("_Exposure", 1.3f);
+            skyMat.SetColor("_SkyTint", new Color(0.35f, 0.55f, 0.8f)); // Rich warm blue
+            skyMat.SetColor("_GroundColor", new Color(0.9f, 0.7f, 0.55f)); // Warm sunset peach
+            skyMat.SetFloat("_AtmosphereThickness", 0.95f);
+            skyMat.SetFloat("_Exposure", 1.2f);
             
             RenderSettings.skybox = skyMat;
             RenderSettings.ambientMode = AmbientMode.Trilight; 
-            RenderSettings.ambientSkyColor    = new Color(0.6f, 0.7f, 0.8f);
-            RenderSettings.ambientEquatorColor = new Color(1.0f, 0.6f, 0.5f);
-            RenderSettings.ambientGroundColor  = new Color(0.5f, 0.4f, 0.3f);
+            RenderSettings.ambientSkyColor    = new Color(0.55f, 0.68f, 0.85f); // Bluish shadow fill
+            RenderSettings.ambientEquatorColor = new Color(0.9f, 0.78f, 0.68f);
+            RenderSettings.ambientGroundColor  = new Color(0.5f, 0.42f, 0.35f);
 
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.95f, 0.75f, 0.65f);
-            RenderSettings.fogStartDistance = 60f;   
-            RenderSettings.fogEndDistance  = 1200f;   
+            RenderSettings.fogColor = new Color(0.78f, 0.85f, 0.92f); // Haze matches blue/peach sky
+            RenderSettings.fogStartDistance = 120f;   // Distant fog to keep sky clear
+            RenderSettings.fogEndDistance  = 1500f;   
             
             var sun = GameObject.Find("Directional Light")?.GetComponent<Light>();
             if (sun != null) {
-                sun.color = new Color(1.0f, 0.9f, 0.8f); 
-                sun.intensity = 1.4f;
-                sun.transform.rotation = Quaternion.Euler(15f, 220f, 0f); // Lower angle for sunset
+                sun.color = new Color(1.0f, 0.92f, 0.82f); // Warm golden light
+                sun.intensity = 1.3f;
+                sun.transform.rotation = Quaternion.Euler(22f, 215f, 0f); // Warm sun angle
             }
             SetupPostProcessing(root.transform);
         }
@@ -546,8 +546,14 @@ namespace TheAlchemistsCrypt.Editor
                 float width = 20f - f * 4f; float depth = 20f - f * 4f; float windowY = (f * 12f) + 6f;
                 var floorBody = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 floorBody.name = "Floor_" + f; floorBody.transform.SetParent(h.transform);
-                floorBody.transform.localPosition = new Vector3(0, (f * 12f) + 6f, 0);
-                floorBody.transform.localScale = new Vector3(width, 12f, depth);
+                if (f == 0) {
+                    // Extend ground floor downward by 8 units to form a solid foundation and eliminate gaps on dunes
+                    floorBody.transform.localPosition = new Vector3(0, 2f, 0);
+                    floorBody.transform.localScale = new Vector3(width, 20f, depth);
+                } else {
+                    floorBody.transform.localPosition = new Vector3(0, (f * 12f) + 6f, 0);
+                    floorBody.transform.localScale = new Vector3(width, 12f, depth);
+                }
                 floorBody.GetComponent<Renderer>().sharedMaterial = wall; floorBody.isStatic = true;
 
                 Vector3[] localPositions = {
@@ -721,27 +727,34 @@ namespace TheAlchemistsCrypt.Editor
                         var mat = new Material(mats[i]);
                         string mName = mat.name.ToLower();
                         
-                        if (mName.Contains("body") || mName.Contains("frame") || mName.Contains("stock")) {
+                        if (mName.Contains("body") || mName.Contains("frame") || mName.Contains("stock") || mName.Contains("metal")) {
+                            // Dark metal/obsidian body
                             mat.SetColor("_BaseColor", new Color(0.08f, 0.08f, 0.10f)); 
-                            mat.SetFloat("_Smoothness", 0.85f);
-                            mat.SetFloat("_Metallic", 1.0f);
-                        } else if (mName.Contains("barrel") || mName.Contains("grip") || mName.Contains("trigger")) {
+                            mat.SetFloat("_Smoothness", 0.75f);
+                            mat.SetFloat("_Metallic", 0.9f);
+                        } else if (mName.Contains("mag") || mName.Contains("rail") || mName.Contains("stripe") || mName.Contains("runes") || mName.Contains("glow") || mName.Contains("ammo") || mName.Contains("bullet")) {
+                            // Glowing runic orange/gold rail/magazine
+                            mat.SetColor("_BaseColor", new Color(1.0f, 0.55f, 0.05f));
+                            mat.SetColor("_EmissionColor", new Color(1.0f, 0.45f, 0.05f) * 8f);
+                            mat.EnableKeyword("_EMISSION");
+                            mat.SetFloat("_Smoothness", 0.5f);
+                            mat.SetFloat("_Metallic", 0.2f);
+                        } else if (mName.Contains("barrel") || mName.Contains("grip") || mName.Contains("trigger") || mName.Contains("scope")) {
+                            // Secondary dark metallic elements
                             mat.SetColor("_BaseColor", new Color(0.12f, 0.12f, 0.12f));
-                            mat.SetFloat("_Smoothness", 0.9f);
-                            mat.SetFloat("_Metallic", 1.0f);
-                            if (mat.HasProperty("_EmissionColor")) {
-                                var emis = mat.GetColor("_EmissionColor");
-                                mat.SetColor("_EmissionColor", emis * 0.25f);
-                                if (emis.maxColorComponent > 0.01f) mat.EnableKeyword("_EMISSION");
-                            }
+                            mat.SetFloat("_Smoothness", 0.8f);
+                            mat.SetFloat("_Metallic", 0.9f);
                         } else {
+                            // Check if the material already has some emission, make it glow orange/gold
                             if (mat.HasProperty("_EmissionColor")) {
-                                var emis = mat.GetColor("_EmissionColor");
-                                mat.SetColor("_EmissionColor", emis * 0.5f);
-                                if (emis.maxColorComponent > 0.01f) mat.EnableKeyword("_EMISSION");
+                                mat.SetColor("_BaseColor", new Color(1.0f, 0.55f, 0.05f));
+                                mat.SetColor("_EmissionColor", new Color(1.0f, 0.45f, 0.05f) * 6f);
+                                mat.EnableKeyword("_EMISSION");
+                            } else {
+                                mat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.12f));
+                                mat.SetFloat("_Smoothness", 0.6f);
+                                mat.SetFloat("_Metallic", 0.8f);
                             }
-                            mat.SetFloat("_Smoothness", 0.6f);
-                            mat.SetFloat("_Metallic", 0.6f);
                         }
                         mats[i] = mat;
                     }
@@ -827,9 +840,12 @@ namespace TheAlchemistsCrypt.Editor
             
             bool isDynamic = obj.name.ToLower().Contains("crate") || obj.name.ToLower().Contains("barrel");
             if (isDynamic) {
+                obj.isStatic = true;
+                foreach (Transform t in obj.GetComponentsInChildren<Transform>(true)) {
+                    t.gameObject.isStatic = true;
+                }
                 var rb = obj.GetComponent<Rigidbody>();
-                if (rb == null) rb = obj.AddComponent<Rigidbody>();
-                rb.mass = 10f;
+                if (rb != null) DestroyImmediate(rb);
                 
                 Bounds bounds = new Bounds(Vector3.zero, Vector3.zero);
                 bool first = true;

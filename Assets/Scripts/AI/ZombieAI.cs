@@ -18,6 +18,7 @@ namespace TheAlchemistsCrypt.AI
 
         [Header("Tactical AI Settings")]
         public int mummyId = 0;
+        public float baseSpeed = 3.2f;
         [HideInInspector] public Vector3 tacticalTarget;
         [HideInInspector] public float tacticalSpeedMult = 1f;
         [HideInInspector] public bool hasTacticalTarget = false;
@@ -200,7 +201,7 @@ namespace TheAlchemistsCrypt.AI
             }
 
             // Slower speed for realism and Mummy thematic movement (buffed 1.2x)
-            agent.speed = 2.64f;
+            agent.speed = baseSpeed;
             agent.stoppingDistance = attackDistance;
             
             // Higher quality avoidance to prevent overlap and clipping
@@ -358,7 +359,7 @@ namespace TheAlchemistsCrypt.AI
             }
 
             Vector3 currentTargetPos = player.position;
-            float currentSpeed = 2.64f;
+            float currentSpeed = baseSpeed;
 
             float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
@@ -375,7 +376,7 @@ namespace TheAlchemistsCrypt.AI
                 Vector3 bounded = tacticalTarget;
                 if (bounded.z < -95f) bounded.z = -95f;
                 currentTargetPos = bounded;
-                currentSpeed = 2.64f * Mathf.Max(tacticalSpeedMult, 0.5f);
+                currentSpeed = baseSpeed * Mathf.Max(tacticalSpeedMult, 0.5f);
             }
             else if (distanceToPlayer <= 15f)
             {
@@ -384,7 +385,7 @@ namespace TheAlchemistsCrypt.AI
                 currentTargetPos = NavMesh.SamplePosition(player.position, out playerHit, 15f, NavMesh.AllAreas)
                     ? playerHit.position
                     : player.position;
-                currentSpeed = 2.64f;
+                currentSpeed = baseSpeed;
             }
 
             // Apply Papyrus Speed Buff: If player has the scroll, mummies become 1.5x faster!
