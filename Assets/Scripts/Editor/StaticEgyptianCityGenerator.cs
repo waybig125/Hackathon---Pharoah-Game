@@ -228,7 +228,7 @@ namespace TheAlchemistsCrypt.Editor
             
             // ── AESTHETIC PALETTE (Warm Sunset Desert) ──
             Material wallMat = new Material(GetLitShader());
-            wallMat.SetColor("_BaseColor", new Color(0.78f, 0.7f, 0.85f)); // Purplish Dusty Lavender
+            wallMat.SetColor("_BaseColor", new Color(0.84f, 0.65f, 0.55f)); // Terracotta-peach albedo
             wallMat.SetFloat("_Smoothness", 0.0f);   // Matte finish
             
             Material woodMat = new Material(GetLitShader());
@@ -242,12 +242,12 @@ namespace TheAlchemistsCrypt.Editor
             floorMat.EnableKeyword("_EMISSION");
 
             Material litWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            litWindowMat.SetColor("_BaseColor", new Color(1f, 0.75f, 0.3f));
-            litWindowMat.SetColor("_EmissionColor", new Color(1f, 0.65f, 0.2f) * 3.5f);
+            litWindowMat.SetColor("_BaseColor", new Color(1f, 0.8f, 0.4f)); // Warm yellow-gold
+            litWindowMat.SetColor("_EmissionColor", new Color(1.0f, 0.6f, 0.1f) * 8.0f); // Rich warm amber/orange
             litWindowMat.EnableKeyword("_EMISSION");
             
             Material darkWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            darkWindowMat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.15f));
+            darkWindowMat.SetColor("_BaseColor", new Color(0.2f, 0.15f, 0.12f)); // Warm dark charcoal-brown
 
             SetupEnvironment(root);
             SetupManagers(root);
@@ -503,9 +503,9 @@ namespace TheAlchemistsCrypt.Editor
             
             var sun = GameObject.Find("Directional Light")?.GetComponent<Light>();
             if (sun != null) {
-                sun.color = new Color(1.0f, 0.82f, 0.62f); // Warm golden light
-                sun.intensity = 1.4f;
-                sun.transform.rotation = Quaternion.Euler(22f, 215f, 0f); // Warm low sun angle
+                sun.color = new Color(1.0f, 0.86f, 0.72f); // Warm sunset light
+                sun.intensity = 1.8f; // Strong sunlight
+                sun.transform.rotation = Quaternion.Euler(25f, 220f, 0f); // Sunset low angle
             }
             SetupPostProcessing(root.transform);
             AssetDatabase.SaveAssets();
@@ -545,9 +545,9 @@ namespace TheAlchemistsCrypt.Editor
             vignette.color.Override(new Color(0.15f, 0.12f, 0.2f)); 
 
             if (!profile.TryGet<LiftGammaGain>(out var lgg)) lgg = profile.Add<LiftGammaGain>();
-            lgg.lift.Override(new Vector4(0.04f, 0.02f, 0.08f, 0f)); // Cool blue-purple shadows
-            lgg.gamma.Override(new Vector4(1.05f, 1.0f, 0.95f, 0f)); // Warm sunset midtones
-            lgg.gain.Override(new Vector4(1.1f, 1.05f, 1.0f, 0f));   // Warm highlights
+            lgg.lift.Override(new Vector4(0.08f, 0.04f, 0.16f, -0.05f)); // Cool purple-blue shadows (more contrast)
+            lgg.gamma.Override(new Vector4(1.05f, 0.98f, 0.92f, 0f)); // Warm sunset midtones
+            lgg.gain.Override(new Vector4(1.15f, 1.08f, 0.98f, 0.05f));   // Warm highlights (more intense)
 
             EditorUtility.SetDirty(profile);
             
@@ -630,19 +630,41 @@ namespace TheAlchemistsCrypt.Editor
             }
             
             if (trees != null && trees.Length > 0) {
-                var t = (GameObject)PrefabUtility.InstantiatePrefab(trees[Random.Range(0, trees.Length)], p.transform);
-                t.transform.localScale = Vector3.one * 8f; AlignToGroundAndAddCollider(t, pos + new Vector3(8f, 0f, 8f), Quaternion.Euler(-90, 0, 0), -1.8f);
+                int numTrees = Random.Range(1, 4); // 1 to 3 trees Max
+                var sectors = new List<Vector3>() {
+                    new Vector3(7f, 0f, 7f),   // Top-Right
+                    new Vector3(-7f, 0f, 7f),  // Top-Left
+                    new Vector3(7f, 0f, -7f)   // Bottom-Right
+                };
 
-                var filters = t.GetComponentsInChildren<MeshFilter>();
-                foreach (var mf in filters) {
-                    if (mf.sharedMesh == null) continue;
-                    try {
-                        var simplifier = new MeshSimplifier();
-                        simplifier.Initialize(mf.sharedMesh);
-                        simplifier.SimplifyMesh(0.80f); 
-                        mf.sharedMesh = simplifier.ToMesh();
-                    } catch (System.Exception e) {
-                        Debug.LogWarning($"[CityGen] Failed to decimate tree mesh: {mf.name} - {e.Message}");
+                // Shuffle sectors to randomize spawn locations
+                for (int i = 0; i < sectors.Count; i++) {
+                    int tempIndex = Random.Range(i, sectors.Count);
+                    Vector3 hold = sectors[i];
+                    sectors[i] = sectors[tempIndex];
+                    sectors[tempIndex] = hold;
+                }
+
+                for (int i = 0; i < numTrees; i++) {
+                    Vector3 offset = sectors[i] + new Vector3(Random.Range(-1.5f, 1.5f), 0f, Random.Range(-1.5f, 1.5f));
+                    Vector3 spawnLoc = pos + offset;
+
+                    GameObject treePrefab = trees[Random.Range(0, trees.Length)];
+                    var t = (GameObject)PrefabUtility.InstantiatePrefab(treePrefab, p.transform);
+                    t.transform.localScale = Vector3.one * 8f; 
+                    AlignToGroundAndAddCollider(t, spawnLoc, Quaternion.Euler(-90, 0, 0), -1.8f);
+
+                    var filters = t.GetComponentsInChildren<MeshFilter>();
+                    foreach (var mf in filters) {
+                        if (mf.sharedMesh == null) continue;
+                        try {
+                            var simplifier = new MeshSimplifier();
+                            simplifier.Initialize(mf.sharedMesh);
+                            simplifier.SimplifyMesh(0.80f); 
+                            mf.sharedMesh = simplifier.ToMesh();
+                        } catch (System.Exception e) {
+                            Debug.LogWarning($"[CityGen] Failed to decimate tree mesh: {mf.name} - {e.Message}");
+                        }
                     }
                 }
             }

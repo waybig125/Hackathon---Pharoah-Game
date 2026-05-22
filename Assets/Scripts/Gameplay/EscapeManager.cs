@@ -11,6 +11,9 @@ namespace TheAlchemistsCrypt.Gameplay
         [Header("State")]
         public bool hasKey = false;
         public bool hasEscaped = false;
+        private bool isEscaping = false;
+        private float escapeTimer = 0f;
+        private float papyrusCollectFeedbackTimer = 0f;
         
         [Header("UI References")]
         private GameObject promptUiGo;
@@ -128,15 +131,40 @@ namespace TheAlchemistsCrypt.Gameplay
             keyObj.AddComponent<Floater>();
         }
 
+        private void ConvertBoatMaterials(GameObject boat)
+        {
+            var renderers = boat.GetComponentsInChildren<Renderer>(true);
+            var urpShader = Shader.Find("Universal Render Pipeline/Lit");
+            if (urpShader == null) return;
+
+            foreach (var r in renderers)
+            {
+                var mats = r.materials;
+                if (mats == null) continue;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    if (mats[i] == null) continue;
+                    var newMat = new Material(urpShader);
+                    newMat.name = mats[i].name + "_URP";
+                    newMat.SetColor("_BaseColor", new Color(0.22f, 0.15f, 0.09f)); // Dark Wood
+                    newMat.SetFloat("_Smoothness", 0.1f);
+                    newMat.SetFloat("_Metallic", 0.0f);
+                    mats[i] = newMat;
+                }
+                r.materials = mats;
+            }
+        }
+
         private void SpawnBoat()
         {
-            Vector3 spawnPos = new Vector3(0f, 1.2f, -106f);
+            Vector3 spawnPos = new Vector3(0f, 0.45f, -112f);
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
             {
                 boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(-90f, 90f, 0f));
                 boatObj.transform.localScale = Vector3.one * 0.18f; 
+                ConvertBoatMaterials(boatObj);
             }
             else
             {
@@ -152,7 +180,7 @@ namespace TheAlchemistsCrypt.Gameplay
             boatLightGo.transform.localPosition = Vector3.up * 3f;
             var bl = boatLightGo.GetComponent<Light>();
             bl.type = LightType.Point;
-            bl.color = Color.blue;
+            bl.color = new Color(1f, 0.6f, 0.2f); // Warm sunset glow
             bl.intensity = 15f;
             bl.range = 25f;
 
@@ -167,32 +195,103 @@ namespace TheAlchemistsCrypt.Gameplay
             col.isTrigger = true;
         }
 
+        private void StartEscapeSequence(GameObject player)
+        {
+            hasEscaped = true;
+            isEscaping = true;
+            escapeTimer = 0f;
+
+            // Disable player controller movement to stop inputs
+            var pc = player.GetComponent<TheAlchemistsCrypt.Player.PlayerController>();
+            if (pc != null) pc.enabled = false;
+
+            var rb = player.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.useGravity = false;
+                rb.linearVelocity = Vector3.zero;
+            }
+
+            // Snugly seat the player on the escape boat
+            player.transform.position = boatObj.transform.position + new Vector3(0f, 1.2f, 0f);
+            
+            // Point the player to look straight back at the city/coast
+            player.transform.rotation = Quaternion.LookRotation(new Vector3(0f, 0f, 1f)); // Face +Z (inland)
+
+            var playerCam = player.GetComponentInChildren<Camera>();
+            if (playerCam != null)
+            {
+                playerCam.transform.localRotation = Quaternion.Euler(10f, 0f, 0f); // Cinematic slight downward tilt
+            }
+
+            if (promptUiGo != null)
+            {
+                promptUiGo.SetActive(true);
+                if (promptText != null)
+                {
+                    promptText.color = new Color(0.2f, 1f, 1f); // Cyan
+                    promptText.text = "ESCAPING THE CRYPT...";
+                }
+            }
+
+            TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_taunt_01");
+            TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_pickup", false, 1.0f);
+        }
+
         private void Update()
         {
-            if (hasEscaped) return;
+            if (hasEscaped)
+            {
+                if (isEscaping)
+                {
+                    escapeTimer += Time.deltaTime;
+                    
+                    // Smoothly sail out to sea (Z decreases)
+                    if (boatObj != null)
+                    {
+                        boatObj.transform.position += new Vector3(0f, 0f, -4f * Time.deltaTime);
+                    }
+                    
+                    var player = GameObject.FindGameObjectWithTag("Player");
+                    if (player != null)
+                    {
+                        player.transform.position = boatObj.transform.position + new Vector3(0f, 1.2f, 0f);
+                    }
+
+                    if (escapeTimer >= 5.0f)
+                    {
+                        isEscaping = false;
+                        WinGame();
+                    }
+                }
+                return;
+            }
+
             if (!TheAlchemistsCrypt.UI.MobileHUDButtons.HasStartedGame) return;
 
-            var player = GameObject.FindGameObjectWithTag("Player");
-            if (player == null) return;
+            var playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj == null) return;
 
-            float distToKey = keyObj != null ? Vector3.Distance(player.transform.position, keyObj.transform.position) : 9999f;
-            float distToBoat = boatObj != null ? Vector3.Distance(player.transform.position, boatObj.transform.position) : 9999f;
+            float distToKey = keyObj != null ? Vector3.Distance(playerObj.transform.position, keyObj.transform.position) : 9999f;
+            float distToBoat = boatObj != null ? Vector3.Distance(playerObj.transform.position, boatObj.transform.position) : 9999f;
 
             nearKey = !hasKey && distToKey < 15f; 
-            nearBoat = distToBoat < 15f;
-
-            bool interactPressed = false;
-            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.eKey.wasPressedThisFrame) interactPressed = true;
-            if (UnityEngine.InputSystem.Touchscreen.current != null && UnityEngine.InputSystem.Touchscreen.current.primaryTouch.press.wasPressedThisFrame) interactPressed = true;
+            nearBoat = distToBoat < 18f;
 
             if (nearKey)
             {
-                if (promptUiGo != null) promptUiGo.SetActive(true);
+                if (promptUiGo != null)
+                {
+                    promptUiGo.SetActive(true);
+                    promptText.color = Color.white;
+                }
                 if (distToKey < 3.5f)
                 {
                     hasKey = true;
                     if (keyObj != null) Destroy(keyObj);
-                    if (promptText != null) promptText.text = "ANCIENT PAPYRUS COLLECTED! RUN TO THE BOAT!";
+                    papyrusCollectFeedbackTimer = 5.0f; // Keep showing explicit pickup banner for 5 seconds
+                    
                     TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_taunt_01");
                     TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_pickup", false, 0.8f);
                 }
@@ -206,23 +305,58 @@ namespace TheAlchemistsCrypt.Gameplay
                 if (promptUiGo != null) promptUiGo.SetActive(true);
                 if (hasKey)
                 { 
-                    if (promptText != null) promptText.text = "YOU REACHED THE BOAT! TAP OR PRESS [E] TO BOARD AND ESCAPE!";
-                    if (interactPressed)
+                    if (distToBoat < 8.0f)
                     {
-                        WinGame();
+                        StartEscapeSequence(playerObj);
+                    }
+                    else
+                    {
+                        if (promptText != null)
+                        {
+                            promptText.color = new Color(0.2f, 1f, 0.2f); // Green
+                            promptText.text = "REACH THE BOAT TO ESCAPE!";
+                        }
                     }
                 }
                 else
                 {
-                    if (promptText != null) promptText.text = "THE ANCIENT BOAT. YOU NEED THE PAPYRUS TO DEPART.";
+                    if (promptText != null)
+                    {
+                        promptText.color = new Color(1f, 0.3f, 0.3f); // Red
+                        promptText.text = "THE ANCIENT BOAT. YOU NEED THE PAPYRUS TO DEPART.";
+                    }
                 }
             }
             else
             {
-                if (promptUiGo != null && promptText != null)
+                if (papyrusCollectFeedbackTimer > 0f)
                 {
-                    if (promptText.text.Contains("COLLECTED")) { if (distToBoat > 40f && distToKey > 40f) promptUiGo.SetActive(false); }
-                    else promptUiGo.SetActive(false);
+                    papyrusCollectFeedbackTimer -= Time.deltaTime;
+                    if (promptUiGo != null)
+                    {
+                        promptUiGo.SetActive(true);
+                        if (promptText != null)
+                        {
+                            promptText.color = new Color(1f, 0.8f, 0.2f); // Gold feedback
+                            promptText.text = "ANCIENT PAPYRUS COLLECTED! RUN TO THE BOAT!";
+                        }
+                    }
+                }
+                else if (hasKey)
+                {
+                    if (promptUiGo != null)
+                    {
+                        promptUiGo.SetActive(true);
+                        if (promptText != null)
+                        {
+                            promptText.color = new Color(1f, 0.8f, 0.2f); // Gold objective
+                            promptText.text = "OBJECTIVE: ESCAPE VIA THE BOAT AT THE COAST!";
+                        }
+                    }
+                }
+                else
+                {
+                    if (promptUiGo != null) promptUiGo.SetActive(false);
                 }
             }
         }
