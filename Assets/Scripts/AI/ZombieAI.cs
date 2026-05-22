@@ -54,16 +54,26 @@ namespace TheAlchemistsCrypt.AI
         private SpriteRenderer healthBarFillSr;
         private Transform mainCameraTransform;
         private Sprite healthBarSprite;
+        private static Sprite sharedHealthBarSprite;
+
+        private TheAlchemistsCrypt.Player.PlayerHealth cachedPlayerHealth;
+        private bool hasSpeedParameter = false;
+        private int speedParamHash;
+        private float pathfindCooldown = 0f;
 
         private void CreateHealthBar()
         {
             if (Camera.main != null) mainCameraTransform = Camera.main.transform;
 
-            // Generate 1x1 white sprite
-            Texture2D tex = new Texture2D(1, 1);
-            tex.SetPixel(0, 0, Color.white);
-            tex.Apply();
-            healthBarSprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
+            // Use statically cached shared sprite to avoid texture allocation per mummy
+            if (sharedHealthBarSprite == null)
+            {
+                Texture2D tex = new Texture2D(1, 1);
+                tex.SetPixel(0, 0, Color.white);
+                tex.Apply();
+                sharedHealthBarSprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
+            }
+            healthBarSprite = sharedHealthBarSprite;
 
             // Container
             healthBarObj = new GameObject("MummyHealthBar");
@@ -179,7 +189,15 @@ namespace TheAlchemistsCrypt.AI
             animator = GetComponent<Animator>();
             if (animator == null) animator = GetComponentInChildren<Animator>();
             
-            if (animator != null) animator.applyRootMotion = false; // Fix 'dragged' look by disabling root motion
+            if (animator != null)
+            {
+                animator.applyRootMotion = false; // Fix 'dragged' look by disabling root motion
+                hasSpeedParameter = HasParameter("Speed");
+                if (hasSpeedParameter)
+                {
+                    speedParamHash = Animator.StringToHash("Speed");
+                }
+            }
 
             // Slower speed for realism and Mummy thematic movement
             agent.speed = 2.2f;
@@ -245,6 +263,17 @@ namespace TheAlchemistsCrypt.AI
                     if (cam != null) player = cam.transform;
                 }
             }
+
+            if (player != null)
+            {
+                cachedPlayerHealth = player.GetComponentInChildren<TheAlchemistsCrypt.Player.PlayerHealth>();
+                if (cachedPlayerHealth == null)
+                    cachedPlayerHealth = player.GetComponentInParent<TheAlchemistsCrypt.Player.PlayerHealth>();
+            }
+            if (cachedPlayerHealth == null)
+            {
+                cachedPlayerHealth = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Player.PlayerHealth>();
+            }
         }
 
         private void ShootPlayer()
@@ -254,16 +283,11 @@ namespace TheAlchemistsCrypt.AI
 
             // Spawn point is slightly forward and upward (at mummy chest/head level)
             Vector3 spawnPos = transform.position + Vector3.up * 1.5f + transform.forward * 0.5f;
-
-            GameObject projObj = new GameObject("MummyProjectile");
-            projObj.transform.position = spawnPos;
-
-            var projectile = projObj.AddComponent<MummyProjectile>();
-            // Target the player's chest/body level rather than their feet (which is transform.position)
             Vector3 targetPos = player.position + Vector3.up * 1.0f;
-            projectile.direction = (targetPos - spawnPos).normalized;
-            projectile.speed = 16f;
-            projectile.damage = 10f;
+            Vector3 dir = (targetPos - spawnPos).normalized;
+
+            // Use the pooled Spawn method
+            MummyProjectile.Spawn(spawnPos, dir, 16f, 10f);
 
             // Trigger attack anim
             PlayAnimation("Attack");
@@ -446,7 +470,13 @@ namespace TheAlchemistsCrypt.AI
                 }
                 else
                 {
-                    agent.SetDestination(currentTargetPos);
+                    // Throttle SetDestination calls using a random interval to spread CPU load on mobile
+                    pathfindCooldown -= Time.deltaTime;
+                    if (pathfindCooldown <= 0f)
+                    {
+                        agent.SetDestination(currentTargetPos);
+                        pathfindCooldown = Random.Range(0.2f, 0.4f);
+                    }
                 }
             }
 
@@ -470,11 +500,9 @@ namespace TheAlchemistsCrypt.AI
             float vel = agent.velocity.magnitude;
             
             // Set Speed parameter safely only if it exists for automatic transitions
-            if (animator != null && animator.runtimeAnimatorController != null) {
+            if (animator != null && animator.runtimeAnimatorController != null && hasSpeedParameter) {
                 try {
-                    if (HasParameter("Speed")) {
-                        animator.SetFloat("Speed", vel);
-                    }
+                    animator.SetFloat(speedParamHash, vel);
                 } catch (System.Exception) {
                     // Suppress harmless animator parameter warnings during transitions
                 }
@@ -492,8 +520,8 @@ namespace TheAlchemistsCrypt.AI
                 PlayAnimation("Attack");
                 if (animator != null) animator.speed = 1.0f;
                 
-                var health = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Player.PlayerHealth>();
-                if (health != null) health.TakeDamage(12f * Time.deltaTime);
+                if (cachedPlayerHealth == null) FindPlayer();
+                if (cachedPlayerHealth != null) cachedPlayerHealth.TakeDamage(12f * Time.deltaTime);
             }
             else {
                 PlayAnimation("Idle");
@@ -515,9 +543,9 @@ namespace TheAlchemistsCrypt.AI
 
         private void SetAnimSpeed(float s)
         {
-            if (animator != null && animator.runtimeAnimatorController != null) {
+            if (animator != null && animator.runtimeAnimatorController != null && hasSpeedParameter) {
                 try {
-                    if (HasParameter("Speed")) animator.SetFloat("Speed", s);
+                    animator.SetFloat(speedParamHash, s);
                 } catch (System.Exception) {}
             }
         }

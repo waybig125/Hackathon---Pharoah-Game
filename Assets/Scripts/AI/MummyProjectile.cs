@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 using TheAlchemistsCrypt.Player;
 
 namespace TheAlchemistsCrypt.AI
@@ -12,10 +13,32 @@ namespace TheAlchemistsCrypt.AI
         [HideInInspector]
         public Vector3 direction = Vector3.forward;
 
+        private float lifetimeTimer = 5f;
+        private bool isInitialized = false;
+
+        // Static object pools to completely eliminate Instantiate/Destroy allocations during gameplay
+        private static List<MummyProjectile> projectilePool = new List<MummyProjectile>();
+        private static List<ParticleSystem> splashPool = new List<ParticleSystem>();
+
+        private static GameObject projectileTemplate;
+        private static GameObject splashTemplate;
+
+        private static Material sharedParticleMaterial;
+        private static Texture2D sharedParticleTexture;
+
         private void Start()
         {
-            // Destroy after lifetime to prevent memory leaks
+            if (isInitialized) return;
+            InitializeInstance();
+            
+            // Non-pooled fallback: auto destroy after lifetime
             Destroy(gameObject, lifetime);
+        }
+
+        public void InitializeInstance()
+        {
+            if (isInitialized) return;
+            isInitialized = true;
 
             // Procedurally create a beautiful glowing alchemical project mesh
             GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -25,7 +48,7 @@ namespace TheAlchemistsCrypt.AI
 
             // Remove sphere collider from child visual to avoid double collision or self-hits
             var sphereCollider = visual.GetComponent<SphereCollider>();
-            if (sphereCollider != null) Destroy(sphereCollider);
+            if (sphereCollider != null) DestroyImmediate(sphereCollider);
 
             // Give the projectile a brilliant golden-amber glowing lit material
             var renderer = visual.GetComponent<MeshRenderer>();
@@ -72,20 +95,153 @@ namespace TheAlchemistsCrypt.AI
             trail.sharedMaterial = trailMat;
 
             // Add trigger collider for the projectile itself
-            var col = gameObject.AddComponent<SphereCollider>();
+            var col = gameObject.GetComponent<SphereCollider>();
+            if (col == null) col = gameObject.AddComponent<SphereCollider>();
             col.isTrigger = true;
             col.radius = 0.3f;
 
             // Add Rigidbody so triggers receive collision messages reliably
-            var rb = gameObject.AddComponent<Rigidbody>();
+            var rb = gameObject.GetComponent<Rigidbody>();
+            if (rb == null) rb = gameObject.AddComponent<Rigidbody>();
             rb.useGravity = false;
             rb.isKinematic = true;
+        }
+
+        private static void InitializeTemplates()
+        {
+            if (projectileTemplate != null) return;
+
+            // Create projectile template
+            projectileTemplate = new GameObject("MummyProjectileTemplate");
+            projectileTemplate.SetActive(false);
+            DontDestroyOnLoad(projectileTemplate);
+            
+            var proj = projectileTemplate.AddComponent<MummyProjectile>();
+            proj.InitializeInstance();
+
+            // Create splash template
+            splashTemplate = new GameObject("ProjectileSplashTemplate");
+            splashTemplate.SetActive(false);
+            DontDestroyOnLoad(splashTemplate);
+            
+            var system = splashTemplate.AddComponent<ParticleSystem>();
+            system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            var main = system.main;
+            main.startColor = new Color(0.95f, 0.65f, 0.15f);
+            main.startSize = 0.12f;
+            main.startSpeed = 4f;
+            main.duration = 0.4f;
+            main.loop = false;
+            main.playOnAwake = false;
+
+            var emission = system.emission;
+            emission.rateOverTime = 0f;
+            emission.burstCount = 1;
+            emission.SetBurst(0, new ParticleSystem.Burst(0f, 15));
+
+            var partRenderer = splashTemplate.GetComponent<ParticleSystemRenderer>();
+            if (partRenderer != null)
+            {
+                partRenderer.sharedMaterial = CreateSharedParticleMaterial(new Color(0.95f, 0.65f, 0.15f));
+            }
+        }
+
+        private static Material CreateSharedParticleMaterial(Color baseColor)
+        {
+            if (sharedParticleMaterial != null) return sharedParticleMaterial;
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+            
+            sharedParticleMaterial = new Material(shader);
+            sharedParticleMaterial.SetColor("_Color", baseColor);
+            if (sharedParticleMaterial.HasProperty("_BaseColor")) sharedParticleMaterial.SetColor("_BaseColor", baseColor);
+            
+            // Create a gorgeous soft anti-aliased circular brush texture once
+            sharedParticleTexture = new Texture2D(16, 16, TextureFormat.RGBA32, false);
+            for (int y = 0; y < 16; y++)
+            {
+                for (int x = 0; x < 16; x++)
+                {
+                    float dx = x - 7.5f;
+                    float dy = y - 7.5f;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    float alpha = Mathf.Clamp01(1f - (dist / 7.5f));
+                    alpha = Mathf.Pow(alpha, 2.5f); // Smooth falloff gradient
+                    sharedParticleTexture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            sharedParticleTexture.Apply();
+            sharedParticleMaterial.mainTexture = sharedParticleTexture;
+            if (sharedParticleMaterial.HasProperty("_BaseMap")) sharedParticleMaterial.SetTexture("_BaseMap", sharedParticleTexture);
+            if (sharedParticleMaterial.HasProperty("_MainTex")) sharedParticleMaterial.SetTexture("_MainTex", sharedParticleTexture);
+            return sharedParticleMaterial;
+        }
+
+        public static MummyProjectile Spawn(Vector3 position, Vector3 direction, float speed, float damage)
+        {
+            InitializeTemplates();
+
+            // Find an inactive projectile in the pool
+            MummyProjectile proj = null;
+            for (int i = projectilePool.Count - 1; i >= 0; i--)
+            {
+                if (projectilePool[i] == null)
+                {
+                    projectilePool.RemoveAt(i);
+                    continue;
+                }
+                if (!projectilePool[i].gameObject.activeSelf)
+                {
+                    proj = projectilePool[i];
+                    break;
+                }
+            }
+
+            // Create a new instance if none found in pool
+            if (proj == null)
+            {
+                GameObject newObj = Instantiate(projectileTemplate);
+                proj = newObj.GetComponent<MummyProjectile>();
+                proj.enabled = true; // Enable Update loop on instance
+                projectilePool.Add(proj);
+            }
+
+            // Set variables
+            proj.transform.position = position;
+            proj.direction = direction;
+            proj.speed = speed;
+            proj.damage = damage;
+            proj.lifetimeTimer = proj.lifetime; // Reset custom lifetime timer
+
+            // Clear the trail renderer history so it doesn't draw from previous active location
+            var trail = proj.GetComponentInChildren<TrailRenderer>();
+            if (trail != null)
+            {
+                trail.Clear();
+            }
+
+            proj.gameObject.SetActive(true);
+            return proj;
         }
 
         private void Update()
         {
             // Move strictly in a straight line
             transform.Translate(direction * speed * Time.deltaTime, Space.World);
+
+            // Custom lifetime tracking for pooled object
+            lifetimeTimer -= Time.deltaTime;
+            if (lifetimeTimer <= 0f)
+            {
+                Deactivate();
+            }
+        }
+
+        private void Deactivate()
+        {
+            gameObject.SetActive(false);
         }
 
         private void OnTriggerEnter(Collider other)
@@ -109,70 +265,61 @@ namespace TheAlchemistsCrypt.AI
             // Spawn beautiful alchemical amber particle splash
             SpawnSplashEffect();
 
-            // Destroy projectile
-            Destroy(gameObject);
+            // Return to pool (instead of Destroy)
+            Deactivate();
         }
 
         private void SpawnSplashEffect()
         {
-            var splashGo = new GameObject("ProjectileSplash");
-            splashGo.transform.position = transform.position;
-            var system = splashGo.AddComponent<ParticleSystem>();
+            InitializeTemplates();
 
-            // Stop before modifying parameters to avoid Unity 6 duration warnings
-            system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-
-            var main = system.main;
-            main.startColor = new Color(0.95f, 0.65f, 0.15f);
-            main.startSize = 0.12f;
-            main.startSpeed = 4f;
-            main.duration = 0.4f;
-            main.loop = false;
-
-            var emission = system.emission;
-            emission.rateOverTime = 0f;
-            emission.burstCount = 1;
-            emission.SetBurst(0, new ParticleSystem.Burst(0f, 15));
-
-            // Set URP-compatible particle material to prevent pink boxes
-            var renderer = splashGo.GetComponent<ParticleSystemRenderer>();
-            if (renderer != null)
+            ParticleSystem splash = null;
+            for (int i = splashPool.Count - 1; i >= 0; i--)
             {
-                renderer.sharedMaterial = CreateParticleMaterial(new Color(0.95f, 0.65f, 0.15f));
-            }
-
-            system.Play();
-            Destroy(splashGo, 0.8f);
-        }
-
-        private Material CreateParticleMaterial(Color baseColor)
-        {
-            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (shader == null) shader = Shader.Find("Sprites/Default");
-            
-            Material mat = new Material(shader);
-            mat.SetColor("_Color", baseColor);
-            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", baseColor);
-            
-            // Create a gorgeous soft anti-aliased circular brush texture
-            Texture2D tex = new Texture2D(16, 16, TextureFormat.RGBA32, false);
-            for (int y = 0; y < 16; y++)
-            {
-                for (int x = 0; x < 16; x++)
+                if (splashPool[i] == null)
                 {
-                    float dx = x - 7.5f;
-                    float dy = y - 7.5f;
-                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
-                    float alpha = Mathf.Clamp01(1f - (dist / 7.5f));
-                    alpha = Mathf.Pow(alpha, 2.5f); // Smooth falloff gradient
-                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                    splashPool.RemoveAt(i);
+                    continue;
+                }
+                if (!splashPool[i].gameObject.activeSelf)
+                {
+                    splash = splashPool[i];
+                    break;
                 }
             }
-            tex.Apply();
-            mat.mainTexture = tex;
-            if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
-            if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", tex);
-            return mat;
+
+            if (splash == null)
+            {
+                GameObject newObj = Instantiate(splashTemplate);
+                splash = newObj.GetComponent<ParticleSystem>();
+                
+                // Add helper component to return to pool automatically
+                newObj.AddComponent<ParticlePoolHelper>();
+                splashPool.Add(splash);
+            }
+
+            splash.transform.position = transform.position;
+            splash.gameObject.SetActive(true);
+            splash.Play();
+        }
+    }
+
+    // Helper component to return particles to pool automatically when finished playing
+    public class ParticlePoolHelper : MonoBehaviour
+    {
+        private ParticleSystem ps;
+
+        private void Awake()
+        {
+            ps = GetComponent<ParticleSystem>();
+        }
+
+        private void Update()
+        {
+            if (ps != null && !ps.isPlaying)
+            {
+                gameObject.SetActive(false);
+            }
         }
     }
 }

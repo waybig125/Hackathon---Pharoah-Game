@@ -567,11 +567,12 @@ public void GeneratePolishedCity()
                 floorBody.GetComponent<Renderer>().sharedMaterial = wall; floorBody.isStatic = true;
 
                 Vector3[] localPositions = {
-                    new Vector3(0f, windowY, -(depth / 2f) - 0.15f),
-                    new Vector3(0f, windowY, (depth / 2f) + 0.15f),
-                    new Vector3(-(width / 2f) - 0.15f, windowY, 0f),
-                    new Vector3((width / 2f) + 0.15f, windowY, 0f)
+                    new Vector3(0f, windowY, -(depth / 2f) - 0.18f),
+                    new Vector3(0f, windowY, (depth / 2f) + 0.18f),
+                    new Vector3(-(width / 2f) - 0.18f, windowY, 0f),
+                    new Vector3((width / 2f) + 0.18f, windowY, 0f)
                 };
+
                 float[] rotations = { 180f, 0f, 90f, -90f };
 
                 for (int side = 0; side < 4; side++) {
@@ -587,8 +588,8 @@ public void GeneratePolishedCity()
                     if (windowMat == litWindowMat) {
                         var lightGo = new GameObject("WindowLight"); lightGo.transform.SetParent(win.transform);
                         lightGo.transform.localPosition = new Vector3(0f, 0f, -0.8f);
-                        var l = lightGo.AddComponent<Light>(); l.type = LightType.Point;
-                        l.color = new Color(1.0f, 0.72f, 0.28f); l.range = 18f; l.intensity = 15.0f;
+                        // Point lights are disabled in the generator to prevent massive real-time rendering overhead on mobile.
+                        // Emissive window material handles the visual glow.
                     }
                 }
             }
