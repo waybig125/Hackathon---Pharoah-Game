@@ -57,6 +57,8 @@ namespace TheAlchemistsCrypt.UI
         private RectTransform guideArrowRect;
         private CanvasGroup guideArrowCanvasGroup;
         private Sprite guideArrowSprite;
+        private Text guideArrowText;
+        private Image guideArrowImage;
 
         private void Awake()
         {
@@ -960,24 +962,41 @@ namespace TheAlchemistsCrypt.UI
 
             new GameObject("MinimapCanvasContainer", typeof(RectTransform), typeof(MinimapUI)).transform.SetParent(root, false);
 
-            // --- GUIDE ARROW TO PAPYRUS ---
+            // --- GUIDE ARROW & TARGET INDICATOR ---
             guideArrowSprite = CreateProceduralArrowSprite(128);
-            var arrowGo = new GameObject("HUD_GuideArrow", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
-            arrowGo.transform.SetParent(root, false);
-            guideArrowRect = arrowGo.GetComponent<RectTransform>();
-            guideArrowRect.anchorMin = guideArrowRect.anchorMax = new Vector2(0.5f, 0.5f);
-            guideArrowRect.anchoredPosition = new Vector2(0f, -220f); // Positioned nicely below the center crosshair
-            guideArrowRect.sizeDelta = new Vector2(100f, 100f);
-            
-            var arrowImg = arrowGo.GetComponent<Image>();
-            arrowImg.sprite = guideArrowSprite;
-            arrowImg.color = Color.white;
-            arrowImg.raycastTarget = false;
-            
-            guideArrowCanvasGroup = arrowGo.GetComponent<CanvasGroup>();
-            guideArrowCanvasGroup.alpha = 0f; // Start hidden
-        }
+            var guideContainer = new GameObject("HUD_GuideContainer", typeof(RectTransform), typeof(CanvasGroup));
+            guideContainer.transform.SetParent(root, false);
+            var containerRect = guideContainer.GetComponent<RectTransform>();
+            containerRect.anchorMin = containerRect.anchorMax = new Vector2(0.5f, 1.0f);
+            containerRect.anchoredPosition = new Vector2(0f, -110f); // Top center
+            containerRect.sizeDelta = new Vector2(300, 150);
+            guideArrowCanvasGroup = guideContainer.GetComponent<CanvasGroup>();
+            guideArrowCanvasGroup.alpha = 0f;
 
+            var arrowGo = new GameObject("HUD_GuideArrow", typeof(RectTransform), typeof(Image));
+            arrowGo.transform.SetParent(guideContainer.transform, false);
+            guideArrowRect = arrowGo.GetComponent<RectTransform>();
+            guideArrowRect.anchoredPosition = new Vector2(0f, 25f);
+            guideArrowRect.sizeDelta = new Vector2(90f, 90f);
+            guideArrowImage = arrowGo.GetComponent<Image>();
+            guideArrowImage.sprite = guideArrowSprite;
+            guideArrowImage.raycastTarget = false;
+
+            var guideTxtGo = new GameObject("HUD_GuideText", typeof(RectTransform), typeof(Text));
+            guideTxtGo.transform.SetParent(guideContainer.transform, false);
+            var txtRect = guideTxtGo.GetComponent<RectTransform>();
+            txtRect.anchoredPosition = new Vector2(0f, -45f);
+            txtRect.sizeDelta = new Vector2(280, 40);
+            guideArrowText = guideTxtGo.GetComponent<Text>();
+            guideArrowText.font = GetTitleFont();
+            guideArrowText.fontSize = 24;
+            guideArrowText.fontStyle = FontStyle.Bold;
+            guideArrowText.alignment = TextAnchor.MiddleCenter;
+            var txtOutline = guideTxtGo.AddComponent<Outline>();
+            txtOutline.effectColor = new Color(0, 0, 0, 0.5f);
+            txtOutline.effectDistance = new Vector2(1, -1);
+            guideArrowText.raycastTarget = false;
+            }
         private void CreateBlockButton(Transform parent, string label, Vector2 pos, Vector2 size, Sprite iconSprite, System.Action onDown, System.Action onUp = null)
         {
             var go = new GameObject(label, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
@@ -1322,46 +1341,41 @@ namespace TheAlchemistsCrypt.UI
         {
             Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
             float half = size * 0.5f;
-            Color gold = new Color(0.95f, 0.8f, 0.2f, 0.95f);
             for (int y = 0; y < size; y++) {
                 for (int x = 0; x < size; x++) {
                     float px = (x - half) / half;
                     float py = (y - half) / half;
-                    
-                    // Draw a sleek arrow pointing up (V > 0)
-                    // Stem: px is narrow, py is negative to mid
-                    bool isStem = Mathf.Abs(px) < 0.15f && py >= -0.7f && py <= 0.1f;
-                    // Head: py is high, px <= (1 - py)
-                    bool isHead = py > 0.1f && py <= 0.8f && Mathf.Abs(px) <= (0.8f - py) * 1.2f;
-                    
-                    if (isStem || isHead)
-                    {
-                        tex.SetPixel(x, y, gold);
-                    }
-                    else
-                    {
-                        tex.SetPixel(x, y, Color.clear);
-                    }
+
+                    // Draw a sleek double-chevron racing-style arrow pointing up
+                    // Lower chevron
+                    bool c1 = Mathf.Abs(px) <= (py + 0.4f) && Mathf.Abs(px) >= (py + 0.1f) && py >= -0.4f && py <= 0.3f;
+                    // Upper chevron
+                    bool c2 = Mathf.Abs(px) <= (py - 0.1f) && Mathf.Abs(px) >= (py - 0.4f) && py >= 0.1f && py <= 0.8f;
+
+                    if (c1 || c2) tex.SetPixel(x, y, Color.white);
+                    else tex.SetPixel(x, y, Color.clear);
                 }
             }
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
         }
-
         private void UpdateGuideArrow()
         {
             if (guideArrowCanvasGroup == null || guideArrowRect == null) return;
 
-            // Find key (Papyrus)
-            var papyrus = GameObject.Find("AncientPapyrus");
-            if (papyrus == null)
-            {
-                // If papyrus is already collected/destroyed, fade out
+            // Target Priority: Ancient Papyrus, then Escape Boat
+            GameObject target = GameObject.Find("AncientPapyrus");
+            bool isBoat = false;
+            if (target == null) {
+                target = GameObject.Find("EscapeBoat");
+                isBoat = true;
+            }
+
+            if (target == null) {
                 guideArrowCanvasGroup.alpha = Mathf.MoveTowards(guideArrowCanvasGroup.alpha, 0f, Time.deltaTime * 3f);
                 return;
             }
 
-            // Find player
             GameObject player = GameObject.FindGameObjectWithTag("Player");
             if (player == null)
             {
@@ -1375,16 +1389,22 @@ namespace TheAlchemistsCrypt.UI
                 return;
             }
 
+            // Dynamic Styling
+            if (guideArrowText != null) {
+                guideArrowText.text = isBoat ? "ESCAPE TO BOAT" : "FIND PAPYRUS";
+                Color indicatorCol = isBoat ? new Color(1f, 0.75f, 0.1f) : new Color(0.2f, 0.9f, 1f); // Gold vs Cyan
+                guideArrowText.color = indicatorCol;
+                if (guideArrowImage != null) guideArrowImage.color = indicatorCol;
+            }
+
             // Determine if the player is moving
             bool isMoving = false;
             
-            // Check touch joystick input
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null &&
                 TheAlchemistsCrypt.Input.MobileInputManager.Instance.MovementInput.sqrMagnitude > 0.01f)
             {
                 isMoving = true;
             }
-            // Check WASD/Keyboard movement input
             else if (UnityEngine.InputSystem.Keyboard.current != null)
             {
                 var k = UnityEngine.InputSystem.Keyboard.current;
@@ -1401,15 +1421,18 @@ namespace TheAlchemistsCrypt.UI
 
             if (guideArrowCanvasGroup.alpha > 0.01f)
             {
-                // Calculate direction to Papyrus in world space
-                Vector3 toPapyrus = papyrus.transform.position - player.transform.position;
-                toPapyrus.y = 0f; // Ignore height difference
+                // Rotation
+                Vector3 dir = (target.transform.position - player.transform.position);
+                dir.y = 0; dir.Normalize();
+                float angle = Vector3.SignedAngle(player.transform.forward, dir, Vector3.up);
+                guideArrowRect.localRotation = Quaternion.Euler(0, 0, -angle);
 
-                // Angle of target relative to player's forward vector
-                float angle = Vector3.SignedAngle(player.transform.forward, toPapyrus, Vector3.up);
-
-                // Rotate the arrow UI (counteract SignedAngle rotation directions)
-                guideArrowRect.localEulerAngles = new Vector3(0f, 0f, -angle);
+                // Bobbing & Pulsing Animations
+                float bob = Mathf.Sin(Time.time * 6f) * 10f;
+                guideArrowRect.anchoredPosition = new Vector2(0, 25f + bob);
+                
+                float pulse = 1f + Mathf.PingPong(Time.time * 0.8f, 0.15f);
+                guideArrowRect.localScale = Vector3.one * pulse;
             }
         }
 
