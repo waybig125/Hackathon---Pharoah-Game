@@ -6,15 +6,18 @@ namespace TheAlchemistsCrypt.Environment
     {
         [Header("Fog Settings")]
         public bool enableFog = true;
-        // Mystic Egyptian Orange Fog
-        public Color fogColor = new Color(0.45f, 0.25f, 0.05f, 1f);
-        public float fogDensity = 0.012f; 
-        public FogMode fogMode = FogMode.ExponentialSquared;
+        // Warm Sunset Peach Horizon
+        public Color fogColor = new Color(0.92f, 0.74f, 0.52f, 1f);
+        public float fogStartDistance = 150f;
+        public float fogEndDistance = 1200f;
+        public FogMode fogMode = FogMode.Linear;
 
         [Header("Lighting Settings")]
-        public Color ambientLight = new Color(0.25f, 0.22f, 0.28f); 
-        public Color sunColor = new Color(0.8f, 0.6f, 0.4f, 1.0f); 
-        public float sunIntensity = 1.0f; 
+        public Color ambientSkyColor = new Color(0.35f, 0.40f, 0.60f); // Cool purple-blue shadows
+        public Color ambientEquatorColor = new Color(0.85f, 0.68f, 0.52f); // Warm peach transition
+        public Color ambientGroundColor = new Color(0.25f, 0.20f, 0.22f); // Cool dark ground
+        public Color sunColor = new Color(1.0f, 0.82f, 0.62f, 1.0f); // Warm golden light
+        public float sunIntensity = 1.4f; 
 
         private void Start()
         {
@@ -23,20 +26,25 @@ namespace TheAlchemistsCrypt.Environment
 
         public void ApplyAtmosphere()
         {
-            RenderSettings.fog = enableFog;
-            RenderSettings.fogColor = fogColor;
-            RenderSettings.fogDensity = fogDensity;
-            RenderSettings.fogMode = fogMode;
-
-            // Force cameras to Solid Color yellowish clear to fix Pink issue
+            // Set camera clear flags to Skybox to show procedural skybox
             foreach (var cam in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include))
             {
-                cam.clearFlags = CameraClearFlags.SolidColor;
-                cam.backgroundColor = fogColor;
+                if (cam != null && cam.name != "TopDownClarityCamera" && cam.name != "MinimapCamera")
+                {
+                    cam.clearFlags = CameraClearFlags.Skybox;
+                }
             }
 
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = ambientLight;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = ambientSkyColor;
+            RenderSettings.ambientEquatorColor = ambientEquatorColor;
+            RenderSettings.ambientGroundColor = ambientGroundColor;
+
+            RenderSettings.fog = enableFog;
+            RenderSettings.fogColor = fogColor;
+            RenderSettings.fogMode = fogMode;
+            RenderSettings.fogStartDistance = fogStartDistance;
+            RenderSettings.fogEndDistance = fogEndDistance;
 
             Light sun = RenderSettings.sun;
             if (sun == null)
@@ -57,8 +65,8 @@ namespace TheAlchemistsCrypt.Environment
             {
                 sun.color = sunColor;
                 sun.intensity = sunIntensity;
-                // Move sun a bit above (higher angle)
-                sun.transform.rotation = Quaternion.Euler(75f, -30f, 0f);
+                // Sunset low angle matching the editor setup
+                sun.transform.rotation = Quaternion.Euler(22f, 215f, 0f);
                 RenderSettings.sun = sun;
             }
         }

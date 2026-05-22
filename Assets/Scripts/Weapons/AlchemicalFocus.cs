@@ -101,11 +101,17 @@ namespace TheAlchemistsCrypt.Weapons
                 foreach (Material m in r.materials)
                 {
                     if (m == null) continue;
-                    if (m.HasProperty("_Color")) m.SetColor("_Color", glowColor);
-                    if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", glowColor);
+                    string matName = m.name.ToLower();
+                    bool isMainBody = matName.Contains("carbon") || matName.Contains("steel") || matName.Contains("metal") || matName.Contains("camo");
+
+                    if (!isMainBody)
+                    {
+                        if (m.HasProperty("_Color")) m.SetColor("_Color", glowColor);
+                        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", glowColor);
+                    }
                     if (m.HasProperty("_EmissionColor"))
                     {
-                        m.SetColor("_EmissionColor", glowColor * 2.5f); // Make it glow!
+                        m.SetColor("_EmissionColor", glowColor * 3.5f); // Make it glow!
                         m.EnableKeyword("_EMISSION");
                     }
                 }

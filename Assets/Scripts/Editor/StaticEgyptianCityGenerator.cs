@@ -475,30 +475,40 @@ namespace TheAlchemistsCrypt.Editor
 
         private void SetupEnvironment(GameObject root)
         {
-            var skyMat = new Material(Shader.Find("Skybox/Procedural"));
-            skyMat.SetColor("_SkyTint", new Color(0.35f, 0.55f, 0.8f)); // Rich warm blue
-            skyMat.SetColor("_GroundColor", new Color(0.9f, 0.7f, 0.55f)); // Warm sunset peach
-            skyMat.SetFloat("_AtmosphereThickness", 0.95f);
-            skyMat.SetFloat("_Exposure", 1.2f);
+            Material skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/DaytimeSkybox.mat");
+            if (skyMat == null) {
+                skyMat = new Material(Shader.Find("Skybox/Procedural"));
+                if (!System.IO.Directory.Exists("Assets/Materials")) System.IO.Directory.CreateDirectory("Assets/Materials");
+                AssetDatabase.CreateAsset(skyMat, "Assets/Materials/DaytimeSkybox.mat");
+            }
+            skyMat.SetColor("_SkyTint", new Color(0.15f, 0.40f, 0.75f, 1f)); // Rich warm sky blue
+            skyMat.SetColor("_GroundColor", new Color(0.95f, 0.65f, 0.45f, 1f)); // Warm sunset peach
+            skyMat.SetFloat("_AtmosphereThickness", 0.85f);
+            skyMat.SetFloat("_Exposure", 1.8f);
+            skyMat.SetFloat("_SunDisk", 2f);
+            skyMat.SetFloat("_SunSize", 0.04f);
+            
+            EditorUtility.SetDirty(skyMat);
             
             RenderSettings.skybox = skyMat;
             RenderSettings.ambientMode = AmbientMode.Trilight; 
-            RenderSettings.ambientSkyColor    = new Color(0.55f, 0.68f, 0.85f); // Bluish shadow fill
-            RenderSettings.ambientEquatorColor = new Color(0.9f, 0.78f, 0.68f);
-            RenderSettings.ambientGroundColor  = new Color(0.5f, 0.42f, 0.35f);
+            RenderSettings.ambientSkyColor    = new Color(0.35f, 0.40f, 0.60f); // Cool purple-blue shadows
+            RenderSettings.ambientEquatorColor = new Color(0.85f, 0.68f, 0.52f); // Warm peach transition
+            RenderSettings.ambientGroundColor  = new Color(0.25f, 0.20f, 0.22f); // Cool dark ground
 
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.78f, 0.85f, 0.92f); // Haze matches blue/peach sky
-            RenderSettings.fogStartDistance = 120f;   // Distant fog to keep sky clear
-            RenderSettings.fogEndDistance  = 1500f;   
+            RenderSettings.fogColor = new Color(0.92f, 0.74f, 0.52f, 1f); // Horizon peach/orange fog
+            RenderSettings.fogStartDistance = 150f;   // Keep city clear up close
+            RenderSettings.fogEndDistance  = 1200f;   
             
             var sun = GameObject.Find("Directional Light")?.GetComponent<Light>();
             if (sun != null) {
-                sun.color = new Color(1.0f, 0.92f, 0.82f); // Warm golden light
-                sun.intensity = 1.3f;
-                sun.transform.rotation = Quaternion.Euler(22f, 215f, 0f); // Warm sun angle
+                sun.color = new Color(1.0f, 0.82f, 0.62f); // Warm golden light
+                sun.intensity = 1.4f;
+                sun.transform.rotation = Quaternion.Euler(22f, 215f, 0f); // Warm low sun angle
             }
             SetupPostProcessing(root.transform);
+            AssetDatabase.SaveAssets();
         }
 
         private void SetupPostProcessing(Transform parent)
@@ -508,8 +518,13 @@ namespace TheAlchemistsCrypt.Editor
             var vol = volGo.AddComponent<Volume>();
             vol.isGlobal = true; vol.priority = 10;
             
-            var profile = ScriptableObject.CreateInstance<VolumeProfile>();
-            profile.name = "VisualOverhaulProfile";
+            VolumeProfile profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>("Assets/Settings/VisualOverhaulProfile.asset");
+            if (profile == null) {
+                profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                profile.name = "VisualOverhaulProfile";
+                if (!System.IO.Directory.Exists("Assets/Settings")) System.IO.Directory.CreateDirectory("Assets/Settings");
+                AssetDatabase.CreateAsset(profile, "Assets/Settings/VisualOverhaulProfile.asset");
+            }
             
             if (!profile.TryGet<Bloom>(out var bloom)) bloom = profile.Add<Bloom>();
             bloom.intensity.Override(0.5f);
@@ -517,23 +532,25 @@ namespace TheAlchemistsCrypt.Editor
             bloom.scatter.Override(0.6f);
 
             if (!profile.TryGet<ColorAdjustments>(out var colorAdj)) colorAdj = profile.Add<ColorAdjustments>();
-            colorAdj.contrast.Override(15f);
-            colorAdj.saturation.Override(10f);
+            colorAdj.contrast.Override(25f);
+            colorAdj.saturation.Override(20f);
             colorAdj.postExposure.Override(0.1f);
-            colorAdj.colorFilter.Override(new Color(1f, 0.96f, 0.9f)); 
+            colorAdj.colorFilter.Override(new Color(1f, 0.95f, 0.9f)); 
 
             if (!profile.TryGet<Tonemapping>(out var tone)) tone = profile.Add<Tonemapping>();
             tone.mode.Override(TonemappingMode.ACES);
             
             if (!profile.TryGet<Vignette>(out var vignette)) vignette = profile.Add<Vignette>();
             vignette.intensity.Override(0.25f);
-            vignette.color.Override(new Color(0.2f, 0.15f, 0.1f)); 
+            vignette.color.Override(new Color(0.15f, 0.12f, 0.2f)); 
 
             if (!profile.TryGet<LiftGammaGain>(out var lgg)) lgg = profile.Add<LiftGammaGain>();
-            lgg.lift.Override(new Vector4(0.05f, 0.02f, 0.0f, 0f));
-            lgg.gamma.Override(new Vector4(1.05f, 1.0f, 0.95f, 0f));
-            lgg.gain.Override(new Vector4(1.1f, 1.05f, 1.0f, 0f));
+            lgg.lift.Override(new Vector4(0.04f, 0.02f, 0.08f, 0f)); // Cool blue-purple shadows
+            lgg.gamma.Override(new Vector4(1.05f, 1.0f, 0.95f, 0f)); // Warm sunset midtones
+            lgg.gain.Override(new Vector4(1.1f, 1.05f, 1.0f, 0f));   // Warm highlights
 
+            EditorUtility.SetDirty(profile);
+            
             vol.sharedProfile = profile;
         }
 
