@@ -84,8 +84,8 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            // Moved to Z=-275 (on beach sand) and scaled to 0.18f (human-sized relative to player)
-            Vector3 spawnPos = new Vector3(0f, 1.2f, -275f);
+            // Moved to Z=-104f (slightly past the Z=-100f CoastlineBarrier) and scaled to 0.18f
+            Vector3 spawnPos = new Vector3(0f, 1.2f, -104f);
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
@@ -119,7 +119,12 @@ namespace TheAlchemistsCrypt.Gameplay
             var col = boatObj.GetComponent<Collider>();
             if (col == null) col = boatObj.AddComponent<MeshCollider>();
             if (col is MeshCollider mc) mc.convex = true;
-            col.isTrigger = true;
+            
+            // Set all colliders in the boat hierarchy to solid so that characters cannot enter
+            foreach (var c in boatObj.GetComponentsInChildren<Collider>(true))
+            {
+                c.isTrigger = false;
+            }
         }
 
         private void CreatePromptUI()
