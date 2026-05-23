@@ -47,7 +47,10 @@ namespace InfimaGames.LowPolyShooterPack
             set 
             {
                 if (float.IsNaN(value.x) || float.IsNaN(value.y) || float.IsNaN(value.z)) return;
-                rigidBody.linearVelocity = value;
+                if (rigidBody != null && !rigidBody.isKinematic)
+                {
+                    rigidBody.linearVelocity = value;
+                }
             }
         }
 

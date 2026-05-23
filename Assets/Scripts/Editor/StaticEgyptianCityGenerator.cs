@@ -884,6 +884,13 @@ namespace TheAlchemistsCrypt.Editor
             
             bool isDynamic = obj.name.ToLower().Contains("crate") || obj.name.ToLower().Contains("barrel");
             if (isDynamic) {
+                var dynamicProps = GameObject.Find("DynamicProps");
+                if (dynamicProps == null)
+                {
+                    dynamicProps = new GameObject("DynamicProps");
+                    dynamicProps.isStatic = false;
+                }
+                obj.transform.SetParent(dynamicProps.transform);
                 obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset + 1.0f, targetPos.z);
             } else {
                 obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset, targetPos.z);
@@ -898,6 +905,8 @@ namespace TheAlchemistsCrypt.Editor
                 }
                 var rb = obj.GetComponent<Rigidbody>();
                 if (rb == null) rb = obj.AddComponent<Rigidbody>();
+                rb.isKinematic = false;
+                rb.useGravity = true;
                 rb.mass = 10f;
                 rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
                 rb.linearDamping = 0.5f;

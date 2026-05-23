@@ -205,6 +205,25 @@ namespace TheAlchemistsCrypt.Gameplay
             var pc = player.GetComponent<TheAlchemistsCrypt.Player.PlayerController>();
             if (pc != null) pc.enabled = false;
 
+            var ph = player.GetComponent<TheAlchemistsCrypt.Player.PlayerHealth>();
+            if (ph != null) ph.enabled = false;
+
+            var punch = player.GetComponent<TheAlchemistsCrypt.Player.PunchCombat>();
+            if (punch != null) punch.enabled = false;
+
+            var focus = player.GetComponentInChildren<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+            if (focus != null) focus.enabled = false;
+
+            // Disable all Infima Games behaviours (movement, inputs, shooting) to prevent physical overrides
+            var infimaBehaviors = player.GetComponentsInChildren<MonoBehaviour>();
+            foreach (var comp in infimaBehaviors)
+            {
+                if (comp.GetType().Namespace != null && comp.GetType().Namespace.StartsWith("InfimaGames"))
+                {
+                    comp.enabled = false;
+                }
+            }
+
             var rb = player.GetComponent<Rigidbody>();
             if (rb != null)
             {
@@ -305,7 +324,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 if (promptUiGo != null) promptUiGo.SetActive(true);
                 if (hasKey)
                 { 
-                    if (distToBoat < 8.0f)
+                    if (distToBoat < 15.0f)
                     {
                         StartEscapeSequence(playerObj);
                     }

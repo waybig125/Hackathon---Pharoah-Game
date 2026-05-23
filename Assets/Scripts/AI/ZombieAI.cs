@@ -369,10 +369,15 @@ namespace TheAlchemistsCrypt.AI
             bool hasMeaningfulTactical = hasTacticalTarget &&
                                          Vector3.Distance(tacticalTarget, transform.position) > 3f;
 
-            if (hasMeaningfulTactical && distanceToPlayer > 4.0f)
+            if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null && TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.hasKey)
             {
-                // HiveMind gave a real flanking/ambush target — go there
-                // Enforce world Z boundary so mummies never get instructions that send them into the sea
+                // ── Priority 0: Player has papyrus — chase relentlessly at hyper-speed! ──
+                if (player != null) currentTargetPos = player.position;
+                currentSpeed = (this is TheAlchemistsCrypt.AI.PharaohAI) ? 75f : 65f;
+            }
+            else if (hasMeaningfulTactical && distanceToPlayer > 4.0f)
+            {
+                // ── Priority 1: HiveMind tactical instruction ──
                 Vector3 bounded = tacticalTarget;
                 if (bounded.z < -95f) bounded.z = -95f;
                 currentTargetPos = bounded;
@@ -387,13 +392,6 @@ namespace TheAlchemistsCrypt.AI
                     : player.position;
                 currentSpeed = baseSpeed;
             }
-
-            // Apply Papyrus Speed Buff: If player has the scroll, mummies become 3.0x faster!
-            if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null && TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.hasKey)
-            {
-                currentSpeed *= 3.0f;
-            }
-
             else
             {
                 // ── Priority 3: Player is far AND no HiveMind target — wander patrol ──
@@ -463,6 +461,16 @@ namespace TheAlchemistsCrypt.AI
             }
 
             if (agent.isActiveAndEnabled && agent.isOnNavMesh) {
+                if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null && TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.hasKey)
+                {
+                    agent.acceleration = 150f;
+                    agent.angularSpeed = 720f;
+                }
+                else
+                {
+                    agent.acceleration = 12f;
+                    agent.angularSpeed = 240f;
+                }
                 agent.speed = currentSpeed;
                 if (isStunned)
                 {
