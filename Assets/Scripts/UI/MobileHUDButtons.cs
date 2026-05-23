@@ -287,13 +287,44 @@ namespace TheAlchemistsCrypt.UI
         {
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
             for (int y = 0; y < h; y++) {
+                float vertRatio = (float)y / h;
                 for (int x = 0; x < w; x++) {
                     float t = (float)x / w;
-                    Color col = Color.Lerp(new Color(0.7f, 0.05f, 0.12f, 0.95f), new Color(0.95f, 0.15f, 0.2f, 0.95f), t);
-                    tex.SetPixel(x, y, col);
+                    Color baseCol = Color.Lerp(new Color(0.5f, 0.02f, 0.02f, 0.95f), new Color(0.95f, 0.15f, 0.15f, 0.95f), t);
+                    // Add a horizontal highlight/sheen on the top half
+                    if (vertRatio > 0.6f)
+                    {
+                        baseCol = Color.Lerp(baseCol, Color.white, (vertRatio - 0.6f) * 0.4f);
+                    }
+                    tex.SetPixel(x, y, baseCol);
                 }
             }
             tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateFramedBarSprite(int w, int h, Color borderColor, Color fillColor, int borderWidth)
+        {
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    bool isBorder = (x < borderWidth) || (x >= w - borderWidth) || (y < borderWidth) || (y >= h - borderWidth);
+                    if (isBorder)
+                    {
+                        // Slight gold gradient/sheen
+                        float t = (float)y / h;
+                        Color finalBorderCol = Color.Lerp(borderColor * 0.8f, borderColor * 1.2f, t);
+                        tex.SetPixel(x, y, finalBorderCol);
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, fillColor);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
         }
 
         private Sprite CreateSolidBarSprite(int w, int h, Color c)
@@ -914,14 +945,15 @@ namespace TheAlchemistsCrypt.UI
             hpBgBar.pivot = new Vector2(0f, 0.5f);
             hpBgBar.anchoredPosition = new Vector2(100, 0);
             hpBgBar.sizeDelta = new Vector2(295, 30);
-            hpBgBar.GetComponent<Image>().sprite = CreateSolidBarSprite(295, 30, new Color(0.04f, 0.04f, 0.04f, 0.8f));
+            hpBgBar.GetComponent<Image>().sprite = CreateFramedBarSprite(295, 30, new Color(0.95f, 0.8f, 0.2f, 0.9f), new Color(0.04f, 0.04f, 0.04f, 0.8f), 2);
 
             var hpFillGo = new GameObject("HpFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             hpFillGo.SetParent(hpBgBar, false);
             hpFillGo.anchorMin = Vector2.zero; hpFillGo.anchorMax = Vector2.one;
-            hpFillGo.offsetMin = hpFillGo.offsetMax = Vector2.zero;
+            // Pad the fill by 3 pixels to fit inside the 2px gold border cleanly
+            hpFillGo.offsetMin = new Vector2(3, 3); hpFillGo.offsetMax = new Vector2(-3, -3);
             healthBarFill = hpFillGo.GetComponent<Image>();
-            healthBarFill.sprite = CreateHealthBarFillSprite(295, 30);
+            healthBarFill.sprite = CreateHealthBarFillSprite(289, 24);
             healthBarFill.type = Image.Type.Filled;
             healthBarFill.fillMethod = Image.FillMethod.Horizontal;
             healthBarFill.fillAmount = 1.0f;
@@ -968,16 +1000,17 @@ namespace TheAlchemistsCrypt.UI
             ammoText = ammoTxtGo.GetComponent<Text>();
             ammoText.text = "";
 
-            var ammoGridGo = new GameObject("AmmoGrid", typeof(RectTransform)).GetComponent<RectTransform>();
+            var ammoGridGo = new GameObject("AmmoGrid", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             ammoGridGo.SetParent(ammoPanel, false);
             ammoGridGo.anchorMin = ammoGridGo.anchorMax = new Vector2(0f, 0.5f);
             ammoGridGo.pivot = new Vector2(0f, 0.5f);
             ammoGridGo.anchoredPosition = new Vector2(100, 0);
             ammoGridGo.sizeDelta = new Vector2(295, 30);
+            ammoGridGo.GetComponent<Image>().sprite = CreateFramedBarSprite(295, 30, new Color(0.95f, 0.8f, 0.2f, 0.9f), new Color(0.04f, 0.04f, 0.04f, 0.8f), 2);
 
             ammoTicks.Clear();
             float tickWidth = 6f;
-            float tickHeight = 30f;
+            float tickHeight = 22f; // Sized down to 22px to fit inside the 2px border cleanly with padding
             float spacing = 4f;
             for (int i = 0; i < 30; i++)
             {
@@ -985,11 +1018,11 @@ namespace TheAlchemistsCrypt.UI
                 tickGo.SetParent(ammoGridGo, false);
                 tickGo.anchorMin = tickGo.anchorMax = new Vector2(0f, 0.5f);
                 tickGo.pivot = new Vector2(0f, 0.5f);
-                tickGo.anchoredPosition = new Vector2(i * (tickWidth + spacing) + tickWidth * 0.5f, 0);
+                tickGo.anchoredPosition = new Vector2(i * (tickWidth + spacing) + tickWidth * 0.5f + 4f, 0); // Offset x starting pos to account for left border
                 tickGo.sizeDelta = new Vector2(tickWidth, tickHeight);
 
                 var img = tickGo.GetComponent<Image>();
-                img.sprite = CreateSolidBarSprite((int)tickWidth, (int)tickHeight, Color.white);
+                img.sprite = CreateSolidBarSprite((int)tickWidth, (int)tickHeight, new Color(1.0f, 0.82f, 0.12f, 0.95f)); // Gold ticks
                 ammoTicks.Add(img);
             }
 
@@ -2312,11 +2345,13 @@ namespace TheAlchemistsCrypt.UI
                 {
                     if (i < c)
                     {
-                        ammoTicks[i].color = tickColor;
+                        // Vibrant gold color for active ammo ticks
+                        ammoTicks[i].color = new Color(1.0f, 0.82f, 0.12f, 0.95f);
                     }
                     else
                     {
-                        ammoTicks[i].color = new Color(0.04f, 0.04f, 0.04f, 0.8f);
+                        // Dark warm empty slot
+                        ammoTicks[i].color = new Color(0.15f, 0.1f, 0.05f, 0.5f);
                     }
                 }
             }

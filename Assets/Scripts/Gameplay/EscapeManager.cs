@@ -118,33 +118,73 @@ namespace TheAlchemistsCrypt.Gameplay
             l.intensity = 20f;
             l.range = 30f;
 
-            // Spawn a skyward glowing golden cylinder beacon beam
-            var beamGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            beamGo.name = "PapyrusBeaconBeam";
+            // Create particle beam GameObject
+            var beamGo = new GameObject("PapyrusBeaconBeam");
             beamGo.transform.SetParent(keyObj.transform);
-            beamGo.transform.localPosition = Vector3.up * 150f;
-            beamGo.transform.localRotation = Quaternion.identity;
-            beamGo.transform.localScale = new Vector3(2.5f, 750f, 2.5f); // 1m wide, 300m tall world space (key scale is 0.4f)
-            DestroyImmediate(beamGo.GetComponent<Collider>());
+            beamGo.transform.localPosition = Vector3.zero;
+            beamGo.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f); // Point straight up relative to parent
+            beamGo.transform.localScale = Vector3.one;
 
-            Shader beamShader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (beamShader == null) beamShader = Shader.Find("Universal Render Pipeline/Lit");
-            if (beamShader == null) beamShader = Shader.Find("Lit");
-            Material beamMat = new Material(beamShader);
+            var ps = beamGo.AddComponent<ParticleSystem>();
+            var psr = beamGo.GetComponent<ParticleSystemRenderer>();
 
-            Color goldColor = new Color(1.0f, 0.75f, 0.1f, 0.4f); // Translucent gold
-            beamMat.SetColor("_BaseColor", goldColor);
-            if (beamMat.HasProperty("_Color")) beamMat.SetColor("_Color", goldColor);
-            beamMat.SetColor("_EmissionColor", new Color(1.0f, 0.75f, 0.1f) * 15f);
-            beamMat.EnableKeyword("_EMISSION");
-            beamMat.SetFloat("_Surface", 1f); // Transparent
-            beamMat.SetFloat("_Blend", 0f); // Alpha blend
-            beamMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            beamMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            beamMat.SetInt("_ZWrite", 0);
-            beamMat.SetInt("_Cull", 0); // Double sided
-            beamMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-            beamGo.GetComponent<Renderer>().sharedMaterial = beamMat;
+            // Stop the particle system before configuration to avoid Duration warnings
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            var main = ps.main;
+            main.duration = 5f;
+            main.loop = true;
+            main.startLifetime = 4.0f;
+            main.startSpeed = 25f;
+            main.startSize = 0.6f;
+            main.startColor = new Color(1.0f, 0.85f, 0.3f, 0.8f);
+            main.maxParticles = 300;
+            main.simulationSpace = ParticleSystemSimulationSpace.World; // Makes particles rise nicely in world space as the parent floats/moves
+
+            var emission = ps.emission;
+            emission.rateOverTime = 80f;
+
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.radius = 0.4f;
+            shape.angle = 1.0f; // Very narrow cone to create a beam-like effect
+
+            // Setup fade out over lifetime so particles disappear smoothly
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient grad = new Gradient();
+            grad.SetKeys(
+                new GradientColorKey[] { new GradientColorKey(new Color(1f, 0.85f, 0.3f), 0.0f), new GradientColorKey(new Color(1f, 0.6f, 0.1f), 1.0f) },
+                new GradientAlphaKey[] { new GradientAlphaKey(0.8f, 0.0f), new GradientAlphaKey(0.0f, 1.0f) }
+            );
+            colorOverLifetime.color = grad;
+
+            Shader particleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (particleShader == null) particleShader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (particleShader == null) particleShader = Shader.Find("Particles/Standard Unlit");
+            if (particleShader == null) particleShader = Shader.Find("Lit");
+            
+            Material particleMat = new Material(particleShader);
+            particleMat.name = "PapyrusBeamParticleMat";
+            
+            // Set properties for URP particles shader
+            if (particleShader.name != null && particleShader.name.Contains("Particles"))
+            {
+                particleMat.SetFloat("_Surface", 1f); // Transparent
+                particleMat.SetFloat("_Blend", 0f); // Alpha blend
+                particleMat.SetColor("_BaseColor", new Color(1f, 0.85f, 0.3f, 0.8f));
+                particleMat.SetColor("_EmissionColor", new Color(1f, 0.85f, 0.3f) * 12f);
+                particleMat.EnableKeyword("_EMISSION");
+            }
+            else
+            {
+                particleMat.SetColor("_Color", new Color(1f, 0.85f, 0.3f, 0.8f));
+            }
+            
+            psr.sharedMaterial = particleMat;
+
+            // Start the system after setup
+            ps.Play();
 
             // Register with Minimap
             if (TheAlchemistsCrypt.UI.MinimapUI.Instance != null)
@@ -185,13 +225,13 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            Vector3 spawnPos = new Vector3(0f, 2.2f, -104f);
+            Vector3 spawnPos = new Vector3(0f, 1.8f, -104f);
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
             {
-                // The user suggested -180deg to fix the flipped boat. Applying to X axis.
-                boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(-180f, 180f, 0f));
+                // Set the boat rotation so it is upright, and height so it floats neatly
+                boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(-90f, 180f, 0f));
                 boatObj.transform.localScale = Vector3.one * 0.18f; 
                 ConvertBoatMaterials(boatObj);
             }

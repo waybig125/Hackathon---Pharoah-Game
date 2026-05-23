@@ -111,20 +111,20 @@ namespace TheAlchemistsCrypt.Editor
             Debug.Log("Mummy & Pharaoh Animator Setup with Transitions!");
 
             // Apply 80% Mesh Decimation to Mummies for Mobile Performance
-            var mummies = GameObject.FindObjectsByType<TheAlchemistsCrypt.AI.ZombieAI>(FindObjectsInactive.Include);
-            foreach (var m in mummies) {
-                DecimateMesh(m.gameObject, 0.8f);
-            }
+            // var mummies = GameObject.FindObjectsByType<TheAlchemistsCrypt.AI.ZombieAI>(FindObjectsInactive.Include);
+            // foreach (var m in mummies) {
+            //     DecimateMesh(m.gameObject, 0.8f);
+            // }
 
             // Also decimate the prefabs in Resources to ensure spawned ones are optimized
-            string[] resourcePrefabs = { "Assets/Resources/Mummy_Dynamic_Prefab.prefab", "Assets/Resources/Pharaoh_Prefab.prefab" };
-            foreach (var path in resourcePrefabs) {
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                if (prefab != null) {
-                    DecimateMesh(prefab, 0.8f);
-                    EditorUtility.SetDirty(prefab);
-                }
-            }
+            // string[] resourcePrefabs = { "Assets/Resources/Mummy_Dynamic_Prefab.prefab", "Assets/Resources/Pharaoh_Prefab.prefab" };
+            // foreach (var path in resourcePrefabs) {
+            //     var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            //     if (prefab != null) {
+            //         DecimateMesh(prefab, 0.8f);
+            //         EditorUtility.SetDirty(prefab);
+            //     }
+            // }
         }
 
         private UnityEditor.Animations.AnimatorState GetOrAddState(UnityEditor.Animations.AnimatorStateMachine sm, string name, AnimationClip clip) {
@@ -209,6 +209,34 @@ namespace TheAlchemistsCrypt.Editor
             }
         }
 
+        private Mesh GetSharedDecimatedColumnMesh(GameObject columnPrefab)
+        {
+            if (columnPrefab == null) return null;
+            
+            string decimatedMeshPath = "Assets/EgyptianAssets/egyptian_column_decimated.mesh";
+            Mesh decimatedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(decimatedMeshPath);
+            if (decimatedMesh != null) return decimatedMesh;
+            
+            // Generate it once
+            var mf = columnPrefab.GetComponentInChildren<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) return null;
+            
+            try {
+                var simplifier = new MeshSimplifier();
+                simplifier.Initialize(mf.sharedMesh);
+                simplifier.SimplifyMesh(0.15f);
+                decimatedMesh = simplifier.ToMesh();
+                decimatedMesh.name = "egyptian_column_decimated";
+                AssetDatabase.CreateAsset(decimatedMesh, decimatedMeshPath);
+                AssetDatabase.SaveAssets();
+                Debug.Log("[CityGen] Created low-poly decimated column mesh asset at: " + decimatedMeshPath);
+                return decimatedMesh;
+            } catch (System.Exception e) {
+                Debug.LogError("[CityGen] Failed to decimate column mesh: " + e.Message);
+                return mf.sharedMesh;
+            }
+        }
+
         public void GeneratePolishedCity()
         {
             Random.InitState(seed);
@@ -226,13 +254,39 @@ namespace TheAlchemistsCrypt.Editor
             var columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_column.glb");
             if (columnPrefab == null) columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_pillar_column.glb");
             
+            // Create warm peach-to-cream gradient texture for houses
+            string houseTexPath = "Assets/EgyptianAssets/HouseGradientTex.png";
+            Texture2D houseTex = AssetDatabase.LoadAssetAtPath<Texture2D>(houseTexPath);
+            if (houseTex == null) {
+                if (!System.IO.Directory.Exists("Assets/EgyptianAssets")) System.IO.Directory.CreateDirectory("Assets/EgyptianAssets");
+                int texSize = 512;
+                houseTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
+                houseTex.wrapMode = TextureWrapMode.Clamp;
+                houseTex.filterMode = FilterMode.Bilinear;
+                Color bottomColor = new Color(0.82f, 0.52f, 0.38f); // Warm deep peach
+                Color topColor = new Color(0.96f, 0.82f, 0.70f);    // Soft light peach
+                Color[] pixels = new Color[texSize * texSize];
+                for (int y = 0; y < texSize; y++) {
+                    float t = (float)y / (texSize - 1);
+                    Color rowColor = Color.Lerp(bottomColor, topColor, t);
+                    for (int x = 0; x < texSize; x++) pixels[y * texSize + x] = rowColor;
+                }
+                houseTex.SetPixels(pixels);
+                houseTex.Apply(true);
+                byte[] bytes = houseTex.EncodeToPNG();
+                System.IO.File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath, "EgyptianAssets/HouseGradientTex.png"), bytes);
+                AssetDatabase.Refresh();
+                houseTex = AssetDatabase.LoadAssetAtPath<Texture2D>(houseTexPath);
+            }
+
             // ── AESTHETIC PALETTE (Warm Sunset Desert) ──
             Material wallMat = new Material(GetLitShader());
-            wallMat.SetColor("_BaseColor", new Color(0.96f, 0.85f, 0.75f)); // Warmer peach/cream sand
+            if (houseTex != null) wallMat.SetTexture("_BaseMap", houseTex);
+            else wallMat.SetColor("_BaseColor", new Color(0.96f, 0.85f, 0.75f)); 
             wallMat.SetFloat("_Smoothness", 0.0f);   // Matte finish
             
             Material woodMat = new Material(GetLitShader());
-            woodMat.SetColor("_BaseColor", new Color(0.35f, 0.20f, 0.12f));
+            woodMat.SetColor("_BaseColor", new Color(0.20f, 0.12f, 0.08f)); // Dark Wood
             
             Material floorMat = new Material(GetLitShader());
             floorMat.SetColor("_BaseColor", new Color(0.95f, 0.85f, 0.70f)); // Warm Pastel Sand
@@ -516,39 +570,66 @@ namespace TheAlchemistsCrypt.Editor
 
         private void SetupEnvironment(GameObject root)
         {
-            Material skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/DaytimeSkybox.mat");
-            if (skyMat == null) {
-                skyMat = new Material(Shader.Find("Skybox/Procedural"));
-                if (!System.IO.Directory.Exists("Assets/Materials")) System.IO.Directory.CreateDirectory("Assets/Materials");
-                AssetDatabase.CreateAsset(skyMat, "Assets/Materials/DaytimeSkybox.mat");
+            // Create 3-color sunset sky gradient texture
+            string skyTexPath = "Assets/EgyptianAssets/SkyGradientTex.png";
+            Texture2D skyTex = AssetDatabase.LoadAssetAtPath<Texture2D>(skyTexPath);
+            if (skyTex == null) {
+                if (!System.IO.Directory.Exists("Assets/EgyptianAssets")) System.IO.Directory.CreateDirectory("Assets/EgyptianAssets");
+                int texSize = 512;
+                skyTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
+                skyTex.wrapMode = TextureWrapMode.Clamp;
+                skyTex.filterMode = FilterMode.Bilinear;
+                Color peachColor = new Color(0.96f, 0.70f, 0.55f);
+                Color skyBlueColor = new Color(0.40f, 0.65f, 0.85f);
+                Color deepBlueColor = new Color(0.08f, 0.20f, 0.45f);
+                
+                Color[] pixels = new Color[texSize * texSize];
+                for (int y = 0; y < texSize; y++) {
+                    float t = (float)y / (texSize - 1);
+                    Color rowColor;
+                    if (t < 0.4f) {
+                        rowColor = Color.Lerp(peachColor, skyBlueColor, t / 0.4f);
+                    } else {
+                        rowColor = Color.Lerp(skyBlueColor, deepBlueColor, (t - 0.4f) / 0.6f);
+                    }
+                    for (int x = 0; x < texSize; x++) pixels[y * texSize + x] = rowColor;
+                }
+                skyTex.SetPixels(pixels);
+                skyTex.Apply(true);
+                byte[] bytes = skyTex.EncodeToPNG();
+                System.IO.File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath, "EgyptianAssets/SkyGradientTex.png"), bytes);
+                AssetDatabase.Refresh();
+                skyTex = AssetDatabase.LoadAssetAtPath<Texture2D>(skyTexPath);
             }
-            skyMat.SetColor("_SkyTint", new Color(0.15f, 0.35f, 0.75f, 1f)); // Deeper blue top gradient
-            skyMat.SetColor("_GroundColor", new Color(0.95f, 0.85f, 0.75f, 1f)); // Brighter, cleaner horizon
-            skyMat.SetFloat("_AtmosphereThickness", 0.6f); // Less haze, crisper transition
-            skyMat.SetFloat("_Exposure", 1.5f);
-            skyMat.SetFloat("_SunDisk", 2f);
-            skyMat.SetFloat("_SunSize", 0.04f);
-            
+
+            Material skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/SkyGradientBox.mat");
+            if (skyMat == null) {
+                skyMat = new Material(Shader.Find("Skybox/Panoramic"));
+                if (!System.IO.Directory.Exists("Assets/Materials")) System.IO.Directory.CreateDirectory("Assets/Materials");
+                AssetDatabase.CreateAsset(skyMat, "Assets/Materials/SkyGradientBox.mat");
+            }
+            if (skyTex != null) skyMat.SetTexture("_Texture", skyTex);
+            skyMat.SetFloat("_Exposure", 1.2f);
+            skyMat.SetColor("_Tint", Color.white);
             EditorUtility.SetDirty(skyMat);
             
             RenderSettings.skybox = skyMat;
-            RenderSettings.ambientMode = AmbientMode.Trilight; 
-            RenderSettings.ambientSkyColor    = new Color(0.45f, 0.65f, 0.85f); // Cool purple-blue shadows
-            RenderSettings.ambientEquatorColor = new Color(0.90f, 0.85f, 0.75f); // Warm peach transition
-            RenderSettings.ambientGroundColor  = new Color(0.35f, 0.40f, 0.55f); // Cool dark ground
+            RenderSettings.ambientMode = AmbientMode.Skybox; 
 
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.95f, 0.85f, 0.75f, 1f); // Horizon fog
-            RenderSettings.fogStartDistance = 150f;   // Keep city clear up close
-            RenderSettings.fogEndDistance  = 1200f;   
+            RenderSettings.fogColor = new Color(0.96f, 0.70f, 0.55f, 1f); // Warm peach fog matching horizon
+            RenderSettings.fogStartDistance = 150f;
+            RenderSettings.fogEndDistance  = 1000f;   
             
             var sun = GameObject.Find("Directional Light")?.GetComponent<Light>();
             if (sun != null) {
-                sun.color = new Color(1.0f, 0.92f, 0.85f); // Warmer sunset sunlight
-                sun.intensity = 2.0f; // Stronger sunlight
-                sun.transform.rotation = Quaternion.Euler(20f, -60f, 0f); // Lower sunset angle to cast light on houses
+                sun.color = new Color(1.0f, 0.90f, 0.80f); // Warm sunset sunlight
+                sun.intensity = 2.0f;
+                sun.shadows = LightShadows.Soft; // Soft shadows!
+                sun.transform.rotation = Quaternion.Euler(25f, -60f, 0f); // Lower angle to cast nice shadows
             }
             SetupPostProcessing(root.transform);
+            DynamicGI.UpdateEnvironment(); // Update lighting reflections
             AssetDatabase.SaveAssets();
         }
 
@@ -598,42 +679,187 @@ namespace TheAlchemistsCrypt.Editor
         private void BuildHouse(Transform parent, Vector3 pos, Material wall, Material wood, Material litWindowMat, Material darkWindowMat, GameObject crate, GameObject barrel, Material floorMat = null)
         {
             var h = new GameObject("House"); h.transform.SetParent(parent); h.transform.position = pos; h.isStatic = true;
-            int floors = (Random.value < 0.2f) ? 1 : (Random.value < 0.7f ? 2 : 3);
             
-            for (int f = 0; f < floors; f++) {
-                float width = 20f - f * 4f; float depth = 20f - f * 4f; float windowY = (f * 12f) + 6f;
-                var floorBody = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                floorBody.name = "Floor_" + f; floorBody.transform.SetParent(h.transform);
-                if (f == 0) {
-                    // Extend ground floor downward by 8 units to form a solid foundation and eliminate gaps on dunes
-                    floorBody.transform.localPosition = new Vector3(0, 2f, 0);
-                    floorBody.transform.localScale = new Vector3(width, 20f, depth);
-                } else {
-                    floorBody.transform.localPosition = new Vector3(0, (f * 12f) + 6f, 0);
-                    floorBody.transform.localScale = new Vector3(width, 12f, depth);
+            // Randomly vary height slightly for organic skyline silhouette
+            float heightScale = Random.Range(0.85f, 1.25f);
+            
+            // 1. Central main building hall
+            float hallWidth = 20f; float hallDepth = 15f; float hallHeight = 14f * heightScale;
+            var hall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            hall.name = "MainHall";
+            hall.transform.SetParent(h.transform);
+            hall.transform.localPosition = new Vector3(0f, hallHeight / 2f, 0f);
+            hall.transform.localScale = new Vector3(hallWidth, hallHeight, hallDepth);
+            hall.GetComponent<Renderer>().sharedMaterial = wall;
+            hall.isStatic = true;
+
+            // 2. Corner Step-Sloped Towers (4 corners)
+            float tDistX = (hallWidth / 2f) + 0.5f;
+            float tDistZ = (hallDepth / 2f) + 0.5f;
+            Vector3[] towerPositions = {
+                new Vector3(-tDistX, 0f, -tDistZ), // Left Front
+                new Vector3(tDistX, 0f, -tDistZ),  // Right Front
+                new Vector3(-tDistX, 0f, tDistZ),  // Left Back
+                new Vector3(tDistX, 0f, tDistZ)   // Right Back
+            };
+
+            foreach (var tPos in towerPositions)
+            {
+                var towerRoot = new GameObject("TaperedTower");
+                towerRoot.transform.SetParent(h.transform);
+                towerRoot.transform.localPosition = tPos;
+                towerRoot.isStatic = true;
+
+                // Tapered look via 3 stacked stepped segments
+                int numSegments = 3;
+                float segHeight = (18f * heightScale) / numSegments;
+                float baseSize = 5.0f;
+                float taperDelta = 0.5f;
+
+                for (int s = 0; s < numSegments; s++)
+                {
+                    float size = baseSize - (s * taperDelta);
+                    var seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    seg.name = $"Seg_{s}";
+                    seg.transform.SetParent(towerRoot.transform);
+                    seg.transform.localPosition = new Vector3(0f, (s * segHeight) + (segHeight / 2f), 0f);
+                    seg.transform.localScale = new Vector3(size, segHeight, size);
+                    seg.GetComponent<Renderer>().sharedMaterial = wall;
+                    seg.isStatic = true;
+
+                    // Horizontal dark transition ring at the top of each segment
+                    var ring = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    ring.name = $"Ring_{s}";
+                    ring.transform.SetParent(towerRoot.transform);
+                    ring.transform.localPosition = new Vector3(0f, (s + 1) * segHeight, 0f);
+                    ring.transform.localScale = new Vector3(size + 0.25f, 0.4f, size + 0.25f);
+                    ring.GetComponent<Renderer>().sharedMaterial = wood;
+                    DestroyImmediate(ring.GetComponent<Collider>());
+                    ring.isStatic = true;
                 }
-                floorBody.GetComponent<Renderer>().sharedMaterial = wall; floorBody.isStatic = true;
 
-                Vector3[] localPositions = {
-                    new Vector3(0f, windowY, -(depth / 2f) - 0.18f),
-                    new Vector3(0f, windowY, (depth / 2f) + 0.18f),
-                    new Vector3(-(width / 2f) - 0.18f, windowY, 0f),
-                    new Vector3((width / 2f) + 0.18f, windowY, 0f)
+                // Add roof battlements (crenelations) on the top segment of each tower
+                float topSize = baseSize - ((numSegments - 1) * taperDelta);
+                float topY = 18f * heightScale;
+                float crenSize = 0.5f;
+                Vector3[] crenOffsets = {
+                    new Vector3(-topSize/2f + 0.25f, topY + 0.25f, -topSize/2f + 0.25f),
+                    new Vector3(topSize/2f - 0.25f, topY + 0.25f, -topSize/2f + 0.25f),
+                    new Vector3(-topSize/2f + 0.25f, topY + 0.25f, topSize/2f - 0.25f),
+                    new Vector3(topSize/2f - 0.25f, topY + 0.25f, topSize/2f - 0.25f)
                 };
-
-                float[] rotations = { 180f, 0f, 90f, -90f };
-
-                for (int side = 0; side < 4; side++) {
-                    Material windowMat = (Random.value < 0.85f) ? litWindowMat : darkWindowMat;
-                    var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    win.transform.SetParent(h.transform); win.transform.localScale = new Vector3(3.6f, 2.6f, 0.3f);
-                    win.GetComponent<Renderer>().sharedMaterial = windowMat;
-                    DestroyImmediate(win.GetComponent<Collider>());
-                    win.transform.localPosition = localPositions[side];
-                    win.transform.localRotation = Quaternion.Euler(0, rotations[side], 0);
-                    win.isStatic = true;
+                foreach (var cOff in crenOffsets)
+                {
+                    var cren = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    cren.name = "Crenelation";
+                    cren.transform.SetParent(towerRoot.transform);
+                    cren.transform.localPosition = cOff;
+                    cren.transform.localScale = new Vector3(crenSize, crenSize, crenSize);
+                    cren.GetComponent<Renderer>().sharedMaterial = wall;
+                    cren.isStatic = true;
                 }
             }
+
+            // 3. Central Temple Gateway Frame (Front Face)
+            float gateY = 4f * heightScale;
+            var lPillar = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            lPillar.name = "GatePillar_L";
+            lPillar.transform.SetParent(h.transform);
+            lPillar.transform.localPosition = new Vector3(-2.8f, gateY, -(hallDepth / 2f) - 0.3f);
+            lPillar.transform.localScale = new Vector3(1.2f, 8f * heightScale, 0.8f);
+            lPillar.GetComponent<Renderer>().sharedMaterial = wood;
+            lPillar.isStatic = true;
+
+            var rPillar = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            rPillar.name = "GatePillar_R";
+            rPillar.transform.SetParent(h.transform);
+            rPillar.transform.localPosition = new Vector3(2.8f, gateY, -(hallDepth / 2f) - 0.3f);
+            rPillar.transform.localScale = new Vector3(1.2f, 8f * heightScale, 0.8f);
+            rPillar.GetComponent<Renderer>().sharedMaterial = wood;
+            rPillar.isStatic = true;
+
+            var lintel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            lintel.name = "GateLintel";
+            lintel.transform.SetParent(h.transform);
+            lintel.transform.localPosition = new Vector3(0f, 8f * heightScale + 0.6f, -(hallDepth / 2f) - 0.3f);
+            lintel.transform.localScale = new Vector3(6.8f, 1.2f, 1.2f);
+            lintel.GetComponent<Renderer>().sharedMaterial = wood;
+            lintel.isStatic = true;
+
+            // 4. Central Glowing Entryway (Emissive Light Portal)
+            var entryway = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            entryway.name = "TempleEntrance";
+            entryway.transform.SetParent(h.transform);
+            entryway.transform.localPosition = new Vector3(0f, gateY, -(hallDepth / 2f) - 0.1f);
+            entryway.transform.localScale = new Vector3(4.0f, 8f * heightScale, 0.2f);
+            entryway.GetComponent<Renderer>().sharedMaterial = litWindowMat;
+            DestroyImmediate(entryway.GetComponent<Collider>()); // Trigger/walk-through
+            entryway.isStatic = true;
+
+            // 5. Narrow Vertical Slot Windows (Sides)
+            Vector3[] winLeftLocs = {
+                new Vector3(-(hallWidth / 2f) - 0.1f, 8f * heightScale, -2.5f),
+                new Vector3(-(hallWidth / 2f) - 0.1f, 8f * heightScale, 2.5f)
+            };
+            foreach (var wLoc in winLeftLocs)
+            {
+                Material winMat = (Random.value < 0.6f) ? litWindowMat : darkWindowMat;
+                var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                win.name = "SlotWindow";
+                win.transform.SetParent(h.transform);
+                win.transform.localPosition = wLoc;
+                win.transform.localScale = new Vector3(0.18f, 4.5f, 0.8f);
+                win.GetComponent<Renderer>().sharedMaterial = winMat;
+                DestroyImmediate(win.GetComponent<Collider>());
+                win.isStatic = true;
+            }
+
+            Vector3[] winRightLocs = {
+                new Vector3((hallWidth / 2f) + 0.1f, 8f * heightScale, -2.5f),
+                new Vector3((hallWidth / 2f) + 0.1f, 8f * heightScale, 2.5f)
+            };
+            foreach (var wLoc in winRightLocs)
+            {
+                Material winMat = (Random.value < 0.6f) ? litWindowMat : darkWindowMat;
+                var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                win.name = "SlotWindow";
+                win.transform.SetParent(h.transform);
+                win.transform.localPosition = wLoc;
+                win.transform.localScale = new Vector3(0.18f, 4.5f, 0.8f);
+                win.GetComponent<Renderer>().sharedMaterial = winMat;
+                DestroyImmediate(win.GetComponent<Collider>());
+                win.isStatic = true;
+            }
+
+            Vector3[] winBackLocs = {
+                new Vector3(-4f, 8f * heightScale, (hallDepth / 2f) + 0.1f),
+                new Vector3(4f, 8f * heightScale, (hallDepth / 2f) + 0.1f)
+            };
+            foreach (var wLoc in winBackLocs)
+            {
+                Material winMat = (Random.value < 0.6f) ? litWindowMat : darkWindowMat;
+                var win = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                win.name = "SlotWindow";
+                win.transform.SetParent(h.transform);
+                win.transform.localPosition = wLoc;
+                win.transform.localScale = new Vector3(0.8f, 4.5f, 0.18f);
+                win.GetComponent<Renderer>().sharedMaterial = winMat;
+                DestroyImmediate(win.GetComponent<Collider>());
+                win.isStatic = true;
+            }
+
+            // 6. Rooftop Access Ladder (Angles at 35 degrees from the back, acting as a clean ramp)
+            float ladderLength = (hallHeight + 2f) / Mathf.Sin(35f * Mathf.Deg2Rad);
+            var ladderRamp = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            ladderRamp.name = "LadderRamp";
+            ladderRamp.transform.SetParent(h.transform);
+            ladderRamp.transform.localScale = new Vector3(3f, 0.3f, ladderLength);
+            
+            float zOffset = (hallDepth / 2f) + (ladderLength * Mathf.Cos(35f * Mathf.Deg2Rad) / 2f);
+            ladderRamp.transform.localPosition = new Vector3(0f, hallHeight / 2f, zOffset);
+            ladderRamp.transform.localRotation = Quaternion.Euler(35f, 0f, 0f);
+            ladderRamp.GetComponent<Renderer>().sharedMaterial = wood;
+            ladderRamp.isStatic = true;
 
             if (crate != null) {
                 Vector3 cratePos = pos + new Vector3(15f, 0f, 13f);
@@ -667,6 +893,11 @@ namespace TheAlchemistsCrypt.Editor
             if (columnPrefab != null) {
                 var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
                 colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
+                var decimatedMesh = GetSharedDecimatedColumnMesh(columnPrefab);
+                if (decimatedMesh != null) {
+                    var mf = colObj.GetComponentInChildren<MeshFilter>();
+                    if (mf != null) mf.sharedMesh = decimatedMesh;
+                }
                 AlignToGroundAndAddCollider(colObj, pos + new Vector3(-14.5f, 0f, -14.5f), Quaternion.Euler(-90f, 0f, 0f), 0f);
             }
             

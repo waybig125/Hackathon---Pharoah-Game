@@ -108,9 +108,16 @@ namespace TheAlchemistsCrypt.Weapons
                 foreach (Renderer r in renderers)
                 {
                     if (r == null) continue;
-                    foreach (Material m in r.materials)
+                    
+                    var mats = r.sharedMaterials;
+                    if (mats == null) continue;
+                    var instancedMats = new Material[mats.Length];
+                    for (int i = 0; i < mats.Length; i++)
                     {
-                        if (m == null) continue;
+                        if (mats[i] == null) continue;
+                        instancedMats[i] = new Material(mats[i]);
+                        Material m = instancedMats[i];
+                        
                         string matName = m.name.ToLower();
                         bool isMainBody = matName.Contains("carbon") || matName.Contains("steel") || matName.Contains("metal") || matName.Contains("camo") || matName.Contains("body") || matName.Contains("frame") || matName.Contains("stock");
 
@@ -131,6 +138,8 @@ namespace TheAlchemistsCrypt.Weapons
                             }
                             if (m.HasProperty("_Color")) m.SetColor("_Color", bodyTint);
                             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", bodyTint);
+                            if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", 0.90f);
+                            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.85f);
                         }
                         if (m.HasProperty("_EmissionColor"))
                         {
@@ -138,6 +147,7 @@ namespace TheAlchemistsCrypt.Weapons
                             m.EnableKeyword("_EMISSION");
                         }
                     }
+                    r.materials = instancedMats;
                 }
             }
 
@@ -165,8 +175,13 @@ namespace TheAlchemistsCrypt.Weapons
                 return;
             }
 
-            bool isFiringInput = (MobileInputManager.Instance != null && MobileInputManager.Instance.IsFiring) || 
-                                 (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.isPressed);
+            bool isMousePressed = UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.isPressed;
+            if (isMousePressed && UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            {
+                isMousePressed = false;
+            }
+
+            bool isFiringInput = (MobileInputManager.Instance != null && MobileInputManager.Instance.IsFiring) || isMousePressed;
             if (isFiringInput && Time.time >= nextFireTime)
             {
                 if (currentAmmo > 0)
