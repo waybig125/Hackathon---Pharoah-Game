@@ -94,39 +94,49 @@ namespace TheAlchemistsCrypt.Weapons
                 case FireMode.Salt: glowColor = new Color(0.8f, 0.2f, 1.0f); break; // Majestic royal violet/purple
             }
 
-            // Find all renderers in children to apply element coloring
-            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
-            foreach (Renderer r in renderers)
-            {
-                if (r == null) continue;
-                foreach (Material m in r.materials)
-                {
-                    if (m == null) continue;
-                    string matName = m.name.ToLower();
-                    bool isMainBody = matName.Contains("carbon") || matName.Contains("steel") || matName.Contains("metal") || matName.Contains("camo");
+            // Find all renderers in the player's inventory weapons to apply element coloring
+            var inventory = GetComponentInParent<InfimaGames.LowPolyShooterPack.Inventory>();
+            if (inventory == null) {
+                var player = GameObject.FindWithTag("Player");
+                if (player != null) inventory = player.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>();
+            }
 
-                    if (!isMainBody)
+            System.Collections.IEnumerable targets = (inventory != null) ? (System.Collections.IEnumerable)inventory.transform : new Transform[] { transform };
+            foreach (Transform weaponTrans in targets)
+            {
+                Renderer[] renderers = weaponTrans.GetComponentsInChildren<Renderer>(true);
+                foreach (Renderer r in renderers)
+                {
+                    if (r == null) continue;
+                    foreach (Material m in r.materials)
                     {
-                        if (m.HasProperty("_Color")) m.SetColor("_Color", glowColor);
-                        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", glowColor);
-                    }
-                    else
-                    {
-                        // Tint the main body significantly with the element color so the guns are visually distinct!
-                        Color bodyTint = Color.black;
-                        switch (currentMode)
+                        if (m == null) continue;
+                        string matName = m.name.ToLower();
+                        bool isMainBody = matName.Contains("carbon") || matName.Contains("steel") || matName.Contains("metal") || matName.Contains("camo") || matName.Contains("body") || matName.Contains("frame") || matName.Contains("stock");
+
+                        if (!isMainBody)
                         {
-                            case FireMode.Sulfur: bodyTint = new Color(0.6f, 0.3f, 0.05f); break; // Strong warm orange/bronze
-                            case FireMode.Mercury: bodyTint = new Color(0.05f, 0.6f, 0.65f); break; // Strong cyan/teal
-                            case FireMode.Salt: bodyTint = new Color(0.6f, 0.1f, 0.8f); break; // Strong violet/purple
+                            if (m.HasProperty("_Color")) m.SetColor("_Color", glowColor);
+                            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", glowColor);
                         }
-                        if (m.HasProperty("_Color")) m.SetColor("_Color", bodyTint);
-                        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", bodyTint);
-                    }
-                    if (m.HasProperty("_EmissionColor"))
-                    {
-                        m.SetColor("_EmissionColor", glowColor * 12.0f); // Make it glow intensely!
-                        m.EnableKeyword("_EMISSION");
+                        else
+                        {
+                            // Tint the main body significantly with the element color so the guns are visually distinct!
+                            Color bodyTint = Color.black;
+                            switch (currentMode)
+                            {
+                                case FireMode.Sulfur: bodyTint = new Color(0.6f, 0.3f, 0.05f); break; // Strong warm orange/bronze
+                                case FireMode.Mercury: bodyTint = new Color(0.05f, 0.6f, 0.65f); break; // Strong cyan/teal
+                                case FireMode.Salt: bodyTint = new Color(0.6f, 0.1f, 0.8f); break; // Strong violet/purple
+                            }
+                            if (m.HasProperty("_Color")) m.SetColor("_Color", bodyTint);
+                            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", bodyTint);
+                        }
+                        if (m.HasProperty("_EmissionColor"))
+                        {
+                            m.SetColor("_EmissionColor", glowColor * 15.0f); // Make it glow intensely!
+                            m.EnableKeyword("_EMISSION");
+                        }
                     }
                 }
             }
