@@ -208,7 +208,7 @@ namespace TheAlchemistsCrypt.Gameplay
             var ph = player.GetComponent<TheAlchemistsCrypt.Player.PlayerHealth>();
             if (ph != null) ph.enabled = false;
 
-            var punch = player.GetComponent<TheAlchemistsCrypt.Player.PunchCombat>();
+            var punch = player.GetComponent<PunchCombat>();
             if (punch != null) punch.enabled = false;
 
             var focus = player.GetComponentInChildren<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
