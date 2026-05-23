@@ -634,15 +634,15 @@ namespace TheAlchemistsCrypt.Editor
             if (columnPrefab != null) {
                 var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
                 colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
-                AlignToGroundAndAddCollider(colObj, pos + new Vector3(-12f, 0f, -12f), Quaternion.Euler(-90f, 0f, 0f), 0f);
+                AlignToGroundAndAddCollider(colObj, pos + new Vector3(-14.5f, 0f, -14.5f), Quaternion.Euler(-90f, 0f, 0f), 0f);
             }
             
             if (trees != null && trees.Length > 0) {
                 int numTrees = Random.Range(1, 4); // 1 to 3 trees Max
                 var sectors = new List<Vector3>() {
-                    new Vector3(12f, 0f, 12f),   // Top-Right
-                    new Vector3(-12f, 0f, 12f),  // Top-Left
-                    new Vector3(12f, 0f, -12f)   // Bottom-Right
+                    new Vector3(14.5f, 0f, 14.5f),   // Top-Right
+                    new Vector3(-14.5f, 0f, 14.5f),  // Top-Left
+                    new Vector3(14.5f, 0f, -14.5f)   // Bottom-Right
                 };
 
                 // Shuffle sectors to randomize spawn locations
@@ -912,36 +912,13 @@ namespace TheAlchemistsCrypt.Editor
                 rb.linearDamping = 0.5f;
                 rb.angularDamping = 0.5f;
                 
-                Bounds localBounds = new Bounds(Vector3.zero, Vector3.zero);
-                bool first = true;
                 var filters = obj.GetComponentsInChildren<MeshFilter>(true);
-                foreach (var mf in filters) {
-                    if (mf.sharedMesh == null) continue;
-                    Bounds meshBounds = mf.sharedMesh.bounds;
-                    
-                    Vector3[] corners = GetBoundsCorners(meshBounds);
-                    foreach (var corner in corners) {
-                        Vector3 worldPt = mf.transform.TransformPoint(corner);
-                        Vector3 localPt = obj.transform.InverseTransformPoint(worldPt);
-                        if (first) {
-                            localBounds = new Bounds(localPt, Vector3.zero);
-                            first = false;
-                        } else {
-                            localBounds.Encapsulate(localPt);
-                        }
-                    }
+                foreach (var filterObj in filters) {
+                    if (filterObj.sharedMesh == null) continue;
+                    var mc = filterObj.gameObject.AddComponent<MeshCollider>();
+                    mc.sharedMesh = filterObj.sharedMesh;
+                    mc.convex = true;
                 }
-                
-                if (first) {
-                    foreach (var r in allRenderers) {
-                        if (r is ParticleSystemRenderer) continue;
-                        if (first) { localBounds = r.bounds; first = false; } else localBounds.Encapsulate(r.bounds);
-                    }
-                }
-                
-                var boxCol = obj.AddComponent<BoxCollider>();
-                boxCol.center = localBounds.center;
-                boxCol.size = localBounds.size;
             } else {
                 var filters = obj.GetComponentsInChildren<MeshFilter>(true);
                 if (filters.Length > 0) {

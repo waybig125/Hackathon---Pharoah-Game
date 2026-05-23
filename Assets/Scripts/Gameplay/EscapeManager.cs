@@ -185,12 +185,12 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            Vector3 spawnPos = new Vector3(0f, 1.6f, -104f);
+            Vector3 spawnPos = new Vector3(0f, 2.2f, -104f);
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
             {
-                boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(0f, 90f, 0f));
+                boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(0f, 180f, 0f));
                 boatObj.transform.localScale = Vector3.one * 0.18f; 
                 ConvertBoatMaterials(boatObj);
             }

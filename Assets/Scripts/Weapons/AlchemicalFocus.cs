@@ -112,20 +112,20 @@ namespace TheAlchemistsCrypt.Weapons
                     }
                     else
                     {
-                        // Tint the main body slightly with the element color so the guns are visually distinct!
+                        // Tint the main body significantly with the element color so the guns are visually distinct!
                         Color bodyTint = Color.black;
                         switch (currentMode)
                         {
-                            case FireMode.Sulfur: bodyTint = new Color(0.25f, 0.15f, 0.05f); break; // Warm orange/bronze tint
-                            case FireMode.Mercury: bodyTint = new Color(0.05f, 0.20f, 0.25f); break; // Cool cyan/teal tint
-                            case FireMode.Salt: bodyTint = new Color(0.18f, 0.08f, 0.25f); break; // Violet/purple tint
+                            case FireMode.Sulfur: bodyTint = new Color(0.6f, 0.3f, 0.05f); break; // Strong warm orange/bronze
+                            case FireMode.Mercury: bodyTint = new Color(0.05f, 0.6f, 0.65f); break; // Strong cyan/teal
+                            case FireMode.Salt: bodyTint = new Color(0.6f, 0.1f, 0.8f); break; // Strong violet/purple
                         }
                         if (m.HasProperty("_Color")) m.SetColor("_Color", bodyTint);
                         if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", bodyTint);
                     }
                     if (m.HasProperty("_EmissionColor"))
                     {
-                        m.SetColor("_EmissionColor", glowColor * 8.0f); // Make it glow!
+                        m.SetColor("_EmissionColor", glowColor * 12.0f); // Make it glow intensely!
                         m.EnableKeyword("_EMISSION");
                     }
                 }
