@@ -172,6 +172,9 @@ namespace TheAlchemistsCrypt.Editor
                     DestroyImmediate(go);
                 }
             }
+            
+            // Clean up unreferenced procedural meshes from editor memory to prevent scene file bloating
+            EditorUtility.UnloadUnusedAssetsImmediate();
         }
 
         private void SetupManagers(GameObject root)
@@ -237,6 +240,39 @@ namespace TheAlchemistsCrypt.Editor
             }
         }
 
+        private Mesh GetSharedDecimatedMesh(Mesh originalMesh, float quality)
+        {
+            if (originalMesh == null) return null;
+            
+            string meshName = originalMesh.name;
+            if (string.IsNullOrEmpty(meshName)) meshName = "unnamed_mesh_" + originalMesh.GetInstanceID();
+            
+            string sanitizedName = System.Text.RegularExpressions.Regex.Replace(meshName, @"[^a-zA-Z0-9_\-]", "_");
+            string decimatedDir = "Assets/EgyptianAssets/DecimatedMeshes";
+            if (!System.IO.Directory.Exists(decimatedDir)) {
+                System.IO.Directory.CreateDirectory(decimatedDir);
+            }
+            
+            string decimatedMeshPath = $"{decimatedDir}/{sanitizedName}_dec_{quality:F2}.mesh";
+            Mesh decimatedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(decimatedMeshPath);
+            if (decimatedMesh != null) return decimatedMesh;
+            
+            try {
+                var simplifier = new MeshSimplifier();
+                simplifier.Initialize(originalMesh);
+                simplifier.SimplifyMesh(quality);
+                decimatedMesh = simplifier.ToMesh();
+                decimatedMesh.name = originalMesh.name + "_decimated";
+                AssetDatabase.CreateAsset(decimatedMesh, decimatedMeshPath);
+                AssetDatabase.SaveAssets();
+                Debug.Log("[CityGen] Created decimated mesh asset at: " + decimatedMeshPath);
+                return decimatedMesh;
+            } catch (System.Exception e) {
+                Debug.LogError("[CityGen] Failed to decimate mesh: " + e.Message);
+                return originalMesh;
+            }
+        }
+
         public void GeneratePolishedCity()
         {
             Random.InitState(seed);
@@ -295,12 +331,12 @@ namespace TheAlchemistsCrypt.Editor
             floorMat.SetColor("_EmissionColor", new Color(1.0f, 0.95f, 0.8f) * 0.02f);
             floorMat.EnableKeyword("_EMISSION");
 
-            Material litWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Material litWindowMat = new Material(GetLitShader());
             litWindowMat.SetColor("_BaseColor", new Color(1f, 0.95f, 0.8f)); // Bright warm white-gold
             litWindowMat.SetColor("_EmissionColor", new Color(1.0f, 0.75f, 0.25f) * 15.0f); // Intense warm amber glow
             litWindowMat.EnableKeyword("_EMISSION");
             
-            Material darkWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            Material darkWindowMat = new Material(GetLitShader());
             darkWindowMat.SetColor("_BaseColor", new Color(0.15f, 0.1f, 0.15f)); // Dark cool-purple contrast
 
             SetupEnvironment(root);
@@ -460,6 +496,10 @@ namespace TheAlchemistsCrypt.Editor
 
             var activeScene = SceneManager.GetActiveScene();
             EditorSceneManager.MarkSceneDirty(activeScene);
+            
+            // Clean up any remaining unused assets before saving to minimize scene file size
+            EditorUtility.UnloadUnusedAssetsImmediate();
+            
             EditorSceneManager.SaveScene(activeScene);
             
             Debug.Log("Polished Egyptian City V5.2 Warm Sunset Aesthetic Overhaul Regenerated!");
@@ -571,6 +611,8 @@ namespace TheAlchemistsCrypt.Editor
             var s = Shader.Find("Universal Render Pipeline/Lit");
             if (s == null) s = Shader.Find("URP/Lit");
             if (s == null) s = Shader.Find("Lit");
+            if (s == null) s = Shader.Find("Standard");
+            if (s == null) s = Shader.Find("Sprites/Default");
             return s;
         }
 
@@ -978,20 +1020,16 @@ namespace TheAlchemistsCrypt.Editor
                     GameObject treePrefab = trees[Random.Range(0, trees.Length)];
                     var t = (GameObject)PrefabUtility.InstantiatePrefab(treePrefab, p.transform);
                     t.transform.localScale = Vector3.one * 8f; 
-                    AlignToGroundAndAddCollider(t, spawnLoc, Quaternion.Euler(-90, 0, 0), -1.8f);
 
+                    // Decimate tree meshes first using shared asset caching
                     var filters = t.GetComponentsInChildren<MeshFilter>();
                     foreach (var mf in filters) {
                         if (mf.sharedMesh == null) continue;
-                        try {
-                            var simplifier = new MeshSimplifier();
-                            simplifier.Initialize(mf.sharedMesh);
-                            simplifier.SimplifyMesh(0.80f); 
-                            mf.sharedMesh = simplifier.ToMesh();
-                        } catch (System.Exception e) {
-                            Debug.LogWarning($"[CityGen] Failed to decimate tree mesh: {mf.name} - {e.Message}");
-                        }
+                        var decimated = GetSharedDecimatedMesh(mf.sharedMesh, 0.80f);
+                        if (decimated != null) mf.sharedMesh = decimated;
                     }
+
+                    AlignToGroundAndAddCollider(t, spawnLoc, Quaternion.Euler(-90, 0, 0), -1.8f);
                 }
             }
 
@@ -1161,6 +1199,11 @@ namespace TheAlchemistsCrypt.Editor
 
         private void AlignToGroundAndAddCollider(GameObject obj, Vector3 basePos, Quaternion targetRot, float offsetAdjustment, bool alignToTerrain = true)
         {
+            if (PrefabUtility.IsPartOfPrefabInstance(obj))
+            {
+                PrefabUtility.UnpackPrefabInstance(obj, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            }
+
             var allRenderers = obj.GetComponentsInChildren<Renderer>(true);
             foreach (var r in allRenderers)
             {
@@ -1174,7 +1217,7 @@ namespace TheAlchemistsCrypt.Editor
                     if (shaderName.Contains("Standard") || shaderName.Contains("Built-in") || shaderName == "Legacy Shaders/Diffuse" || shaderName == "Diffuse")
                     {
                         var oldMat = mats[i];
-                        var newMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                        var newMat = new Material(GetLitShader());
                         newMat.name = oldMat.name + "_URP";
                         if (oldMat.HasProperty("_Color")) newMat.SetColor("_BaseColor", oldMat.GetColor("_Color"));
                         if (oldMat.HasProperty("_MainTex") && oldMat.GetTexture("_MainTex") != null) newMat.SetTexture("_BaseMap", oldMat.GetTexture("_MainTex"));
