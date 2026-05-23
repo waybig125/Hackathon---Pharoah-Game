@@ -23,7 +23,11 @@ namespace TheAlchemistsCrypt.Gameplay
             if (Instance == null)
             {
                 Instance = this;
-                if (Application.isPlaying) DontDestroyOnLoad(gameObject);
+                if (Application.isPlaying)
+                {
+                    transform.SetParent(null);
+                    DontDestroyOnLoad(gameObject);
+                }
                 InitializeSources();
             }
             else if (Instance != this)
