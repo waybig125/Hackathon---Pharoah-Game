@@ -37,6 +37,7 @@ namespace TheAlchemistsCrypt.Weapons
         private void OnEnable()
         {
             isReloading = false;
+            UpdateWeaponColor();
         }
 
         private void OnDisable()
@@ -88,7 +89,7 @@ namespace TheAlchemistsCrypt.Weapons
             Color glowColor = Color.red; // default Sulfur
             switch (currentMode)
             {
-                case FireMode.Sulfur: glowColor = new Color(1.0f, 0.3f, 0.0f); break; // Fiery orange
+                case FireMode.Sulfur: glowColor = new Color(1.0f, 0.55f, 0.05f); break; // Bright orange-gold
                 case FireMode.Mercury: glowColor = new Color(0.0f, 0.9f, 1.0f); break; // Cyan/blue
                 case FireMode.Salt: glowColor = new Color(0.8f, 0.2f, 1.0f); break; // Majestic royal violet/purple
             }
@@ -108,6 +109,19 @@ namespace TheAlchemistsCrypt.Weapons
                     {
                         if (m.HasProperty("_Color")) m.SetColor("_Color", glowColor);
                         if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", glowColor);
+                    }
+                    else
+                    {
+                        // Tint the main body slightly with the element color so the guns are visually distinct!
+                        Color bodyTint = Color.black;
+                        switch (currentMode)
+                        {
+                            case FireMode.Sulfur: bodyTint = new Color(0.25f, 0.15f, 0.05f); break; // Warm orange/bronze tint
+                            case FireMode.Mercury: bodyTint = new Color(0.05f, 0.20f, 0.25f); break; // Cool cyan/teal tint
+                            case FireMode.Salt: bodyTint = new Color(0.18f, 0.08f, 0.25f); break; // Violet/purple tint
+                        }
+                        if (m.HasProperty("_Color")) m.SetColor("_Color", bodyTint);
+                        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", bodyTint);
                     }
                     if (m.HasProperty("_EmissionColor"))
                     {

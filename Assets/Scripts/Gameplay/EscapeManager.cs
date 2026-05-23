@@ -73,7 +73,7 @@ namespace TheAlchemistsCrypt.Gameplay
             if (plazas.Count > 0)
             {
                 var targetPlaza = plazas[Random.Range(0, plazas.Count)];
-                chosenLoc = targetPlaza.transform.position + new Vector3(Random.Range(-5f, 5f), 0, Random.Range(-5f, 5f));
+                chosenLoc = targetPlaza.transform.position;
                 Debug.Log($"[EscapeManager] Spawning Papyrus at random Plaza: {targetPlaza.name} at {chosenLoc}");
             }
             else
@@ -114,9 +114,37 @@ namespace TheAlchemistsCrypt.Gameplay
             lightGo.transform.localPosition = Vector3.up * 0.5f;
             var l = lightGo.GetComponent<Light>();
             l.type = LightType.Point;
-            l.color = new Color(1f, 0.9f, 0.5f);
-            l.intensity = 5f;
-            l.range = 8f;
+            l.color = new Color(1f, 0.85f, 0.3f);
+            l.intensity = 20f;
+            l.range = 30f;
+
+            // Spawn a skyward glowing golden cylinder beacon beam
+            var beamGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            beamGo.name = "PapyrusBeaconBeam";
+            beamGo.transform.SetParent(keyObj.transform);
+            beamGo.transform.localPosition = Vector3.up * 150f;
+            beamGo.transform.localRotation = Quaternion.identity;
+            beamGo.transform.localScale = new Vector3(2.5f, 750f, 2.5f); // 1m wide, 300m tall world space (key scale is 0.4f)
+            DestroyImmediate(beamGo.GetComponent<Collider>());
+
+            Shader beamShader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (beamShader == null) beamShader = Shader.Find("Universal Render Pipeline/Lit");
+            if (beamShader == null) beamShader = Shader.Find("Lit");
+            Material beamMat = new Material(beamShader);
+
+            Color goldColor = new Color(1.0f, 0.75f, 0.1f, 0.4f); // Translucent gold
+            beamMat.SetColor("_BaseColor", goldColor);
+            if (beamMat.HasProperty("_Color")) beamMat.SetColor("_Color", goldColor);
+            beamMat.SetColor("_EmissionColor", new Color(1.0f, 0.75f, 0.1f) * 15f);
+            beamMat.EnableKeyword("_EMISSION");
+            beamMat.SetFloat("_Surface", 1f); // Transparent
+            beamMat.SetFloat("_Blend", 0f); // Alpha blend
+            beamMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            beamMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            beamMat.SetInt("_ZWrite", 0);
+            beamMat.SetInt("_Cull", 0); // Double sided
+            beamMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            beamGo.GetComponent<Renderer>().sharedMaterial = beamMat;
 
             // Register with Minimap
             if (TheAlchemistsCrypt.UI.MinimapUI.Instance != null)
@@ -157,12 +185,12 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            Vector3 spawnPos = new Vector3(0f, 0.85f, -112f);
+            Vector3 spawnPos = new Vector3(0f, 1.6f, -104f);
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
             {
-                boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(-90f, 90f, 0f));
+                boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(0f, 90f, 0f));
                 boatObj.transform.localScale = Vector3.one * 0.18f; 
                 ConvertBoatMaterials(boatObj);
             }

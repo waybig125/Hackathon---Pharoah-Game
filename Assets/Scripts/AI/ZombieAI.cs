@@ -373,7 +373,7 @@ namespace TheAlchemistsCrypt.AI
             {
                 // ── Priority 0: Player has papyrus — chase relentlessly at hyper-speed! ──
                 if (player != null) currentTargetPos = player.position;
-                currentSpeed = (this is TheAlchemistsCrypt.AI.PharaohAI) ? 75f : 65f;
+                currentSpeed = (this is TheAlchemistsCrypt.AI.PharaohAI) ? 22f : 16f;
             }
             else if (hasMeaningfulTactical && distanceToPlayer > 4.0f)
             {
@@ -463,8 +463,8 @@ namespace TheAlchemistsCrypt.AI
             if (agent.isActiveAndEnabled && agent.isOnNavMesh) {
                 if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null && TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.hasKey)
                 {
-                    agent.acceleration = 150f;
-                    agent.angularSpeed = 720f;
+                    agent.acceleration = 40f;
+                    agent.angularSpeed = 360f;
                 }
                 else
                 {

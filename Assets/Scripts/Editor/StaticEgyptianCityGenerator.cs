@@ -167,7 +167,7 @@ namespace TheAlchemistsCrypt.Editor
                     lowerName.Contains("globalvolume") || lowerName.Contains("reflectionprobe") ||
                     lowerName.Contains("claritylight") || lowerName.Contains("environmentvolume") ||
                     lowerName.Contains("audiomanager") || lowerName.Contains("hivemindmanager") || lowerName.Contains("mummyspawner") ||
-                    lowerName.Contains("escapemanager")) 
+                    lowerName.Contains("escapemanager") || lowerName.Contains("dynamicprops")) 
                 {
                     DestroyImmediate(go);
                 }
@@ -228,7 +228,7 @@ namespace TheAlchemistsCrypt.Editor
             
             // ── AESTHETIC PALETTE (Warm Sunset Desert) ──
             Material wallMat = new Material(GetLitShader());
-            wallMat.SetColor("_BaseColor", new Color(0.84f, 0.65f, 0.55f)); // Terracotta-peach albedo
+            wallMat.SetColor("_BaseColor", new Color(0.92f, 0.88f, 0.82f)); // Lighter desaturated cream/sand
             wallMat.SetFloat("_Smoothness", 0.0f);   // Matte finish
             
             Material woodMat = new Material(GetLitShader());
@@ -242,8 +242,8 @@ namespace TheAlchemistsCrypt.Editor
             floorMat.EnableKeyword("_EMISSION");
 
             Material litWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            litWindowMat.SetColor("_BaseColor", new Color(1f, 0.8f, 0.4f)); // Warm yellow-gold
-            litWindowMat.SetColor("_EmissionColor", new Color(1.0f, 0.6f, 0.1f) * 8.0f); // Rich warm amber/orange
+            litWindowMat.SetColor("_BaseColor", new Color(1f, 0.85f, 0.5f)); // Warm yellow-gold
+            litWindowMat.SetColor("_EmissionColor", new Color(1.0f, 0.65f, 0.15f) * 10.0f); // Rich warm amber/orange
             litWindowMat.EnableKeyword("_EMISSION");
             
             Material darkWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
@@ -317,8 +317,8 @@ namespace TheAlchemistsCrypt.Editor
                     sandTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
                     sandTex.wrapMode = TextureWrapMode.Clamp;
                     sandTex.filterMode = FilterMode.Trilinear;
-                    Color topColor = new Color(0.98f, 0.90f, 0.72f);
-                    Color bottomColor = new Color(0.86f, 0.75f, 0.55f);
+                    Color topColor = new Color(0.96f, 0.92f, 0.86f);
+                    Color bottomColor = new Color(0.90f, 0.84f, 0.76f);
                     Color[] pixels = new Color[texSize * texSize];
                     for (int y = 0; y < texSize; y++) {
                         float t = (float)y / (texSize - 1);
@@ -489,9 +489,9 @@ namespace TheAlchemistsCrypt.Editor
                 if (!System.IO.Directory.Exists("Assets/Materials")) System.IO.Directory.CreateDirectory("Assets/Materials");
                 AssetDatabase.CreateAsset(skyMat, "Assets/Materials/DaytimeSkybox.mat");
             }
-            skyMat.SetColor("_SkyTint", new Color(0.15f, 0.40f, 0.75f, 1f)); // Rich warm sky blue
-            skyMat.SetColor("_GroundColor", new Color(0.95f, 0.65f, 0.45f, 1f)); // Warm sunset peach
-            skyMat.SetFloat("_AtmosphereThickness", 0.85f);
+            skyMat.SetColor("_SkyTint", new Color(0.20f, 0.45f, 0.80f, 1f)); // Rich warm sky blue
+            skyMat.SetColor("_GroundColor", new Color(1.0f, 0.72f, 0.55f, 1f)); // Warm sunset peach
+            skyMat.SetFloat("_AtmosphereThickness", 0.90f);
             skyMat.SetFloat("_Exposure", 1.8f);
             skyMat.SetFloat("_SunDisk", 2f);
             skyMat.SetFloat("_SunSize", 0.04f);
@@ -500,8 +500,8 @@ namespace TheAlchemistsCrypt.Editor
             
             RenderSettings.skybox = skyMat;
             RenderSettings.ambientMode = AmbientMode.Trilight; 
-            RenderSettings.ambientSkyColor    = new Color(0.35f, 0.40f, 0.60f); // Cool purple-blue shadows
-            RenderSettings.ambientEquatorColor = new Color(0.85f, 0.68f, 0.52f); // Warm peach transition
+            RenderSettings.ambientSkyColor    = new Color(0.40f, 0.38f, 0.65f); // Cool purple-blue shadows
+            RenderSettings.ambientEquatorColor = new Color(0.95f, 0.78f, 0.62f); // Warm peach transition
             RenderSettings.ambientGroundColor  = new Color(0.25f, 0.20f, 0.22f); // Cool dark ground
 
             RenderSettings.fog = true;
@@ -634,15 +634,15 @@ namespace TheAlchemistsCrypt.Editor
             if (columnPrefab != null) {
                 var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
                 colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
-                AlignToGroundAndAddCollider(colObj, pos + new Vector3(-8f, 0f, -8f), Quaternion.Euler(-90f, 0f, 0f), 0f);
+                AlignToGroundAndAddCollider(colObj, pos + new Vector3(-12f, 0f, -12f), Quaternion.Euler(-90f, 0f, 0f), 0f);
             }
             
             if (trees != null && trees.Length > 0) {
                 int numTrees = Random.Range(1, 4); // 1 to 3 trees Max
                 var sectors = new List<Vector3>() {
-                    new Vector3(7f, 0f, 7f),   // Top-Right
-                    new Vector3(-7f, 0f, 7f),  // Top-Left
-                    new Vector3(7f, 0f, -7f)   // Bottom-Right
+                    new Vector3(12f, 0f, 12f),   // Top-Right
+                    new Vector3(-12f, 0f, 12f),  // Top-Left
+                    new Vector3(12f, 0f, -12f)   // Bottom-Right
                 };
 
                 // Shuffle sectors to randomize spawn locations
@@ -891,7 +891,7 @@ namespace TheAlchemistsCrypt.Editor
                     dynamicProps.isStatic = false;
                 }
                 obj.transform.SetParent(dynamicProps.transform);
-                obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset + 1.0f, targetPos.z);
+                obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset + 0.05f, targetPos.z);
             } else {
                 obj.transform.position = new Vector3(targetPos.x, targetPos.y + yOffset, targetPos.z);
             }
@@ -912,16 +912,36 @@ namespace TheAlchemistsCrypt.Editor
                 rb.linearDamping = 0.5f;
                 rb.angularDamping = 0.5f;
                 
-                Bounds bounds = new Bounds(Vector3.zero, Vector3.zero);
+                Bounds localBounds = new Bounds(Vector3.zero, Vector3.zero);
                 bool first = true;
-                foreach (var r in allRenderers) {
-                    if (r is ParticleSystemRenderer) continue;
-                    if (first) { bounds = r.bounds; first = false; } else bounds.Encapsulate(r.bounds);
+                var filters = obj.GetComponentsInChildren<MeshFilter>(true);
+                foreach (var mf in filters) {
+                    if (mf.sharedMesh == null) continue;
+                    Bounds meshBounds = mf.sharedMesh.bounds;
+                    
+                    Vector3[] corners = GetBoundsCorners(meshBounds);
+                    foreach (var corner in corners) {
+                        Vector3 worldPt = mf.transform.TransformPoint(corner);
+                        Vector3 localPt = obj.transform.InverseTransformPoint(worldPt);
+                        if (first) {
+                            localBounds = new Bounds(localPt, Vector3.zero);
+                            first = false;
+                        } else {
+                            localBounds.Encapsulate(localPt);
+                        }
+                    }
+                }
+                
+                if (first) {
+                    foreach (var r in allRenderers) {
+                        if (r is ParticleSystemRenderer) continue;
+                        if (first) { localBounds = r.bounds; first = false; } else localBounds.Encapsulate(r.bounds);
+                    }
                 }
                 
                 var boxCol = obj.AddComponent<BoxCollider>();
-                boxCol.center = obj.transform.InverseTransformPoint(bounds.center);
-                boxCol.size = Vector3.Scale(bounds.size, new Vector3(1f/obj.transform.lossyScale.x, 1f/obj.transform.lossyScale.y, 1f/obj.transform.lossyScale.z));
+                boxCol.center = localBounds.center;
+                boxCol.size = localBounds.size;
             } else {
                 var filters = obj.GetComponentsInChildren<MeshFilter>(true);
                 if (filters.Length > 0) {
@@ -947,6 +967,20 @@ namespace TheAlchemistsCrypt.Editor
             pMat.SetColor("_BaseColor", new Color(0.78f, 0.52f, 0.35f)); 
             pMat.SetColor("_EmissionColor", glowColor * 1.5f); pMat.EnableKeyword("_EMISSION"); renderer.sharedMaterial = pMat;
             pGo.AddComponent<MeshCollider>().sharedMesh = mesh;
+        }
+
+        private static Vector3[] GetBoundsCorners(Bounds b)
+        {
+            return new Vector3[] {
+                b.min,
+                b.max,
+                new Vector3(b.min.x, b.min.y, b.max.z),
+                new Vector3(b.min.x, b.max.y, b.min.z),
+                new Vector3(b.max.x, b.min.y, b.min.z),
+                new Vector3(b.min.x, b.max.y, b.max.z),
+                new Vector3(b.max.x, b.min.y, b.max.z),
+                new Vector3(b.max.x, b.max.y, b.min.z)
+            };
         }
     }
 }
