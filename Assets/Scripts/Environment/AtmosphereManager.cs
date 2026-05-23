@@ -6,18 +6,22 @@ namespace TheAlchemistsCrypt.Environment
     {
         [Header("Fog Settings")]
         public bool enableFog = true;
-        // Warm Sunset Peach Horizon
-        public Color fogColor = new Color(0.92f, 0.74f, 0.52f, 1f);
+        // Dusty, bright sand reflection
+        public Color fogColor = new Color(0.95f, 0.85f, 0.75f, 1f);
         public float fogStartDistance = 150f;
         public float fogEndDistance = 1200f;
         public FogMode fogMode = FogMode.Linear;
 
         [Header("Lighting Settings")]
-        public Color ambientSkyColor = new Color(0.35f, 0.40f, 0.60f); // Cool purple-blue shadows
-        public Color ambientEquatorColor = new Color(0.85f, 0.68f, 0.52f); // Warm peach transition
-        public Color ambientGroundColor = new Color(0.25f, 0.20f, 0.22f); // Cool dark ground
-        public Color sunColor = new Color(1.0f, 0.86f, 0.72f, 1.0f); // Warm sunset light
-        public float sunIntensity = 1.8f; 
+        // Brighter, crisper sky
+        public Color ambientSkyColor = new Color(0.45f, 0.65f, 0.85f); 
+        // Dusty, bright sand reflection
+        public Color ambientEquatorColor = new Color(0.90f, 0.85f, 0.75f); 
+        // Distinct deep blue/purple for the stark shadows seen in the image
+        public Color ambientGroundColor = new Color(0.35f, 0.40f, 0.55f); 
+        // Whiter, crisper sunlight
+        public Color sunColor = new Color(1.0f, 0.95f, 0.90f, 1.0f); 
+        public float sunIntensity = 2.0f; 
 
         private void Start()
         {
@@ -65,8 +69,8 @@ namespace TheAlchemistsCrypt.Environment
             {
                 sun.color = sunColor;
                 sun.intensity = sunIntensity;
-                // Sunset low angle matching the editor setup
-                sun.transform.rotation = Quaternion.Euler(25f, 220f, 0f);
+                // Changed from sunset (25f) to a higher mid-afternoon angle for sharper shadows
+                sun.transform.rotation = Quaternion.Euler(50f, -45f, 0f); 
                 RenderSettings.sun = sun;
             }
         }

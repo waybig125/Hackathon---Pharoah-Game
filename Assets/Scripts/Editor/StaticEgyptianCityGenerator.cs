@@ -489,10 +489,10 @@ namespace TheAlchemistsCrypt.Editor
                 if (!System.IO.Directory.Exists("Assets/Materials")) System.IO.Directory.CreateDirectory("Assets/Materials");
                 AssetDatabase.CreateAsset(skyMat, "Assets/Materials/DaytimeSkybox.mat");
             }
-            skyMat.SetColor("_SkyTint", new Color(0.20f, 0.45f, 0.80f, 1f)); // Rich warm sky blue
-            skyMat.SetColor("_GroundColor", new Color(1.0f, 0.72f, 0.55f, 1f)); // Warm sunset peach
-            skyMat.SetFloat("_AtmosphereThickness", 0.90f);
-            skyMat.SetFloat("_Exposure", 1.8f);
+            skyMat.SetColor("_SkyTint", new Color(0.15f, 0.35f, 0.75f, 1f)); // Deeper blue top gradient
+            skyMat.SetColor("_GroundColor", new Color(0.95f, 0.85f, 0.75f, 1f)); // Brighter, cleaner horizon
+            skyMat.SetFloat("_AtmosphereThickness", 0.6f); // Less haze, crisper transition
+            skyMat.SetFloat("_Exposure", 1.5f);
             skyMat.SetFloat("_SunDisk", 2f);
             skyMat.SetFloat("_SunSize", 0.04f);
             
@@ -500,20 +500,20 @@ namespace TheAlchemistsCrypt.Editor
             
             RenderSettings.skybox = skyMat;
             RenderSettings.ambientMode = AmbientMode.Trilight; 
-            RenderSettings.ambientSkyColor    = new Color(0.40f, 0.38f, 0.65f); // Cool purple-blue shadows
-            RenderSettings.ambientEquatorColor = new Color(0.95f, 0.78f, 0.62f); // Warm peach transition
-            RenderSettings.ambientGroundColor  = new Color(0.25f, 0.20f, 0.22f); // Cool dark ground
+            RenderSettings.ambientSkyColor    = new Color(0.45f, 0.65f, 0.85f); // Cool purple-blue shadows
+            RenderSettings.ambientEquatorColor = new Color(0.90f, 0.85f, 0.75f); // Warm peach transition
+            RenderSettings.ambientGroundColor  = new Color(0.35f, 0.40f, 0.55f); // Cool dark ground
 
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.92f, 0.74f, 0.52f, 1f); // Horizon peach/orange fog
+            RenderSettings.fogColor = new Color(0.95f, 0.85f, 0.75f, 1f); // Horizon fog
             RenderSettings.fogStartDistance = 150f;   // Keep city clear up close
             RenderSettings.fogEndDistance  = 1200f;   
             
             var sun = GameObject.Find("Directional Light")?.GetComponent<Light>();
             if (sun != null) {
-                sun.color = new Color(1.0f, 0.86f, 0.72f); // Warm sunset light
-                sun.intensity = 1.8f; // Strong sunlight
-                sun.transform.rotation = Quaternion.Euler(25f, 220f, 0f); // Sunset low angle
+                sun.color = new Color(1.0f, 0.95f, 0.90f); // Whiter, crisper sunlight
+                sun.intensity = 2.0f; // Stronger sunlight
+                sun.transform.rotation = Quaternion.Euler(50f, -45f, 0f); // Higher mid-afternoon angle
             }
             SetupPostProcessing(root.transform);
             AssetDatabase.SaveAssets();
@@ -553,9 +553,9 @@ namespace TheAlchemistsCrypt.Editor
             vignette.color.Override(new Color(0.15f, 0.12f, 0.2f)); 
 
             if (!profile.TryGet<LiftGammaGain>(out var lgg)) lgg = profile.Add<LiftGammaGain>();
-            lgg.lift.Override(new Vector4(0.08f, 0.04f, 0.16f, -0.05f)); // Cool purple-blue shadows (more contrast)
-            lgg.gamma.Override(new Vector4(1.05f, 0.98f, 0.92f, 0f)); // Warm sunset midtones
-            lgg.gain.Override(new Vector4(1.15f, 1.08f, 0.98f, 0.05f));   // Warm highlights (more intense)
+            lgg.lift.Override(new Vector4(0.05f, 0.05f, 0.20f, 0f)); // Pushes shadows toward deep blue
+            lgg.gamma.Override(new Vector4(1.0f, 1.0f, 1.0f, 0f));   // Keep midtones neutral/bright
+            lgg.gain.Override(new Vector4(1.05f, 1.0f, 0.95f, 0f));  // Slight warm pop on highlights
 
             EditorUtility.SetDirty(profile);
             
@@ -785,12 +785,12 @@ namespace TheAlchemistsCrypt.Editor
                             mat.SetFloat("_Smoothness", 0.75f);
                             mat.SetFloat("_Metallic", 0.9f);
                         } else if (mName.Contains("mag") || mName.Contains("rail") || mName.Contains("stripe") || mName.Contains("runes") || mName.Contains("glow") || mName.Contains("ammo") || mName.Contains("bullet")) {
-                            // Glowing runic orange/gold rail/magazine
-                            mat.SetColor("_BaseColor", new Color(1.0f, 0.55f, 0.05f));
-                            mat.SetColor("_EmissionColor", new Color(1.0f, 0.45f, 0.05f) * 8f);
+                            mat.SetColor("_BaseColor", new Color(1.0f, 0.7f, 0.1f));
+                            // Cranked the multiplier to 15f for that intense, blown-out fiery core
+                            mat.SetColor("_EmissionColor", new Color(1.0f, 0.6f, 0.05f) * 15f); 
                             mat.EnableKeyword("_EMISSION");
-                            mat.SetFloat("_Smoothness", 0.5f);
-                            mat.SetFloat("_Metallic", 0.2f);
+                            mat.SetFloat("_Smoothness", 0.1f); // Lower smoothness so the glow feels matte
+                            mat.SetFloat("_Metallic", 0.0f);
                         } else if (mName.Contains("barrel") || mName.Contains("grip") || mName.Contains("trigger") || mName.Contains("scope")) {
                             // Secondary dark metallic elements
                             mat.SetColor("_BaseColor", new Color(0.12f, 0.12f, 0.12f));
