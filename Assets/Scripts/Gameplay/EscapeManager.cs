@@ -133,18 +133,23 @@ namespace TheAlchemistsCrypt.Gameplay
             Material beamMat = new Material(beamShader);
             beamMat.name = "VolumetricBeamMat";
 
-            Color beamColor = new Color(1.0f, 0.85f, 0.4f, 0.18f); // Soft glowing translucent gold
+            Color beamColor = new Color(0.96f, 0.75f, 0.5f, 0.12f); // Soft glowing translucent sunset gold
             if (beamShader.name != null && beamShader.name.Contains("Universal Render Pipeline"))
             {
                 beamMat.SetFloat("_Surface", 1f); // Transparent
                 beamMat.SetFloat("_Blend", 0f); // Alpha blend
                 beamMat.SetColor("_BaseColor", beamColor);
-                beamMat.SetColor("_EmissionColor", new Color(1.0f, 0.85f, 0.4f) * 4f);
+                beamMat.SetColor("_EmissionColor", new Color(0.96f, 0.75f, 0.5f) * 3f);
                 beamMat.EnableKeyword("_EMISSION");
                 beamMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 beamMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 beamMat.SetInt("_ZWrite", 0);
                 beamMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+
+                // Enable URP transparency keywords so it actually blends instead of rendering opaque
+                beamMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                beamMat.DisableKeyword("_ALPHATEST_ON");
+                beamMat.EnableKeyword("_ALPHABLEND_ON");
             }
             else
             {
@@ -167,18 +172,19 @@ namespace TheAlchemistsCrypt.Gameplay
             var main = ps.main;
             main.duration = 5f;
             main.loop = true;
-            main.startLifetime = 8.0f; // Long lifetime to float slowly
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.8f, 2.2f); // Slow speed
-            main.startSize = new ParticleSystem.MinMaxCurve(0.04f, 0.15f); // Very tiny dust size!
-            main.startColor = new Color(1.0f, 0.85f, 0.5f, 0.7f); // Glowing gold dust
-            main.maxParticles = 400;
+            main.startLifetime = 10.0f; // Extra long lifetime for suspended feel
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.1f, 0.4f); // Very slow upward drift (floating suspended dust)
+            main.startSize = new ParticleSystem.MinMaxCurve(0.015f, 0.06f); // Extremely tiny dust motes (realistic)
+            main.startColor = new Color(0.96f, 0.85f, 0.6f, 0.45f); // Subtly glowing gold dust
+            main.maxParticles = 600; // More particles since they are smaller
             main.simulationSpace = ParticleSystemSimulationSpace.World;
 
             var emission = ps.emission;
-            emission.rateOverTime = 60f;
+            emission.rateOverTime = 120f; // Higher rate to populate the shaft volume beautifully
 
             var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Cylinder;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 0f; // 0 degree angle makes the cone a cylinder!
             shape.radius = 1.2f; // Spawn in the cylinder radius
             shape.length = 150f; // Spawn along the height of the beam!
 
@@ -194,8 +200,8 @@ namespace TheAlchemistsCrypt.Gameplay
             colorOverLifetime.enabled = true;
             Gradient grad = new Gradient();
             grad.SetKeys(
-                new GradientColorKey[] { new GradientColorKey(new Color(1f, 0.85f, 0.5f), 0.0f), new GradientColorKey(new Color(1f, 0.85f, 0.5f), 1.0f) },
-                new GradientAlphaKey[] { new GradientAlphaKey(0.0f, 0.0f), new GradientAlphaKey(0.7f, 0.2f), new GradientAlphaKey(0.7f, 0.8f), new GradientAlphaKey(0.0f, 1.0f) }
+                new GradientColorKey[] { new GradientColorKey(new Color(0.96f, 0.85f, 0.6f), 0.0f), new GradientColorKey(new Color(0.96f, 0.85f, 0.6f), 1.0f) },
+                new GradientAlphaKey[] { new GradientAlphaKey(0.0f, 0.0f), new GradientAlphaKey(0.5f, 0.2f), new GradientAlphaKey(0.5f, 0.8f), new GradientAlphaKey(0.0f, 1.0f) }
             );
             colorOverLifetime.color = grad;
 
@@ -224,7 +230,7 @@ namespace TheAlchemistsCrypt.Gameplay
             }
             circleTex.Apply();
 
-            Color pColor = new Color(1f, 0.85f, 0.5f, 0.7f);
+            Color pColor = new Color(0.96f, 0.85f, 0.6f, 0.5f);
             if (dustShader.name != null && dustShader.name.Contains("Particles"))
             {
                 dustMat.SetTexture("_BaseMap", circleTex);
@@ -236,7 +242,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 dustMat.SetInt("_ZWrite", 0);
                 dustMat.DisableKeyword("_ALPHATEST_ON");
                 dustMat.EnableKeyword("_ALPHABLEND_ON");
-                dustMat.SetColor("_EmissionColor", new Color(1f, 0.85f, 0.5f) * 15f);
+                dustMat.SetColor("_EmissionColor", new Color(0.96f, 0.85f, 0.6f) * 8f);
                 dustMat.EnableKeyword("_EMISSION");
                 dustMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             }
@@ -292,7 +298,7 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            Vector3 spawnPos = new Vector3(0f, 2.5f, -104f); // Raised from 1.8f to 2.5f to float deck above water
+            Vector3 spawnPos = new Vector3(0f, 3.2f, -104f); // Raised to 3.2f to float deck and cabin above water
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
@@ -405,9 +411,9 @@ namespace TheAlchemistsCrypt.Gameplay
                     // Smoothly sail out to sea (Z decreases) with gentle wave bobbing
                     if (boatObj != null)
                     {
-                        float bob = Mathf.Sin(Time.time * 2f) * 0.12f;
+                        float bob = Mathf.Sin(Time.time * 1.2f) * 0.08f;
                         float newZ = boatObj.transform.position.z - 4f * Time.deltaTime;
-                        boatObj.transform.position = new Vector3(0f, 2.5f + bob, newZ);
+                        boatObj.transform.position = new Vector3(0f, 3.2f + bob, newZ);
                     }
                     
                     var player = GameObject.FindGameObjectWithTag("Player");
@@ -423,6 +429,13 @@ namespace TheAlchemistsCrypt.Gameplay
                     }
                 }
                 return;
+            }
+
+            // Bob the escape boat gently at all times in the water to make it look floaty
+            if (boatObj != null)
+            {
+                float bob = Mathf.Sin(Time.time * 1.2f) * 0.08f;
+                boatObj.transform.position = new Vector3(0f, 3.2f + bob, -104f);
             }
 
             if (!TheAlchemistsCrypt.UI.MobileHUDButtons.HasStartedGame) return;

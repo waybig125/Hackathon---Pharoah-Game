@@ -608,11 +608,12 @@ namespace TheAlchemistsCrypt.Editor
                 skyTex = AssetDatabase.LoadAssetAtPath<Texture2D>(skyTexPath);
             }
 
-            Material skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/SkyGradientBox.mat");
+            Material skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Materials/SkyGradientBox.mat");
             if (skyMat == null) {
                 skyMat = new Material(Shader.Find("Skybox/Procedural"));
-                if (!System.IO.Directory.Exists("Assets/Materials")) System.IO.Directory.CreateDirectory("Assets/Materials");
-                AssetDatabase.CreateAsset(skyMat, "Assets/Materials/SkyGradientBox.mat");
+                if (!System.IO.Directory.Exists("Assets/Resources")) System.IO.Directory.CreateDirectory("Assets/Resources");
+                if (!System.IO.Directory.Exists("Assets/Resources/Materials")) System.IO.Directory.CreateDirectory("Assets/Resources/Materials");
+                AssetDatabase.CreateAsset(skyMat, "Assets/Resources/Materials/SkyGradientBox.mat");
             }
             else
             {

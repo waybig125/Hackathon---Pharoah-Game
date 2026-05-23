@@ -2683,6 +2683,8 @@ namespace TheAlchemistsCrypt.UI
                 HasStartedGame = false;
                 UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
             }, new Color(0.2f, 0.3f, 0.6f, 0.15f));
+
+            SetLayerRecursively(deathCanvasGo, 5);
         }
 
         public void ShowVictoryScreen()
@@ -2760,6 +2762,8 @@ namespace TheAlchemistsCrypt.UI
                 HasStartedGame = false;
                 UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
             }, new Color(0.2f, 0.3f, 0.6f, 0.15f));
+
+            SetLayerRecursively(victoryCanvasGo, 5);
         }
 
         private bool hasTintedWeapons = false;
