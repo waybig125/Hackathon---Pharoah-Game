@@ -657,6 +657,11 @@ namespace TheAlchemistsCrypt.Editor
                     Vector3 offset = sectors[i] + new Vector3(Random.Range(-1.5f, 1.5f), 0f, Random.Range(-1.5f, 1.5f));
                     Vector3 spawnLoc = pos + offset;
 
+                    // Prevent spawning trees too close to the origin to avoid spawning inside player
+                    if (Vector3.Distance(new Vector3(spawnLoc.x, 0f, spawnLoc.z), Vector3.zero) < 12f) {
+                        continue;
+                    }
+
                     GameObject treePrefab = trees[Random.Range(0, trees.Length)];
                     var t = (GameObject)PrefabUtility.InstantiatePrefab(treePrefab, p.transform);
                     t.transform.localScale = Vector3.one * 8f; 
@@ -912,12 +917,32 @@ namespace TheAlchemistsCrypt.Editor
                 rb.linearDamping = 0.5f;
                 rb.angularDamping = 0.5f;
                 
-                var filters = obj.GetComponentsInChildren<MeshFilter>(true);
-                foreach (var filterObj in filters) {
-                    if (filterObj.sharedMesh == null) continue;
-                    var mc = filterObj.gameObject.AddComponent<MeshCollider>();
-                    mc.sharedMesh = filterObj.sharedMesh;
-                    mc.convex = true;
+                // Aggregate local bounds in the root object's local space
+                Bounds localBounds = new Bounds(Vector3.zero, Vector3.zero);
+                bool hasBounds = false;
+                var meshFilters = obj.GetComponentsInChildren<MeshFilter>(true);
+                foreach (var mf in meshFilters) {
+                    if (mf.sharedMesh == null) continue;
+                    Bounds meshBounds = mf.sharedMesh.bounds;
+                    
+                    // Transform to root's local space
+                    Matrix4x4 childToRoot = obj.transform.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+                    Vector3[] corners = GetBoundsCorners(meshBounds);
+                    foreach (var corner in corners) {
+                        Vector3 localCorner = childToRoot.MultiplyPoint3x4(corner);
+                        if (!hasBounds) {
+                            localBounds = new Bounds(localCorner, Vector3.zero);
+                            hasBounds = true;
+                        } else {
+                            localBounds.Encapsulate(localCorner);
+                        }
+                    }
+                }
+                
+                var bc = obj.AddComponent<BoxCollider>();
+                if (hasBounds) {
+                    bc.center = localBounds.center;
+                    bc.size = localBounds.size;
                 }
             } else {
                 var filters = obj.GetComponentsInChildren<MeshFilter>(true);
