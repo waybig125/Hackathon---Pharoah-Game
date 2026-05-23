@@ -69,8 +69,8 @@ namespace TheAlchemistsCrypt.Environment
             {
                 sun.color = sunColor;
                 sun.intensity = sunIntensity;
-                // Changed from sunset (25f) to a higher mid-afternoon angle for sharper shadows
-                sun.transform.rotation = Quaternion.Euler(50f, -45f, 0f); 
+                // Changed to a lower sunset angle so sunlight falls on the houses
+                sun.transform.rotation = Quaternion.Euler(20f, -60f, 0f); 
                 RenderSettings.sun = sun;
             }
         }

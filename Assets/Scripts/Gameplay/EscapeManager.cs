@@ -190,7 +190,8 @@ namespace TheAlchemistsCrypt.Gameplay
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
             {
-                boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(0f, 180f, 0f));
+                // The user suggested -180deg to fix the flipped boat. Applying to X axis.
+                boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(-180f, 180f, 0f));
                 boatObj.transform.localScale = Vector3.one * 0.18f; 
                 ConvertBoatMaterials(boatObj);
             }

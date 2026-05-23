@@ -228,26 +228,26 @@ namespace TheAlchemistsCrypt.Editor
             
             // ── AESTHETIC PALETTE (Warm Sunset Desert) ──
             Material wallMat = new Material(GetLitShader());
-            wallMat.SetColor("_BaseColor", new Color(0.92f, 0.88f, 0.82f)); // Lighter desaturated cream/sand
+            wallMat.SetColor("_BaseColor", new Color(0.96f, 0.85f, 0.75f)); // Warmer peach/cream sand
             wallMat.SetFloat("_Smoothness", 0.0f);   // Matte finish
             
             Material woodMat = new Material(GetLitShader());
-            woodMat.SetColor("_BaseColor", new Color(0.25f, 0.15f, 0.08f));
+            woodMat.SetColor("_BaseColor", new Color(0.35f, 0.20f, 0.12f));
             
             Material floorMat = new Material(GetLitShader());
-            floorMat.SetColor("_BaseColor", new Color(0.91f, 0.81f, 0.62f)); // Pale Pastel Sand
+            floorMat.SetColor("_BaseColor", new Color(0.95f, 0.85f, 0.70f)); // Warm Pastel Sand
             floorMat.SetFloat("_Metallic", 0.0f);
-            floorMat.SetFloat("_Smoothness", 0.12f);
-            floorMat.SetColor("_EmissionColor", new Color(1.0f, 0.95f, 0.8f) * 0.01f);
+            floorMat.SetFloat("_Smoothness", 0.10f);
+            floorMat.SetColor("_EmissionColor", new Color(1.0f, 0.95f, 0.8f) * 0.02f);
             floorMat.EnableKeyword("_EMISSION");
 
             Material litWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            litWindowMat.SetColor("_BaseColor", new Color(1f, 0.85f, 0.5f)); // Warm yellow-gold
-            litWindowMat.SetColor("_EmissionColor", new Color(1.0f, 0.65f, 0.15f) * 10.0f); // Rich warm amber/orange
+            litWindowMat.SetColor("_BaseColor", new Color(1f, 0.95f, 0.8f)); // Bright warm white-gold
+            litWindowMat.SetColor("_EmissionColor", new Color(1.0f, 0.75f, 0.25f) * 15.0f); // Intense warm amber glow
             litWindowMat.EnableKeyword("_EMISSION");
             
             Material darkWindowMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            darkWindowMat.SetColor("_BaseColor", new Color(0.2f, 0.15f, 0.12f)); // Warm dark charcoal-brown
+            darkWindowMat.SetColor("_BaseColor", new Color(0.15f, 0.1f, 0.15f)); // Dark cool-purple contrast
 
             SetupEnvironment(root);
             SetupManagers(root);
@@ -394,6 +394,7 @@ namespace TheAlchemistsCrypt.Editor
             CreateProceduralPyramid(root, new Vector3(-450f, 0f, 120f), 170f, 110f, wallMat, new Color(1f, 0.7f, 0.3f)); 
 
             CreateSeaAndCoastline(root);
+            CreateWorldBounds(root);
             FixPlayerAndWeapons();
             SetupMummyAnimations();
 
@@ -473,6 +474,38 @@ namespace TheAlchemistsCrypt.Editor
             Debug.Log("[CityGen] Sea visible and ultra reflective. Substantial barrier at Z=-100.");
         }
 
+        private void CreateWorldBounds(GameObject root)
+        {
+            var boundsObj = new GameObject("WorldBounds");
+            boundsObj.transform.SetParent(root.transform);
+            boundsObj.isStatic = true;
+
+            // North
+            var bcN = boundsObj.AddComponent<BoxCollider>();
+            bcN.center = new Vector3(0f, 100f, 495f);
+            bcN.size = new Vector3(1000f, 200f, 10f);
+            
+            // South
+            var bcS = boundsObj.AddComponent<BoxCollider>();
+            bcS.center = new Vector3(0f, 100f, -495f);
+            bcS.size = new Vector3(1000f, 200f, 10f);
+
+            // East
+            var bcE = boundsObj.AddComponent<BoxCollider>();
+            bcE.center = new Vector3(495f, 100f, 0f);
+            bcE.size = new Vector3(10f, 200f, 1000f);
+
+            // West
+            var bcW = boundsObj.AddComponent<BoxCollider>();
+            bcW.center = new Vector3(-495f, 100f, 0f);
+            bcW.size = new Vector3(10f, 200f, 1000f);
+
+            // Floor (underneath to catch any fallers just in case)
+            var bcF = boundsObj.AddComponent<BoxCollider>();
+            bcF.center = new Vector3(0f, -10f, 0f);
+            bcF.size = new Vector3(1200f, 5f, 1200f);
+        }
+
         private Shader GetLitShader()
         {
             var s = Shader.Find("Universal Render Pipeline/Lit");
@@ -511,9 +544,9 @@ namespace TheAlchemistsCrypt.Editor
             
             var sun = GameObject.Find("Directional Light")?.GetComponent<Light>();
             if (sun != null) {
-                sun.color = new Color(1.0f, 0.95f, 0.90f); // Whiter, crisper sunlight
+                sun.color = new Color(1.0f, 0.92f, 0.85f); // Warmer sunset sunlight
                 sun.intensity = 2.0f; // Stronger sunlight
-                sun.transform.rotation = Quaternion.Euler(50f, -45f, 0f); // Higher mid-afternoon angle
+                sun.transform.rotation = Quaternion.Euler(20f, -60f, 0f); // Lower sunset angle to cast light on houses
             }
             SetupPostProcessing(root.transform);
             AssetDatabase.SaveAssets();
