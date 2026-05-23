@@ -166,19 +166,48 @@ namespace TheAlchemistsCrypt.Gameplay
             
             Material particleMat = new Material(particleShader);
             particleMat.name = "PapyrusBeamParticleMat";
-            
-            // Set properties for URP particles shader
+
+            // Generate a simple soft circle texture for particles to prevent hard square blocks
+            int pTexSize = 16;
+            Texture2D circleTex = new Texture2D(pTexSize, pTexSize, TextureFormat.RGBA32, false);
+            for (int y = 0; y < pTexSize; y++)
+            {
+                for (int x = 0; x < pTexSize; x++)
+                {
+                    float dx = (x - (pTexSize - 1) * 0.5f) / ((pTexSize - 1) * 0.5f);
+                    float dy = (y - (pTexSize - 1) * 0.5f) / ((pTexSize - 1) * 0.5f);
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    float alpha = Mathf.Clamp01(1.0f - dist);
+                    alpha = alpha * alpha; // Soft edge
+                    circleTex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            circleTex.Apply();
+
+            Color particleColor = new Color(1f, 0.85f, 0.3f, 0.8f);
             if (particleShader.name != null && particleShader.name.Contains("Particles"))
             {
+                particleMat.SetTexture("_BaseMap", circleTex);
+                particleMat.SetColor("_BaseColor", particleColor);
                 particleMat.SetFloat("_Surface", 1f); // Transparent
                 particleMat.SetFloat("_Blend", 0f); // Alpha blend
-                particleMat.SetColor("_BaseColor", new Color(1f, 0.85f, 0.3f, 0.8f));
+                particleMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                particleMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One); // Additive glow
+                particleMat.SetInt("_ZWrite", 0);
+                particleMat.DisableKeyword("_ALPHATEST_ON");
+                particleMat.EnableKeyword("_ALPHABLEND_ON");
                 particleMat.SetColor("_EmissionColor", new Color(1f, 0.85f, 0.3f) * 12f);
                 particleMat.EnableKeyword("_EMISSION");
+                particleMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             }
             else
             {
-                particleMat.SetColor("_Color", new Color(1f, 0.85f, 0.3f, 0.8f));
+                if (particleMat.HasProperty("_MainTex")) particleMat.SetTexture("_MainTex", circleTex);
+                if (particleMat.HasProperty("_Color")) particleMat.SetColor("_Color", particleColor);
+                particleMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                particleMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                particleMat.SetInt("_ZWrite", 0);
+                particleMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             }
             
             psr.sharedMaterial = particleMat;

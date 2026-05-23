@@ -364,34 +364,40 @@ namespace TheAlchemistsCrypt.Editor
             TerrainLayer layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
             if (layer == null) {
                 layer = new TerrainLayer();
-                Texture2D sandTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EgyptianAssets/desert_sand_albedo.png");
-                if (sandTex == null) sandTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/EgyptianAssets/sand_diffuse.png");
-                if (sandTex == null) {
-                    int texSize = 1024;
-                    sandTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
-                    sandTex.wrapMode = TextureWrapMode.Clamp;
-                    sandTex.filterMode = FilterMode.Trilinear;
-                    Color topColor = new Color(0.96f, 0.92f, 0.86f);
-                    Color bottomColor = new Color(0.90f, 0.84f, 0.76f);
-                    Color[] pixels = new Color[texSize * texSize];
-                    for (int y = 0; y < texSize; y++) {
-                        float t = (float)y / (texSize - 1);
-                        Color rowColor = Color.Lerp(bottomColor, topColor, t);
-                        for (int x = 0; x < texSize; x++) pixels[y * texSize + x] = rowColor;
-                    }
-                    sandTex.SetPixels(pixels);
-                    sandTex.Apply(true);
-                    AssetDatabase.CreateAsset(sandTex, "Assets/EgyptianAssets/SandTexGradient_1024.asset");
-                }
-                layer.diffuseTexture = sandTex;
-                layer.tileSize = new Vector2(80f, 80f);
-                layer.specular = new Color(0.03f, 0.03f, 0.02f, 0f);
-                layer.smoothness = 0.12f;
+                if (!System.IO.Directory.Exists("Assets/EgyptianAssets")) System.IO.Directory.CreateDirectory("Assets/EgyptianAssets");
                 AssetDatabase.CreateAsset(layer, layerPath);
             }
-            layer.tileSize = new Vector2(80f, 80f);
-            layer.smoothness = 0.12f;
+
+            // Always create/update the gradient texture
+            string sandTexPath = "Assets/EgyptianAssets/SandTexGradient_1024.png";
+            Texture2D sandTex = AssetDatabase.LoadAssetAtPath<Texture2D>(sandTexPath);
+            if (sandTex == null) {
+                int texSize = 1024;
+                sandTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
+                sandTex.wrapMode = TextureWrapMode.Clamp;
+                sandTex.filterMode = FilterMode.Trilinear;
+                Color topColor = new Color(0.96f, 0.75f, 0.60f); // Warm peach matching skybox
+                Color bottomColor = new Color(0.90f, 0.85f, 0.75f); // Warm sandy cream
+                Color[] pixels = new Color[texSize * texSize];
+                for (int y = 0; y < texSize; y++) {
+                    float t = (float)y / (texSize - 1);
+                    Color rowColor = Color.Lerp(bottomColor, topColor, t);
+                    for (int x = 0; x < texSize; x++) pixels[y * texSize + x] = rowColor;
+                }
+                sandTex.SetPixels(pixels);
+                sandTex.Apply(true);
+                byte[] pngBytes = sandTex.EncodeToPNG();
+                System.IO.File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath, "EgyptianAssets/SandTexGradient_1024.png"), pngBytes);
+                AssetDatabase.Refresh();
+                sandTex = AssetDatabase.LoadAssetAtPath<Texture2D>(sandTexPath);
+            }
+
+            layer.diffuseTexture = sandTex;
+            layer.tileSize = new Vector2(1000f, 1000f); // Stretch across entire terrain to prevent repeating grid
+            layer.specular = new Color(0.03f, 0.03f, 0.02f, 0f);
+            layer.smoothness = 0.05f;
             EditorUtility.SetDirty(layer);
+            AssetDatabase.SaveAssets();
             terrainData.terrainLayers = new TerrainLayer[] { layer };
 
             GameObject terrainGo = Terrain.CreateTerrainGameObject(terrainData);
@@ -608,7 +614,7 @@ namespace TheAlchemistsCrypt.Editor
                 if (!System.IO.Directory.Exists("Assets/Materials")) System.IO.Directory.CreateDirectory("Assets/Materials");
                 AssetDatabase.CreateAsset(skyMat, "Assets/Materials/SkyGradientBox.mat");
             }
-            if (skyTex != null) skyMat.SetTexture("_Texture", skyTex);
+            if (skyTex != null) skyMat.SetTexture("_Tex", skyTex);
             skyMat.SetFloat("_Exposure", 1.2f);
             skyMat.SetColor("_Tint", Color.white);
             EditorUtility.SetDirty(skyMat);
@@ -683,15 +689,43 @@ namespace TheAlchemistsCrypt.Editor
             // Randomly vary height slightly for organic skyline silhouette
             float heightScale = Random.Range(0.85f, 1.25f);
             
-            // 1. Central main building hall
+            // 1. Central main building hall (extended 3.0f below ground to prevent floating foundations on slopes)
             float hallWidth = 20f; float hallDepth = 15f; float hallHeight = 14f * heightScale;
             var hall = GameObject.CreatePrimitive(PrimitiveType.Cube);
             hall.name = "MainHall";
             hall.transform.SetParent(h.transform);
-            hall.transform.localPosition = new Vector3(0f, hallHeight / 2f, 0f);
-            hall.transform.localScale = new Vector3(hallWidth, hallHeight, hallDepth);
+            hall.transform.localPosition = new Vector3(0f, (hallHeight - 3.0f) / 2f, 0f);
+            hall.transform.localScale = new Vector3(hallWidth, hallHeight + 3.0f, hallDepth);
             hall.GetComponent<Renderer>().sharedMaterial = wall;
             hall.isStatic = true;
+
+            // Dark wooden border ring (cornice) at the top of the main hall
+            var hallTopRing = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            hallTopRing.name = "HallTopRing";
+            hallTopRing.transform.SetParent(h.transform);
+            hallTopRing.transform.localPosition = new Vector3(0f, hallHeight, 0f);
+            hallTopRing.transform.localScale = new Vector3(hallWidth + 0.3f, 0.4f, hallDepth + 0.3f);
+            hallTopRing.GetComponent<Renderer>().sharedMaterial = wood;
+            DestroyImmediate(hallTopRing.GetComponent<Collider>());
+            hallTopRing.isStatic = true;
+
+            // Side decorative pillars embedded in walls (extends 3.0f below ground)
+            float[] pillarX = { -hallWidth / 2f - 0.1f, hallWidth / 2f + 0.1f };
+            float[] pillarZs = { -3f, 0f, 3f };
+            foreach (var px in pillarX)
+            {
+                foreach (var pz in pillarZs)
+                {
+                    var sidePillar = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    sidePillar.name = "SideDecorPillar";
+                    sidePillar.transform.SetParent(h.transform);
+                    sidePillar.transform.localPosition = new Vector3(px, (hallHeight - 3.0f) / 2f, pz);
+                    sidePillar.transform.localScale = new Vector3(0.3f, hallHeight + 3.0f, 0.6f);
+                    sidePillar.GetComponent<Renderer>().sharedMaterial = wood;
+                    DestroyImmediate(sidePillar.GetComponent<Collider>());
+                    sidePillar.isStatic = true;
+                }
+            }
 
             // 2. Corner Step-Sloped Towers (4 corners)
             float tDistX = (hallWidth / 2f) + 0.5f;
@@ -722,8 +756,17 @@ namespace TheAlchemistsCrypt.Editor
                     var seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     seg.name = $"Seg_{s}";
                     seg.transform.SetParent(towerRoot.transform);
-                    seg.transform.localPosition = new Vector3(0f, (s * segHeight) + (segHeight / 2f), 0f);
-                    seg.transform.localScale = new Vector3(size, segHeight, size);
+                    
+                    float yLoc = (s * segHeight) + (segHeight / 2f);
+                    float ySize = segHeight;
+                    if (s == 0)
+                    {
+                        // Extend bottom segment downward by 3.0f to act as a solid foundation
+                        ySize = segHeight + 3.0f;
+                        yLoc = (segHeight - 3.0f) / 2f;
+                    }
+                    seg.transform.localPosition = new Vector3(0f, yLoc, 0f);
+                    seg.transform.localScale = new Vector3(size, ySize, size);
                     seg.GetComponent<Renderer>().sharedMaterial = wall;
                     seg.isStatic = true;
 
@@ -760,38 +803,38 @@ namespace TheAlchemistsCrypt.Editor
                 }
             }
 
-            // 3. Central Temple Gateway Frame (Front Face)
-            float gateY = 4f * heightScale;
+            // 3. Central Temple Gateway Frame (Front Face, extended 3.0f below ground)
+            float gateHeight = 8f * heightScale;
             var lPillar = GameObject.CreatePrimitive(PrimitiveType.Cube);
             lPillar.name = "GatePillar_L";
             lPillar.transform.SetParent(h.transform);
-            lPillar.transform.localPosition = new Vector3(-2.8f, gateY, -(hallDepth / 2f) - 0.3f);
-            lPillar.transform.localScale = new Vector3(1.2f, 8f * heightScale, 0.8f);
+            lPillar.transform.localPosition = new Vector3(-2.8f, (gateHeight - 3.0f) / 2f, -(hallDepth / 2f) - 0.3f);
+            lPillar.transform.localScale = new Vector3(1.2f, gateHeight + 3.0f, 0.8f);
             lPillar.GetComponent<Renderer>().sharedMaterial = wood;
             lPillar.isStatic = true;
 
             var rPillar = GameObject.CreatePrimitive(PrimitiveType.Cube);
             rPillar.name = "GatePillar_R";
             rPillar.transform.SetParent(h.transform);
-            rPillar.transform.localPosition = new Vector3(2.8f, gateY, -(hallDepth / 2f) - 0.3f);
-            rPillar.transform.localScale = new Vector3(1.2f, 8f * heightScale, 0.8f);
+            rPillar.transform.localPosition = new Vector3(2.8f, (gateHeight - 3.0f) / 2f, -(hallDepth / 2f) - 0.3f);
+            rPillar.transform.localScale = new Vector3(1.2f, gateHeight + 3.0f, 0.8f);
             rPillar.GetComponent<Renderer>().sharedMaterial = wood;
             rPillar.isStatic = true;
 
             var lintel = GameObject.CreatePrimitive(PrimitiveType.Cube);
             lintel.name = "GateLintel";
             lintel.transform.SetParent(h.transform);
-            lintel.transform.localPosition = new Vector3(0f, 8f * heightScale + 0.6f, -(hallDepth / 2f) - 0.3f);
+            lintel.transform.localPosition = new Vector3(0f, gateHeight + 0.6f, -(hallDepth / 2f) - 0.3f);
             lintel.transform.localScale = new Vector3(6.8f, 1.2f, 1.2f);
             lintel.GetComponent<Renderer>().sharedMaterial = wood;
             lintel.isStatic = true;
 
-            // 4. Central Glowing Entryway (Emissive Light Portal)
+            // 4. Central Glowing Entryway (Emissive Light Portal, extended 3.0f below ground)
             var entryway = GameObject.CreatePrimitive(PrimitiveType.Cube);
             entryway.name = "TempleEntrance";
             entryway.transform.SetParent(h.transform);
-            entryway.transform.localPosition = new Vector3(0f, gateY, -(hallDepth / 2f) - 0.1f);
-            entryway.transform.localScale = new Vector3(4.0f, 8f * heightScale, 0.2f);
+            entryway.transform.localPosition = new Vector3(0f, (gateHeight - 3.0f) / 2f, -(hallDepth / 2f) - 0.1f);
+            entryway.transform.localScale = new Vector3(4.0f, gateHeight + 3.0f, 0.2f);
             entryway.GetComponent<Renderer>().sharedMaterial = litWindowMat;
             DestroyImmediate(entryway.GetComponent<Collider>()); // Trigger/walk-through
             entryway.isStatic = true;
