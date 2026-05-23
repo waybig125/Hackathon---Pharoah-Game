@@ -36,6 +36,11 @@ namespace TheAlchemistsCrypt.Environment
                 if (cam != null && cam.name != "TopDownClarityCamera" && cam.name != "MinimapCamera")
                 {
                     cam.clearFlags = CameraClearFlags.Skybox;
+                    var urpCamData = cam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
+                    if (urpCamData != null)
+                    {
+                        urpCamData.backgroundType = UnityEngine.Rendering.Universal.CameraBackgroundType.Skybox;
+                    }
                 }
             }
 

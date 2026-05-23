@@ -118,101 +118,139 @@ namespace TheAlchemistsCrypt.Gameplay
             l.intensity = 20f;
             l.range = 30f;
 
-            // Create particle beam GameObject
-            var beamGo = new GameObject("PapyrusBeaconBeam");
+            // 1. Volumetric Light Shaft (Semi-transparent glowing cylinder)
+            var beamGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            beamGo.name = "PapyrusVolumetricBeam";
             beamGo.transform.SetParent(keyObj.transform);
-            beamGo.transform.localPosition = Vector3.zero;
-            beamGo.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f); // Point straight up relative to parent
-            beamGo.transform.localScale = Vector3.one;
+            beamGo.transform.localPosition = Vector3.up * 150f;
+            beamGo.transform.localRotation = Quaternion.identity;
+            beamGo.transform.localScale = new Vector3(2.5f, 375f, 2.5f); // scaled to go high up (key is 0.4f scale)
+            DestroyImmediate(beamGo.GetComponent<Collider>());
 
-            var ps = beamGo.AddComponent<ParticleSystem>();
-            var psr = beamGo.GetComponent<ParticleSystemRenderer>();
+            Shader beamShader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (beamShader == null) beamShader = Shader.Find("Universal Render Pipeline/Lit");
+            if (beamShader == null) beamShader = Shader.Find("Lit");
+            Material beamMat = new Material(beamShader);
+            beamMat.name = "VolumetricBeamMat";
 
-            // Stop the particle system before configuration to avoid Duration warnings
+            Color beamColor = new Color(1.0f, 0.85f, 0.4f, 0.18f); // Soft glowing translucent gold
+            if (beamShader.name != null && beamShader.name.Contains("Universal Render Pipeline"))
+            {
+                beamMat.SetFloat("_Surface", 1f); // Transparent
+                beamMat.SetFloat("_Blend", 0f); // Alpha blend
+                beamMat.SetColor("_BaseColor", beamColor);
+                beamMat.SetColor("_EmissionColor", new Color(1.0f, 0.85f, 0.4f) * 4f);
+                beamMat.EnableKeyword("_EMISSION");
+                beamMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                beamMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                beamMat.SetInt("_ZWrite", 0);
+                beamMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            }
+            else
+            {
+                beamMat.SetColor("_Color", beamColor);
+            }
+            beamGo.GetComponent<Renderer>().sharedMaterial = beamMat;
+
+            // 2. Slow-floating tiny dust particles inside the light shaft
+            var dustGo = new GameObject("PapyrusDustParticles");
+            dustGo.transform.SetParent(keyObj.transform);
+            dustGo.transform.localPosition = Vector3.zero;
+            dustGo.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f); // Point straight up
+            dustGo.transform.localScale = Vector3.one;
+
+            var ps = dustGo.AddComponent<ParticleSystem>();
+            var psr = dustGo.GetComponent<ParticleSystemRenderer>();
+
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
             var main = ps.main;
             main.duration = 5f;
             main.loop = true;
-            main.startLifetime = 4.0f;
-            main.startSpeed = 25f;
-            main.startSize = 0.6f;
-            main.startColor = new Color(1.0f, 0.85f, 0.3f, 0.8f);
-            main.maxParticles = 300;
-            main.simulationSpace = ParticleSystemSimulationSpace.World; // Makes particles rise nicely in world space as the parent floats/moves
+            main.startLifetime = 8.0f; // Long lifetime to float slowly
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.8f, 2.2f); // Slow speed
+            main.startSize = new ParticleSystem.MinMaxCurve(0.04f, 0.15f); // Very tiny dust size!
+            main.startColor = new Color(1.0f, 0.85f, 0.5f, 0.7f); // Glowing gold dust
+            main.maxParticles = 400;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
 
             var emission = ps.emission;
-            emission.rateOverTime = 80f;
+            emission.rateOverTime = 60f;
 
             var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Cone;
-            shape.radius = 0.4f;
-            shape.angle = 1.0f; // Very narrow cone to create a beam-like effect
+            shape.shapeType = ParticleSystemShapeType.Cylinder;
+            shape.radius = 1.2f; // Spawn in the cylinder radius
+            shape.length = 150f; // Spawn along the height of the beam!
 
-            // Setup fade out over lifetime so particles disappear smoothly
+            // Add simple noise to make particles wander realistically like dust in air
+            var noise = ps.noise;
+            noise.enabled = true;
+            noise.strength = 0.15f;
+            noise.frequency = 0.5f;
+            noise.scrollSpeed = 0.2f;
+
+            // Setup fade out over lifetime
             var colorOverLifetime = ps.colorOverLifetime;
             colorOverLifetime.enabled = true;
             Gradient grad = new Gradient();
             grad.SetKeys(
-                new GradientColorKey[] { new GradientColorKey(new Color(1f, 0.85f, 0.3f), 0.0f), new GradientColorKey(new Color(1f, 0.6f, 0.1f), 1.0f) },
-                new GradientAlphaKey[] { new GradientAlphaKey(0.8f, 0.0f), new GradientAlphaKey(0.0f, 1.0f) }
+                new GradientColorKey[] { new GradientColorKey(new Color(1f, 0.85f, 0.5f), 0.0f), new GradientColorKey(new Color(1f, 0.85f, 0.5f), 1.0f) },
+                new GradientAlphaKey[] { new GradientAlphaKey(0.0f, 0.0f), new GradientAlphaKey(0.7f, 0.2f), new GradientAlphaKey(0.7f, 0.8f), new GradientAlphaKey(0.0f, 1.0f) }
             );
             colorOverLifetime.color = grad;
 
-            Shader particleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (particleShader == null) particleShader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (particleShader == null) particleShader = Shader.Find("Particles/Standard Unlit");
-            if (particleShader == null) particleShader = Shader.Find("Lit");
-            
-            Material particleMat = new Material(particleShader);
-            particleMat.name = "PapyrusBeamParticleMat";
+            // Create soft circular material for dust particles
+            Shader dustShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (dustShader == null) dustShader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (dustShader == null) dustShader = Shader.Find("Particles/Standard Unlit");
+            if (dustShader == null) dustShader = Shader.Find("Lit");
 
-            // Generate a simple soft circle texture for particles to prevent hard square blocks
-            int pTexSize = 16;
-            Texture2D circleTex = new Texture2D(pTexSize, pTexSize, TextureFormat.RGBA32, false);
-            for (int y = 0; y < pTexSize; y++)
+            Material dustMat = new Material(dustShader);
+            dustMat.name = "PapyrusDustMat";
+
+            int dTexSize = 16;
+            Texture2D circleTex = new Texture2D(dTexSize, dTexSize, TextureFormat.RGBA32, false);
+            for (int y = 0; y < dTexSize; y++)
             {
-                for (int x = 0; x < pTexSize; x++)
+                for (int x = 0; x < dTexSize; x++)
                 {
-                    float dx = (x - (pTexSize - 1) * 0.5f) / ((pTexSize - 1) * 0.5f);
-                    float dy = (y - (pTexSize - 1) * 0.5f) / ((pTexSize - 1) * 0.5f);
+                    float dx = (x - (dTexSize - 1) * 0.5f) / ((dTexSize - 1) * 0.5f);
+                    float dy = (y - (dTexSize - 1) * 0.5f) / ((dTexSize - 1) * 0.5f);
                     float dist = Mathf.Sqrt(dx * dx + dy * dy);
                     float alpha = Mathf.Clamp01(1.0f - dist);
-                    alpha = alpha * alpha; // Soft edge
+                    alpha = alpha * alpha;
                     circleTex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
                 }
             }
             circleTex.Apply();
 
-            Color particleColor = new Color(1f, 0.85f, 0.3f, 0.8f);
-            if (particleShader.name != null && particleShader.name.Contains("Particles"))
+            Color pColor = new Color(1f, 0.85f, 0.5f, 0.7f);
+            if (dustShader.name != null && dustShader.name.Contains("Particles"))
             {
-                particleMat.SetTexture("_BaseMap", circleTex);
-                particleMat.SetColor("_BaseColor", particleColor);
-                particleMat.SetFloat("_Surface", 1f); // Transparent
-                particleMat.SetFloat("_Blend", 0f); // Alpha blend
-                particleMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                particleMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One); // Additive glow
-                particleMat.SetInt("_ZWrite", 0);
-                particleMat.DisableKeyword("_ALPHATEST_ON");
-                particleMat.EnableKeyword("_ALPHABLEND_ON");
-                particleMat.SetColor("_EmissionColor", new Color(1f, 0.85f, 0.3f) * 12f);
-                particleMat.EnableKeyword("_EMISSION");
-                particleMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                dustMat.SetTexture("_BaseMap", circleTex);
+                dustMat.SetColor("_BaseColor", pColor);
+                dustMat.SetFloat("_Surface", 1f);
+                dustMat.SetFloat("_Blend", 0f);
+                dustMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                dustMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One); // Additive glowing dust
+                dustMat.SetInt("_ZWrite", 0);
+                dustMat.DisableKeyword("_ALPHATEST_ON");
+                dustMat.EnableKeyword("_ALPHABLEND_ON");
+                dustMat.SetColor("_EmissionColor", new Color(1f, 0.85f, 0.5f) * 15f);
+                dustMat.EnableKeyword("_EMISSION");
+                dustMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             }
             else
             {
-                if (particleMat.HasProperty("_MainTex")) particleMat.SetTexture("_MainTex", circleTex);
-                if (particleMat.HasProperty("_Color")) particleMat.SetColor("_Color", particleColor);
-                particleMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                particleMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
-                particleMat.SetInt("_ZWrite", 0);
-                particleMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                if (dustMat.HasProperty("_MainTex")) dustMat.SetTexture("_MainTex", circleTex);
+                if (dustMat.HasProperty("_Color")) dustMat.SetColor("_Color", pColor);
+                dustMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                dustMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                dustMat.SetInt("_ZWrite", 0);
+                dustMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             }
-            
-            psr.sharedMaterial = particleMat;
 
-            // Start the system after setup
+            psr.sharedMaterial = dustMat;
             ps.Play();
 
             // Register with Minimap
@@ -254,7 +292,7 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            Vector3 spawnPos = new Vector3(0f, 1.8f, -104f);
+            Vector3 spawnPos = new Vector3(0f, 2.5f, -104f); // Raised from 1.8f to 2.5f to float deck above water
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
@@ -364,10 +402,12 @@ namespace TheAlchemistsCrypt.Gameplay
                 {
                     escapeTimer += Time.deltaTime;
                     
-                    // Smoothly sail out to sea (Z decreases)
+                    // Smoothly sail out to sea (Z decreases) with gentle wave bobbing
                     if (boatObj != null)
                     {
-                        boatObj.transform.position += new Vector3(0f, 0f, -4f * Time.deltaTime);
+                        float bob = Mathf.Sin(Time.time * 2f) * 0.12f;
+                        float newZ = boatObj.transform.position.z - 4f * Time.deltaTime;
+                        boatObj.transform.position = new Vector3(0f, 2.5f + bob, newZ);
                     }
                     
                     var player = GameObject.FindGameObjectWithTag("Player");
@@ -481,8 +521,17 @@ namespace TheAlchemistsCrypt.Gameplay
         private void WinGame()
         {
             hasEscaped = true;
-            if (TheAlchemistsCrypt.UI.MobileHUDButtons.Instance != null)
-                TheAlchemistsCrypt.UI.MobileHUDButtons.Instance.ShowVictoryScreen();
+            var hud = TheAlchemistsCrypt.UI.MobileHUDButtons.Instance;
+            if (hud == null) hud = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.UI.MobileHUDButtons>();
+            if (hud != null)
+            {
+                Debug.Log("[EscapeManager] WinGame: HUD found! Displaying Victory Screen.");
+                hud.ShowVictoryScreen();
+            }
+            else
+            {
+                Debug.LogError("[EscapeManager] WinGame: MobileHUDButtons Instance not found!");
+            }
         }
     }
 

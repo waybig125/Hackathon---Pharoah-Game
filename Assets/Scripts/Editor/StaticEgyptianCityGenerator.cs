@@ -610,13 +610,18 @@ namespace TheAlchemistsCrypt.Editor
 
             Material skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/SkyGradientBox.mat");
             if (skyMat == null) {
-                skyMat = new Material(Shader.Find("Skybox/Panoramic"));
+                skyMat = new Material(Shader.Find("Skybox/Procedural"));
                 if (!System.IO.Directory.Exists("Assets/Materials")) System.IO.Directory.CreateDirectory("Assets/Materials");
                 AssetDatabase.CreateAsset(skyMat, "Assets/Materials/SkyGradientBox.mat");
             }
-            if (skyTex != null) skyMat.SetTexture("_Tex", skyTex);
-            skyMat.SetFloat("_Exposure", 1.2f);
-            skyMat.SetColor("_Tint", Color.white);
+            else
+            {
+                skyMat.shader = Shader.Find("Skybox/Procedural");
+            }
+            skyMat.SetColor("_SkyTint", new Color(0.12f, 0.28f, 0.55f)); // Deep sunset blue
+            skyMat.SetColor("_GroundColor", new Color(0.96f, 0.70f, 0.55f)); // Warm sunset peach
+            skyMat.SetFloat("_AtmosphereThickness", 1.3f); // Blends horizon beautifully
+            skyMat.SetFloat("_Exposure", 1.3f);
             EditorUtility.SetDirty(skyMat);
             
             RenderSettings.skybox = skyMat;
