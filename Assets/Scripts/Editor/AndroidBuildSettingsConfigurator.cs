@@ -53,6 +53,9 @@ namespace TheAlchemistsCrypt.Editor
             // 9. Low memory / high performance settings
             PlayerSettings.Android.forceSDCardPermission = false;
 
+            // 10. Enable Development Build by default to allow fast Application Patching
+            EditorUserBuildSettings.development = true;
+
             // Save settings
             AssetDatabase.SaveAssets();
             Debug.Log("[AndroidOptimizer] Android Build Settings successfully optimized for maximum performance!");
