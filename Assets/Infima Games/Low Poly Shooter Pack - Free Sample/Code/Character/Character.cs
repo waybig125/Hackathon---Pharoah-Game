@@ -297,6 +297,13 @@ namespace InfimaGames.LowPolyShooterPack
             }
 
 			UpdateAnimator();
+
+            // Smooth Camera FOV Zoom during aiming (Focus Mode Zoom)
+            if (cameraWorld != null)
+            {
+                float targetFOV = aiming ? 40f : 70f;
+                cameraWorld.fieldOfView = Mathf.Lerp(cameraWorld.fieldOfView, targetFOV, Time.deltaTime * 12f);
+            }
 		}
 
 		protected override void LateUpdate()

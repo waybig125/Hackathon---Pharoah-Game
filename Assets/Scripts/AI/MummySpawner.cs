@@ -59,19 +59,25 @@ namespace TheAlchemistsCrypt.AI
                 {
                     if (waveCounter % pharaohSpawnInterval == 0)
                     {
-                        // Boss Wave! Spawn Pharaoh + guards
+                        // Boss Wave! Spawn Pharaoh
                         SpawnPharaoh(maxExistingId + 1);
-                        for (int i = 0; i < 6; i++)
+                        aliveCount++; // Increment for the Pharaoh
+                        
+                        // Spawn guards only if we have less than 15 mummies present at the same time
+                        if (aliveCount < 16)
                         {
-                            if (aliveCount + 1 + i < maxMummies)
+                            int guardsToSpawn = Mathf.Min(6, maxMummies - aliveCount);
+                            for (int i = 0; i < guardsToSpawn; i++)
                             {
                                 SpawnSingleMummy(maxExistingId + 2 + i);
+                                aliveCount++;
                             }
                         }
                     }
                     else
                     {
                         SpawnSingleMummy(maxExistingId + 1);
+                        aliveCount++;
                     }
                 }
             }

@@ -19,6 +19,12 @@ namespace TheAlchemistsCrypt.AI
             
             base.Start(); // Let base initialize agent, animator, etc.
             
+            var pharaohAgent = GetComponent<NavMeshAgent>();
+            if (pharaohAgent != null)
+            {
+                pharaohAgent.radius = 1.5f;
+            }
+            
             // Match player health: 100f
             maxHealth = 100f;
             currentHealth = maxHealth;

@@ -1,0 +1,26 @@
+# The Pharaoh's Game: Agent Rules & Coding Guidelines
+
+## Python Configuration
+- Always run python scripts using `python` instead of `python3` command.
+
+## Version Control & Workflow
+- Commit and push changes to GitHub after every successful modification to the project.
+- Check the git diff before discarding/reverting any changes to avoid overwriting the user's modifications.
+- Do not make redundant changes; verify the state of the repository before writing code.
+
+## Optimization & Mobile Performance
+- Aim for 30-60 FPS on mobile target devices.
+- Use dynamic distance-based culling (`DistanceCuller.cs`) for renderers and colliders that are far away (>180 units) from the player.
+- Minimize real-time light sources; prefer baked lighting or emissive materials for window/plaza lights.
+- Batch static scenery objects using static batching.
+
+## UI Design & Aesthetics
+- Use premium color palettes: obsidian, clean charcoal, and Egyptian gold trim.
+- Buttons should have high contrast (e.g., gold-yellow background with bold black text).
+- Use normal-mapped UI frames (`UINormalMappedFrame.shader`) for high-quality embossed lighting effects.
+- Canvas matching should prevent oval joysticks and scaling skew on wide mobile screens.
+
+## Navigation & AI
+- Set `NavMeshObstacles` with `carve = true` on all generated physical barriers (houses, columns, obelisks, tombs) to prevent AI stuck states.
+- Set appropriate agent radii (e.g., 0.8f for standard mummies, 1.5f for Pharaoh bosses) to match their physical size.
+- Maintain a strict limit of 20 active mummies to preserve CPU performance on mobile.

@@ -206,7 +206,7 @@ namespace TheAlchemistsCrypt.AI
             
             // Higher quality avoidance to prevent overlap and clipping
             agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
-            agent.radius = 0.5f;
+            agent.radius = 0.8f;
             agent.acceleration = 12f;
             agent.angularSpeed = 240f;
             

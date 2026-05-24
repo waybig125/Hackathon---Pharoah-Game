@@ -369,9 +369,48 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             // ── AESTHETIC PALETTE (Golden Sandstone Desert) ──
+            string normalMapPath = "Assets/Resources/Textures/EgyptianNormalMap.png";
+            var importer = AssetImporter.GetAtPath(normalMapPath) as TextureImporter;
+            if (importer != null)
+            {
+                bool changed = false;
+                if (importer.textureType != TextureImporterType.NormalMap)
+                {
+                    importer.textureType = TextureImporterType.NormalMap;
+                    changed = true;
+                }
+                if (!importer.mipmapEnabled)
+                {
+                    importer.mipmapEnabled = true;
+                    changed = true;
+                }
+                if (changed)
+                {
+                    importer.SaveAndReimport();
+                    AssetDatabase.Refresh();
+                }
+            }
+
             Material wallMat = new Material(GetLitShader());
-            if (houseTex != null) wallMat.SetTexture("_BaseMap", houseTex);
-            else wallMat.SetColor("_BaseColor", new Color(0.96f, 0.85f, 0.75f)); 
+            if (houseTex != null)
+            {
+                wallMat.SetTexture("_BaseMap", houseTex);
+                wallMat.SetTextureScale("_BaseMap", new Vector2(10, 10));
+            }
+            else
+            {
+                wallMat.SetColor("_BaseColor", new Color(0.96f, 0.85f, 0.75f));
+            }
+
+            Texture2D normalMapTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalMapPath);
+            if (normalMapTex != null)
+            {
+                wallMat.SetTexture("_BumpMap", normalMapTex);
+                wallMat.SetTextureScale("_BumpMap", new Vector2(10, 10));
+                wallMat.EnableKeyword("_NORMALMAP");
+                wallMat.SetFloat("_BumpScale", 1.0f);
+            }
+
             wallMat.SetFloat("_Smoothness", 0.0f);   // Matte finish
             wallMat.enableInstancing = true;
             
@@ -569,10 +608,16 @@ namespace TheAlchemistsCrypt.Editor
             surface.useGeometry = UnityEngine.AI.NavMeshCollectGeometry.RenderMeshes;
             surface.BuildNavMesh();
 
+            // Add dynamic distance-based culling for mobile optimization
+            root.AddComponent<TheAlchemistsCrypt.Utils.DistanceCuller>();
+
             CreateProceduralPyramid(root, new Vector3(-450f, 0f, 400f), 150f, 95f, wallMat, new Color(1f, 0.85f, 0.4f));
             CreateProceduralPyramid(root, new Vector3(450f, 0f, 400f), 160f, 100f, wallMat, new Color(1f, 0.5f, 0.2f)); 
             CreateProceduralPyramid(root, new Vector3(450f, 0f, 120f), 140f, 85f, wallMat, new Color(1f, 0.82f, 0.45f));
             CreateProceduralPyramid(root, new Vector3(-450f, 0f, 120f), 170f, 110f, wallMat, new Color(1f, 0.7f, 0.3f)); 
+
+            SpawnDesertBrokenPillars(root, wallMat);
+            SpawnPalmTreeOasis(root, trees);
 
             CreateSeaAndCoastline(root);
             CreateWorldBounds(root);
@@ -1016,6 +1061,12 @@ namespace TheAlchemistsCrypt.Editor
             ladderRamp.GetComponent<Renderer>().sharedMaterial = wood;
             ladderRamp.isStatic = true;
 
+            // Add NavMeshObstacle to the house root to carve the NavMesh
+            var nmoHouse = h.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+            nmoHouse.carving = true;
+            nmoHouse.size = new Vector3(25f, 20f, 19f);
+            nmoHouse.center = new Vector3(0f, 7f, 0f);
+
             if (crate != null) {
                 Vector3 cratePos = pos + new Vector3(15f, 0f, 13f);
                 var cObj = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
@@ -1044,6 +1095,15 @@ namespace TheAlchemistsCrypt.Editor
         private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab, Material floorMat = null)
         {
             var p = new GameObject("Plaza"); p.transform.SetParent(parent); p.transform.position = pos; p.isStatic = true;
+            if (floorMat != null) {
+                var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                floor.name = "PlazaFloor";
+                floor.transform.SetParent(p.transform);
+                floor.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+                floor.transform.localScale = new Vector3(3.2f, 1f, 3.2f);
+                floor.GetComponent<Renderer>().sharedMaterial = floorMat;
+                floor.isStatic = true;
+            }
             
             if (columnPrefab != null) {
                 var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
@@ -1054,6 +1114,12 @@ namespace TheAlchemistsCrypt.Editor
                     if (mf != null) mf.sharedMesh = decimatedMesh;
                 }
                 AlignToGroundAndAddCollider(colObj, pos + new Vector3(-14.5f, 0f, -14.5f), Quaternion.Euler(-90f, 0f, 0f), 0f);
+
+                // Add NavMeshObstacle to column to carve the NavMesh
+                var nmoCol = colObj.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+                nmoCol.carving = true;
+                nmoCol.size = new Vector3(3f, 12f, 3f);
+                nmoCol.center = new Vector3(0f, 6f, 0f);
             }
             
             if (trees != null && trees.Length > 0) {
@@ -1376,6 +1442,16 @@ namespace TheAlchemistsCrypt.Editor
             return (terrain != null) ? terrain.SampleHeight(pos) : 0f;
         }
 
+        private Vector3 GetTerrainNormal(Vector3 worldPos) {
+            var terrain = Terrain.activeTerrain;
+            if (terrain == null || terrain.terrainData == null) return Vector3.up;
+            
+            Vector3 terrainLocalPos = worldPos - terrain.transform.position;
+            float normX = Mathf.Clamp01(terrainLocalPos.x / terrain.terrainData.size.x);
+            float normZ = Mathf.Clamp01(terrainLocalPos.z / terrain.terrainData.size.z);
+            return terrain.terrainData.GetInterpolatedNormal(normX, normZ);
+        }
+
         private float GetMeshBottomWorldY(GameObject obj)
         {
             float worldMinY = float.MaxValue;
@@ -1442,9 +1518,15 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             Vector3 targetPos = basePos;
-            if (alignToTerrain) targetPos.y = GetTerrainHeight(basePos);
+            Quaternion finalRot = targetRot;
+            if (alignToTerrain) {
+                targetPos.y = GetTerrainHeight(basePos);
+                Vector3 normal = GetTerrainNormal(basePos);
+                Quaternion normalRot = Quaternion.FromToRotation(Vector3.up, normal);
+                finalRot = normalRot * targetRot;
+            }
             obj.transform.position = targetPos; 
-            obj.transform.rotation = targetRot;
+            obj.transform.rotation = finalRot;
             
             float worldMinY = GetMeshBottomWorldY(obj);
             float yOffset = (targetPos.y + offsetAdjustment) - worldMinY;
@@ -1604,6 +1686,12 @@ namespace TheAlchemistsCrypt.Editor
             // Freeze horizontal translation and all rotation to make them completely immovable by player or mummies, only allowing vertical gravity drop
             rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
             rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+            // Add NavMeshObstacle to carve the NavMesh around the obelisk
+            var nmoObelisk = obRoot.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+            nmoObelisk.carving = true;
+            nmoObelisk.size = new Vector3(3f, 16f, 3f);
+            nmoObelisk.center = new Vector3(0f, 8f, 0f);
         }
 
         private void BuildAlchemistTomb(Transform parent, Vector3 pos, Material stoneMat)
@@ -1687,6 +1775,12 @@ namespace TheAlchemistsCrypt.Editor
             // Freeze horizontal translation and all rotation to make them completely immovable by player or mummies, only allowing vertical gravity drop
             rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
             rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+            // Add NavMeshObstacle to carve the NavMesh around the tomb
+            var nmoTomb = root.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+            nmoTomb.carving = true;
+            nmoTomb.size = new Vector3(20f, 25f, 20f);
+            nmoTomb.center = new Vector3(0f, 12.5f, 0f);
         }
 
         private void CleanupOverlappingColumns(GameObject root)
@@ -1736,6 +1830,103 @@ namespace TheAlchemistsCrypt.Editor
                     }
                 }
                 NextColumn:;
+            }
+        }
+
+        private void SpawnDesertBrokenPillars(GameObject root, Material stoneMat)
+        {
+            var folder = new GameObject("DesertBrokenPillars");
+            folder.transform.SetParent(root.transform);
+
+            int spawnedCount = 0;
+            int attempts = 0;
+            while (spawnedCount < 50 && attempts < 500)
+            {
+                attempts++;
+                float rx = Random.Range(-480f, 480f);
+                float rz = Random.Range(-480f, 480f);
+                Vector3 pos = new Vector3(rx, 0f, rz);
+                
+                if (pos.magnitude > 150f && rz >= -75f)
+                {
+                    pos.y = GetTerrainHeight(pos);
+                    if (pos.y < 0.5f) continue;
+
+                    var pillar = new GameObject("DesertBrokenPillar");
+                    pillar.transform.SetParent(folder.transform);
+                    pillar.transform.position = pos;
+                    pillar.isStatic = true;
+
+                    float height = Random.Range(4f, 8f);
+                    float baseWidth = Random.Range(1.8f, 2.5f);
+                    float topWidth = baseWidth * Random.Range(0.6f, 0.85f);
+
+                    int segments = Random.Range(3, 6);
+                    float segHeight = height / segments;
+
+                    for (int i = 0; i < segments; i++)
+                    {
+                        float currentWidth = Mathf.Lerp(baseWidth, topWidth, (float)i / (segments - 1));
+                        var seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                        seg.transform.SetParent(pillar.transform);
+                        seg.transform.localPosition = new Vector3(0f, (i * segHeight) + (segHeight / 2f), 0f);
+                        seg.transform.localScale = new Vector3(currentWidth, segHeight, currentWidth);
+                        seg.GetComponent<Renderer>().sharedMaterial = stoneMat;
+                        seg.isStatic = true;
+                    }
+
+                    var col = pillar.AddComponent<BoxCollider>();
+                    col.center = new Vector3(0f, height / 2f, 0f);
+                    col.size = new Vector3(baseWidth, height, baseWidth);
+
+                    Vector3 normal = GetTerrainNormal(pos);
+                    Quaternion normalRot = Quaternion.FromToRotation(Vector3.up, normal);
+                    Quaternion randomTilt = Quaternion.Euler(Random.Range(-20f, 20f), Random.Range(0f, 360f), Random.Range(-20f, 20f));
+                    pillar.transform.rotation = normalRot * randomTilt;
+
+                    spawnedCount++;
+                }
+            }
+        }
+
+        private void SpawnPalmTreeOasis(GameObject root, GameObject[] treePrefabs)
+        {
+            if (treePrefabs == null || treePrefabs.Length == 0 || treePrefabs[0] == null) return;
+
+            var folder = new GameObject("PalmTreeOasis");
+            folder.transform.SetParent(root.transform);
+
+            int spawnedCount = 0;
+            int attempts = 0;
+            while (spawnedCount < 80 && attempts < 800)
+            {
+                attempts++;
+                float rx = Random.Range(-450f, 450f);
+                float rz = Random.Range(-95f, -60f);
+                Vector3 pos = new Vector3(rx, 0f, rz);
+                pos.y = GetTerrainHeight(pos);
+
+                if (pos.y < 0.2f || pos.y > 6.0f) continue;
+
+                var prefab = treePrefabs[Random.Range(0, treePrefabs.Length)];
+                if (prefab == null) continue;
+
+                var palm = (GameObject)PrefabUtility.InstantiatePrefab(prefab, folder.transform);
+                palm.transform.position = pos;
+                palm.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+                palm.transform.localScale = Vector3.one * Random.Range(0.8f, 1.4f);
+                palm.isStatic = true;
+
+                var cc = palm.GetComponent<CapsuleCollider>();
+                if (cc == null)
+                {
+                    cc = palm.AddComponent<CapsuleCollider>();
+                    cc.center = new Vector3(0f, 4.0f, 0f);
+                    cc.height = 8.0f;
+                    cc.radius = 0.6f;
+                }
+
+                spawnedCount++;
             }
         }
     }

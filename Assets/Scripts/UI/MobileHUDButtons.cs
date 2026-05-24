@@ -1986,6 +1986,7 @@ namespace TheAlchemistsCrypt.UI
             var btnImg = btnGo.GetComponent<Image>();
             btnImg.sprite = goldTrimmedButtonSprite;
             btnImg.type = Image.Type.Sliced;
+            btnImg.color = new Color(0.95f, 0.8f, 0.2f, 1.0f);
             
             var highlight = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             highlight.SetParent(btnGo, false); highlight.anchorMin = Vector2.zero; highlight.anchorMax = Vector2.one;
@@ -2004,7 +2005,7 @@ namespace TheAlchemistsCrypt.UI
             txtGo.offsetMin = txtGo.offsetMax = Vector2.zero;
             var txt = txtGo.GetComponent<Text>();
             txt.font = GetRobustFont(); txt.fontSize = 15; txt.fontStyle = FontStyle.Bold;
-            txt.alignment = TextAnchor.MiddleCenter; txt.color = new Color(0.12f, 0.08f, 0.05f, 1.0f);
+            txt.alignment = TextAnchor.MiddleCenter; txt.color = Color.black;
             txt.text = labelText;
             txt.raycastTarget = false;
 
@@ -2026,13 +2027,75 @@ namespace TheAlchemistsCrypt.UI
             var modalBg = new GameObject("SettingsModal", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             modalBg.SetParent(parentCanvas, false); modalBg.SetAsLastSibling(); modalBg.anchorMin = Vector2.zero; modalBg.anchorMax = Vector2.one; modalBg.offsetMin = modalBg.offsetMax = Vector2.zero;
             modalBg.GetComponent<Image>().color = new Color(0, 0, 0, 0.85f); settingsModalInstance = modalBg.gameObject;
+
+            // Page border frame (Egyptian Gold normal-mapped)
+            var pageBorder = new GameObject("PageBorder", typeof(RectTransform)).GetComponent<RectTransform>();
+            pageBorder.SetParent(modalBg, false);
+            pageBorder.anchorMin = Vector2.zero;
+            pageBorder.anchorMax = Vector2.one;
+            pageBorder.offsetMin = new Vector2(30, 30);
+            pageBorder.offsetMax = new Vector2(-30, -30);
+
+            Material borderMatH = new Material(Shader.Find("UI/NormalMappedFrame"));
+            Material borderMatV = new Material(Shader.Find("UI/NormalMappedFrame"));
+            Texture2D normalMapTex = Resources.Load<Texture2D>("Textures/EgyptianNormalMap");
+            if (normalMapTex != null)
+            {
+                if (borderMatH != null)
+                {
+                    borderMatH.SetTexture("_BumpMap", normalMapTex);
+                    borderMatH.SetFloat("_BumpScale", 1.5f);
+                    borderMatH.SetColor("_Color", new Color(0.95f, 0.8f, 0.2f, 0.95f));
+                    borderMatH.SetVector("_Tiling", new Vector4(25, 1, 0, 0));
+                }
+                if (borderMatV != null)
+                {
+                    borderMatV.SetTexture("_BumpMap", normalMapTex);
+                    borderMatV.SetFloat("_BumpScale", 1.5f);
+                    borderMatV.SetColor("_Color", new Color(0.95f, 0.8f, 0.2f, 0.95f));
+                    borderMatV.SetVector("_Tiling", new Vector4(1, 25, 0, 0));
+                }
+
+                float thickness = 16f;
+                var topBar = new GameObject("Top", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                topBar.SetParent(pageBorder, false);
+                topBar.anchorMin = new Vector2(0, 1); topBar.anchorMax = new Vector2(1, 1);
+                topBar.pivot = new Vector2(0.5f, 1); topBar.anchoredPosition = Vector2.zero;
+                topBar.sizeDelta = new Vector2(0, thickness);
+                topBar.GetComponent<Image>().material = borderMatH;
+                topBar.GetComponent<Image>().color = Color.white;
+
+                var bottomBar = new GameObject("Bottom", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                bottomBar.SetParent(pageBorder, false);
+                bottomBar.anchorMin = new Vector2(0, 0); bottomBar.anchorMax = new Vector2(1, 0);
+                bottomBar.pivot = new Vector2(0.5f, 0); bottomBar.anchoredPosition = Vector2.zero;
+                bottomBar.sizeDelta = new Vector2(0, thickness);
+                bottomBar.GetComponent<Image>().material = borderMatH;
+                bottomBar.GetComponent<Image>().color = Color.white;
+
+                var leftBar = new GameObject("Left", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                leftBar.SetParent(pageBorder, false);
+                leftBar.anchorMin = new Vector2(0, 0); leftBar.anchorMax = new Vector2(0, 1);
+                leftBar.pivot = new Vector2(0, 0.5f); leftBar.anchoredPosition = Vector2.zero;
+                leftBar.sizeDelta = new Vector2(thickness, -thickness * 2);
+                leftBar.GetComponent<Image>().material = borderMatV;
+                leftBar.GetComponent<Image>().color = Color.white;
+
+                var rightBar = new GameObject("Right", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                rightBar.SetParent(pageBorder, false);
+                rightBar.anchorMin = new Vector2(1, 0); rightBar.anchorMax = new Vector2(1, 1);
+                rightBar.pivot = new Vector2(1, 0.5f); rightBar.anchoredPosition = Vector2.zero;
+                rightBar.sizeDelta = new Vector2(thickness, -thickness * 2);
+                rightBar.GetComponent<Image>().material = borderMatV;
+                rightBar.GetComponent<Image>().color = Color.white;
+            }
             
             // Dialog box
             var dialog = new GameObject("Dialog", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             dialog.SetParent(modalBg, false); dialog.anchorMin = dialog.anchorMax = new Vector2(0.5f, 0.5f); dialog.sizeDelta = new Vector2(850, 640);
             var dialogImg = dialog.GetComponent<Image>();
-            dialogImg.sprite = sandstoneFrameSprite;
-            dialogImg.type = Image.Type.Sliced;
+            dialogImg.sprite = null;
+            dialogImg.color = new Color(0.08f, 0.08f, 0.08f, 0.95f);
             
             // Title Text
             var titleGo = new GameObject("Title", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
@@ -2826,8 +2889,27 @@ namespace TheAlchemistsCrypt.UI
             modalGo.sizeDelta = new Vector2(850, 640);
             
             var cardImg = modalGo.GetComponent<Image>();
-            cardImg.sprite = sandstoneFrameSprite;
-            cardImg.type = Image.Type.Sliced;
+            cardImg.sprite = null;
+            cardImg.color = new Color(0.06f, 0.05f, 0.05f, 0.95f);
+
+            var cardBorder = new GameObject("CardBorder", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            cardBorder.SetParent(modalGo, false);
+            cardBorder.anchorMin = Vector2.zero; cardBorder.anchorMax = Vector2.one;
+            cardBorder.offsetMin = cardBorder.offsetMax = Vector2.zero;
+            Material deathBorderMat = new Material(Shader.Find("UI/NormalMappedFrame"));
+            Texture2D uiNormalMap = Resources.Load<Texture2D>("Textures/EgyptianNormalMap");
+            if (uiNormalMap != null && deathBorderMat != null)
+            {
+                deathBorderMat.SetTexture("_BumpMap", uiNormalMap);
+                deathBorderMat.SetFloat("_BumpScale", 1.8f);
+                deathBorderMat.SetColor("_Color", new Color(0.85f, 0.15f, 0.15f, 0.95f));
+                deathBorderMat.SetVector("_Tiling", new Vector4(12, 10, 0, 0));
+                
+                var borderImg = cardBorder.GetComponent<Image>();
+                borderImg.sprite = CreateBorderSprite(100, 100, 8, Color.white);
+                borderImg.type = Image.Type.Sliced;
+                borderImg.material = deathBorderMat;
+            }
             
             // Add a CanvasGroup for fading the card content
             var cardGroup = modalGo.gameObject.AddComponent<CanvasGroup>();
@@ -2979,8 +3061,27 @@ namespace TheAlchemistsCrypt.UI
             modalGo.anchoredPosition = Vector2.zero;
             modalGo.sizeDelta = new Vector2(850, 640);
             var cardImg = modalGo.GetComponent<Image>();
-            cardImg.sprite = sandstoneFrameSprite;
-            cardImg.type = Image.Type.Sliced;
+            cardImg.sprite = null;
+            cardImg.color = new Color(0.06f, 0.05f, 0.05f, 0.95f);
+
+            var cardBorder = new GameObject("CardBorder", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            cardBorder.SetParent(modalGo, false);
+            cardBorder.anchorMin = Vector2.zero; cardBorder.anchorMax = Vector2.one;
+            cardBorder.offsetMin = cardBorder.offsetMax = Vector2.zero;
+            Material victoryBorderMat = new Material(Shader.Find("UI/NormalMappedFrame"));
+            Texture2D uiNormalMap = Resources.Load<Texture2D>("Textures/EgyptianNormalMap");
+            if (uiNormalMap != null && victoryBorderMat != null)
+            {
+                victoryBorderMat.SetTexture("_BumpMap", uiNormalMap);
+                victoryBorderMat.SetFloat("_BumpScale", 1.8f);
+                victoryBorderMat.SetColor("_Color", new Color(0.95f, 0.8f, 0.2f, 0.95f));
+                victoryBorderMat.SetVector("_Tiling", new Vector4(12, 10, 0, 0));
+                
+                var borderImg = cardBorder.GetComponent<Image>();
+                borderImg.sprite = CreateBorderSprite(100, 100, 8, Color.white);
+                borderImg.type = Image.Type.Sliced;
+                borderImg.material = victoryBorderMat;
+            }
             
             var cardGroup = modalGo.gameObject.AddComponent<CanvasGroup>();
             cardGroup.alpha = 0f;

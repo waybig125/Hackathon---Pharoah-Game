@@ -47,8 +47,9 @@ namespace TheAlchemistsCrypt.UI
         public Sprite boatSprite;
 private Sprite buildingSprite;
         
-        // Premium Minimap procedural assets
         private Sprite minimapBgSprite;
+        private Sprite minimapBgRectSprite;
+        private UnityEngine.UI.Image bgGridImage;
         private Sprite radarSweepSprite;
         private Sprite zombieDotSprite;
         private Sprite pharaohDotSprite;
@@ -105,6 +106,8 @@ private Sprite buildingSprite;
             var movement = Object.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Movement>();
             if (movement != null) playerTransform = movement.transform;
 
+            expandedScale = (Screen.width * 0.45f) / 500f;
+            BuildMinimapUI();
             CacheStaticElements();
         }
 
@@ -119,13 +122,14 @@ private Sprite buildingSprite;
             buildingSprite = CreateSolidBarSprite(32, 32, new Color(0.85f, 0.7f, 0.4f, 0.65f));
 
             minimapBgSprite = CreateMinimapBackgroundSprite(240);
+            minimapBgRectSprite = CreateMinimapBackgroundRectSprite(400, 400);
             radarSweepSprite = CreateRadarSweepSprite(220, new Color(0.95f, 0.8f, 0.2f, 0.15f));
             zombieDotSprite = CreateWarningTriangleSprite(20, new Color(0.9f, 0.1f, 0.1f, 0.95f));
             pharaohDotSprite = CreateWarningTriangleSprite(24, ColorPharaoh);
             
             keySprite = CreateSolidCircleSprite(16, new Color(1f, 0.9f, 0.2f, 0.95f));
             boatSprite = CreateSolidBarSprite(24, 12, new Color(0.1f, 0.4f, 0.9f, 0.95f));
-medicineDotSprite = CreateMedicineIconSprite(20, new Color(0.1f, 0.9f, 0.3f, 0.95f));
+            medicineDotSprite = CreateMedicineIconSprite(20, new Color(0.1f, 0.9f, 0.3f, 0.95f));
         }
 
         private void BuildMinimapUI()
@@ -172,6 +176,7 @@ medicineDotSprite = CreateMedicineIconSprite(20, new Color(0.1f, 0.9f, 0.3f, 0.9
             bgImg.sprite = minimapBgSprite;
             bgImg.type = Image.Type.Tiled;
             bgImg.color = Color.white;
+            bgGridImage = bgImg;
 
             var mapContentGo = new GameObject("MapContent", typeof(RectTransform));
             mapContent = mapContentGo.GetComponent<RectTransform>();
@@ -392,6 +397,15 @@ medicineDotSprite = CreateMedicineIconSprite(20, new Color(0.1f, 0.9f, 0.3f, 0.9
 
         private void Update()
         {
+            if (Input.GetKeyDown(KeyCode.M))
+            {
+                if (transitionCoroutine == null)
+                {
+                    isExpanded = !isExpanded;
+                    transitionCoroutine = StartCoroutine(AnimateMapTransition(isExpanded));
+                }
+            }
+
             if (playerTransform == null)
             {
                 var movement = Object.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Movement>();
@@ -672,6 +686,11 @@ public void OnPointerDown(PointerEventData eventData)
             // Toggle UI overlays
             if (expanding)
             {
+                if (bgGridImage != null)
+                {
+                    bgGridImage.sprite = minimapBgRectSprite;
+                    bgGridImage.type = Image.Type.Simple;
+                }
                 minimapFrame.GetComponent<Image>().sprite = obsidianRectSprite;
                 radarSweep.gameObject.SetActive(false);
                 compassRing.gameObject.SetActive(false);
@@ -702,6 +721,11 @@ public void OnPointerDown(PointerEventData eventData)
 
             if (!expanding)
             {
+                if (bgGridImage != null)
+                {
+                    bgGridImage.sprite = minimapBgSprite;
+                    bgGridImage.type = Image.Type.Tiled;
+                }
                 minimapFrame.GetComponent<Image>().sprite = obsidianCircleSprite;
                 radarSweep.gameObject.SetActive(true);
                 compassRing.gameObject.SetActive(true);
@@ -856,6 +880,38 @@ private Sprite CreateSolidBarSprite(int w, int h, Color col)
             }
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateMinimapBackgroundRectSprite(int w, int h)
+        {
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            Color baseBg = new Color(0.04f, 0.04f, 0.04f, 0.90f);
+            Color gridColor = new Color(0.95f, 0.8f, 0.2f, 0.08f);
+            Color gridColorBright = new Color(0.95f, 0.8f, 0.2f, 0.20f);
+            
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    Color pixelColor = baseBg;
+                    if (x % 40 == 0 || y % 40 == 0)
+                    {
+                        pixelColor = Color.Lerp(pixelColor, gridColorBright, 0.6f);
+                    }
+                    else if (x % 10 == 0 || y % 10 == 0)
+                    {
+                        pixelColor = Color.Lerp(pixelColor, gridColor, 0.3f);
+                    }
+                    
+                    if (x < 3 || x > w - 4 || y < 3 || y > h - 4)
+                    {
+                        pixelColor = new Color(0.95f, 0.8f, 0.2f, 0.7f);
+                    }
+                    tex.SetPixel(x, y, pixelColor);
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
         }
 
         private Sprite CreateRadarSweepSprite(int size, Color col)
