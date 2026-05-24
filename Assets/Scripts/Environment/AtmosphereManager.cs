@@ -51,8 +51,8 @@ namespace TheAlchemistsCrypt.Environment
                 if (proceduralSkyShader != null)
                 {
                     skyMat = new Material(proceduralSkyShader);
-                    skyMat.SetColor("_SkyTint", new Color(0.12f, 0.28f, 0.55f)); // Deep sunset blue
-                    skyMat.SetColor("_GroundColor", new Color(0.96f, 0.70f, 0.55f)); // Warm sunset peach
+                    skyMat.SetColor("_SkyTint", new Color(0.06f, 0.12f, 0.35f)); // Deep space/twilight blue
+                    skyMat.SetColor("_GroundColor", new Color(0.98f, 0.62f, 0.42f)); // Warm sunset peach
                     skyMat.SetFloat("_AtmosphereThickness", 1.3f);
                     skyMat.SetFloat("_Exposure", 1.3f);
                     RenderSettings.skybox = skyMat;

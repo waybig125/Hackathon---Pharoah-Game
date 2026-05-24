@@ -445,6 +445,13 @@ namespace InfimaGames.LowPolyShooterPack
 		/// </summary>
 		private IEnumerator Equip(int index = 0)
 		{
+			// Notify AlchemicalFocus immediately when equip starts so HUD and voice lines play without delay!
+			var focus = GetComponentInChildren<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+			if (focus != null)
+			{
+				focus.SetMode((TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode)index, true);
+			}
+
 			//Only if we're not holstered, holster. If we are already, we don't need to wait.
 			if(!holstered)
 			{
@@ -482,6 +489,13 @@ namespace InfimaGames.LowPolyShooterPack
 			equippedWeaponScope = weaponAttachmentManager.GetEquippedScope();
 			//Cache the magazine.
 			equippedWeaponMagazine = weaponAttachmentManager.GetEquippedMagazine();
+
+			// Sync and update weapon colors!
+			var focus = GetComponentInChildren<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+			if (focus != null)
+			{
+				focus.UpdateWeaponColor();
+			}
 		}
 
 		/// <summary>

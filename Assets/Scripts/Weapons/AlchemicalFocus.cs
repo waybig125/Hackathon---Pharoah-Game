@@ -126,19 +126,37 @@ namespace TheAlchemistsCrypt.Weapons
 
         private void SyncInventoryWeapon()
         {
-            var inventory = GetComponentInParent<InfimaGames.LowPolyShooterPack.Inventory>();
-            if (inventory == null)
+            var character = GetComponentInParent<InfimaGames.LowPolyShooterPack.Character>();
+            if (character == null)
             {
                 var player = GameObject.FindWithTag("Player");
-                if (player != null) inventory = player.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>();
+                if (player != null) character = player.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Character>();
             }
-            if (inventory != null)
+            if (character != null)
             {
-                inventory.Equip((int)currentMode);
+                var inv = character.GetInventory();
+                if (inv != null && inv.GetEquippedIndex() != (int)currentMode)
+                {
+                    character.StopCoroutine("Equip");
+                    character.StartCoroutine("Equip", (int)currentMode);
+                }
+            }
+            else
+            {
+                var inventory = GetComponentInParent<InfimaGames.LowPolyShooterPack.Inventory>();
+                if (inventory == null)
+                {
+                    var player = GameObject.FindWithTag("Player");
+                    if (player != null) inventory = player.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>();
+                }
+                if (inventory != null && inventory.GetEquippedIndex() != (int)currentMode)
+                {
+                    inventory.Equip((int)currentMode);
+                }
             }
         }
 
-        private void UpdateWeaponColor()
+        public void UpdateWeaponColor()
         {
             Color glowColor = Color.red; // default Sulfur
             switch (currentMode)
@@ -261,15 +279,6 @@ namespace TheAlchemistsCrypt.Weapons
 
         private void HandleModeSwitch()
         {
-            // Mobile Swap Logic
-            if (MobileInputManager.Instance != null && MobileInputManager.Instance.IsSwappingWeapon)
-            {
-                int next = ((int)currentMode + 1) % 3;
-                currentMode = (FireMode)next;
-                MobileInputManager.Instance.IsSwappingWeapon = false; // Reset the trigger
-                Debug.Log($"Mobile: Switched to {currentMode}");
-            }
-
             // Simple keyboard switch for desktop testing using modern Input System APIs
             if (UnityEngine.InputSystem.Keyboard.current != null)
             {
@@ -280,9 +289,35 @@ namespace TheAlchemistsCrypt.Weapons
             }
         }
 
-        public void SetMode(FireMode mode)
+        public void SetMode(FireMode mode, bool initiatedByCharacter = false)
         {
+            if (currentMode == mode) return;
             currentMode = mode;
+            if (initiatedByCharacter)
+            {
+                lastMode = currentMode;
+                UpdateWeaponColor();
+                TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_element_switch");
+
+                // Play voice lines immediately on element switch
+                string[] voiceClips = null;
+                switch (currentMode)
+                {
+                    case FireMode.Sulfur:
+                        voiceClips = new string[] { "Voice/vo_sulfur_01", "Voice/vo_sulfur_02" };
+                        break;
+                    case FireMode.Mercury:
+                        voiceClips = new string[] { "Voice/vo_mercury_01", "Voice/vo_mercury_02" };
+                        break;
+                    case FireMode.Salt:
+                        voiceClips = new string[] { "Voice/vo_salt_01", "Voice/vo_salt_02" };
+                        break;
+                }
+                if (voiceClips != null)
+                {
+                    TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(voiceClips[UnityEngine.Random.Range(0, voiceClips.Length)]);
+                }
+            }
         }
 
         private void Shoot()

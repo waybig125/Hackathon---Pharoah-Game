@@ -651,58 +651,72 @@ namespace TheAlchemistsCrypt.Editor
         {
             // Create 3-color sunset sky gradient texture
             string skyTexPath = "Assets/EgyptianAssets/SkyGradientTex.png";
-            Texture2D skyTex = AssetDatabase.LoadAssetAtPath<Texture2D>(skyTexPath);
-            if (skyTex == null) {
-                if (!System.IO.Directory.Exists("Assets/EgyptianAssets")) System.IO.Directory.CreateDirectory("Assets/EgyptianAssets");
-                int texSize = 512;
-                skyTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
-                skyTex.wrapMode = TextureWrapMode.Clamp;
-                skyTex.filterMode = FilterMode.Bilinear;
-                Color peachColor = new Color(0.96f, 0.70f, 0.55f);
-                Color skyBlueColor = new Color(0.40f, 0.65f, 0.85f);
-                Color deepBlueColor = new Color(0.08f, 0.20f, 0.45f);
-                
-                Color[] pixels = new Color[texSize * texSize];
-                for (int y = 0; y < texSize; y++) {
-                    float t = (float)y / (texSize - 1);
-                    Color rowColor;
-                    if (t < 0.4f) {
-                        rowColor = Color.Lerp(peachColor, skyBlueColor, t / 0.4f);
-                    } else {
-                        rowColor = Color.Lerp(skyBlueColor, deepBlueColor, (t - 0.4f) / 0.6f);
-                    }
-                    for (int x = 0; x < texSize; x++) pixels[y * texSize + x] = rowColor;
+            if (!System.IO.Directory.Exists("Assets/EgyptianAssets")) System.IO.Directory.CreateDirectory("Assets/EgyptianAssets");
+            
+            int texSize = 512;
+            Texture2D skyTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, false);
+            skyTex.wrapMode = TextureWrapMode.Clamp;
+            skyTex.filterMode = FilterMode.Bilinear;
+            
+            // Warm Sunset Palette: Peach -> Rose Pink -> Twilight Blue -> Deep Blue (Zero muddy green transitions)
+            Color peachColor = new Color(0.98f, 0.62f, 0.42f);     // Warm sunset/orangey peach
+            Color sunsetRose = new Color(0.85f, 0.44f, 0.60f);     // Sunset pink/rose
+            Color twilightBlue = new Color(0.24f, 0.44f, 0.74f);   // Twilight blue
+            Color deepBlueColor = new Color(0.06f, 0.12f, 0.35f);  // Deep twilight/space blue
+            
+            Color[] pixels = new Color[texSize * texSize];
+            for (int y = 0; y < texSize; y++) {
+                float t = (float)y / (texSize - 1);
+                Color rowColor;
+                if (t < 0.25f) {
+                    rowColor = Color.Lerp(peachColor, sunsetRose, t / 0.25f);
+                } else if (t < 0.65f) {
+                    rowColor = Color.Lerp(sunsetRose, twilightBlue, (t - 0.25f) / 0.40f);
+                } else {
+                    rowColor = Color.Lerp(twilightBlue, deepBlueColor, (t - 0.65f) / 0.35f);
                 }
-                skyTex.SetPixels(pixels);
-                skyTex.Apply(true);
-                byte[] bytes = skyTex.EncodeToPNG();
-                System.IO.File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath, "EgyptianAssets/SkyGradientTex.png"), bytes);
-                AssetDatabase.Refresh();
-                skyTex = AssetDatabase.LoadAssetAtPath<Texture2D>(skyTexPath);
+                for (int x = 0; x < texSize; x++) pixels[y * texSize + x] = rowColor;
             }
+            skyTex.SetPixels(pixels);
+            skyTex.Apply(false);
+            byte[] bytes = skyTex.EncodeToPNG();
+            System.IO.File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath, "EgyptianAssets/SkyGradientTex.png"), bytes);
+            AssetDatabase.Refresh();
+            
+            // Set Texture Importer properties to avoid wrap bleed
+            TextureImporter importer = AssetImporter.GetAtPath(skyTexPath) as TextureImporter;
+            if (importer != null)
+            {
+                importer.textureShape = TextureImporterShape.Texture2D;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.filterMode = FilterMode.Bilinear;
+                importer.mipmapEnabled = false;
+                importer.SaveAndReimport();
+            }
+            
+            skyTex = AssetDatabase.LoadAssetAtPath<Texture2D>(skyTexPath);
 
             Material skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Materials/SkyGradientBox.mat");
             if (skyMat == null) {
-                skyMat = new Material(Shader.Find("Skybox/Procedural"));
+                skyMat = new Material(Shader.Find("Skybox/Panoramic"));
                 if (!System.IO.Directory.Exists("Assets/Resources")) System.IO.Directory.CreateDirectory("Assets/Resources");
                 if (!System.IO.Directory.Exists("Assets/Resources/Materials")) System.IO.Directory.CreateDirectory("Assets/Resources/Materials");
                 AssetDatabase.CreateAsset(skyMat, "Assets/Resources/Materials/SkyGradientBox.mat");
             }
             else
             {
-                skyMat.shader = Shader.Find("Skybox/Procedural");
+                skyMat.shader = Shader.Find("Skybox/Panoramic");
             }
-            skyMat.SetColor("_SkyTint", new Color(0.12f, 0.28f, 0.55f)); // Deep sunset blue
-            skyMat.SetColor("_GroundColor", new Color(0.96f, 0.70f, 0.55f)); // Warm sunset peach
-            skyMat.SetFloat("_AtmosphereThickness", 1.3f); // Blends horizon beautifully
-            skyMat.SetFloat("_Exposure", 1.3f);
+            skyMat.SetTexture("_Tex", skyTex);
+            skyMat.SetColor("_Tint", Color.white);
+            skyMat.SetFloat("_Exposure", 1.0f);
             EditorUtility.SetDirty(skyMat);
             
             RenderSettings.skybox = skyMat;
             RenderSettings.ambientMode = AmbientMode.Skybox; 
 
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.96f, 0.70f, 0.55f, 1f); // Warm peach fog matching horizon
+            RenderSettings.fogColor = peachColor; // Warm sunset peach fog matching horizon
             RenderSettings.fogStartDistance = 150f;
             RenderSettings.fogEndDistance  = 1000f;   
             
