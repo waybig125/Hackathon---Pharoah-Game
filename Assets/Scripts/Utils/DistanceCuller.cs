@@ -42,19 +42,18 @@ namespace TheAlchemistsCrypt.Utils
         {
             cullables.Clear();
             
-            // Find the "City" root object
-            var cityRoot = GameObject.Find("City");
+            // Find the "EgyptianCity_V5_Final" root object
+            var cityRoot = GameObject.Find("EgyptianCity_V5_Final");
             if (cityRoot == null)
             {
-                Debug.LogWarning("[DistanceCuller] Could not find 'City' root GameObject. Culler is inactive.");
+                Debug.LogWarning("[DistanceCuller] Could not find 'EgyptianCity_V5_Final' root GameObject. Culler is inactive.");
                 return;
             }
 
             // Find all renderers under City
             Renderer[] allRenderers = cityRoot.GetComponentsInChildren<Renderer>(true);
             
-            // We want to group renderers and colliders by their immediate child of City (e.g. house object, pillar folder, palm tree)
-            // so we don't have thousands of separate cullable items. Grouping by their top-level city sub-hierarchy is more performant.
+            // We want to group renderers and colliders by their immediate child of City
             Dictionary<Transform, List<Renderer>> groupedRenderers = new Dictionary<Transform, List<Renderer>>();
             Dictionary<Transform, List<Collider>> groupedColliders = new Dictionary<Transform, List<Collider>>();
 

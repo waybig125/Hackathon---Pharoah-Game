@@ -1219,10 +1219,10 @@ namespace TheAlchemistsCrypt.UI
             guideArrowImage.raycastTarget = false;
 
             var guideTxtGo = new GameObject("HUD_GuideText", typeof(RectTransform), typeof(TextMeshProUGUI));
-            guideTxtGo.transform.SetParent(guideArrowRect, false);
+            guideTxtGo.transform.SetParent(guideContainer.transform, false);
             var gTxtRect = guideTxtGo.GetComponent<RectTransform>();
             gTxtRect.anchorMin = gTxtRect.anchorMax = new Vector2(0.5f, 0.5f);
-            gTxtRect.anchoredPosition = new Vector2(0, 75);
+            gTxtRect.anchoredPosition = new Vector2(0, 100);
             gTxtRect.sizeDelta = new Vector2(250, 45);
             guideArrowText = guideTxtGo.GetComponent<TextMeshProUGUI>();
             guideArrowText.font = GetTitleFont();
@@ -2333,9 +2333,7 @@ namespace TheAlchemistsCrypt.UI
                 narrationText.font = GetTitleFont();
                 narrationText.fontSize = 21;
                 narrationText.fontStyle = FontStyles.Normal;
-                narrationText.alignment = TextAlignmentOptions.Center;
-                narrationText.color = Color.white;
-                narrationText.enableWordWrapping = true;
+                narrationText.textWrappingMode = TextWrappingModes.Normal;
                 narrationText.overflowMode = TextOverflowModes.Truncate;
             }
 
@@ -2411,9 +2409,7 @@ namespace TheAlchemistsCrypt.UI
                 orbTooltipText.font = GetRobustFont();
                 orbTooltipText.fontSize = 18;
                 orbTooltipText.fontStyle = FontStyles.Bold;
-                orbTooltipText.alignment = TextAlignmentOptions.Center;
-                orbTooltipText.color = Color.white; // Pure white!
-                orbTooltipText.enableWordWrapping = true;
+                orbTooltipText.textWrappingMode = TextWrappingModes.Normal;
                 orbTooltipText.overflowMode = TextOverflowModes.Truncate;
             }
 

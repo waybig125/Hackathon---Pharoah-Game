@@ -211,6 +211,8 @@ namespace TheAlchemistsCrypt.Editor
                     lowerName.Contains("player_copy") || lowerName.Contains("mobilehud") || lowerName.Contains("p_lpsp_ui_canvas") || 
                     lowerName.StartsWith("mummy") || lowerName.Contains("windowlight") || lowerName.Contains("crater") ||
                     lowerName.Contains("plaza") || lowerName.Contains("house") || lowerName.Contains("pyramid") ||
+                    lowerName.Contains("sphinx") || lowerName.Contains("mastaba") || lowerName.Contains("temple") ||
+                    lowerName.Contains("stall") || lowerName.Contains("obelisk") ||
                     lowerName.Contains("seazone") || lowerName.Contains("beachzone") || lowerName.Contains("coastlinebarrier") ||
                     lowerName.Contains("globalvolume") || lowerName.Contains("reflectionprobe") ||
                     lowerName.Contains("claritylight") || lowerName.Contains("environmentvolume") ||
@@ -410,7 +412,7 @@ namespace TheAlchemistsCrypt.Editor
                 wallMat.SetTexture("_BumpMap", normalMapTex);
                 wallMat.SetTextureScale("_BumpMap", new Vector2(10, 10));
                 wallMat.EnableKeyword("_NORMALMAP");
-                wallMat.SetFloat("_BumpScale", 1.0f);
+                wallMat.SetFloat("_BumpScale", 3.0f);
             }
 
             wallMat.SetFloat("_Smoothness", 0.0f);   // Matte finish
@@ -1203,7 +1205,16 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             p.tag = "Player";
-            p.transform.position = new Vector3(16f, GetTerrainHeight(new Vector3(16f, 0f, 48f)) + 1.2f, 48f);
+            
+            // Phase 2: Spawn player inside the Mastaba if it exists
+            var mastaba = GameObject.Find("MastabaOfQar");
+            if (mastaba != null) {
+                // Position player inside the mastaba entrance/chamber
+                p.transform.position = mastaba.transform.position + new Vector3(0f, 1.5f, 0f);
+                Debug.Log("[CityGen] Player spawned inside Mastaba of Qar.");
+            } else {
+                p.transform.position = new Vector3(16f, GetTerrainHeight(new Vector3(16f, 0f, 48f)) + 1.2f, 48f);
+            }
 
             // Ensure AlchemicalFocus is attached to the player GameObject
             var focus = p.GetComponent<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
@@ -2029,6 +2040,38 @@ namespace TheAlchemistsCrypt.Editor
             float n1 = Mathf.Lerp(n01, n11, 1.0f - u);
             
             return Mathf.Lerp(n0, n1, 1.0f - v);
+        }
+
+        private GameObject PlaceIntegratedAsset(Transform parent, Vector3 pos, GameObject prefab, float scale, bool decimate)
+        {
+            if (prefab == null) return null;
+            var obj = PrefabUtility.InstantiatePrefab(prefab, parent) as GameObject;
+            obj.transform.position = pos;
+            obj.transform.localScale = Vector3.one * scale;
+            obj.isStatic = true;
+
+            if (decimate) {
+                DecimateRecursively(obj, 0.25f); // 75% reduction = 0.25 quality
+            }
+
+            // Add colliders if missing
+            var colliders = obj.GetComponentsInChildren<Collider>();
+            if (colliders.Length == 0) {
+                AlignToGroundAndAddCollider(obj, pos, Quaternion.identity, 0f);
+            }
+
+            return obj;
+        }
+
+        private void DecimateRecursively(GameObject obj, float quality)
+        {
+            var filters = obj.GetComponentsInChildren<MeshFilter>(true);
+            foreach (var mf in filters) {
+                if (mf.sharedMesh != null) {
+                    var decimated = GetSharedDecimatedMesh(mf.sharedMesh, quality);
+                    if (decimated != null) mf.sharedMesh = decimated;
+                }
+            }
         }
     }
 }
