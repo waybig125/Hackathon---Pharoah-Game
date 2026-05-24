@@ -141,14 +141,31 @@ namespace TheAlchemistsCrypt.Editor
         {
             var importer = AssetImporter.GetAtPath(path) as ModelImporter;
             if (importer != null) {
+                // Skip if already configured to avoid redundant re-imports and Rig Error spam
+                if (importer.animationType == ModelImporterAnimationType.Human && 
+                    importer.avatarSetup == ModelImporterAvatarSetup.CreateFromThisModel)
+                {
+                    return;
+                }
+
                 bool dirty = false;
                 if (importer.animationType != ModelImporterAnimationType.Human) {
-                    importer.animationType = ModelImporterAnimationType.Human; dirty = true;
+                    importer.animationType = ModelImporterAnimationType.Human; 
+                    dirty = true;
                 }
                 if (importer.avatarSetup != ModelImporterAvatarSetup.CreateFromThisModel) {
-                    importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel; dirty = true;
+                    importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel; 
+                    dirty = true;
                 }
-                if (dirty) importer.SaveAndReimport();
+                
+                if (dirty) {
+                    try {
+                        Debug.Log($"[CityGen] Reimporting {path} as Humanoid...");
+                        importer.SaveAndReimport();
+                    } catch (System.Exception ex) {
+                        Debug.LogError($"[CityGen] Failed to configure {path} as Humanoid: {ex.Message}");
+                    }
+                }
             }
         }
 
