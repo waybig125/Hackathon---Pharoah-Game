@@ -397,13 +397,6 @@ namespace TheAlchemistsCrypt.Editor
             darkWindowMat.SetColor("_BaseColor", new Color(0.15f, 0.1f, 0.15f)); // Dark cool-purple contrast
             darkWindowMat.enableInstancing = true;
 
-            Material cyanEmissiveMat = new Material(GetLitShader());
-            cyanEmissiveMat.SetColor("_BaseColor", new Color(0.1f, 0.8f, 0.9f));
-            cyanEmissiveMat.SetColor("_EmissionColor", new Color(0.1f, 0.9f, 1.0f) * 8f);
-            cyanEmissiveMat.EnableKeyword("_EMISSION");
-            cyanEmissiveMat.SetFloat("_Smoothness", 0.8f);
-            cyanEmissiveMat.enableInstancing = true;
-
             SetupEnvironment(root);
             SetupManagers(root);
             
@@ -537,7 +530,7 @@ namespace TheAlchemistsCrypt.Editor
                         
                         if (roll < 0.12f) {
                             // 12% chance to spawn the monumental Tomb Gateway instead of a normal house
-                            BuildAlchemistTomb(root.transform, pos, wallMat, cyanEmissiveMat);
+                            BuildAlchemistTomb(root.transform, pos, wallMat);
                         } 
                         else if (roll < 0.75f) {
                             BuildHouse(root.transform, pos, wallMat, woodMat, litWindowMat, darkWindowMat, crate, barrel, floorMat);
@@ -1521,9 +1514,9 @@ namespace TheAlchemistsCrypt.Editor
             }
         }
 
-        private void CreateProceduralPyramid(GameObject root, Vector3 pos, float baseSize, float height, Material mat, Color glowColor)
+        private void CreateProceduralPyramid(GameObject root, Vector3 pos, float baseSize, float height, Material mat, Color glowColor, bool isStatic = true)
         {
-            var pGo = new GameObject("Pyramid"); pGo.transform.SetParent(root.transform); pGo.transform.position = pos; pGo.isStatic = true;
+            var pGo = new GameObject("Pyramid"); pGo.transform.SetParent(root.transform); pGo.transform.position = pos; pGo.isStatic = isStatic;
             Mesh mesh = new Mesh(); float half = baseSize / 2f;
             Vector3 apex = new Vector3(0, height, 0); Vector3 fl = new Vector3(-half, 0, -half), fr = new Vector3(half, 0, -half), br = new Vector3(half, 0, half), bl = new Vector3(-half, 0, half);
             mesh.vertices = new Vector3[] { fl, fr, apex, fr, br, apex, br, bl, apex, bl, fl, apex, bl, br, fl, br, fr, fl };
@@ -1554,9 +1547,21 @@ namespace TheAlchemistsCrypt.Editor
         private void BuildProceduralObelisk(Transform parent, Vector3 pos, Material stoneMat, bool isBroken = false)
         {
             var obRoot = new GameObject(isBroken ? "BrokenObelisk" : "Obelisk");
-            obRoot.transform.SetParent(parent);
-            obRoot.transform.position = pos;
-            obRoot.isStatic = true;
+            
+            // Find or create DynamicProps as parent (never use a static parent for active Rigidbodies)
+            var dynamicProps = GameObject.Find("DynamicProps");
+            if (dynamicProps == null)
+            {
+                dynamicProps = new GameObject("DynamicProps");
+                dynamicProps.isStatic = false;
+            }
+            obRoot.transform.SetParent(dynamicProps.transform);
+            
+            // Spawn slightly above terrain to prevent initial collider penetration/stuck states
+            Vector3 spawnPos = pos;
+            spawnPos.y = pos.y + 0.1f;
+            obRoot.transform.position = spawnPos;
+            obRoot.isStatic = false;
 
             float height = isBroken ? Random.Range(4f, 7f) : 14f;
             float baseWidth = 2.0f;
@@ -1571,27 +1576,46 @@ namespace TheAlchemistsCrypt.Editor
                 float currentWidth = Mathf.Lerp(baseWidth, topWidth, (float)i / (segments - 1));
                 var seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 seg.transform.SetParent(obRoot.transform);
-                // Sink the first segment slightly to root it in the uneven sand
-                float yOffset = i == 0 ? -1f : 0f; 
-                seg.transform.localPosition = new Vector3(0f, (i * segHeight) + (segHeight / 2f) + yOffset, 0f);
-                seg.transform.localScale = new Vector3(currentWidth, segHeight + (i == 0 ? 1f : 0f), currentWidth);
+                // Stack segments perfectly on top of each other starting at local y = 0
+                seg.transform.localPosition = new Vector3(0f, (i * segHeight) + (segHeight / 2f), 0f);
+                seg.transform.localScale = new Vector3(currentWidth, segHeight, currentWidth);
                 seg.GetComponent<Renderer>().sharedMaterial = stoneMat;
-                seg.isStatic = true;
+                seg.isStatic = false;
             }
 
             // Add the pyramidion cap if it isn't a broken obelisk
             if (!isBroken)
             {
-                CreateProceduralPyramid(obRoot, new Vector3(0f, height, 0f), topWidth, topWidth * 1.5f, stoneMat, Color.clear);
+                CreateProceduralPyramid(obRoot, new Vector3(0f, height, 0f), topWidth, topWidth * 1.5f, stoneMat, Color.clear, false);
             }
+
+            // Add Compound Rigidbody so it drops to the uneven terrain and has massive weight
+            var rb = obRoot.AddComponent<Rigidbody>();
+            rb.mass = 10000000f; // 10,000 tonnes (extremely heavy)
+            rb.useGravity = true;
+            // Freeze horizontal translation and all rotation to make them completely immovable by player or mummies, only allowing vertical gravity drop
+            rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
+            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
         }
 
-        private void BuildAlchemistTomb(Transform parent, Vector3 pos, Material stoneMat, Material cyanEmissiveMat)
+        private void BuildAlchemistTomb(Transform parent, Vector3 pos, Material stoneMat)
         {
             var root = new GameObject("AlchemistTomb");
-            root.transform.SetParent(parent);
-            root.transform.position = pos;
-            root.isStatic = true;
+            
+            // Find or create DynamicProps as parent (never use a static parent for active Rigidbodies)
+            var dynamicProps = GameObject.Find("DynamicProps");
+            if (dynamicProps == null)
+            {
+                dynamicProps = new GameObject("DynamicProps");
+                dynamicProps.isStatic = false;
+            }
+            root.transform.SetParent(dynamicProps.transform);
+            
+            // Spawn slightly above terrain to prevent initial collider penetration/stuck states
+            Vector3 spawnPos = pos;
+            spawnPos.y = pos.y + 0.1f;
+            root.transform.position = spawnPos;
+            root.isStatic = false;
 
             float heightScale = 1.3f;
 
@@ -1602,6 +1626,7 @@ namespace TheAlchemistsCrypt.Editor
                 var pylon = new GameObject("TombPylon");
                 pylon.transform.SetParent(root.transform);
                 pylon.transform.localPosition = new Vector3(x, 0f, 0f);
+                pylon.isStatic = false;
 
                 float pBase = 6f;
                 float pTaper = 0.5f;
@@ -1616,7 +1641,7 @@ namespace TheAlchemistsCrypt.Editor
                     seg.transform.localPosition = new Vector3(0f, (s * segH) + (segH / 2f), 0f);
                     seg.transform.localScale = new Vector3(sizeX, segH, sizeZ);
                     seg.GetComponent<Renderer>().sharedMaterial = stoneMat;
-                    seg.isStatic = true;
+                    seg.isStatic = false;
                 }
             }
 
@@ -1629,14 +1654,14 @@ namespace TheAlchemistsCrypt.Editor
                 archL.transform.localPosition = new Vector3(-3.5f + (i * 0.8f), archStartY + (i * 1.5f), 0f);
                 archL.transform.localScale = new Vector3(3f + i, 2f, 4f);
                 archL.GetComponent<Renderer>().sharedMaterial = stoneMat;
-                archL.isStatic = true;
+                archL.isStatic = false;
 
                 var archR = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 archR.transform.SetParent(root.transform);
                 archR.transform.localPosition = new Vector3(3.5f - (i * 0.8f), archStartY + (i * 1.5f), 0f);
                 archR.transform.localScale = new Vector3(3f + i, 2f, 4f);
                 archR.GetComponent<Renderer>().sharedMaterial = stoneMat;
-                archR.isStatic = true;
+                archR.isStatic = false;
             }
 
             // 3. Top Massive Lintel Block
@@ -1645,17 +1670,15 @@ namespace TheAlchemistsCrypt.Editor
             lintel.transform.localPosition = new Vector3(0f, archStartY + 5f, 0f);
             lintel.transform.localScale = new Vector3(12f, 3f, 5f);
             lintel.GetComponent<Renderer>().sharedMaterial = stoneMat;
-            lintel.isStatic = true;
+            lintel.isStatic = false;
 
-            // 4. Glowing Transmutation Circle on the Floor
-            var floorCircle = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            floorCircle.name = "TransmutationCircle";
-            floorCircle.transform.SetParent(root.transform);
-            floorCircle.transform.localPosition = new Vector3(0f, 0.1f, -7f); // Pushed out front like the image
-            floorCircle.transform.localScale = new Vector3(9f, 0.05f, 9f);
-            floorCircle.GetComponent<Renderer>().sharedMaterial = cyanEmissiveMat;
-            DestroyImmediate(floorCircle.GetComponent<Collider>()); // Don't trip the player
-            floorCircle.isStatic = true;
+            // Add Compound Rigidbody so it drops to the uneven terrain and has massive weight
+            var rb = root.AddComponent<Rigidbody>();
+            rb.mass = 20000000f; // 20,000 tonnes (extremely heavy)
+            rb.useGravity = true;
+            // Freeze horizontal translation and all rotation to make them completely immovable by player or mummies, only allowing vertical gravity drop
+            rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
+            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
         }
 
         private void CleanupOverlappingColumns(GameObject root)
