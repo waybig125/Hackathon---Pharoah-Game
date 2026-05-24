@@ -44,6 +44,10 @@ namespace TheAlchemistsCrypt.UI
         private Sprite goldGradientSprite;
         private Sprite joystickRingSprite;
         private Sprite joystickKnobSprite;
+        private Sprite sandstoneFrameSprite;
+        private Sprite goldTrimmedButtonSprite;
+        private Sprite orangeGlowSprite;
+        private Sprite cyanGlowSprite;
         
         private Sprite healthIconSprite;
         private Sprite sulphurIconSprite;
@@ -124,6 +128,11 @@ namespace TheAlchemistsCrypt.UI
             goldGradientSprite = CreateGoldenGradientSprite();
             if (joystickRingSprite == null) joystickRingSprite = CreateRingSprite();
             if (joystickKnobSprite == null) joystickKnobSprite = CreateKnobSprite();
+
+            sandstoneFrameSprite = CreateSlicedSandstoneFrameSprite();
+            goldTrimmedButtonSprite = CreateSlicedGoldTrimmedButtonSprite();
+            orangeGlowSprite = CreateSlicedEnergyGlowSprite(new Color(1.0f, 0.55f, 0.05f));
+            cyanGlowSprite = CreateSlicedEnergyGlowSprite(new Color(0.0f, 0.9f, 1.0f));
 
             sulfurBarSprite = CreateAlchemicalBarSprite(new Color(0.95f, 0.55f, 0.05f), new Color(1f, 0.85f, 0.1f));
             mercuryBarSprite = CreateAlchemicalBarSprite(new Color(0.1f, 0.5f, 0.8f), new Color(0.4f, 0.9f, 0.95f));
@@ -636,6 +645,101 @@ namespace TheAlchemistsCrypt.UI
                 }
             }
             tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateSlicedSandstoneFrameSprite()
+        {
+            int size = 256;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            int borderThickness = 40;
+            Color sandColor = new Color(0.78f, 0.62f, 0.40f, 0.90f); // Warm sandstone
+            Color sandShadow = new Color(0.55f, 0.40f, 0.22f, 0.95f); // Shadow color for bevel/cracks
+            Color sandHighlight = new Color(0.92f, 0.82f, 0.65f, 0.95f); // Highlight color
+            
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    bool isBorder = (x < borderThickness || x >= size - borderThickness || y < borderThickness || y >= size - borderThickness);
+                    if (isBorder) {
+                        float grain = UnityEngine.Random.Range(-0.06f, 0.06f);
+                        Color pixelCol = sandColor;
+                        pixelCol.r += grain; pixelCol.g += grain; pixelCol.b += grain;
+                        
+                        if (y >= size - 6 || x < 6) {
+                            pixelCol = Color.Lerp(pixelCol, sandHighlight, 0.6f);
+                        }
+                        else if (y < 6 || x >= size - 6) {
+                            pixelCol = Color.Lerp(pixelCol, sandShadow, 0.6f);
+                        }
+                        
+                        bool crack1 = Mathf.Abs((x - 50) + (y - (size - 50))) < 1.5f && (x < 80 && y > size - 80);
+                        bool crack2 = Mathf.Abs((x - (size - 60)) + (y - 60)) < 1.5f && (x > size - 90 && y < 90);
+                        
+                        if (crack1 || crack2) {
+                            pixelCol = Color.Lerp(pixelCol, sandShadow, 0.8f);
+                        }
+                        
+                        tex.SetPixel(x, y, pixelCol);
+                    } else {
+                        tex.SetPixel(x, y, new Color(0.08f, 0.05f, 0.05f, 0.45f));
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(borderThickness, borderThickness, borderThickness, borderThickness));
+        }
+
+        private Sprite CreateSlicedGoldTrimmedButtonSprite()
+        {
+            int size = 64;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color sandColor = new Color(0.76f, 0.62f, 0.42f, 0.95f); // Rich warm sandstone
+            Color goldColor = new Color(0.95f, 0.8f, 0.2f, 0.98f); // Golden trim
+            Color shadowColor = new Color(0.48f, 0.35f, 0.2f, 0.95f); // Bevel shadow
+            Color highlightColor = new Color(0.9f, 0.82f, 0.68f, 0.95f); // Bevel highlight
+            
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    bool isGoldTrim = (x < 4 || x >= size - 4 || y < 4 || y >= size - 4);
+                    bool isBevel = !isGoldTrim && (x < 7 || x >= size - 7 || y < 7 || y >= size - 7);
+                    
+                    if (isGoldTrim) {
+                        tex.SetPixel(x, y, goldColor);
+                    } else if (isBevel) {
+                        if (y >= size - 7 || x < 7) {
+                            tex.SetPixel(x, y, highlightColor);
+                        } else {
+                            tex.SetPixel(x, y, shadowColor);
+                        }
+                    } else {
+                        float grain = UnityEngine.Random.Range(-0.04f, 0.04f);
+                        Color pixelCol = sandColor;
+                        pixelCol.r += grain; pixelCol.g += grain; pixelCol.b += grain;
+                        tex.SetPixel(x, y, pixelCol);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(12, 12, 12, 12));
+        }
+
+        private Sprite CreateSlicedEnergyGlowSprite(Color glowColor)
+        {
+            int size = 64;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++) {
+                    float distToEdgeX = Mathf.Min(x, size - 1 - x);
+                    float distToEdgeY = Mathf.Min(y, size - 1 - y);
+                    float minDist = Mathf.Min(distToEdgeX, distToEdgeY);
+                    
+                    float t = Mathf.Clamp01(minDist / 12f);
+                    Color c = glowColor;
+                    c.a = (1f - t) * 0.7f;
+                    tex.SetPixel(x, y, c);
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(16, 16, 16, 16));
         }
 
         private Sprite CreateRingSprite()
@@ -1187,6 +1291,7 @@ namespace TheAlchemistsCrypt.UI
             }
 
             var helper = go.gameObject.AddComponent<ButtonInputHelper>();
+            helper.isDraggable = true;
             helper.onDown = () => {
                 go.localScale = new Vector3(0.95f, 0.95f, 1f);
                 txt.color = new Color(0.8f, 0.65f, 0.1f, 0.95f);
@@ -1242,6 +1347,7 @@ namespace TheAlchemistsCrypt.UI
             sprintButtonText.text = "SPRINT: OFF";
 
             var helper = go.gameObject.AddComponent<ButtonInputHelper>();
+            helper.isDraggable = true;
             helper.onDown = () => {
                 sprintToggleState = !sprintToggleState;
                 sprintButtonText.text = sprintToggleState ? "SPRINT: ON" : "SPRINT: OFF";
@@ -1264,6 +1370,7 @@ namespace TheAlchemistsCrypt.UI
             iImg.preserveAspect = true; 
 
             var helper = go.gameObject.AddComponent<ButtonInputHelper>();
+            helper.isDraggable = true;
             helper.onDown = () => { go.localScale = new Vector3(0.9f, 0.9f, 1f); iImg.color = new Color(0.8f, 0.8f, 0.8f, 1f); onDown?.Invoke(); };
             helper.onUp = () => { go.localScale = new Vector3(1f, 1f, 1f); iImg.color = Color.white; onUp?.Invoke(); };
         }
@@ -1284,6 +1391,7 @@ namespace TheAlchemistsCrypt.UI
             sprintIconImage.preserveAspect = true;
 
             var helper = go.gameObject.AddComponent<ButtonInputHelper>();
+            helper.isDraggable = true;
             helper.onDown = () => { sprintToggleState = !sprintToggleState; UpdateSprintVisuals(); SetSprint(sprintToggleState); };
         }
 
@@ -1294,8 +1402,11 @@ namespace TheAlchemistsCrypt.UI
             }
         }
 
-        private class ButtonInputHelper : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler, IDragHandler {
+        private class ButtonInputHelper : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler, IDragHandler, IPointerEnterHandler, IPointerExitHandler {
             public System.Action onDown; public System.Action onUp; public System.Action onClick;
+            public GameObject glowObject;
+            public bool allowClicksDuringCustomization = false;
+            public bool isDraggable = false;
             private RectTransform rectTransform;
 
             private void Awake()
@@ -1305,29 +1416,41 @@ namespace TheAlchemistsCrypt.UI
 
             public void OnPointerDown(PointerEventData data)
             {
-                if (IsCustomizingHUD) return;
+                if (IsCustomizingHUD && !allowClicksDuringCustomization) return;
                 transform.localScale = Vector3.one * 0.95f; // tactile scale squeeze feedback
+                if (glowObject != null) glowObject.SetActive(true);
                 onDown?.Invoke();
             }
 
             public void OnPointerUp(PointerEventData data)
             {
-                if (IsCustomizingHUD) return;
+                if (IsCustomizingHUD && !allowClicksDuringCustomization) return;
                 transform.localScale = Vector3.one; // restore scale
-                // Standard onUp (if onClick is not explicitly handled, OnPointerClick will also trigger)
+                if (glowObject != null) glowObject.SetActive(false);
                 if (onClick == null) onUp?.Invoke();
             }
 
             public void OnPointerClick(PointerEventData data)
             {
-                if (IsCustomizingHUD) return;
+                if (IsCustomizingHUD && !allowClicksDuringCustomization) return;
                 if (onClick != null) onClick.Invoke();
-                else if (onUp != null) { /* onUp already handled in OnPointerUp */ }
+            }
+
+            public void OnPointerEnter(PointerEventData data)
+            {
+                if (IsCustomizingHUD && !allowClicksDuringCustomization) return;
+                if (glowObject != null) glowObject.SetActive(true);
+            }
+
+            public void OnPointerExit(PointerEventData data)
+            {
+                if (IsCustomizingHUD && !allowClicksDuringCustomization) return;
+                if (glowObject != null) glowObject.SetActive(false);
             }
 
             public void OnDrag(PointerEventData data)
             {
-                if (!IsCustomizingHUD || rectTransform == null) return;
+                if (!IsCustomizingHUD || !isDraggable || rectTransform == null) return;
                 
                 var canvas = GetComponentInParent<Canvas>();
                 if (canvas != null)
@@ -1726,37 +1849,76 @@ namespace TheAlchemistsCrypt.UI
             customRoot.offsetMin = customRoot.offsetMax = Vector2.zero;
             customRoot.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.45f);
 
-            // Put button container in front of the overlay
+            // Put button container in front of the overlay so they can be dragged
             var btnContainer = hudRootGo != null ? hudRootGo.transform.Find("ButtonContainer") : null;
             if (btnContainer != null)
             {
                 btnContainer.SetAsLastSibling();
             }
 
-            var textGo = new GameObject("Instructions", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            textGo.SetParent(customRoot, false);
-            textGo.anchoredPosition = new Vector2(0, 180);
-            textGo.sizeDelta = new Vector2(900, 100);
-            var txt = textGo.GetComponent<Text>();
-            txt.font = GetRobustFont(); txt.fontSize = 28; txt.fontStyle = FontStyle.Bold;
-            txt.alignment = TextAnchor.MiddleCenter;
-            txt.color = new Color(0.95f, 0.85f, 0.2f);
-            txt.text = "MOBILE HUD EDITOR ACTIVE\nDrag any action button to place it. Select a preset or SAVE.";
+            // Create a premium, full-width top horizontal menu bar of height 85
+            var panelGo = new GameObject("CustomizerPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            panelGo.SetParent(customRoot, false);
+            panelGo.anchorMin = new Vector2(0f, 1f); // Top left
+            panelGo.anchorMax = new Vector2(1f, 1f); // Top right
+            panelGo.pivot = new Vector2(0.5f, 1f);
+            panelGo.anchoredPosition = Vector2.zero; // Touches the top of the screen
+            panelGo.sizeDelta = new Vector2(0f, 85f); // Height 85
+            
+            var panelImg = panelGo.GetComponent<Image>();
+            panelImg.sprite = null; // Clean obsidian top bar
+            panelImg.color = new Color(0.06f, 0.05f, 0.05f, 0.9f); // Dark semi-transparent
+            
+            // Add Canvas override sorting to panelGo so it always sits on top of standard buttons and receives clicks
+            var panelCanvas = panelGo.gameObject.AddComponent<Canvas>();
+            panelCanvas.overrideSorting = true;
+            panelCanvas.sortingOrder = 1005; // Drawn above ButtonContainer (999)
+            panelGo.gameObject.AddComponent<GraphicRaycaster>();
 
-            // Add beautiful preset selection action buttons inside the overlay
-            CreateSettingsActionButton(customRoot, "DEFAULT PRESET", new Vector2(-220, 60), new Vector2(200, 50),
+            // Thin gold border line at the bottom
+            var borderGo = new GameObject("BottomBorder", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            borderGo.SetParent(panelGo, false);
+            borderGo.anchorMin = new Vector2(0f, 0f);
+            borderGo.anchorMax = new Vector2(1f, 0f);
+            borderGo.pivot = new Vector2(0.5f, 0f);
+            borderGo.anchoredPosition = Vector2.zero;
+            borderGo.sizeDelta = new Vector2(0f, 3f); // 3px height
+            var borderImg = borderGo.GetComponent<Image>();
+            borderImg.color = new Color(0.95f, 0.8f, 0.2f, 0.9f); // Egyptian gold border line
+
+            // Left-aligned instructions text
+            var textGo = new GameObject("Instructions", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
+            textGo.SetParent(panelGo, false);
+            textGo.anchorMin = new Vector2(0f, 0.5f);
+            textGo.anchorMax = new Vector2(0f, 0.5f);
+            textGo.pivot = new Vector2(0f, 0.5f);
+            textGo.anchoredPosition = new Vector2(40f, 0f);
+            textGo.sizeDelta = new Vector2(400, 60);
+            var txt = textGo.GetComponent<Text>();
+            txt.font = GetRobustFont(); txt.fontSize = 18; txt.fontStyle = FontStyle.Bold;
+            txt.alignment = TextAnchor.MiddleLeft;
+            txt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            txt.text = "HUD CUSTOMIZER\n<size=12><color=#cccccc>Drag any action button to place.</color></size>";
+            txt.supportRichText = true;
+
+            // Preset Selection Buttons centered in a row
+            CreateSettingsActionButton(panelGo, "DEFAULT PRESET", new Vector2(-160, 0), new Vector2(140, 40),
                 () => ApplyPreset("DEFAULT"), new Color(0.95f, 0.8f, 0.2f, 0.15f));
 
-            CreateSettingsActionButton(customRoot, "COMPACT PRESET", new Vector2(0, 60), new Vector2(200, 50),
+            CreateSettingsActionButton(panelGo, "COMPACT PRESET", new Vector2(0, 0), new Vector2(140, 40),
                 () => ApplyPreset("COMPACT"), new Color(0.95f, 0.8f, 0.2f, 0.15f));
 
-            CreateSettingsActionButton(customRoot, "LEFTY PRESET", new Vector2(220, 60), new Vector2(200, 50),
+            CreateSettingsActionButton(panelGo, "LEFTY PRESET", new Vector2(160, 0), new Vector2(140, 40),
                 () => ApplyPreset("LEFTY"), new Color(0.95f, 0.8f, 0.2f, 0.15f));
 
-            CreateSettingsActionButton(customRoot, "RESET TO FACTORY", new Vector2(0, -20), new Vector2(260, 50),
+            // Reset and Save Buttons anchored to the right side
+            var resetBtn = CreateSettingsActionButton(panelGo, "RESET", new Vector2(-220, 0), new Vector2(130, 40),
                 () => ResetToFactoryDefaults(), new Color(0.9f, 0.2f, 0.2f, 0.15f));
+            var resetRect = resetBtn.GetComponent<RectTransform>();
+            resetRect.anchorMin = resetRect.anchorMax = new Vector2(1f, 0.5f);
+            resetRect.pivot = new Vector2(1f, 0.5f);
 
-            CreateSettingsActionButton(customRoot, "SAVE & EXIT", new Vector2(0, -110), new Vector2(280, 60),
+            var saveBtn = CreateSettingsActionButton(panelGo, "SAVE & EXIT", new Vector2(-40, 0), new Vector2(150, 40),
                 () => {
                     IsCustomizingHUD = false;
                     Destroy(customRoot.gameObject);
@@ -1765,13 +1927,15 @@ namespace TheAlchemistsCrypt.UI
                         Destroy(settingsModalInstance);
                         settingsModalInstance = null;
                     }
-                    // Rebuild the HUD to fully restore gameplay input handling
                     BuildHUD();
                     Time.timeScale = 1f; // RESUME THE GAME!
                     if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
                     Cursor.lockState = CursorLockMode.Locked;
                     Cursor.visible = false;
                 }, new Color(0.1f, 0.9f, 0.3f, 0.2f));
+            var saveRect = saveBtn.GetComponent<RectTransform>();
+            saveRect.anchorMin = saveRect.anchorMax = new Vector2(1f, 0.5f);
+            saveRect.pivot = new Vector2(1f, 0.5f);
         }
 
         private void UpdateHUDButtonPositionsOnScreen()
@@ -1818,23 +1982,37 @@ namespace TheAlchemistsCrypt.UI
         {
             var btnGo = new GameObject(labelText, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             btnGo.SetParent(parent, false); btnGo.anchoredPosition = pos; btnGo.sizeDelta = size;
-            btnGo.GetComponent<Image>().sprite = charcoalSprite;
+            
+            var btnImg = btnGo.GetComponent<Image>();
+            btnImg.sprite = goldTrimmedButtonSprite;
+            btnImg.type = Image.Type.Sliced;
             
             var highlight = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             highlight.SetParent(btnGo, false); highlight.anchorMin = Vector2.zero; highlight.anchorMax = Vector2.one;
             highlight.offsetMin = highlight.offsetMax = Vector2.zero;
-            highlight.GetComponent<Image>().color = highlightColor;
+            
+            var hlImg = highlight.GetComponent<Image>();
+            bool isOrange = highlightColor.r > highlightColor.b;
+            hlImg.sprite = isOrange ? orangeGlowSprite : cyanGlowSprite;
+            hlImg.type = Image.Type.Sliced;
+            hlImg.color = Color.white;
+            highlight.gameObject.SetActive(false);
             
             var txtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             txtGo.SetParent(btnGo, false);
             txtGo.anchorMin = Vector2.zero; txtGo.anchorMax = Vector2.one;
             txtGo.offsetMin = txtGo.offsetMax = Vector2.zero;
             var txt = txtGo.GetComponent<Text>();
-            txt.font = GetRobustFont(); txt.fontSize = 18; txt.fontStyle = FontStyle.Bold;
+            txt.font = GetRobustFont(); txt.fontSize = 15; txt.fontStyle = FontStyle.Bold;
             txt.alignment = TextAnchor.MiddleCenter; txt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
             txt.text = labelText;
+            txt.raycastTarget = false;
 
-            btnGo.gameObject.AddComponent<ButtonInputHelper>().onClick = onClick;
+            var helper = btnGo.gameObject.AddComponent<ButtonInputHelper>();
+            helper.onClick = onClick;
+            helper.glowObject = highlight.gameObject;
+            helper.allowClicksDuringCustomization = true;
+            helper.isDraggable = false;
             return btnGo.gameObject;
         }
 
@@ -1852,15 +2030,9 @@ namespace TheAlchemistsCrypt.UI
             // Dialog box
             var dialog = new GameObject("Dialog", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             dialog.SetParent(modalBg, false); dialog.anchorMin = dialog.anchorMax = new Vector2(0.5f, 0.5f); dialog.sizeDelta = new Vector2(850, 640);
-            dialog.GetComponent<Image>().sprite = charcoalSprite;
-            
-            // Add a beautiful gold border around the dialog!
-            var border = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            border.SetParent(dialog, false); border.anchorMin = Vector2.zero; border.anchorMax = Vector2.one;
-            border.offsetMin = new Vector2(4, 4); border.offsetMax = new Vector2(-4, -4);
-            var borderImg = border.GetComponent<Image>();
-            borderImg.color = new Color(0.95f, 0.8f, 0.2f, 0.2f); // Golden glow border
-            borderImg.sprite = charcoalSprite; // Use charcoal base or transparent fill
+            var dialogImg = dialog.GetComponent<Image>();
+            dialogImg.sprite = sandstoneFrameSprite;
+            dialogImg.type = Image.Type.Sliced;
             
             // Title Text
             var titleGo = new GameObject("Title", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
@@ -1973,34 +2145,17 @@ namespace TheAlchemistsCrypt.UI
                 new Color(0.2f, 0.5f, 0.8f, 0.15f)
             );
 
-            // Close Button
-            var closeGo = new GameObject("CloseButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            closeGo.SetParent(dialog, false); closeGo.anchoredPosition = new Vector2(160, -250); closeGo.sizeDelta = new Vector2(300, 50);
-            closeGo.GetComponent<Image>().sprite = charcoalSprite;
-            
-            // Add gold highlights to the close button
-            var closeHighlight = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            closeHighlight.SetParent(closeGo, false); closeHighlight.anchorMin = Vector2.zero; closeHighlight.anchorMax = Vector2.one;
-            closeHighlight.offsetMin = closeHighlight.offsetMax = Vector2.zero;
-            closeHighlight.GetComponent<Image>().color = new Color(0.95f, 0.8f, 0.2f, 0.15f);
-            
-            var closeTxtGo = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
-            closeTxtGo.SetParent(closeGo, false);
-            closeTxtGo.anchorMin = Vector2.zero; closeTxtGo.anchorMax = Vector2.one;
-            closeTxtGo.offsetMin = closeTxtGo.offsetMax = Vector2.zero;
-            var closeTxt = closeTxtGo.GetComponent<Text>();
-            closeTxt.font = GetRobustFont(); closeTxt.fontSize = 20; closeTxt.fontStyle = FontStyle.Bold;
-            closeTxt.alignment = TextAnchor.MiddleCenter; closeTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
-            closeTxt.text = "RETURN TO GAME";
-
-            closeGo.gameObject.AddComponent<ButtonInputHelper>().onUp = () => {
-                Destroy(modalBg.gameObject);
-                settingsModalInstance = null;
-                Time.timeScale = 1f; // RESUME THE GAME!
-                if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
-            };
+            CreateSettingsActionButton(dialog, "RETURN TO GAME", new Vector2(160, -250), new Vector2(300, 50),
+                () => {
+                    Destroy(modalBg.gameObject);
+                    settingsModalInstance = null;
+                    Time.timeScale = 1f; // RESUME THE GAME!
+                    if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
+                    Cursor.lockState = CursorLockMode.Locked;
+                    Cursor.visible = false;
+                },
+                new Color(0.95f, 0.8f, 0.2f, 0.15f)
+            );
         }
 
         private GameObject CreateSettingsSliderRow(RectTransform parent, string labelText, Vector2 pos, float minVal, float maxVal, float initialVal, System.Action<float> onValueChange, System.Func<float, string> formatFunc)
@@ -2650,9 +2805,9 @@ namespace TheAlchemistsCrypt.UI
             deathPanelGo.anchorMin = Vector2.zero; deathPanelGo.anchorMax = Vector2.one;
             deathPanelGo.offsetMin = deathPanelGo.offsetMax = Vector2.zero;
             
-            // Create a gorgeous radial gradient overlay (dark red center fading to black edges)
+            // Create a gorgeous radial gradient overlay (transparent center fading to dark crimson/black edges)
             var bgImg = deathPanelGo.GetComponent<Image>();
-            bgImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.28f, 0.04f, 0.04f, 0.95f), new Color(0.04f, 0.0f, 0.0f, 0.98f));
+            bgImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.28f, 0.04f, 0.04f, 0.0f), new Color(0.04f, 0.0f, 0.0f, 0.98f));
             bgImg.color = new Color(1f, 1f, 1f, 0f); // Set alpha to 0 initially for fade-in
 
             var modalGo = new GameObject("DeathCard", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
@@ -2660,52 +2815,40 @@ namespace TheAlchemistsCrypt.UI
             modalGo.anchorMin = modalGo.anchorMax = new Vector2(0.5f, 0.5f);
             modalGo.anchoredPosition = Vector2.zero;
             modalGo.sizeDelta = new Vector2(850, 640);
-            modalGo.GetComponent<Image>().sprite = charcoalSprite;
+            
+            var cardImg = modalGo.GetComponent<Image>();
+            cardImg.sprite = sandstoneFrameSprite;
+            cardImg.type = Image.Type.Sliced;
             
             // Add a CanvasGroup for fading the card content
             var cardGroup = modalGo.gameObject.AddComponent<CanvasGroup>();
             cardGroup.alpha = 0f;
 
-            // Thick alchemical gold border
-            var border = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            border.SetParent(modalGo, false); border.anchorMin = Vector2.zero; border.anchorMax = Vector2.one;
-            border.offsetMin = new Vector2(4, 4); border.offsetMax = new Vector2(-4, -4);
-            var borderImg = border.GetComponent<Image>();
-            borderImg.color = new Color(0.95f, 0.8f, 0.2f, 0.45f); // Brighter gold
-            borderImg.sprite = charcoalSprite;
-
-            // Egyptian Corner Ornaments using the preloaded goldGradientSprite
-            Vector2[] cornerAnchors = {
-                new Vector2(0, 0), new Vector2(0, 1),
-                new Vector2(1, 0), new Vector2(1, 1)
-            };
-            for (int i = 0; i < 4; i++)
-            {
-                var ornament = new GameObject("CornerOrnament", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-                ornament.SetParent(modalGo, false);
-                ornament.anchorMin = ornament.anchorMax = ornament.pivot = cornerAnchors[i];
-                ornament.anchoredPosition = Vector2.zero;
-                ornament.sizeDelta = new Vector2(25, 25);
-                var ornImg = ornament.GetComponent<Image>();
-                ornImg.sprite = goldGradientSprite;
-                ornImg.color = new Color(0.95f, 0.8f, 0.2f, 0.8f);
-            }
-
             var titleGo = new GameObject("TitleText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             titleGo.SetParent(modalGo, false);
-            titleGo.anchoredPosition = new Vector2(0, 240); titleGo.sizeDelta = new Vector2(700, 100);
+            titleGo.anchoredPosition = new Vector2(0, 230); titleGo.sizeDelta = new Vector2(700, 120);
             var titleText = titleGo.GetComponent<Text>();
             titleText.font = GetTitleFont();
-            titleText.fontSize = 80; // Enlarged Title
+            titleText.fontSize = 110; // Massive Impact Title
             titleText.fontStyle = FontStyle.Bold;
             titleText.alignment = TextAnchor.MiddleCenter;
             titleText.color = new Color(0.9f, 0.1f, 0.1f, 0.98f); // Warning Red
             titleText.text = "YOU DIED";
 
+            // Add smoldering orange outline
+            var outComp = titleGo.gameObject.AddComponent<Outline>();
+            outComp.effectColor = new Color(0.95f, 0.35f, 0.05f, 0.8f);
+            outComp.effectDistance = new Vector2(3, -3);
+
+            // Add deep dark red shadow
+            var shadComp = titleGo.gameObject.AddComponent<Shadow>();
+            shadComp.effectColor = new Color(0.2f, 0.02f, 0.0f, 0.95f);
+            shadComp.effectDistance = new Vector2(5, -5);
+
             // Gold divider line below title
             var dividerGo = new GameObject("Divider", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             dividerGo.SetParent(modalGo, false);
-            dividerGo.anchoredPosition = new Vector2(0, 175);
+            dividerGo.anchoredPosition = new Vector2(0, 155);
             dividerGo.sizeDelta = new Vector2(500, 2);
             dividerGo.GetComponent<Image>().color = new Color(0.95f, 0.8f, 0.2f, 0.5f);
 
@@ -2793,15 +2936,9 @@ namespace TheAlchemistsCrypt.UI
             modalGo.anchorMin = modalGo.anchorMax = new Vector2(0.5f, 0.5f);
             modalGo.anchoredPosition = Vector2.zero;
             modalGo.sizeDelta = new Vector2(850, 640);
-            modalGo.GetComponent<Image>().sprite = charcoalSprite;
-
-            var border = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            border.SetParent(modalGo, false); border.anchorMin = Vector2.zero; border.anchorMax = Vector2.one;
-            border.offsetMin = new Vector2(4, 4); border.offsetMax = new Vector2(-4, -4);
-            var borderImg = border.GetComponent<Image>();
-            borderImg.color = new Color(0.95f, 0.8f, 0.2f, 0.2f);
-            borderImg.sprite = charcoalSprite;
-
+            var cardImg = modalGo.GetComponent<Image>();
+            cardImg.sprite = sandstoneFrameSprite;
+            cardImg.type = Image.Type.Sliced;
             var titleGo = new GameObject("TitleText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             titleGo.SetParent(modalGo, false);
             titleGo.anchoredPosition = new Vector2(0, 260); titleGo.sizeDelta = new Vector2(700, 80);

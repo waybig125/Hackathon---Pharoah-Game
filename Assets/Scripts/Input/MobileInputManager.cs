@@ -43,6 +43,12 @@ namespace TheAlchemistsCrypt.Input
                 gameObject.AddComponent<TheAlchemistsCrypt.UI.MobileHUDButtons>();
             }
 
+            // Auto-attach MobileHUDFixer
+            if (gameObject.GetComponent<TheAlchemistsCrypt.UI.MobileHUDFixer>() == null)
+            {
+                gameObject.AddComponent<TheAlchemistsCrypt.UI.MobileHUDFixer>();
+            }
+
             // Auto-attach AtmosphereManager
             if (gameObject.GetComponent<TheAlchemistsCrypt.Environment.AtmosphereManager>() == null)
             {
