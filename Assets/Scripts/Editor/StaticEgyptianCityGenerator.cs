@@ -579,6 +579,9 @@ namespace TheAlchemistsCrypt.Editor
             FixPlayerAndWeapons();
             SetupMummyAnimations();
 
+            // Combine all static meshes under the city root to minimize draw calls and maximize mobile FPS!
+            StaticBatchingUtility.Combine(root);
+
             var activeScene = SceneManager.GetActiveScene();
             EditorSceneManager.MarkSceneDirty(activeScene);
             
@@ -1526,6 +1529,10 @@ namespace TheAlchemistsCrypt.Editor
             var renderer = pGo.AddComponent<MeshRenderer>();
             var pMat = new Material(mat);
             pMat.SetColor("_BaseColor", new Color(0.78f, 0.52f, 0.35f)); 
+            pMat.SetColor("_EmissionColor", glowColor * 1.5f);
+            if (glowColor != Color.clear) pMat.EnableKeyword("_EMISSION");
+            renderer.sharedMaterial = pMat;
+            
             var mc = pGo.AddComponent<MeshCollider>();
             mc.sharedMesh = mesh;
             mc.convex = true;

@@ -62,6 +62,7 @@ namespace TheAlchemistsCrypt.Environment
                     Shader proceduralSkyShader = Shader.Find("Skybox/Procedural");
                     if (proceduralSkyShader != null)
                     {
+                        
                         skyMat = new Material(proceduralSkyShader);
                         skyMat.SetColor("_SkyTint", new Color(0.06f, 0.12f, 0.35f));
                         skyMat.SetColor("_GroundColor", new Color(0.98f, 0.62f, 0.42f));

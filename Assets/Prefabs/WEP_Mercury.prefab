@@ -473,9 +473,9 @@ SkinnedMeshRenderer:
   m_Materials:
   - {fileID: 2100000, guid: 4533e5490096146eb97fc8a15f38ae6d, type: 2}
   - {fileID: 2100000, guid: b95cf1f74a8e546b382459ddfd57aea4, type: 2}
-  - {fileID: 2100000, guid: 28efbcf375e1f492bbc38be21d5681ab, type: 2}
+  - {fileID: 2100000, guid: 4533e5490096146eb97fc8a15f38ae6d, type: 2}
   - {fileID: 2100000, guid: b95cf1f74a8e546b382459ddfd57aea4, type: 2}
-  - {fileID: 2100000, guid: 28efbcf375e1f492bbc38be21d5681ab, type: 2}
+  - {fileID: 2100000, guid: 4533e5490096146eb97fc8a15f38ae6d, type: 2}
   - {fileID: 2100000, guid: b95cf1f74a8e546b382459ddfd57aea4, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
@@ -675,7 +675,7 @@ PrefabInstance:
     - target: {fileID: 2300000, guid: 9f4d52975d229e74fa27561b00052caa, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 28efbcf375e1f492bbc38be21d5681ab, type: 2}
+      objectReference: {fileID: 2100000, guid: 4533e5490096146eb97fc8a15f38ae6d, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -893,7 +893,7 @@ PrefabInstance:
     - target: {fileID: 2300000, guid: 894eecaba4473bc41a05f263041a2272, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 28efbcf375e1f492bbc38be21d5681ab, type: 2}
+      objectReference: {fileID: 2100000, guid: 4533e5490096146eb97fc8a15f38ae6d, type: 2}
     - target: {fileID: 2300000, guid: 894eecaba4473bc41a05f263041a2272, type: 3}
       propertyPath: 'm_Materials.Array.data[1]'
       value: 

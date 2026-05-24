@@ -68,7 +68,17 @@ namespace TheAlchemistsCrypt.Gameplay
             Vector3 chosenLoc;
             var plazas = new List<GameObject>();
             var allGo = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
-            foreach (var go in allGo) if (go.name.Contains("Plaza")) plazas.Add(go);
+            foreach (var go in allGo)
+            {
+                if (go.name.Contains("Plaza"))
+                {
+                    float distToCentral = Vector3.Distance(new Vector3(go.transform.position.x, 0f, go.transform.position.z), new Vector3(16f, 0f, 48f));
+                    if (distToCentral > 10f)
+                    {
+                        plazas.Add(go);
+                    }
+                }
+            }
 
             if (plazas.Count > 0)
             {

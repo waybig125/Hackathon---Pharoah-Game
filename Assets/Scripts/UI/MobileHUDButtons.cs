@@ -2929,7 +2929,11 @@ namespace TheAlchemistsCrypt.UI
 
         public void ShowVictoryScreen()
         {
-            if (deathPanelInstance != null) return;
+            if (deathPanelInstance != null)
+            {
+                Destroy(deathPanelInstance);
+                deathPanelInstance = null;
+            }
             if (hudRootGo != null) hudRootGo.SetActive(false);
 
             Time.timeScale = 0f;
@@ -2955,7 +2959,19 @@ namespace TheAlchemistsCrypt.UI
             panelGo.SetParent(victoryCanvasGo.transform, false);
             panelGo.anchorMin = Vector2.zero; panelGo.anchorMax = Vector2.one;
             panelGo.offsetMin = panelGo.offsetMax = Vector2.zero;
-            panelGo.GetComponent<Image>().color = new Color(0f, 0.1f, 0.2f, 0.85f);
+            
+            var bgImg = panelGo.GetComponent<Image>();
+            bgImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.12f, 0.22f, 0.32f, 0.0f), new Color(0.02f, 0.06f, 0.12f, 0.98f));
+            bgImg.color = new Color(1f, 1f, 1f, 0f); // Set alpha to 0 for fade-in
+
+            // Triumphant golden glowing vignette
+            var vignetteGo = new GameObject("VictoryVignette", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            vignetteGo.SetParent(panelGo, false);
+            vignetteGo.anchorMin = Vector2.zero; vignetteGo.anchorMax = Vector2.one;
+            vignetteGo.offsetMin = vignetteGo.offsetMax = Vector2.zero;
+            var vigImg = vignetteGo.GetComponent<Image>();
+            vigImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.95f, 0.8f, 0.2f, 0.0f), new Color(0.45f, 0.3f, 0.05f, 0.85f));
+            vigImg.color = new Color(1f, 1f, 1f, 0f);
 
             var modalGo = new GameObject("VictoryCard", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             modalGo.SetParent(panelGo, false);
@@ -2965,23 +2981,44 @@ namespace TheAlchemistsCrypt.UI
             var cardImg = modalGo.GetComponent<Image>();
             cardImg.sprite = sandstoneFrameSprite;
             cardImg.type = Image.Type.Sliced;
+            
+            var cardGroup = modalGo.gameObject.AddComponent<CanvasGroup>();
+            cardGroup.alpha = 0f;
+
             var titleGo = new GameObject("TitleText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             titleGo.SetParent(modalGo, false);
-            titleGo.anchoredPosition = new Vector2(0, 260); titleGo.sizeDelta = new Vector2(700, 80);
+            titleGo.anchoredPosition = new Vector2(0, 230); titleGo.sizeDelta = new Vector2(700, 120);
             var titleText = titleGo.GetComponent<Text>();
             titleText.font = GetTitleFont();
-            titleText.fontSize = 64;
+            titleText.fontSize = 110;
             titleText.fontStyle = FontStyle.Bold;
             titleText.alignment = TextAnchor.MiddleCenter;
-            titleText.color = new Color(0.2f, 0.8f, 1f, 1f);
+            titleText.color = new Color(0.95f, 0.8f, 0.2f, 0.98f); // Golden Victory Color
             titleText.text = "ESCAPED!";
+
+            // Add radiant outline
+            var outComp = titleGo.gameObject.AddComponent<Outline>();
+            outComp.effectColor = new Color(1.0f, 0.55f, 0.05f, 0.8f);
+            outComp.effectDistance = new Vector2(3, -3);
+
+            // Add shadow
+            var shadComp = titleGo.gameObject.AddComponent<Shadow>();
+            shadComp.effectColor = new Color(0.2f, 0.1f, 0f, 0.95f);
+            shadComp.effectDistance = new Vector2(5, -5);
+
+            // Gold divider line
+            var dividerGo = new GameObject("Divider", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            dividerGo.SetParent(modalGo, false);
+            dividerGo.anchoredPosition = new Vector2(0, 155);
+            dividerGo.sizeDelta = new Vector2(500, 2);
+            dividerGo.GetComponent<Image>().color = new Color(0.95f, 0.8f, 0.2f, 0.5f);
 
             var descGo = new GameObject("DescriptionText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             descGo.SetParent(modalGo, false);
-            descGo.anchoredPosition = new Vector2(0, 50); descGo.sizeDelta = new Vector2(700, 200);
+            descGo.anchoredPosition = new Vector2(0, 30); descGo.sizeDelta = new Vector2(700, 200);
             var descText = descGo.GetComponent<Text>();
             descText.font = GetTitleFont();
-            descText.fontSize = 32;
+            descText.fontSize = 28;
             descText.alignment = TextAnchor.MiddleCenter;
             descText.color = new Color(0.9f, 0.9f, 0.9f, 0.9f);
             descText.text = "You successfully retrieved the Ancient Papyrus and reached the boat.\n\nThe Alchemist's Crypt is finally behind you.";
@@ -2997,7 +3034,46 @@ namespace TheAlchemistsCrypt.UI
                 UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
             }, new Color(0.2f, 0.3f, 0.6f, 0.15f));
 
+            // Play celebratory audio on victory!
+            TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_vision");
+            TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_pickup", false, 1.0f);
+
             SetLayerRecursively(victoryCanvasGo, 5);
+
+            StartCoroutine(FadeInVictoryScreen(bgImg, cardGroup, vigImg));
+        }
+
+        private IEnumerator FadeInVictoryScreen(Image bgImg, CanvasGroup cardGroup, Image vigImg)
+        {
+            float duration = 0.8f;
+            float elapsed = 0f;
+            bgImg.color = new Color(1f, 1f, 1f, 0f);
+            vigImg.color = new Color(1f, 1f, 1f, 0f);
+            cardGroup.alpha = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                float smoothT = Mathf.Sin(t * Mathf.PI * 0.5f);
+
+                bgImg.color = new Color(1f, 1f, 1f, smoothT);
+                vigImg.color = new Color(1f, 1f, 1f, smoothT * 0.8f);
+                cardGroup.alpha = smoothT;
+                yield return null;
+            }
+            bgImg.color = Color.white;
+            cardGroup.alpha = 1f;
+
+            // Pulsing golden light effect for victory card overlay
+            float pulseTimer = 0f;
+            while (vigImg != null)
+            {
+                pulseTimer += Time.unscaledDeltaTime;
+                float pulse = 0.4f + Mathf.PingPong(pulseTimer * 1.0f, 0.4f); // oscillates between 0.4 and 0.8
+                vigImg.color = new Color(1f, 1f, 1f, pulse);
+                yield return null;
+            }
         }
 
     }

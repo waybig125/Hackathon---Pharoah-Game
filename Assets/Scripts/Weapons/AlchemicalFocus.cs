@@ -190,7 +190,7 @@ namespace TheAlchemistsCrypt.Weapons
                         var muzzle = equipped.transform.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Muzzle>(true);
                         if (muzzle != null)
                         {
-                            firePoint = muzzle.transform;
+                            firePoint = muzzle.GetSocket() != null ? muzzle.GetSocket() : muzzle.transform;
                         }
                         else
                         {
@@ -376,7 +376,20 @@ namespace TheAlchemistsCrypt.Weapons
 
             if (ObjectPooler.Instance != null && firePoint != null)
             {
-                GameObject spawned = ObjectPooler.Instance.SpawnFromPool(tag, firePoint.position, firePoint.rotation);
+                Camera mainCam = Camera.main;
+                Quaternion spawnRotation = firePoint.rotation;
+                if (mainCam != null)
+                {
+                    Vector3 targetPoint = mainCam.transform.position + mainCam.transform.forward * 100f;
+                    // Raycast to aim at what the player is looking at, ignoring Player layer
+                    if (Physics.Raycast(mainCam.transform.position, mainCam.transform.forward, out RaycastHit hit, 500f, ~LayerMask.GetMask("Player")))
+                    {
+                        targetPoint = hit.point;
+                    }
+                    spawnRotation = Quaternion.LookRotation(targetPoint - firePoint.position);
+                }
+
+                GameObject spawned = ObjectPooler.Instance.SpawnFromPool(tag, firePoint.position, spawnRotation);
                 if (spawned != null)
                 {
                     Projectile proj = spawned.GetComponent<Projectile>();
