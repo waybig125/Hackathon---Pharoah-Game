@@ -1,0 +1,4 @@
+TestRoot path: TestRoot
+Components on TestRoot:
+  Transform
+Children of TestRoot:

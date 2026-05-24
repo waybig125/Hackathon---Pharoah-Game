@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using TMPro;
 
 namespace TheAlchemistsCrypt.Gameplay
 {
@@ -17,7 +18,7 @@ namespace TheAlchemistsCrypt.Gameplay
         
         [Header("UI References")]
         private GameObject promptUiGo;
-        private Text promptText;
+        private TextMeshProUGUI promptText;
         private GameObject victoryUiGo;
         private GameObject deathUiGo;
 
@@ -52,14 +53,13 @@ namespace TheAlchemistsCrypt.Gameplay
             rect.anchoredPosition = new Vector2(0, 100f);
             rect.sizeDelta = new Vector2(600, 50);
 
-            promptText = promptUiGo.AddComponent<Text>();
-            promptText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            promptText = promptUiGo.AddComponent<TextMeshProUGUI>();
+            promptText.font = TMP_Settings.defaultFontAsset;
             promptText.fontSize = 24;
-            promptText.alignment = TextAnchor.MiddleCenter;
+            promptText.alignment = TextAlignmentOptions.Center;
             promptText.color = Color.white;
-            var outline = promptUiGo.AddComponent<Outline>();
-            outline.effectColor = Color.black;
-            outline.effectDistance = new Vector2(2, -2);
+            promptText.outlineColor = Color.black;
+            promptText.outlineWidth = 0.2f;
             promptUiGo.SetActive(false);
         }
 
