@@ -1,4 +1,5 @@
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -17,7 +18,7 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             // 2. Set Scripting Backend to IL2CPP (much faster execution)
-            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.IL2CPP);
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
             Debug.Log("[AndroidOptimizer] Scripting backend set to IL2CPP.");
 
             // 3. Target ARM64 and ARMv7 architectures
@@ -35,7 +36,6 @@ namespace TheAlchemistsCrypt.Editor
 
             // 5. Enable Multithreaded Rendering
             PlayerSettings.MTRendering = true;
-            PlayerSettings.mobileMipsSplit = true;
             Debug.Log("[AndroidOptimizer] Multithreaded rendering enabled.");
 
             // 6. Enable GPU Skinning to offload animation skinning from CPU to GPU
@@ -49,11 +49,9 @@ namespace TheAlchemistsCrypt.Editor
             // 8. Optimize Android specific compiler flags
             PlayerSettings.Android.minifyDebug = true;
             PlayerSettings.Android.minifyRelease = true;
-            PlayerSettings.Android.minifyWithR8 = true;
             
             // 9. Low memory / high performance settings
             PlayerSettings.Android.forceSDCardPermission = false;
-            PlayerSettings.Android.targetSandbox = true;
 
             // Save settings
             AssetDatabase.SaveAssets();

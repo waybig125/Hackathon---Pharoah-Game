@@ -293,7 +293,7 @@ namespace TheAlchemistsCrypt.Editor
             if (originalMesh == null) return null;
             
             string meshName = originalMesh.name;
-            if (string.IsNullOrEmpty(meshName)) meshName = "unnamed_mesh_" + originalMesh.GetInstanceID();
+            if (string.IsNullOrEmpty(meshName)) meshName = "unnamed_mesh_" + originalMesh.GetHashCode();
             
             string sanitizedName = System.Text.RegularExpressions.Regex.Replace(meshName, @"[^a-zA-Z0-9_\-]", "_");
             string decimatedDir = "Assets/EgyptianAssets/DecimatedMeshes";
@@ -1979,8 +1979,6 @@ namespace TheAlchemistsCrypt.Editor
                 System.IO.Directory.CreateDirectory(folderPath);
             }
             string path = System.IO.Path.Combine(folderPath, "SkyCloudNormalMap.png");
-            System.IO.File.WriteAllBytes(path, bytes => { /* dummy callback but we write directly */ });
-            System.IO.File.WriteAllBytes(path, bytes: System.Text.Encoding.ASCII.GetBytes("")); // dummy to avoid unused warnings or we just write bytes:
             byte[] fileBytes = tex.EncodeToPNG();
             System.IO.File.WriteAllBytes(path, fileBytes);
             AssetDatabase.Refresh();
