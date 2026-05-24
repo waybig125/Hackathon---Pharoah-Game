@@ -371,9 +371,9 @@ namespace TheAlchemistsCrypt.AI
 
             if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null && TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.hasKey)
             {
-                // ── Priority 0: Player has papyrus — chase relentlessly at hyper-speed! ──
+                // ── Priority 0: Player has papyrus — chase relentlessly at 2x base speed! ──
                 if (player != null) currentTargetPos = player.position;
-                currentSpeed = (this is TheAlchemistsCrypt.AI.PharaohAI) ? 22f : 16f;
+                currentSpeed = baseSpeed * 2f;
             }
             else if (hasMeaningfulTactical && distanceToPlayer > 4.0f)
             {

@@ -352,8 +352,8 @@ namespace TheAlchemistsCrypt.Editor
                 houseTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
                 houseTex.wrapMode = TextureWrapMode.Clamp;
                 houseTex.filterMode = FilterMode.Bilinear;
-                Color bottomColor = new Color(0.85f, 0.65f, 0.20f); // Rich golden yellow sandstone
-                Color topColor = new Color(0.98f, 0.85f, 0.40f);    // Soft warm sandstone yellow
+                Color bottomColor = new Color(0.75f, 0.55f, 0.47f); // Desaturated warm sand bottom
+                Color topColor = new Color(0.86f, 0.62f, 0.50f);    // Desaturated warm sand top
                 Color[] pixels = new Color[texSize * texSize];
                 for (int y = 0; y < texSize; y++) {
                     float t = (float)y / (texSize - 1);
@@ -396,6 +396,13 @@ namespace TheAlchemistsCrypt.Editor
             Material darkWindowMat = new Material(GetLitShader());
             darkWindowMat.SetColor("_BaseColor", new Color(0.15f, 0.1f, 0.15f)); // Dark cool-purple contrast
             darkWindowMat.enableInstancing = true;
+
+            Material cyanEmissiveMat = new Material(GetLitShader());
+            cyanEmissiveMat.SetColor("_BaseColor", new Color(0.1f, 0.8f, 0.9f));
+            cyanEmissiveMat.SetColor("_EmissionColor", new Color(0.1f, 0.9f, 1.0f) * 8f);
+            cyanEmissiveMat.EnableKeyword("_EMISSION");
+            cyanEmissiveMat.SetFloat("_Smoothness", 0.8f);
+            cyanEmissiveMat.enableInstancing = true;
 
             SetupEnvironment(root);
             SetupManagers(root);
@@ -475,8 +482,8 @@ namespace TheAlchemistsCrypt.Editor
                 sandTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
                 sandTex.wrapMode = TextureWrapMode.Clamp;
                 sandTex.filterMode = FilterMode.Trilinear;
-                Color topColor = new Color(0.95f, 0.80f, 0.40f);    // Warm sand yellow
-                Color bottomColor = new Color(0.85f, 0.65f, 0.20f); // Rich golden yellow sandstone
+                Color topColor = new Color(0.86f, 0.72f, 0.58f);    // Desaturated sand top
+                Color bottomColor = new Color(0.76f, 0.62f, 0.50f); // Desaturated sand bottom
                 Color[] pixels = new Color[texSize * texSize];
                 for (int y = 0; y < texSize; y++) {
                     float t = (float)y / (texSize - 1);
@@ -524,13 +531,32 @@ namespace TheAlchemistsCrypt.Editor
                     Vector3 pos = new Vector3(posX, 0, posZ);
                     pos.y = GetTerrainHeight(pos);
 
-                    if (pos.magnitude > 25f) {
-                        if (Random.value < 0.75f) {
+                    bool isCentralSpawnPlaza = (Mathf.Approximately(posX, 16f) && Mathf.Approximately(posZ, 48f));
+                    if (pos.magnitude > 25f && !isCentralSpawnPlaza) {
+                        float roll = Random.value;
+                        
+                        if (roll < 0.12f) {
+                            // 12% chance to spawn the monumental Tomb Gateway instead of a normal house
+                            BuildAlchemistTomb(root.transform, pos, wallMat, cyanEmissiveMat);
+                        } 
+                        else if (roll < 0.75f) {
                             BuildHouse(root.transform, pos, wallMat, woodMat, litWindowMat, darkWindowMat, crate, barrel, floorMat);
-                        } else {
+                        } 
+                        else {
                             PlacePlaza(root.transform, pos, trees, columnPrefab, floorMat);
+                            
+                            // 60% chance to drop a procedural obelisk in empty plazas
+                            if (Random.value < 0.6f) {
+                                Vector3 obeliskPos = pos + new Vector3(Random.Range(-6f, 6f), 0f, Random.Range(-6f, 6f));
+                                obeliskPos.y = GetTerrainHeight(obeliskPos);
+                                // 35% chance the obelisk is broken
+                                bool isBroken = Random.value < 0.35f; 
+                                BuildProceduralObelisk(root.transform, obeliskPos, wallMat, isBroken);
+                            }
                         }
-                    } else PlacePlaza(root.transform, pos, trees, columnPrefab, floorMat);
+                    } else {
+                        PlacePlaza(root.transform, pos, trees, columnPrefab, floorMat);
+                    }
 
                     if (enemyPrefab != null && Random.value < 0.15f) {
                         var e = (GameObject)PrefabUtility.InstantiatePrefab(enemyPrefab, root.transform);
@@ -541,6 +567,9 @@ namespace TheAlchemistsCrypt.Editor
                     }
                 }
             }
+
+            // Cleanup any columns that overlap with houses to prevent clipping inside walls
+            CleanupOverlappingColumns(root);
 
             var surface = root.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.Children;
@@ -1110,7 +1139,7 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             p.tag = "Player";
-            p.transform.position = new Vector3(0f, GetTerrainHeight(Vector3.zero) + 1.2f, 0f);
+            p.transform.position = new Vector3(16f, GetTerrainHeight(new Vector3(16f, 0f, 48f)) + 1.2f, 48f);
 
             // Ensure AlchemicalFocus is attached to the player GameObject
             var focus = p.GetComponent<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
@@ -1520,6 +1549,163 @@ namespace TheAlchemistsCrypt.Editor
                 new Vector3(b.max.x, b.min.y, b.max.z),
                 new Vector3(b.max.x, b.max.y, b.min.z)
             };
+        }
+
+        private void BuildProceduralObelisk(Transform parent, Vector3 pos, Material stoneMat, bool isBroken = false)
+        {
+            var obRoot = new GameObject(isBroken ? "BrokenObelisk" : "Obelisk");
+            obRoot.transform.SetParent(parent);
+            obRoot.transform.position = pos;
+            obRoot.isStatic = true;
+
+            float height = isBroken ? Random.Range(4f, 7f) : 14f;
+            float baseWidth = 2.0f;
+            float topWidth = isBroken ? 1.4f : 0.8f;
+
+            // Stack segments to create a smooth taper without needing a custom mesh
+            int segments = isBroken ? Random.Range(3, 5) : 8;
+            float segHeight = height / segments;
+
+            for (int i = 0; i < segments; i++)
+            {
+                float currentWidth = Mathf.Lerp(baseWidth, topWidth, (float)i / (segments - 1));
+                var seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                seg.transform.SetParent(obRoot.transform);
+                // Sink the first segment slightly to root it in the uneven sand
+                float yOffset = i == 0 ? -1f : 0f; 
+                seg.transform.localPosition = new Vector3(0f, (i * segHeight) + (segHeight / 2f) + yOffset, 0f);
+                seg.transform.localScale = new Vector3(currentWidth, segHeight + (i == 0 ? 1f : 0f), currentWidth);
+                seg.GetComponent<Renderer>().sharedMaterial = stoneMat;
+                seg.isStatic = true;
+            }
+
+            // Add the pyramidion cap if it isn't a broken obelisk
+            if (!isBroken)
+            {
+                CreateProceduralPyramid(obRoot, new Vector3(0f, height, 0f), topWidth, topWidth * 1.5f, stoneMat, Color.clear);
+            }
+        }
+
+        private void BuildAlchemistTomb(Transform parent, Vector3 pos, Material stoneMat, Material cyanEmissiveMat)
+        {
+            var root = new GameObject("AlchemistTomb");
+            root.transform.SetParent(parent);
+            root.transform.position = pos;
+            root.isStatic = true;
+
+            float heightScale = 1.3f;
+
+            // 1. Left and Right Massive Pylons (Tapered)
+            float[] sideX = { -5.5f, 5.5f };
+            foreach (float x in sideX)
+            {
+                var pylon = new GameObject("TombPylon");
+                pylon.transform.SetParent(root.transform);
+                pylon.transform.localPosition = new Vector3(x, 0f, 0f);
+
+                float pBase = 6f;
+                float pTaper = 0.5f;
+                for (int s = 0; s < 4; s++)
+                {
+                    float sizeX = pBase - (s * pTaper);
+                    float sizeZ = pBase - (s * pTaper);
+                    float segH = 4f * heightScale;
+
+                    var seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    seg.transform.SetParent(pylon.transform);
+                    seg.transform.localPosition = new Vector3(0f, (s * segH) + (segH / 2f), 0f);
+                    seg.transform.localScale = new Vector3(sizeX, segH, sizeZ);
+                    seg.GetComponent<Renderer>().sharedMaterial = stoneMat;
+                    seg.isStatic = true;
+                }
+            }
+
+            // 2. Stepped Arch Structure (Approximating a curve with blocks)
+            float archStartY = 16f * heightScale;
+            for (int i = 0; i < 3; i++)
+            {
+                var archL = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                archL.transform.SetParent(root.transform);
+                archL.transform.localPosition = new Vector3(-3.5f + (i * 0.8f), archStartY + (i * 1.5f), 0f);
+                archL.transform.localScale = new Vector3(3f + i, 2f, 4f);
+                archL.GetComponent<Renderer>().sharedMaterial = stoneMat;
+                archL.isStatic = true;
+
+                var archR = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                archR.transform.SetParent(root.transform);
+                archR.transform.localPosition = new Vector3(3.5f - (i * 0.8f), archStartY + (i * 1.5f), 0f);
+                archR.transform.localScale = new Vector3(3f + i, 2f, 4f);
+                archR.GetComponent<Renderer>().sharedMaterial = stoneMat;
+                archR.isStatic = true;
+            }
+
+            // 3. Top Massive Lintel Block
+            var lintel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            lintel.transform.SetParent(root.transform);
+            lintel.transform.localPosition = new Vector3(0f, archStartY + 5f, 0f);
+            lintel.transform.localScale = new Vector3(12f, 3f, 5f);
+            lintel.GetComponent<Renderer>().sharedMaterial = stoneMat;
+            lintel.isStatic = true;
+
+            // 4. Glowing Transmutation Circle on the Floor
+            var floorCircle = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            floorCircle.name = "TransmutationCircle";
+            floorCircle.transform.SetParent(root.transform);
+            floorCircle.transform.localPosition = new Vector3(0f, 0.1f, -7f); // Pushed out front like the image
+            floorCircle.transform.localScale = new Vector3(9f, 0.05f, 9f);
+            floorCircle.GetComponent<Renderer>().sharedMaterial = cyanEmissiveMat;
+            DestroyImmediate(floorCircle.GetComponent<Collider>()); // Don't trip the player
+            floorCircle.isStatic = true;
+        }
+
+        private void CleanupOverlappingColumns(GameObject root)
+        {
+            var columns = new List<GameObject>();
+            var houses = new List<GameObject>();
+
+            // Find all columns and houses
+            foreach (Transform t in root.transform)
+            {
+                if (t.name.Contains("Plaza"))
+                {
+                    foreach (Transform child in t)
+                    {
+                        if (child.name.ToLower().Contains("column") || child.name.ToLower().Contains("pillar"))
+                        {
+                            columns.Add(child.gameObject);
+                        }
+                    }
+                }
+                else if (t.name.Contains("House") || t.name.Contains("AlchemistTomb"))
+                {
+                    houses.Add(t.gameObject);
+                }
+            }
+
+            // For each column, check if it intersects any house's renderer bounds
+            foreach (var col in columns)
+            {
+                var colRenderer = col.GetComponentInChildren<Renderer>();
+                if (colRenderer == null) continue;
+                Bounds colBounds = colRenderer.bounds;
+                colBounds.Expand(1.5f); // Expand bounds to prevent columns clipping walls
+
+                foreach (var house in houses)
+                {
+                    var houseRenderers = house.GetComponentsInChildren<Renderer>();
+                    foreach (var hr in houseRenderers)
+                    {
+                        if (hr.name.Contains("Floor") || hr.name.Contains("floor") || hr.name.Contains("TransmutationCircle")) continue;
+                        if (hr.bounds.Intersects(colBounds))
+                        {
+                            // Overlap detected! Destroy the column
+                            DestroyImmediate(col);
+                            goto NextColumn;
+                        }
+                    }
+                }
+                NextColumn:;
+            }
         }
     }
 }

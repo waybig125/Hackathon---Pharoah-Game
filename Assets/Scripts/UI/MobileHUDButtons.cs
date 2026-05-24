@@ -2004,7 +2004,7 @@ namespace TheAlchemistsCrypt.UI
             txtGo.offsetMin = txtGo.offsetMax = Vector2.zero;
             var txt = txtGo.GetComponent<Text>();
             txt.font = GetRobustFont(); txt.fontSize = 15; txt.fontStyle = FontStyle.Bold;
-            txt.alignment = TextAnchor.MiddleCenter; txt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            txt.alignment = TextAnchor.MiddleCenter; txt.color = new Color(0.12f, 0.08f, 0.05f, 1.0f);
             txt.text = labelText;
             txt.raycastTarget = false;
 
