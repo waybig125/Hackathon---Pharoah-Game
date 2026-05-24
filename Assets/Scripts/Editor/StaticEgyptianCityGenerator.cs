@@ -1526,8 +1526,9 @@ namespace TheAlchemistsCrypt.Editor
             var renderer = pGo.AddComponent<MeshRenderer>();
             var pMat = new Material(mat);
             pMat.SetColor("_BaseColor", new Color(0.78f, 0.52f, 0.35f)); 
-            pMat.SetColor("_EmissionColor", glowColor * 1.5f); pMat.EnableKeyword("_EMISSION"); renderer.sharedMaterial = pMat;
-            pGo.AddComponent<MeshCollider>().sharedMesh = mesh;
+            var mc = pGo.AddComponent<MeshCollider>();
+            mc.sharedMesh = mesh;
+            mc.convex = true;
         }
 
         private static Vector3[] GetBoundsCorners(Bounds b)

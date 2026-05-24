@@ -2810,6 +2810,15 @@ namespace TheAlchemistsCrypt.UI
             bgImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.28f, 0.04f, 0.04f, 0.0f), new Color(0.04f, 0.0f, 0.0f, 0.98f));
             bgImg.color = new Color(1f, 1f, 1f, 0f); // Set alpha to 0 initially for fade-in
 
+            // Dangerous blood-red vignette overlay that pulses dynamically
+            var vignetteGo = new GameObject("BloodVignette", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            vignetteGo.SetParent(deathPanelGo, false);
+            vignetteGo.anchorMin = Vector2.zero; vignetteGo.anchorMax = Vector2.one;
+            vignetteGo.offsetMin = vignetteGo.offsetMax = Vector2.zero;
+            var vigImg = vignetteGo.GetComponent<Image>();
+            vigImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.8f, 0.0f, 0.0f, 0.0f), new Color(0.4f, 0.0f, 0.0f, 0.95f));
+            vigImg.color = new Color(1f, 1f, 1f, 0f);
+
             var modalGo = new GameObject("DeathCard", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             modalGo.SetParent(deathPanelGo, false);
             modalGo.anchorMin = modalGo.anchorMax = new Vector2(0.5f, 0.5f);
@@ -2874,17 +2883,23 @@ namespace TheAlchemistsCrypt.UI
                 UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
             }, new Color(0.2f, 0.3f, 0.6f, 0.20f));
 
+            // Play a scary voice line on death to make it feel dangerous!
+            string[] deathTaunts = { "Voice/vo_taunt_01", "Voice/vo_taunt_02", "Voice/vo_taunt_03", "Voice/vo_taunt_04", "Voice/vo_taunt_05", "Voice/vo_taunt_06", "Voice/vo_taunt_07", "Voice/vo_taunt_08" };
+            string randomDeathTaunt = deathTaunts[UnityEngine.Random.Range(0, deathTaunts.Length)];
+            TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(randomDeathTaunt);
+
             SetLayerRecursively(deathCanvasGo, 5);
 
             // Start the smooth unscaled fade-in animation
-            StartCoroutine(FadeInDeathScreen(bgImg, cardGroup));
+            StartCoroutine(FadeInDeathScreen(bgImg, cardGroup, vigImg));
         }
 
-        private IEnumerator FadeInDeathScreen(Image bgImg, CanvasGroup cardGroup)
+        private IEnumerator FadeInDeathScreen(Image bgImg, CanvasGroup cardGroup, Image vigImg)
         {
             float duration = 0.8f;
             float elapsed = 0f;
             bgImg.color = new Color(1f, 1f, 1f, 0f);
+            vigImg.color = new Color(1f, 1f, 1f, 0f);
             cardGroup.alpha = 0f;
 
             while (elapsed < duration)
@@ -2894,11 +2909,22 @@ namespace TheAlchemistsCrypt.UI
                 float smoothT = Mathf.Sin(t * Mathf.PI * 0.5f); // Smooth ease-out curve
 
                 bgImg.color = new Color(1f, 1f, 1f, smoothT);
+                vigImg.color = new Color(1f, 1f, 1f, smoothT * 0.8f);
                 cardGroup.alpha = smoothT;
                 yield return null;
             }
             bgImg.color = Color.white;
             cardGroup.alpha = 1f;
+
+            // Dangerous breathing/pulsing effect for the blood vignette
+            float pulseTimer = 0f;
+            while (vigImg != null)
+            {
+                pulseTimer += Time.unscaledDeltaTime;
+                float pulse = 0.5f + Mathf.PingPong(pulseTimer * 1.5f, 0.45f); // oscillates between 0.5 and 0.95
+                vigImg.color = new Color(1f, 1f, 1f, pulse);
+                yield return null;
+            }
         }
 
         public void ShowVictoryScreen()

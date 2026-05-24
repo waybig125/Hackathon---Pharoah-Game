@@ -17,6 +17,16 @@ namespace TheAlchemistsCrypt.Weapons
         private void Awake()
         {
             rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.freezeRotation = true;
+                rb.useGravity = false;
+            }
+            var col = GetComponent<Collider>();
+            if (col != null)
+            {
+                col.isTrigger = true;
+            }
         }
 
         private void OnEnable()
