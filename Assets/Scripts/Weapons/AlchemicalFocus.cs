@@ -257,7 +257,9 @@ namespace TheAlchemistsCrypt.Weapons
                 l.type = LightType.Point;
                 l.color = glowColor;
                 l.intensity = 8.0f;
-                l.range = 5.0f;
+                l.range = 8.0f;
+                l.shadows = LightShadows.None; // Optimize shadows for mobile performance
+                l.enabled = false; // Disabled by default to prevent permanent light below player
             }
         }
 
@@ -362,6 +364,16 @@ namespace TheAlchemistsCrypt.Weapons
                 case FireMode.Salt: TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_salt_shot"); break;
             }
 
+            // Flash muzzle light briefly when firing
+            if (firePoint != null)
+            {
+                Light l = firePoint.GetComponent<Light>();
+                if (l != null)
+                {
+                    StartCoroutine(FlashMuzzleLight(l));
+                }
+            }
+
             if (ObjectPooler.Instance != null && firePoint != null)
             {
                 GameObject spawned = ObjectPooler.Instance.SpawnFromPool(tag, firePoint.position, firePoint.rotation);
@@ -375,6 +387,13 @@ namespace TheAlchemistsCrypt.Weapons
                     }
                 }
             }
+        }
+
+        private IEnumerator FlashMuzzleLight(Light l)
+        {
+            l.enabled = true;
+            yield return new WaitForSeconds(0.08f);
+            if (l != null) l.enabled = false;
         }
 
         private void DumpTransform(Transform t, string indent, System.Text.StringBuilder sb)
