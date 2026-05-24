@@ -1306,12 +1306,14 @@ namespace TheAlchemistsCrypt.UI
             public void OnPointerDown(PointerEventData data)
             {
                 if (IsCustomizingHUD) return;
+                transform.localScale = Vector3.one * 0.95f; // tactile scale squeeze feedback
                 onDown?.Invoke();
             }
 
             public void OnPointerUp(PointerEventData data)
             {
                 if (IsCustomizingHUD) return;
+                transform.localScale = Vector3.one; // restore scale
                 // Standard onUp (if onClick is not explicitly handled, OnPointerClick will also trigger)
                 if (onClick == null) onUp?.Invoke();
             }
@@ -1901,21 +1903,23 @@ namespace TheAlchemistsCrypt.UI
             );
 
             // Row 4: Visual Fidelity (SELECTOR)
-            int currentQuality = QualitySettings.GetQualityLevel();
+            int currentQualityIdx = PlayerPrefs.GetInt("VisualQualityIdx", 2); // 0: LOW, 1: MEDIUM, 2: ULTRA (default 2)
             string[] qualityNames = { "LOW", "MEDIUM", "ULTRA" };
-            string initialQualityName = currentQuality < qualityNames.Length ? qualityNames[currentQuality] : "ULTRA";
-            var qualRow = CreateSettingsRow(dialog, "VISUAL QUALITY", new Vector2(0, -40), initialQualityName,
+            int[] unityQualityLevels = { 1, 3, 5 }; // Map user options to Low, High, Ultra in Unity Settings
+            var qualRow = CreateSettingsRow(dialog, "VISUAL QUALITY", new Vector2(0, -40), qualityNames[Mathf.Clamp(currentQualityIdx, 0, 2)],
                 () => {
-                    int q = QualitySettings.GetQualityLevel();
-                    q = Mathf.Clamp(q - 1, 0, 2);
-                    QualitySettings.SetQualityLevel(q, true);
-                    return qualityNames[q];
+                    currentQualityIdx = Mathf.Clamp(currentQualityIdx - 1, 0, 2);
+                    PlayerPrefs.SetInt("VisualQualityIdx", currentQualityIdx);
+                    PlayerPrefs.Save();
+                    QualitySettings.SetQualityLevel(unityQualityLevels[currentQualityIdx], true);
+                    return qualityNames[currentQualityIdx];
                 },
                 () => {
-                    int q = QualitySettings.GetQualityLevel();
-                    q = Mathf.Clamp(q + 1, 0, 2);
-                    QualitySettings.SetQualityLevel(q, true);
-                    return qualityNames[q];
+                    currentQualityIdx = Mathf.Clamp(currentQualityIdx + 1, 0, 2);
+                    PlayerPrefs.SetInt("VisualQualityIdx", currentQualityIdx);
+                    PlayerPrefs.Save();
+                    QualitySettings.SetQualityLevel(unityQualityLevels[currentQualityIdx], true);
+                    return qualityNames[currentQualityIdx];
                 }
             );
 
@@ -2364,6 +2368,18 @@ namespace TheAlchemistsCrypt.UI
 
         private void Start()
         {
+            // Apply volume on boot
+            float currentVol = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
+            AudioListener.volume = currentVol;
+
+            // Apply visual quality setting on boot
+            int currentQualityIdx = PlayerPrefs.GetInt("VisualQualityIdx", 2); // default to ULTRA
+            int[] unityQualityLevels = { 1, 3, 5 };
+            QualitySettings.SetQualityLevel(unityQualityLevels[Mathf.Clamp(currentQualityIdx, 0, 2)], true);
+
+            // Limit framerate to 60 FPS for battery and performance optimization on mobile devices
+            Application.targetFrameRate = 60;
+
             if (!HasStartedGame)
             {
                 CreateStartScreen();
@@ -2633,7 +2649,11 @@ namespace TheAlchemistsCrypt.UI
             deathPanelGo.SetParent(deathCanvasGo.transform, false);
             deathPanelGo.anchorMin = Vector2.zero; deathPanelGo.anchorMax = Vector2.one;
             deathPanelGo.offsetMin = deathPanelGo.offsetMax = Vector2.zero;
-            deathPanelGo.GetComponent<Image>().color = new Color(0.12f, 0.02f, 0.02f, 0.85f);
+            
+            // Create a gorgeous radial gradient overlay (dark red center fading to black edges)
+            var bgImg = deathPanelGo.GetComponent<Image>();
+            bgImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.28f, 0.04f, 0.04f, 0.95f), new Color(0.04f, 0.0f, 0.0f, 0.98f));
+            bgImg.color = new Color(1f, 1f, 1f, 0f); // Set alpha to 0 initially for fade-in
 
             var modalGo = new GameObject("DeathCard", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             modalGo.SetParent(deathPanelGo, false);
@@ -2641,28 +2661,57 @@ namespace TheAlchemistsCrypt.UI
             modalGo.anchoredPosition = Vector2.zero;
             modalGo.sizeDelta = new Vector2(850, 640);
             modalGo.GetComponent<Image>().sprite = charcoalSprite;
+            
+            // Add a CanvasGroup for fading the card content
+            var cardGroup = modalGo.gameObject.AddComponent<CanvasGroup>();
+            cardGroup.alpha = 0f;
 
+            // Thick alchemical gold border
             var border = new GameObject("Border", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             border.SetParent(modalGo, false); border.anchorMin = Vector2.zero; border.anchorMax = Vector2.one;
             border.offsetMin = new Vector2(4, 4); border.offsetMax = new Vector2(-4, -4);
             var borderImg = border.GetComponent<Image>();
-            borderImg.color = new Color(0.95f, 0.8f, 0.2f, 0.2f);
+            borderImg.color = new Color(0.95f, 0.8f, 0.2f, 0.45f); // Brighter gold
             borderImg.sprite = charcoalSprite;
+
+            // Egyptian Corner Ornaments using the preloaded goldGradientSprite
+            Vector2[] cornerAnchors = {
+                new Vector2(0, 0), new Vector2(0, 1),
+                new Vector2(1, 0), new Vector2(1, 1)
+            };
+            for (int i = 0; i < 4; i++)
+            {
+                var ornament = new GameObject("CornerOrnament", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                ornament.SetParent(modalGo, false);
+                ornament.anchorMin = ornament.anchorMax = ornament.pivot = cornerAnchors[i];
+                ornament.anchoredPosition = Vector2.zero;
+                ornament.sizeDelta = new Vector2(25, 25);
+                var ornImg = ornament.GetComponent<Image>();
+                ornImg.sprite = goldGradientSprite;
+                ornImg.color = new Color(0.95f, 0.8f, 0.2f, 0.8f);
+            }
 
             var titleGo = new GameObject("TitleText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             titleGo.SetParent(modalGo, false);
-            titleGo.anchoredPosition = new Vector2(0, 260); titleGo.sizeDelta = new Vector2(700, 80);
+            titleGo.anchoredPosition = new Vector2(0, 240); titleGo.sizeDelta = new Vector2(700, 100);
             var titleText = titleGo.GetComponent<Text>();
             titleText.font = GetTitleFont();
-            titleText.fontSize = 64;
+            titleText.fontSize = 80; // Enlarged Title
             titleText.fontStyle = FontStyle.Bold;
             titleText.alignment = TextAnchor.MiddleCenter;
-            titleText.color = new Color(0.85f, 0.05f, 0.05f, 0.98f);
+            titleText.color = new Color(0.9f, 0.1f, 0.1f, 0.98f); // Warning Red
             titleText.text = "YOU DIED";
+
+            // Gold divider line below title
+            var dividerGo = new GameObject("Divider", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            dividerGo.SetParent(modalGo, false);
+            dividerGo.anchoredPosition = new Vector2(0, 175);
+            dividerGo.sizeDelta = new Vector2(500, 2);
+            dividerGo.GetComponent<Image>().color = new Color(0.95f, 0.8f, 0.2f, 0.5f);
 
             var descGo = new GameObject("DescriptionText", typeof(RectTransform), typeof(Text)).GetComponent<RectTransform>();
             descGo.SetParent(modalGo, false);
-            descGo.anchoredPosition = new Vector2(0, 50); descGo.sizeDelta = new Vector2(700, 200);
+            descGo.anchoredPosition = new Vector2(0, 30); descGo.sizeDelta = new Vector2(700, 200);
             var descText = descGo.GetComponent<Text>();
             descText.font = GetTitleFont();
             descText.fontSize = 28;
@@ -2670,18 +2719,43 @@ namespace TheAlchemistsCrypt.UI
             descText.color = new Color(0.9f, 0.9f, 0.9f, 0.9f);
             descText.text = "The shifting dunes of Egypt reclaim another lost soul.\n\nYour elements have decayed, and the Alchemist's Crypt has locked your fate in eternal stone.";
 
+            // Action Buttons with micro-squeezing feedback in ButtonInputHelper
             CreateSettingsActionButton(modalGo, "RESTART VOYAGE", new Vector2(-160, -180), new Vector2(300, 70), () => {
                 Time.timeScale = 1f;
                 UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
-            }, new Color(0.6f, 0.1f, 0.1f, 0.15f));
+            }, new Color(0.7f, 0.1f, 0.1f, 0.20f));
 
             CreateSettingsActionButton(modalGo, "MAIN MENU", new Vector2(160, -180), new Vector2(300, 70), () => {
                 Time.timeScale = 1f;
                 HasStartedGame = false;
                 UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
-            }, new Color(0.2f, 0.3f, 0.6f, 0.15f));
+            }, new Color(0.2f, 0.3f, 0.6f, 0.20f));
 
             SetLayerRecursively(deathCanvasGo, 5);
+
+            // Start the smooth unscaled fade-in animation
+            StartCoroutine(FadeInDeathScreen(bgImg, cardGroup));
+        }
+
+        private IEnumerator FadeInDeathScreen(Image bgImg, CanvasGroup cardGroup)
+        {
+            float duration = 0.8f;
+            float elapsed = 0f;
+            bgImg.color = new Color(1f, 1f, 1f, 0f);
+            cardGroup.alpha = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                float smoothT = Mathf.Sin(t * Mathf.PI * 0.5f); // Smooth ease-out curve
+
+                bgImg.color = new Color(1f, 1f, 1f, smoothT);
+                cardGroup.alpha = smoothT;
+                yield return null;
+            }
+            bgImg.color = Color.white;
+            cardGroup.alpha = 1f;
         }
 
         public void ShowVictoryScreen()
