@@ -338,17 +338,22 @@ namespace TheAlchemistsCrypt.Editor
             var columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_column.glb");
             if (columnPrefab == null) columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_pillar_column.glb");
             
-            // Create warm peach-to-cream gradient texture for houses
+            // Create warm golden sandstone gradient texture for houses
             string houseTexPath = "Assets/EgyptianAssets/HouseGradientTex.png";
-            Texture2D houseTex = AssetDatabase.LoadAssetAtPath<Texture2D>(houseTexPath);
+            if (System.IO.File.Exists(houseTexPath)) {
+                System.IO.File.Delete(houseTexPath);
+                System.IO.File.Delete(houseTexPath + ".meta");
+                AssetDatabase.Refresh();
+            }
+            Texture2D houseTex = null;
             if (houseTex == null) {
                 if (!System.IO.Directory.Exists("Assets/EgyptianAssets")) System.IO.Directory.CreateDirectory("Assets/EgyptianAssets");
                 int texSize = 512;
                 houseTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
                 houseTex.wrapMode = TextureWrapMode.Clamp;
                 houseTex.filterMode = FilterMode.Bilinear;
-                Color bottomColor = new Color(0.82f, 0.52f, 0.38f); // Warm deep peach
-                Color topColor = new Color(0.96f, 0.82f, 0.70f);    // Soft light peach
+                Color bottomColor = new Color(0.85f, 0.65f, 0.20f); // Rich golden yellow sandstone
+                Color topColor = new Color(0.98f, 0.85f, 0.40f);    // Soft warm sandstone yellow
                 Color[] pixels = new Color[texSize * texSize];
                 for (int y = 0; y < texSize; y++) {
                     float t = (float)y / (texSize - 1);
@@ -363,14 +368,16 @@ namespace TheAlchemistsCrypt.Editor
                 houseTex = AssetDatabase.LoadAssetAtPath<Texture2D>(houseTexPath);
             }
 
-            // ── AESTHETIC PALETTE (Warm Sunset Desert) ──
+            // ── AESTHETIC PALETTE (Golden Sandstone Desert) ──
             Material wallMat = new Material(GetLitShader());
             if (houseTex != null) wallMat.SetTexture("_BaseMap", houseTex);
             else wallMat.SetColor("_BaseColor", new Color(0.96f, 0.85f, 0.75f)); 
             wallMat.SetFloat("_Smoothness", 0.0f);   // Matte finish
+            wallMat.enableInstancing = true;
             
             Material woodMat = new Material(GetLitShader());
             woodMat.SetColor("_BaseColor", new Color(0.20f, 0.12f, 0.08f)); // Dark Wood
+            woodMat.enableInstancing = true;
             
             Material floorMat = new Material(GetLitShader());
             floorMat.SetColor("_BaseColor", new Color(0.95f, 0.85f, 0.70f)); // Warm Pastel Sand
@@ -378,14 +385,17 @@ namespace TheAlchemistsCrypt.Editor
             floorMat.SetFloat("_Smoothness", 0.10f);
             floorMat.SetColor("_EmissionColor", new Color(1.0f, 0.95f, 0.8f) * 0.02f);
             floorMat.EnableKeyword("_EMISSION");
+            floorMat.enableInstancing = true;
 
             Material litWindowMat = new Material(GetLitShader());
             litWindowMat.SetColor("_BaseColor", new Color(1f, 0.95f, 0.8f)); // Bright warm white-gold
             litWindowMat.SetColor("_EmissionColor", new Color(1.0f, 0.75f, 0.25f) * 15.0f); // Intense warm amber glow
             litWindowMat.EnableKeyword("_EMISSION");
+            litWindowMat.enableInstancing = true;
             
             Material darkWindowMat = new Material(GetLitShader());
             darkWindowMat.SetColor("_BaseColor", new Color(0.15f, 0.1f, 0.15f)); // Dark cool-purple contrast
+            darkWindowMat.enableInstancing = true;
 
             SetupEnvironment(root);
             SetupManagers(root);
@@ -452,16 +462,21 @@ namespace TheAlchemistsCrypt.Editor
                 AssetDatabase.CreateAsset(layer, layerPath);
             }
 
-            // Always create/update the gradient texture
+            // Always recreate the sand gradient texture with new golden yellow sandstone color
             string sandTexPath = "Assets/EgyptianAssets/SandTexGradient_1024.png";
-            Texture2D sandTex = AssetDatabase.LoadAssetAtPath<Texture2D>(sandTexPath);
+            if (System.IO.File.Exists(sandTexPath)) {
+                System.IO.File.Delete(sandTexPath);
+                System.IO.File.Delete(sandTexPath + ".meta");
+                AssetDatabase.Refresh();
+            }
+            Texture2D sandTex = null;
             if (sandTex == null) {
                 int texSize = 1024;
                 sandTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
                 sandTex.wrapMode = TextureWrapMode.Clamp;
                 sandTex.filterMode = FilterMode.Trilinear;
-                Color topColor = new Color(0.96f, 0.75f, 0.60f); // Warm peach matching skybox
-                Color bottomColor = new Color(0.90f, 0.85f, 0.75f); // Warm sandy cream
+                Color topColor = new Color(0.95f, 0.80f, 0.40f);    // Warm sand yellow
+                Color bottomColor = new Color(0.85f, 0.65f, 0.20f); // Rich golden yellow sandstone
                 Color[] pixels = new Color[texSize * texSize];
                 for (int y = 0; y < texSize; y++) {
                     float t = (float)y / (texSize - 1);
@@ -569,6 +584,7 @@ namespace TheAlchemistsCrypt.Editor
             seaMat.EnableKeyword("_EMISSION");
             seaMat.SetFloat("_Smoothness", 0.99f); 
             seaMat.SetFloat("_Metallic", 0.95f);
+            seaMat.enableInstancing = true;
             sea.GetComponent<Renderer>().sharedMaterial = seaMat;
             sea.isStatic = true;
             DestroyImmediate(sea.GetComponent<Collider>());
@@ -586,6 +602,7 @@ namespace TheAlchemistsCrypt.Editor
             shallowMat.SetColor("_EmissionColor", shallowBlue * 2f);
             shallowMat.EnableKeyword("_EMISSION");
             shallowMat.SetFloat("_Smoothness", 0.95f);
+            shallowMat.enableInstancing = true;
             shallows.GetComponent<Renderer>().sharedMaterial = shallowMat;
             shallows.isStatic = true;
             DestroyImmediate(shallows.GetComponent<Collider>());
@@ -600,6 +617,7 @@ namespace TheAlchemistsCrypt.Editor
             var beachMat = new Material(GetLitShader());
             beachMat.SetColor("_BaseColor", new Color(0.85f, 0.75f, 0.6f, 1f)); 
             beachMat.SetFloat("_Smoothness", 0.1f);
+            beachMat.enableInstancing = true;
             beach.GetComponent<Renderer>().sharedMaterial = beachMat;
             beach.isStatic = true;
             DestroyImmediate(beach.GetComponent<Collider>());
@@ -1381,6 +1399,7 @@ namespace TheAlchemistsCrypt.Editor
                         var oldMat = mats[i];
                         var newMat = new Material(GetLitShader());
                         newMat.name = oldMat.name + "_URP";
+                        newMat.enableInstancing = true;
                         if (oldMat.HasProperty("_Color")) newMat.SetColor("_BaseColor", oldMat.GetColor("_Color"));
                         if (oldMat.HasProperty("_MainTex") && oldMat.GetTexture("_MainTex") != null) newMat.SetTexture("_BaseMap", oldMat.GetTexture("_MainTex"));
                         if (oldMat.HasProperty("_BumpMap") && oldMat.GetTexture("_BumpMap") != null) {
