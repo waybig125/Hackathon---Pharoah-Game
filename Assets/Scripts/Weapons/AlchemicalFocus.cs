@@ -49,17 +49,21 @@ namespace TheAlchemistsCrypt.Weapons
         {
             currentAmmo = maxAmmo;
             lastMode = currentMode;
+            ResolveFirePoint();
+            SyncInventoryWeapon();
             UpdateWeaponColor();
         }
 
         private void Update()
         {
+            ResolveFirePoint();
             HandleShooting();
             HandleModeSwitch();
 
             if (currentMode != lastMode)
             {
                 lastMode = currentMode;
+                SyncInventoryWeapon();
                 UpdateWeaponColor();
                 TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_element_switch");
 
@@ -81,6 +85,56 @@ namespace TheAlchemistsCrypt.Weapons
                 {
                     TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(voiceClips[UnityEngine.Random.Range(0, voiceClips.Length)]);
                 }
+            }
+        }
+
+        private void ResolveFirePoint()
+        {
+            if (firePoint == null || !firePoint.gameObject.activeInHierarchy)
+            {
+                var inventory = GetComponentInParent<InfimaGames.LowPolyShooterPack.Inventory>();
+                if (inventory == null)
+                {
+                    var player = GameObject.FindWithTag("Player");
+                    if (player != null) inventory = player.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>();
+                }
+                if (inventory != null)
+                {
+                    var equipped = inventory.GetEquipped();
+                    if (equipped != null)
+                    {
+                        var muzzle = equipped.transform.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Muzzle>(true);
+                        if (muzzle != null)
+                        {
+                            firePoint = muzzle.transform;
+                        }
+                        else
+                        {
+                            foreach (var t in equipped.transform.GetComponentsInChildren<Transform>(true))
+                            {
+                                if (t.name.Contains("Muzzle") || t.name.Contains("muzzle"))
+                                {
+                                    firePoint = t;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void SyncInventoryWeapon()
+        {
+            var inventory = GetComponentInParent<InfimaGames.LowPolyShooterPack.Inventory>();
+            if (inventory == null)
+            {
+                var player = GameObject.FindWithTag("Player");
+                if (player != null) inventory = player.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>();
+            }
+            if (inventory != null)
+            {
+                inventory.Equip((int)currentMode);
             }
         }
 

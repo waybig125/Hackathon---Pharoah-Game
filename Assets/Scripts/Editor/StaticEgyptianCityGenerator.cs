@@ -154,9 +154,40 @@ namespace TheAlchemistsCrypt.Editor
 
         private void Purge()
         {
+            // 1. Destroy procedural city root if it exists
+            var cityRoot = GameObject.Find(rootName);
+            if (cityRoot != null) DestroyImmediate(cityRoot);
+
+            // 2. Loop through root GameObjects and destroy any non-essential ones
+            var roots = SceneManager.GetActiveScene().GetRootGameObjects();
+            foreach (var r in roots)
+            {
+                if (r == null) continue;
+                string lowerName = r.name.ToLower().Replace(" ", "");
+
+                // Keep Player, cameras, lights, EventSystem, GameController, and Terrain
+                if (lowerName.Contains("player") || lowerName.Contains("camera") || lowerName.Contains("controller") || 
+                    lowerName.Contains("eventsystem") || lowerName.Contains("terrain") || lowerName.Contains("light") || 
+                    lowerName.Contains("sun") || lowerName.Contains("sky") || r.name == "TestRoot")
+                {
+                    continue;
+                }
+
+                DestroyImmediate(r);
+            }
+
+            // 3. Keep fallback keyword check for childless / hidden / empty name GameObjects
             var all = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
             foreach (var go in all) {
-                if (go == null) continue; 
+                if (go == null) continue;
+                
+                // Clear any empty / unnamed remnants immediately
+                if (string.IsNullOrEmpty(go.name) || string.IsNullOrEmpty(go.name.Trim()))
+                {
+                    DestroyImmediate(go);
+                    continue;
+                }
+
                 string lowerName = go.name.ToLower().Replace(" ", ""); 
                 if (lowerName.Contains("egyptiancity") || lowerName.Contains("desertfloor") || lowerName.Contains("floorground") ||
                     lowerName.Contains("groundplane") || lowerName.Contains("desertterrain") ||
@@ -1062,26 +1093,6 @@ namespace TheAlchemistsCrypt.Editor
                 {
                     p = PrefabUtility.InstantiatePrefab(fpPrefab) as GameObject;
                     p.name = "Player";
-
-                    string invPath = "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Prefabs/Weapons/P_LPSP_Inventory.prefab";
-                    GameObject invPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(invPath);
-                    if (invPrefab != null)
-                    {
-                        var inv = PrefabUtility.InstantiatePrefab(invPrefab) as GameObject;
-                        inv.name = "Inventory";
-                        inv.transform.SetParent(p.transform, false);
-                        inv.transform.localPosition = Vector3.zero;
-                    }
-
-                    string uiPath = "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Prefabs/Interface/P_LPSP_UI_Canvas.prefab";
-                    GameObject uiPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(uiPath);
-                    if (uiPrefab != null)
-                    {
-                        var ui = PrefabUtility.InstantiatePrefab(uiPrefab) as GameObject;
-                        ui.name = "P_LPSP_UI_Canvas";
-                    }
-
-                    Debug.Log("[CityGen] FPS Character spawned from prefab.");
                 }
                 else
                 {
@@ -1092,6 +1103,14 @@ namespace TheAlchemistsCrypt.Editor
 
             p.tag = "Player";
             p.transform.position = new Vector3(0f, GetTerrainHeight(Vector3.zero) + 1.2f, 0f);
+
+            // Ensure AlchemicalFocus is attached to the player GameObject
+            var focus = p.GetComponent<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+            if (focus == null)
+            {
+                focus = p.AddComponent<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+                Debug.Log("[CityGen] Attached AlchemicalFocus component to Player.");
+            }
 
             Camera mainCam = p.GetComponentInChildren<Camera>(true);
             if (mainCam == null) mainCam = Camera.main;
@@ -1119,17 +1138,87 @@ namespace TheAlchemistsCrypt.Editor
                 camGo.AddComponent<AudioListener>();
             }
 
-            var inv2 = p.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>();
-            if (inv2 == null) return;
-            
-            foreach (Transform weapon in inv2.transform) {
-                foreach (var rend in weapon.GetComponentsInChildren<Renderer>()) {
+            // Find all Inventory components under the player and clean up duplicates
+            var inventories = p.GetComponentsInChildren<InfimaGames.LowPolyShooterPack.Inventory>(true);
+            InfimaGames.LowPolyShooterPack.Inventory mainInv = null;
+            if (inventories != null && inventories.Length > 0)
+            {
+                mainInv = inventories[0];
+                // Destroy duplicates
+                for (int i = 1; i < inventories.Length; i++)
+                {
+                    if (inventories[i] != null && inventories[i].gameObject != null)
+                    {
+                        Debug.LogWarning("[CityGen] Destroying duplicate inventory: " + inventories[i].gameObject.name);
+                        DestroyImmediate(inventories[i].gameObject);
+                    }
+                }
+            }
+
+            // If we don't have an inventory at all, spawn one
+            if (mainInv == null)
+            {
+                string invPath = "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Prefabs/Weapons/P_LPSP_Inventory.prefab";
+                GameObject invPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(invPath);
+                if (invPrefab != null)
+                {
+                    var invGo = PrefabUtility.InstantiatePrefab(invPrefab) as GameObject;
+                    invGo.name = "Inventory";
+                    invGo.transform.SetParent(p.transform, false);
+                    invGo.transform.localPosition = Vector3.zero;
+                    mainInv = invGo.GetComponent<InfimaGames.LowPolyShooterPack.Inventory>();
+                }
+            }
+
+            if (mainInv == null)
+            {
+                Debug.LogError("[CityGen] Failed to resolve Player inventory!");
+                return;
+            }
+
+            // Clear old weapons from inventory transform
+            for (int i = mainInv.transform.childCount - 1; i >= 0; i--)
+            {
+                DestroyImmediate(mainInv.transform.GetChild(i).gameObject);
+            }
+
+            // Populate the inventory with the three elemental weapon prefabs
+            string[] wPrefabs = {
+                "Assets/Prefabs/WEP_Sulfur.prefab",
+                "Assets/Prefabs/WEP_Mercury.prefab",
+                "Assets/Prefabs/WEP_Salt.prefab"
+            };
+
+            foreach (var wpPath in wPrefabs)
+            {
+                GameObject wpPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(wpPath);
+                if (wpPrefab != null)
+                {
+                    var wpObj = PrefabUtility.InstantiatePrefab(wpPrefab, mainInv.transform) as GameObject;
+                    wpObj.name = System.IO.Path.GetFileNameWithoutExtension(wpPath);
+                    Debug.Log("[CityGen] Instantiated element weapon prefab: " + wpObj.name);
+                }
+                else
+                {
+                    Debug.LogError("[CityGen] Failed to load element weapon prefab: " + wpPath);
+                }
+            }
+
+            // Perform URP material/shader conversions and custom alchemical tints on the weapons
+            foreach (Transform weapon in mainInv.transform) {
+                foreach (var rend in weapon.GetComponentsInChildren<Renderer>(true)) {
                     Material[] mats = rend.sharedMaterials;
                     for (int i = 0; i < mats.Length; i++) {
                         if (mats[i] == null) continue;
                         var mat = new Material(mats[i]);
-                        string mName = mat.name.ToLower();
                         
+                        // Convert shader to URP Lit if it is standard, missing, or error shader
+                        if (mat.shader == null || mat.shader.name.Contains("InternalError") || mat.shader.name.Contains("Standard") || string.IsNullOrEmpty(mat.name))
+                        {
+                            mat.shader = GetLitShader();
+                        }
+                        
+                        string mName = mat.name.ToLower();
                         if (mName.Contains("body") || mName.Contains("frame") || mName.Contains("stock") || mName.Contains("metal")) {
                             // Dark metal/obsidian body
                             mat.SetColor("_BaseColor", new Color(0.08f, 0.08f, 0.10f)); 
