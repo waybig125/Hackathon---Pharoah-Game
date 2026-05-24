@@ -6,6 +6,14 @@ Shader "Custom/SkyboxGradient"
         _ColorMiddle1 ("Color Middle Low (Rose)", Color) = (0.85, 0.44, 0.60, 1)
         _ColorMiddle2 ("Color Middle High (Twilight)", Color) = (0.24, 0.44, 0.74, 1)
         _ColorTop ("Color Top (Deep Blue)", Color) = (0.06, 0.12, 0.35, 1)
+        
+        [NoScaleOffset] _CloudTex ("Cloud Normal & Density (RGBA)", 2D) = "white" {}
+        _CloudSpeed ("Cloud Scroll Speed (XY)", Vector) = (0.05, 0.03, 0, 0)
+        _CloudColor ("Cloud Tint Color", Color) = (0.95, 0.85, 0.75, 1)
+        _CloudThreshold ("Cloud Threshold", Range(0, 1)) = 0.38
+        _CloudThickness ("Cloud Thickness Multiplier", Range(0, 5)) = 2.5
+        _CloudScale ("Cloud Scale", Float) = 0.12
+        _SunDir ("Sun Light Direction", Vector) = (-0.5, 0.3, 0.8, 0)
     }
 
     SubShader
@@ -38,6 +46,14 @@ Shader "Custom/SkyboxGradient"
             fixed4 _ColorMiddle2;
             fixed4 _ColorTop;
 
+            sampler2D _CloudTex;
+            float4 _CloudSpeed;
+            fixed4 _CloudColor;
+            float _CloudThreshold;
+            float _CloudThickness;
+            float _CloudScale;
+            float4 _SunDir;
+
             v2f vert (appdata v)
             {
                 v2f o;
@@ -66,6 +82,53 @@ Shader "Custom/SkyboxGradient"
                 else
                 {
                     col = lerp(_ColorMiddle2, _ColorTop, (t - 0.65) / 0.35);
+                }
+
+                // Render scrolling normal-mapped clouds in the sky hemisphere
+                if (d.y > 0.0)
+                {
+                    // Project skybox sphere onto a flat horizontal plane at height Y = 1.0
+                    float2 skyUV = d.xz / (d.y + 0.05); // Avoid divide-by-zero
+                    skyUV *= _CloudScale;
+
+                    // Scroll over time using Unity's built-in _Time variable
+                    float2 scrolledUV = skyUV + _Time.x * _CloudSpeed.xy;
+
+                    // Sample packed texture (RGB = Normals, A = Density)
+                    float4 cloudSample = tex2D(_CloudTex, scrolledUV);
+                    
+                    float density = cloudSample.a;
+                    float3 normal;
+                    normal.xy = (cloudSample.rg * 2.0 - 1.0);
+                    normal.z = sqrt(1.0 - saturate(dot(normal.xy, normal.xy)));
+                    normal = normalize(normal);
+
+                    // Apply threshold and scaling
+                    float cloudAlpha = saturate((density - _CloudThreshold) * _CloudThickness);
+                    
+                    // Fade clouds out near the horizon line to prevent harsh clipping
+                    float horizonFade = saturate(d.y * 5.0);
+                    cloudAlpha *= horizonFade;
+
+                    if (cloudAlpha > 0.0)
+                    {
+                        // Calculate lighting from the sun direction
+                        float3 sunDir = normalize(_SunDir.xyz);
+                        float diffuse = saturate(dot(normal, sunDir));
+
+                        // Base shaded cloud color
+                        fixed3 shadowCol = col.rgb * 0.7; // Blend slightly with sky behind it
+                        fixed3 litCol = _CloudColor.rgb * (diffuse * 0.8 + 0.4);
+
+                        // Sunset golden rim highlight on edges facing the sun
+                        float rim = saturate(dot(normal, sunDir));
+                        fixed3 rimCol = fixed3(1.0, 0.65, 0.25); // Bright gold/orange
+                        litCol = lerp(litCol, rimCol, pow(rim, 6.0) * 0.9);
+
+                        // Final cloud mix
+                        fixed3 finalCloudColor = lerp(shadowCol, litCol, diffuse);
+                        col.rgb = lerp(col.rgb, finalCloudColor, cloudAlpha);
+                    }
                 }
                 
                 return col;

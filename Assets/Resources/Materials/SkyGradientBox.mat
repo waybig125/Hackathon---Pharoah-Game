@@ -25,6 +25,10 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _CloudTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _MainTex:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -32,6 +36,9 @@ Material:
     m_Ints: []
     m_Floats:
     - _AtmosphereThickness: 1.3
+    - _CloudScale: 0.12
+    - _CloudThickness: 2.5
+    - _CloudThreshold: 0.38
     - _Exposure: 1
     - _ImageType: 0
     - _Layout: 0
@@ -42,12 +49,15 @@ Material:
     - _SunSize: 0.04
     - _SunSizeConvergence: 5
     m_Colors:
+    - _CloudColor: {r: 0.95, g: 0.85, b: 0.75, a: 1}
+    - _CloudSpeed: {r: 0.05, g: 0.03, b: 0, a: 0}
     - _ColorBottom: {r: 0.98, g: 0.62, b: 0.42, a: 1}
     - _ColorMiddle1: {r: 0.85, g: 0.44, b: 0.6, a: 1}
     - _ColorMiddle2: {r: 0.24, g: 0.44, b: 0.74, a: 1}
     - _ColorTop: {r: 0.06, g: 0.12, b: 0.35, a: 1}
     - _GroundColor: {r: 0.96, g: 0.7, b: 0.55, a: 1}
     - _SkyTint: {r: 0.12, g: 0.28, b: 0.55, a: 1}
+    - _SunDir: {r: -0.5, g: 0.3, b: 0.8, a: 0}
     - _Tint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

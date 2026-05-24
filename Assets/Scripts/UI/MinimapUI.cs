@@ -397,7 +397,7 @@ private Sprite buildingSprite;
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.M))
+            if (UnityEngine.Input.GetKeyDown(KeyCode.M))
             {
                 if (transitionCoroutine == null)
                 {

@@ -323,6 +323,8 @@ namespace TheAlchemistsCrypt.Editor
 
         public void GeneratePolishedCity()
         {
+            GenerateSkyCloudNormalMap();
+
             Random.InitState(seed);
             Purge();
 
@@ -1928,6 +1930,107 @@ namespace TheAlchemistsCrypt.Editor
 
                 spawnedCount++;
             }
+        }
+
+        [MenuItem("Egyptian/Generate Sky Cloud Normal Map", false, 2)]
+        public static void GenerateSkyCloudNormalMap()
+        {
+            int size = 512;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, true);
+            tex.wrapMode = TextureWrapMode.Repeat;
+            tex.filterMode = FilterMode.Bilinear;
+
+            float eps = 1f / size;
+            float bumpStrength = 2.0f;
+
+            Color[] pixels = new Color[size * size];
+
+            for (int y = 0; y < size; y++)
+            {
+                float v = (float)y / size;
+                for (int x = 0; x < size; x++)
+                {
+                    float u = (float)x / size;
+
+                    float density = GetFBmNoise(u, v);
+                    float densityU = GetFBmNoise(u + eps, v);
+                    float densityV = GetFBmNoise(u, v + eps);
+
+                    float du = (densityU - density) / eps;
+                    float dv = (densityV - density) / eps;
+
+                    Vector3 normal = new Vector3(-du * bumpStrength, -dv * bumpStrength, 1.0f).normalized;
+
+                    pixels[y * size + x] = new Color(
+                        normal.x * 0.5f + 0.5f,
+                        normal.y * 0.5f + 0.5f,
+                        normal.z * 0.5f + 0.5f,
+                        density
+                    );
+                }
+            }
+
+            tex.SetPixels(pixels);
+            tex.Apply(true);
+
+            string folderPath = "Assets/Resources/Textures";
+            if (!System.IO.Directory.Exists(folderPath))
+            {
+                System.IO.Directory.CreateDirectory(folderPath);
+            }
+            string path = System.IO.Path.Combine(folderPath, "SkyCloudNormalMap.png");
+            System.IO.File.WriteAllBytes(path, bytes => { /* dummy callback but we write directly */ });
+            System.IO.File.WriteAllBytes(path, bytes: System.Text.Encoding.ASCII.GetBytes("")); // dummy to avoid unused warnings or we just write bytes:
+            byte[] fileBytes = tex.EncodeToPNG();
+            System.IO.File.WriteAllBytes(path, fileBytes);
+            AssetDatabase.Refresh();
+
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer != null)
+            {
+                importer.textureType = TextureImporterType.Default;
+                importer.sRGBTexture = false;
+                importer.alphaSource = TextureImporterAlphaSource.FromInput;
+                importer.alphaIsTransparency = false;
+                importer.mipmapEnabled = true;
+                importer.wrapMode = TextureWrapMode.Repeat;
+                importer.SaveAndReimport();
+                AssetDatabase.Refresh();
+            }
+
+            Texture2D cloudTex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            Material skyboxMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Materials/SkyGradientBox.mat");
+            if (skyboxMat != null && cloudTex != null)
+            {
+                skyboxMat.SetTexture("_CloudTex", cloudTex);
+                EditorUtility.SetDirty(skyboxMat);
+            }
+            Debug.Log("[SkyCloudNormalMap] Generated and imported seamless normal/density texture successfully.");
+        }
+
+        private static float GetFBmNoise(float u, float v)
+        {
+            float val = 0f;
+            val += SeamlessNoise(u, v, 4f) * 0.6f;
+            val += SeamlessNoise(u, v, 8f) * 0.3f;
+            val += SeamlessNoise(u, v, 16f) * 0.1f;
+            return val;
+        }
+
+        private static float SeamlessNoise(float u, float v, float scale)
+        {
+            float x = u * scale;
+            float y = v * scale;
+            
+            float n00 = Mathf.PerlinNoise(x, y);
+            float n10 = Mathf.PerlinNoise(x + scale, y);
+            float n01 = Mathf.PerlinNoise(x, y + scale);
+            float n11 = Mathf.PerlinNoise(x + scale, y + scale);
+            
+            float n0 = Mathf.Lerp(n00, n10, 1.0f - u);
+            float n1 = Mathf.Lerp(n01, n11, 1.0f - u);
+            
+            return Mathf.Lerp(n0, n1, 1.0f - v);
         }
     }
 }
