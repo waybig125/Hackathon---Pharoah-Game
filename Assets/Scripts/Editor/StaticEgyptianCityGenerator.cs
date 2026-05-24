@@ -649,67 +649,26 @@ namespace TheAlchemistsCrypt.Editor
 
         private void SetupEnvironment(GameObject root)
         {
-            // Create 3-color sunset sky gradient texture
-            string skyTexPath = "Assets/EgyptianAssets/SkyGradientTex.png";
-            if (!System.IO.Directory.Exists("Assets/EgyptianAssets")) System.IO.Directory.CreateDirectory("Assets/EgyptianAssets");
-            
-            int texSize = 512;
-            Texture2D skyTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, false);
-            skyTex.wrapMode = TextureWrapMode.Clamp;
-            skyTex.filterMode = FilterMode.Bilinear;
-            
-            // Warm Sunset Palette: Peach -> Rose Pink -> Twilight Blue -> Deep Blue (Zero muddy green transitions)
             Color peachColor = new Color(0.98f, 0.62f, 0.42f);     // Warm sunset/orangey peach
             Color sunsetRose = new Color(0.85f, 0.44f, 0.60f);     // Sunset pink/rose
             Color twilightBlue = new Color(0.24f, 0.44f, 0.74f);   // Twilight blue
             Color deepBlueColor = new Color(0.06f, 0.12f, 0.35f);  // Deep twilight/space blue
-            
-            Color[] pixels = new Color[texSize * texSize];
-            for (int y = 0; y < texSize; y++) {
-                float t = (float)y / (texSize - 1);
-                Color rowColor;
-                if (t < 0.25f) {
-                    rowColor = Color.Lerp(peachColor, sunsetRose, t / 0.25f);
-                } else if (t < 0.65f) {
-                    rowColor = Color.Lerp(sunsetRose, twilightBlue, (t - 0.25f) / 0.40f);
-                } else {
-                    rowColor = Color.Lerp(twilightBlue, deepBlueColor, (t - 0.65f) / 0.35f);
-                }
-                for (int x = 0; x < texSize; x++) pixels[y * texSize + x] = rowColor;
-            }
-            skyTex.SetPixels(pixels);
-            skyTex.Apply(false);
-            byte[] bytes = skyTex.EncodeToPNG();
-            System.IO.File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath, "EgyptianAssets/SkyGradientTex.png"), bytes);
-            AssetDatabase.Refresh();
-            
-            // Set Texture Importer properties to avoid wrap bleed
-            TextureImporter importer = AssetImporter.GetAtPath(skyTexPath) as TextureImporter;
-            if (importer != null)
-            {
-                importer.textureShape = TextureImporterShape.Texture2D;
-                importer.wrapMode = TextureWrapMode.Clamp;
-                importer.filterMode = FilterMode.Bilinear;
-                importer.mipmapEnabled = false;
-                importer.SaveAndReimport();
-            }
-            
-            skyTex = AssetDatabase.LoadAssetAtPath<Texture2D>(skyTexPath);
 
             Material skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Materials/SkyGradientBox.mat");
             if (skyMat == null) {
-                skyMat = new Material(Shader.Find("Skybox/Panoramic"));
+                skyMat = new Material(Shader.Find("Custom/SkyboxGradient"));
                 if (!System.IO.Directory.Exists("Assets/Resources")) System.IO.Directory.CreateDirectory("Assets/Resources");
                 if (!System.IO.Directory.Exists("Assets/Resources/Materials")) System.IO.Directory.CreateDirectory("Assets/Resources/Materials");
                 AssetDatabase.CreateAsset(skyMat, "Assets/Resources/Materials/SkyGradientBox.mat");
             }
             else
             {
-                skyMat.shader = Shader.Find("Skybox/Panoramic");
+                skyMat.shader = Shader.Find("Custom/SkyboxGradient");
             }
-            skyMat.SetTexture("_Tex", skyTex);
-            skyMat.SetColor("_Tint", Color.white);
-            skyMat.SetFloat("_Exposure", 1.0f);
+            skyMat.SetColor("_ColorBottom", peachColor);
+            skyMat.SetColor("_ColorMiddle1", sunsetRose);
+            skyMat.SetColor("_ColorMiddle2", twilightBlue);
+            skyMat.SetColor("_ColorTop", deepBlueColor);
             EditorUtility.SetDirty(skyMat);
             
             RenderSettings.skybox = skyMat;
@@ -1218,55 +1177,138 @@ namespace TheAlchemistsCrypt.Editor
                 }
             }
 
-            // Perform URP material/shader conversions and custom alchemical tints on the weapons
-            foreach (Transform weapon in mainInv.transform) {
-                foreach (var rend in weapon.GetComponentsInChildren<Renderer>(true)) {
-                    Material[] mats = rend.sharedMaterials;
-                    for (int i = 0; i < mats.Length; i++) {
-                        if (mats[i] == null) continue;
-                        var mat = new Material(mats[i]);
-                        
-                        // Convert shader to URP Lit if it is standard, missing, or error shader
-                        if (mat.shader == null || mat.shader.name.Contains("InternalError") || mat.shader.name.Contains("Standard") || string.IsNullOrEmpty(mat.name))
-                        {
-                            mat.shader = GetLitShader();
-                        }
-                        
-                        string mName = mat.name.ToLower();
-                        if (mName.Contains("body") || mName.Contains("frame") || mName.Contains("stock") || mName.Contains("metal")) {
-                            // Dark metal/obsidian body
-                            mat.SetColor("_BaseColor", new Color(0.08f, 0.08f, 0.10f)); 
-                            mat.SetFloat("_Smoothness", 0.75f);
-                            mat.SetFloat("_Metallic", 0.9f);
-                        } else if (mName.Contains("mag") || mName.Contains("rail") || mName.Contains("stripe") || mName.Contains("runes") || mName.Contains("glow") || mName.Contains("ammo") || mName.Contains("bullet")) {
-                            mat.SetColor("_BaseColor", new Color(1.0f, 0.7f, 0.1f));
-                            // Cranked the multiplier to 15f for that intense, blown-out fiery core
-                            mat.SetColor("_EmissionColor", new Color(1.0f, 0.6f, 0.05f) * 15f); 
-                            mat.EnableKeyword("_EMISSION");
-                            mat.SetFloat("_Smoothness", 0.1f); // Lower smoothness so the glow feels matte
-                            mat.SetFloat("_Metallic", 0.0f);
-                        } else if (mName.Contains("barrel") || mName.Contains("grip") || mName.Contains("trigger") || mName.Contains("scope")) {
-                            // Secondary dark metallic elements
-                            mat.SetColor("_BaseColor", new Color(0.12f, 0.12f, 0.12f));
-                            mat.SetFloat("_Smoothness", 0.8f);
-                            mat.SetFloat("_Metallic", 0.9f);
-                        } else {
-                            // Check if the material already has some emission, make it glow orange/gold
-                            if (mat.HasProperty("_EmissionColor")) {
-                                mat.SetColor("_BaseColor", new Color(1.0f, 0.55f, 0.05f));
-                                mat.SetColor("_EmissionColor", new Color(1.0f, 0.45f, 0.05f) * 6f);
-                                mat.EnableKeyword("_EMISSION");
-                            } else {
-                                mat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.12f));
-                                mat.SetFloat("_Smoothness", 0.6f);
-                                mat.SetFloat("_Metallic", 0.8f);
-                            }
-                        }
-                        mats[i] = mat;
-                    }
-                    rend.sharedMaterials = mats;
-                }
+            // Bake the alchemical weapon prefabs directly to avoid scene instance material leaks/serialization errors
+            UpdateWeaponPrefabMaterials();
+        }
+
+        private static Material GetOrCreateMaterial(string name, Color baseColor, float smoothness, float metallic, Color emissionColor, bool useEmission)
+        {
+            string path = "Assets/Materials/" + name + ".mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null)
+            {
+                mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (!System.IO.Directory.Exists("Assets/Materials")) System.IO.Directory.CreateDirectory("Assets/Materials");
+                AssetDatabase.CreateAsset(mat, path);
             }
+            else
+            {
+                mat.shader = Shader.Find("Universal Render Pipeline/Lit");
+            }
+            
+            mat.SetColor("_BaseColor", baseColor);
+            mat.SetFloat("_Smoothness", smoothness);
+            mat.SetFloat("_Metallic", metallic);
+            
+            if (useEmission)
+            {
+                mat.SetColor("_EmissionColor", emissionColor);
+                mat.EnableKeyword("_EMISSION");
+            }
+            else
+            {
+                mat.SetColor("_EmissionColor", Color.clear);
+                mat.DisableKeyword("_EMISSION");
+            }
+            
+            EditorUtility.SetDirty(mat);
+            return mat;
+        }
+
+        private static void UpdateWeaponPrefabMaterials()
+        {
+            // 1. Create or update the material assets
+            var matCasings = GetOrCreateMaterial("M_WEP_Casings_Gold", new Color(0.8f, 0.6f, 0.2f), 0.8f, 0.9f, Color.clear, false);
+
+            var matSulfurBody = GetOrCreateMaterial("M_WEP_Sulfur_Body", new Color(0.15f, 0.08f, 0.04f), 0.75f, 0.9f, Color.clear, false);
+            var matSulfurAccent = GetOrCreateMaterial("M_WEP_Sulfur_Accent", new Color(1.0f, 0.55f, 0.05f), 0.1f, 0.0f, new Color(1.0f, 0.55f, 0.05f) * 8f, true);
+            var matSulfurSecondary = GetOrCreateMaterial("M_WEP_Sulfur_Secondary", new Color(0.12f, 0.12f, 0.12f), 0.8f, 0.9f, Color.clear, false);
+
+            var matMercuryBody = GetOrCreateMaterial("M_WEP_Mercury_Body", new Color(0.05f, 0.12f, 0.15f), 0.75f, 0.9f, Color.clear, false);
+            var matMercuryAccent = GetOrCreateMaterial("M_WEP_Mercury_Accent", new Color(0.0f, 0.85f, 1.0f), 0.1f, 0.0f, new Color(0.0f, 0.85f, 1.0f) * 8f, true);
+            var matMercurySecondary = GetOrCreateMaterial("M_WEP_Mercury_Secondary", new Color(0.12f, 0.12f, 0.12f), 0.8f, 0.9f, Color.clear, false);
+
+            var matSaltBody = GetOrCreateMaterial("M_WEP_Salt_Body", new Color(0.12f, 0.06f, 0.15f), 0.75f, 0.9f, Color.clear, false);
+            var matSaltAccent = GetOrCreateMaterial("M_WEP_Salt_Accent", new Color(0.85f, 0.55f, 1.0f), 0.1f, 0.0f, new Color(0.85f, 0.55f, 1.0f) * 8f, true);
+            var matSaltSecondary = GetOrCreateMaterial("M_WEP_Salt_Secondary", new Color(0.12f, 0.12f, 0.12f), 0.8f, 0.9f, Color.clear, false);
+
+            AssetDatabase.SaveAssets();
+
+            // 2. Load and configure the weapon prefabs
+            string[] wPrefabs = {
+                "Assets/Prefabs/WEP_Sulfur.prefab",
+                "Assets/Prefabs/WEP_Mercury.prefab",
+                "Assets/Prefabs/WEP_Salt.prefab"
+            };
+
+            foreach (var path in wPrefabs)
+            {
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab == null) continue;
+
+                string wName = prefab.name.ToLower();
+                Material bodyMat = matSulfurBody;
+                Material accentMat = matSulfurAccent;
+                Material secMat = matSulfurSecondary;
+
+                if (wName.Contains("mercury"))
+                {
+                    bodyMat = matMercuryBody;
+                    accentMat = matMercuryAccent;
+                    secMat = matMercurySecondary;
+                }
+                else if (wName.Contains("salt"))
+                {
+                    bodyMat = matSaltBody;
+                    accentMat = matSaltAccent;
+                    secMat = matSaltSecondary;
+                }
+
+                // Modify the prefab's renderers directly
+                foreach (var rend in prefab.GetComponentsInChildren<Renderer>(true))
+                {
+                    Material[] mats = rend.sharedMaterials;
+                    bool changed = false;
+                    for (int i = 0; i < mats.Length; i++)
+                    {
+                        if (mats[i] == null) continue;
+                        string mName = mats[i].name.ToLower();
+
+                        Material targetMat = null;
+                        if (mName.Contains("body") || mName.Contains("frame") || mName.Contains("stock") || mName.Contains("metal") || mName.Contains("camo"))
+                        {
+                            targetMat = bodyMat;
+                        }
+                        else if (mName.Contains("mag") || mName.Contains("rail") || mName.Contains("stripe") || mName.Contains("runes") || mName.Contains("glow") || mName.Contains("ammo") || mName.Contains("bullet") || mName.Contains("sulfur") || mName.Contains("mercury") || mName.Contains("salt"))
+                        {
+                            targetMat = accentMat;
+                        }
+                        else if (mName.Contains("barrel") || mName.Contains("grip") || mName.Contains("trigger") || mName.Contains("scope") || mName.Contains("basic") || mName.Contains("carbon"))
+                        {
+                            targetMat = secMat;
+                        }
+                        else if (mName.Contains("casing"))
+                        {
+                            targetMat = matCasings;
+                        }
+
+                        if (targetMat != null && mats[i] != targetMat)
+                        {
+                            mats[i] = targetMat;
+                            changed = true;
+                        }
+                    }
+
+                    if (changed)
+                    {
+                        rend.sharedMaterials = mats;
+                        EditorUtility.SetDirty(rend);
+                    }
+                }
+
+                EditorUtility.SetDirty(prefab);
+            }
+            AssetDatabase.SaveAssets();
         }
 
         private float GetTerrainHeight(Vector3 pos) {

@@ -1441,9 +1441,6 @@ namespace TheAlchemistsCrypt.UI
                 ammoIconImage.sprite = activeElementIcon;
             }
 
-            // Dynamically tint alchemical weapons
-            TryTintWeapons();
-
             int current = 30;
             int total = 30;
             if (focus != null)
@@ -2766,48 +2763,6 @@ namespace TheAlchemistsCrypt.UI
             SetLayerRecursively(victoryCanvasGo, 5);
         }
 
-        private bool hasTintedWeapons = false;
-        private void TryTintWeapons()
-        {
-            if (hasTintedWeapons) return;
-            
-            var sulfurGo = GameObject.Find("WEP_Sulfur");
-            var mercuryGo = GameObject.Find("WEP_Mercury");
-            var saltGo = GameObject.Find("WEP_Salt");
-
-            if (sulfurGo == null && mercuryGo == null && saltGo == null) return;
-
-            hasTintedWeapons = true;
-            
-            // Sulfur: Fiery Orange
-            if (sulfurGo != null) TintWeaponMaterials(sulfurGo, new Color(1.0f, 0.35f, 0.05f));
-            
-            // Mercury: Cool Cyan
-            if (mercuryGo != null) TintWeaponMaterials(mercuryGo, new Color(0.0f, 0.85f, 1.0f));
-            
-            // Salt: Bright White Crystalline
-            if (saltGo != null) TintWeaponMaterials(saltGo, new Color(0.85f, 0.85f, 1.0f));
-        }
-
-        private void TintWeaponMaterials(GameObject go, Color col)
-        {
-            Renderer[] renderers = go.GetComponentsInChildren<Renderer>(true);
-            foreach (Renderer r in renderers)
-            {
-                if (r == null) continue;
-                foreach (Material m in r.materials)
-                {
-                    if (m == null) continue;
-                    if (m.HasProperty("_Color")) m.SetColor("_Color", col);
-                    if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", col);
-                    if (m.HasProperty("_EmissionColor"))
-                    {
-                        m.SetColor("_EmissionColor", col * 1.5f);
-                        m.EnableKeyword("_EMISSION");
-                    }
-                }
-            }
-        }
     }
 
     public class LookSwipeZone : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler

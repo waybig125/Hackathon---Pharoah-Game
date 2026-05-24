@@ -47,15 +47,28 @@ namespace TheAlchemistsCrypt.Environment
             }
             else
             {
-                Shader proceduralSkyShader = Shader.Find("Skybox/Procedural");
-                if (proceduralSkyShader != null)
+                Shader gradientSkyShader = Shader.Find("Custom/SkyboxGradient");
+                if (gradientSkyShader != null)
                 {
-                    skyMat = new Material(proceduralSkyShader);
-                    skyMat.SetColor("_SkyTint", new Color(0.06f, 0.12f, 0.35f)); // Deep space/twilight blue
-                    skyMat.SetColor("_GroundColor", new Color(0.98f, 0.62f, 0.42f)); // Warm sunset peach
-                    skyMat.SetFloat("_AtmosphereThickness", 1.3f);
-                    skyMat.SetFloat("_Exposure", 1.3f);
+                    skyMat = new Material(gradientSkyShader);
+                    skyMat.SetColor("_ColorBottom", new Color(0.98f, 0.62f, 0.42f));
+                    skyMat.SetColor("_ColorMiddle1", new Color(0.85f, 0.44f, 0.60f));
+                    skyMat.SetColor("_ColorMiddle2", new Color(0.24f, 0.44f, 0.74f));
+                    skyMat.SetColor("_ColorTop", new Color(0.06f, 0.12f, 0.35f));
                     RenderSettings.skybox = skyMat;
+                }
+                else
+                {
+                    Shader proceduralSkyShader = Shader.Find("Skybox/Procedural");
+                    if (proceduralSkyShader != null)
+                    {
+                        skyMat = new Material(proceduralSkyShader);
+                        skyMat.SetColor("_SkyTint", new Color(0.06f, 0.12f, 0.35f));
+                        skyMat.SetColor("_GroundColor", new Color(0.98f, 0.62f, 0.42f));
+                        skyMat.SetFloat("_AtmosphereThickness", 1.3f);
+                        skyMat.SetFloat("_Exposure", 1.3f);
+                        RenderSettings.skybox = skyMat;
+                    }
                 }
             }
 

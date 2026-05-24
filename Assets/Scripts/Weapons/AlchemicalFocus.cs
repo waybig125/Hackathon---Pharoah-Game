@@ -137,8 +137,7 @@ namespace TheAlchemistsCrypt.Weapons
                 var inv = character.GetInventory();
                 if (inv != null && inv.GetEquippedIndex() != (int)currentMode)
                 {
-                    character.StopCoroutine("Equip");
-                    character.StartCoroutine("Equip", (int)currentMode);
+                    character.EquipWeapon((int)currentMode);
                 }
             }
             else
@@ -164,63 +163,6 @@ namespace TheAlchemistsCrypt.Weapons
                 case FireMode.Sulfur: glowColor = new Color(1.0f, 0.55f, 0.05f); break; // Bright orange-gold
                 case FireMode.Mercury: glowColor = new Color(0.0f, 0.9f, 1.0f); break; // Cyan/blue
                 case FireMode.Salt: glowColor = new Color(0.8f, 0.2f, 1.0f); break; // Majestic royal violet/purple
-            }
-
-            // Find all renderers in the player's inventory weapons to apply element coloring
-            var inventory = GetComponentInParent<InfimaGames.LowPolyShooterPack.Inventory>();
-            if (inventory == null) {
-                var player = GameObject.FindWithTag("Player");
-                if (player != null) inventory = player.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Inventory>();
-            }
-
-            System.Collections.IEnumerable targets = (inventory != null) ? (System.Collections.IEnumerable)inventory.transform : new Transform[] { transform };
-            foreach (Transform weaponTrans in targets)
-            {
-                Renderer[] renderers = weaponTrans.GetComponentsInChildren<Renderer>(true);
-                foreach (Renderer r in renderers)
-                {
-                    if (r == null) continue;
-                    
-                    var mats = r.sharedMaterials;
-                    if (mats == null) continue;
-                    var instancedMats = new Material[mats.Length];
-                    for (int i = 0; i < mats.Length; i++)
-                    {
-                        if (mats[i] == null) continue;
-                        instancedMats[i] = new Material(mats[i]);
-                        Material m = instancedMats[i];
-                        
-                        string matName = m.name.ToLower();
-                        bool isMainBody = matName.Contains("carbon") || matName.Contains("steel") || matName.Contains("metal") || matName.Contains("camo") || matName.Contains("body") || matName.Contains("frame") || matName.Contains("stock");
-
-                        if (!isMainBody)
-                        {
-                            if (m.HasProperty("_Color")) m.SetColor("_Color", glowColor);
-                            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", glowColor);
-                        }
-                        else
-                        {
-                            // Tint the main body significantly with the element color so the guns are visually distinct!
-                            Color bodyTint = Color.black;
-                            switch (currentMode)
-                            {
-                                case FireMode.Sulfur: bodyTint = new Color(0.6f, 0.3f, 0.05f); break; // Strong warm orange/bronze
-                                case FireMode.Mercury: bodyTint = new Color(0.05f, 0.6f, 0.65f); break; // Strong cyan/teal
-                                case FireMode.Salt: bodyTint = new Color(0.6f, 0.1f, 0.8f); break; // Strong violet/purple
-                            }
-                            if (m.HasProperty("_Color")) m.SetColor("_Color", bodyTint);
-                            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", bodyTint);
-                            if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", 0.90f);
-                            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.85f);
-                        }
-                        if (m.HasProperty("_EmissionColor"))
-                        {
-                            m.SetColor("_EmissionColor", glowColor * 15.0f); // Make it glow intensely!
-                            m.EnableKeyword("_EMISSION");
-                        }
-                    }
-                    r.materials = instancedMats;
-                }
             }
 
             // Add or update a dynamic glowing Point Light on the firePoint to illuminate the surroundings with the element's color!

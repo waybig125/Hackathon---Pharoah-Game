@@ -441,6 +441,15 @@ namespace InfimaGames.LowPolyShooterPack
 		}
 
 		/// <summary>
+		/// Public wrapper to start the Equip coroutine from other components.
+		/// </summary>
+		public void EquipWeapon(int index)
+		{
+			StopCoroutine("Equip");
+			StartCoroutine(Equip(index));
+		}
+
+		/// <summary>
 		/// Equip Weapon Coroutine.
 		/// </summary>
 		private IEnumerator Equip(int index = 0)

@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: SkyGradientBox
-  m_Shader: {fileID: 108, guid: 0000000000000000f000000000000000, type: 0}
+  m_Shader: {fileID: 4800000, guid: e61487e5b4b434e9988c5831df455e95, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -42,6 +42,10 @@ Material:
     - _SunSize: 0.04
     - _SunSizeConvergence: 5
     m_Colors:
+    - _ColorBottom: {r: 0.98, g: 0.62, b: 0.42, a: 1}
+    - _ColorMiddle1: {r: 0.85, g: 0.44, b: 0.6, a: 1}
+    - _ColorMiddle2: {r: 0.24, g: 0.44, b: 0.74, a: 1}
+    - _ColorTop: {r: 0.06, g: 0.12, b: 0.35, a: 1}
     - _GroundColor: {r: 0.96, g: 0.7, b: 0.55, a: 1}
     - _SkyTint: {r: 0.12, g: 0.28, b: 0.55, a: 1}
     - _Tint: {r: 1, g: 1, b: 1, a: 1}
