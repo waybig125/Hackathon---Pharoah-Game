@@ -25,6 +25,7 @@ namespace TheAlchemistsCrypt.Editor
         private int seed = 999;
         private int gridSize = 8; 
         private string rootName = "EgyptianCity_V5_Final";
+        private static Dictionary<string, Material> convertedMaterialsCache = new Dictionary<string, Material>();
 
         private void OnGUI()
         {
@@ -416,6 +417,7 @@ namespace TheAlchemistsCrypt.Editor
 
         public void GeneratePolishedCity()
         {
+            convertedMaterialsCache.Clear();
             GenerateSkyCloudNormalMap();
 
             Random.InitState(seed);
@@ -444,8 +446,7 @@ namespace TheAlchemistsCrypt.Editor
                 "Assets/Resources/more_items_for_map/egyptian_house.glb",
                 "Assets/Resources/more_items_for_map/lay_house.glb",
                 "Assets/Resources/more_items_for_map/light_house_-_egypt_game_ready_lowpoly.glb",
-                "Assets/Resources/more_items_for_map/medieval_stone_arab_house.glb",
-                "Assets/Resources/more_items_for_map/stylized_egyptian_farmer.glb" // Reclassified as a residential house asset!
+                "Assets/Resources/more_items_for_map/medieval_stone_arab_house.glb"
             };
             foreach (var path in housePaths) {
                 var h = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -523,18 +524,12 @@ namespace TheAlchemistsCrypt.Editor
                 }
             }
 
-            Material wallMat = new Material(GetLitShader());
+            Material wallMat = GetOrCreateMaterial("M_City_Wall", new Color(0.96f, 0.85f, 0.75f), 0.0f, 0.0f, Color.clear, false);
             if (houseTex != null)
             {
                 wallMat.SetTexture("_BaseMap", houseTex);
                 wallMat.SetTextureScale("_BaseMap", new Vector2(10, 10));
             }
-            else
-            {
-                wallMat.SetColor("_BaseColor", new Color(0.96f, 0.85f, 0.75f));
-            }
-
-            Texture2D normalMapTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalMapPath);
             if (normalMapTex != null)
             {
                 wallMat.SetTexture("_BumpMap", normalMapTex);
@@ -542,31 +537,24 @@ namespace TheAlchemistsCrypt.Editor
                 wallMat.EnableKeyword("_NORMALMAP");
                 wallMat.SetFloat("_BumpScale", 3.0f);
             }
-
-            wallMat.SetFloat("_Smoothness", 0.0f);   // Matte finish
             wallMat.enableInstancing = true;
-            
-            Material woodMat = new Material(GetLitShader());
-            woodMat.SetColor("_BaseColor", new Color(0.20f, 0.12f, 0.08f)); // Dark Wood
-            woodMat.enableInstancing = true;
-            
-            Material floorMat = new Material(GetLitShader());
-            floorMat.SetColor("_BaseColor", new Color(0.95f, 0.85f, 0.70f)); // Warm Pastel Sand
-            floorMat.SetFloat("_Metallic", 0.0f);
-            floorMat.SetFloat("_Smoothness", 0.10f);
-            floorMat.SetColor("_EmissionColor", new Color(1.0f, 0.95f, 0.8f) * 0.02f);
-            floorMat.EnableKeyword("_EMISSION");
-            floorMat.enableInstancing = true;
+            EditorUtility.SetDirty(wallMat);
 
-            Material litWindowMat = new Material(GetLitShader());
-            litWindowMat.SetColor("_BaseColor", new Color(1f, 0.95f, 0.8f)); // Bright warm white-gold
-            litWindowMat.SetColor("_EmissionColor", new Color(1.0f, 0.75f, 0.25f) * 15.0f); // Intense warm amber glow
-            litWindowMat.EnableKeyword("_EMISSION");
+            Material woodMat = GetOrCreateMaterial("M_City_Wood", new Color(0.20f, 0.12f, 0.08f), 0.0f, 0.0f, Color.clear, false);
+            woodMat.enableInstancing = true;
+            EditorUtility.SetDirty(woodMat);
+
+            Material floorMat = GetOrCreateMaterial("M_City_Floor", new Color(0.95f, 0.85f, 0.70f), 0.10f, 0.0f, new Color(1.0f, 0.95f, 0.8f) * 0.02f, true);
+            floorMat.enableInstancing = true;
+            EditorUtility.SetDirty(floorMat);
+
+            Material litWindowMat = GetOrCreateMaterial("M_City_LitWindow", new Color(1f, 0.95f, 0.8f), 0.10f, 0.0f, new Color(1.0f, 0.75f, 0.25f) * 15.0f, true);
             litWindowMat.enableInstancing = true;
-            
-            Material darkWindowMat = new Material(GetLitShader());
-            darkWindowMat.SetColor("_BaseColor", new Color(0.15f, 0.1f, 0.15f)); // Dark cool-purple contrast
+            EditorUtility.SetDirty(litWindowMat);
+
+            Material darkWindowMat = GetOrCreateMaterial("M_City_DarkWindow", new Color(0.15f, 0.1f, 0.15f), 0.0f, 0.0f, Color.clear, false);
             darkWindowMat.enableInstancing = true;
+            EditorUtility.SetDirty(darkWindowMat);
 
             SetupEnvironment(root);
             SetupManagers(root);
@@ -1795,17 +1783,43 @@ namespace TheAlchemistsCrypt.Editor
                     if (shaderName.Contains("Standard") || shaderName.Contains("Built-in") || shaderName == "Legacy Shaders/Diffuse" || shaderName == "Diffuse")
                     {
                         var oldMat = mats[i];
-                        var newMat = new Material(GetLitShader());
-                        newMat.name = oldMat.name + "_URP";
-                        newMat.enableInstancing = true;
-                        if (oldMat.HasProperty("_Color")) newMat.SetColor("_BaseColor", oldMat.GetColor("_Color"));
-                        if (oldMat.HasProperty("_MainTex") && oldMat.GetTexture("_MainTex") != null) newMat.SetTexture("_BaseMap", oldMat.GetTexture("_MainTex"));
-                        if (oldMat.HasProperty("_BumpMap") && oldMat.GetTexture("_BumpMap") != null) {
-                            newMat.SetTexture("_BumpMap", oldMat.GetTexture("_BumpMap"));
-                            newMat.EnableKeyword("_NORMALMAP");
+                        
+                        Texture mainTex = oldMat.HasProperty("_MainTex") ? oldMat.GetTexture("_MainTex") : null;
+                        Texture bumpMap = oldMat.HasProperty("_BumpMap") ? oldMat.GetTexture("_BumpMap") : null;
+                        Color col = oldMat.HasProperty("_Color") ? oldMat.GetColor("_Color") : Color.white;
+                        float metallic = oldMat.HasProperty("_Metallic") ? oldMat.GetFloat("_Metallic") : 0f;
+                        float smoothness = oldMat.HasProperty("_Glossiness") ? oldMat.GetFloat("_Glossiness") : 0f;
+
+                        string cacheKey = $"{oldMat.name}_{mainTex?.GetInstanceID()}_{bumpMap?.GetInstanceID()}_{col}_{metallic}_{smoothness}";
+                        
+                        if (!convertedMaterialsCache.TryGetValue(cacheKey, out Material newMat))
+                        {
+                            string safeName = System.Text.RegularExpressions.Regex.Replace(oldMat.name, @"[^a-zA-Z0-9_\-]", "_");
+                            string materialAssetPath = $"Assets/Materials/Generated/{safeName}_URP.mat";
+                            newMat = AssetDatabase.LoadAssetAtPath<Material>(materialAssetPath);
+                            
+                            if (newMat == null)
+                            {
+                                newMat = new Material(GetLitShader());
+                                newMat.name = oldMat.name + "_URP";
+                                newMat.enableInstancing = true;
+                                if (oldMat.HasProperty("_Color")) newMat.SetColor("_BaseColor", col);
+                                if (mainTex != null) newMat.SetTexture("_BaseMap", mainTex);
+                                if (bumpMap != null) {
+                                    newMat.SetTexture("_BumpMap", bumpMap);
+                                    newMat.EnableKeyword("_NORMALMAP");
+                                }
+                                newMat.SetFloat("_Metallic", metallic);
+                                newMat.SetFloat("_Smoothness", smoothness);
+
+                                if (!System.IO.Directory.Exists("Assets/Materials/Generated")) 
+                                    System.IO.Directory.CreateDirectory("Assets/Materials/Generated");
+                                AssetDatabase.CreateAsset(newMat, materialAssetPath);
+                            }
+                            
+                            convertedMaterialsCache[cacheKey] = newMat;
                         }
-                        if (oldMat.HasProperty("_Metallic")) newMat.SetFloat("_Metallic", oldMat.GetFloat("_Metallic"));
-                        if (oldMat.HasProperty("_Glossiness")) newMat.SetFloat("_Smoothness", oldMat.GetFloat("_Glossiness"));
+                        
                         mats[i] = newMat; changed = true;
                     }
                 }
@@ -2299,7 +2313,7 @@ namespace TheAlchemistsCrypt.Editor
 
             int spawnedCount = 0;
             int attempts = 0;
-            while (spawnedCount < 80 && attempts < 800)
+            while (spawnedCount < 40 && attempts < 400)
             {
                 attempts++;
                 float rx = Random.Range(-450f, 450f);
@@ -2330,7 +2344,7 @@ namespace TheAlchemistsCrypt.Editor
             int attempts = 0;
             Vector3 playerSpawn = new Vector3(16f, 0f, 48f);
 
-            while (spawnedCount < 200 && attempts < 2000)
+            while (spawnedCount < 100 && attempts < 1000)
             {
                 attempts++;
                 float rx = Random.Range(-240f, 240f);
@@ -2567,15 +2581,17 @@ namespace TheAlchemistsCrypt.Editor
 
             // Step 5: Optimization and Collision
             string pName = prefab.name.ToLower();
-            bool skipDecimation = pName.Contains("temple") || 
-                                 pName.Contains("sphinx") || 
-                                 pName.Contains("mastaba") || 
-                                 pName.Contains("obelisk") || 
-                                 pName.Contains("stall") || 
-                                 pName.Contains("farmer");
-
-            if (decimate && !skipDecimation) {
-                DecimateRecursively(obj, 0.25f);
+            
+            // Intelligent decimation: Decimate all models based on visual details.
+            // Landmarks are simplified to 50% rather than skipped, preserving visual aesthetics while saving massive VRAM and draw calls.
+            if (decimate) {
+                if (pName.Contains("temple") || pName.Contains("sphinx") || pName.Contains("mastaba")) {
+                    DecimateRecursively(obj, 0.5f); // High-detail landmarks
+                } else if (pName.Contains("obelisk") || pName.Contains("stall") || pName.Contains("farmer")) {
+                    DecimateRecursively(obj, 0.4f); // Medium-detail environmental props
+                } else {
+                    DecimateRecursively(obj, 0.25f); // Low-poly / background trees
+                }
             }
 
             if (enterable) {
