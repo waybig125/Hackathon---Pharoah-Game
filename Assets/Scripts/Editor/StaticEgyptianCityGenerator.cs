@@ -694,7 +694,7 @@ namespace TheAlchemistsCrypt.Editor
                 terrainComp.drawInstanced = true;
             }
 
-            float spacing = 60f; // Increased spacing for better movement
+            float spacing = 42f; // Decreased spacing to bring houses closer together for a denser residential feel
             float halfSpan = (gridSize * spacing) / 2f;
             var enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Inspiration-Thirdperson-Controller-Update372022/Assets/Enemy-AI/Prefabs/TestZombie.prefab");
 
@@ -2535,19 +2535,19 @@ namespace TheAlchemistsCrypt.Editor
                 else if (name.Contains("egyptian_temples")) targetSize = 120f; 
                 else if (name.Contains("obelisk")) targetSize = 16f;
                 else if (name.Contains("medieval_stall")) {
-                    targetSize = 2.5f; // Bounded Y: 258.94 cm -> Scales to 2.5 meters tall
+                    targetSize = 5.2f; // Bounded Y: 258.94 cm -> Scales to 5.2 meters tall (spacious and realistic)
                     scaleByHeight = true;
                 }
                 else if (name.Contains("vietnamese_meat_market_stall")) {
-                    targetSize = 2.2f; // Bounded Y: 4.64 meters -> Scales to 2.2 meters tall
+                    targetSize = 4.6f; // Bounded Y: 4.64 meters -> Scales to 4.6 meters tall
                     scaleByHeight = true;
                 }
                 else if (name.Contains("low_poly_market_stall_pack")) {
-                    targetSize = 2.4f; // Bounded Y: 1.79 meters -> Scales to 2.4 meters tall
+                    targetSize = 4.8f; // Bounded Y: 1.79 meters -> Scales to 4.8 meters tall
                     scaleByHeight = true;
                 }
                 else if (name.Contains("stall")) {
-                    targetSize = 2.4f; // Fallback for other stalls
+                    targetSize = 4.8f; // Fallback for other stalls
                     scaleByHeight = true;
                 }
                 else if (name.Contains("palm")) targetSize = 18f;
@@ -2558,6 +2558,9 @@ namespace TheAlchemistsCrypt.Editor
                     float dimensionToScale = scaleByHeight ? localBounds.size.y : Mathf.Max(localBounds.size.x, localBounds.size.y, localBounds.size.z);
                     if (dimensionToScale > 0) {
                         finalScale = (targetSize / dimensionToScale) * scaleMultiplier;
+                    }
+                    if (name.Contains("stall")) {
+                        Debug.Log($"[StallScale] Name: {prefab.name}, TargetSize: {targetSize}, DimensionToScale(Y): {dimensionToScale}, FinalScale: {finalScale}, scaleMultiplier: {scaleMultiplier}");
                     }
                 }
             }
