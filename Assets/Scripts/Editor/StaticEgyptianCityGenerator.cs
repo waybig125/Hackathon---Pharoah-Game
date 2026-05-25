@@ -279,6 +279,48 @@ namespace TheAlchemistsCrypt.Editor
                 simplifier.Initialize(mf.sharedMesh);
                 simplifier.SimplifyMesh(0.15f);
                 decimatedMesh = simplifier.ToMesh();
+                decimatedMesh.RecalculateBounds();
+
+                // Validation check
+                bool isValid = true;
+                Vector3[] verts = decimatedMesh.vertices;
+                for (int i = 0; i < verts.Length; i++) {
+                    if (float.IsNaN(verts[i].x) || float.IsNaN(verts[i].y) || float.IsNaN(verts[i].z) ||
+                        float.IsInfinity(verts[i].x) || float.IsInfinity(verts[i].y) || float.IsInfinity(verts[i].z)) {
+                        isValid = false;
+                        break;
+                    }
+                }
+                
+                if (isValid) {
+                    float origMag = mf.sharedMesh.bounds.size.magnitude;
+                    float decMag = decimatedMesh.bounds.size.magnitude;
+                    if (decMag > origMag * 1.5f || decMag < origMag * 0.5f) {
+                        isValid = false;
+                    }
+                }
+
+                if (isValid) {
+                    int[] tris = decimatedMesh.triangles;
+                    for (int i = 0; i < tris.Length; i += 3) {
+                        if (tris[i] >= verts.Length || tris[i+1] >= verts.Length || tris[i+2] >= verts.Length) continue;
+                        Vector3 v0 = verts[tris[i]];
+                        Vector3 v1 = verts[tris[i+1]];
+                        Vector3 v2 = verts[tris[i+2]];
+                        if (Vector3.Distance(v0, v1) > 15f || 
+                            Vector3.Distance(v1, v2) > 15f || 
+                            Vector3.Distance(v2, v0) > 15f) {
+                            isValid = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!isValid) {
+                    Debug.LogWarning("[CityGen] Decimated column mesh failed validation. Reverting to original mesh.");
+                    return mf.sharedMesh;
+                }
+
                 decimatedMesh.name = "egyptian_column_decimated";
                 AssetDatabase.CreateAsset(decimatedMesh, decimatedMeshPath);
                 AssetDatabase.SaveAssets();
@@ -312,6 +354,48 @@ namespace TheAlchemistsCrypt.Editor
                 simplifier.Initialize(originalMesh);
                 simplifier.SimplifyMesh(quality);
                 decimatedMesh = simplifier.ToMesh();
+                decimatedMesh.RecalculateBounds();
+
+                // Validation check
+                bool isValid = true;
+                Vector3[] verts = decimatedMesh.vertices;
+                for (int i = 0; i < verts.Length; i++) {
+                    if (float.IsNaN(verts[i].x) || float.IsNaN(verts[i].y) || float.IsNaN(verts[i].z) ||
+                        float.IsInfinity(verts[i].x) || float.IsInfinity(verts[i].y) || float.IsInfinity(verts[i].z)) {
+                        isValid = false;
+                        break;
+                    }
+                }
+                
+                if (isValid) {
+                    float origMag = originalMesh.bounds.size.magnitude;
+                    float decMag = decimatedMesh.bounds.size.magnitude;
+                    if (decMag > origMag * 1.5f || decMag < origMag * 0.5f) {
+                        isValid = false;
+                    }
+                }
+
+                if (isValid) {
+                    int[] tris = decimatedMesh.triangles;
+                    for (int i = 0; i < tris.Length; i += 3) {
+                        if (tris[i] >= verts.Length || tris[i+1] >= verts.Length || tris[i+2] >= verts.Length) continue;
+                        Vector3 v0 = verts[tris[i]];
+                        Vector3 v1 = verts[tris[i+1]];
+                        Vector3 v2 = verts[tris[i+2]];
+                        if (Vector3.Distance(v0, v1) > 15f || 
+                            Vector3.Distance(v1, v2) > 15f || 
+                            Vector3.Distance(v2, v0) > 15f) {
+                            isValid = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!isValid) {
+                    Debug.LogWarning($"[CityGen] Decimated mesh for {originalMesh.name} failed validation. Reverting to original mesh.");
+                    return originalMesh;
+                }
+
                 decimatedMesh.name = originalMesh.name + "_decimated";
                 AssetDatabase.CreateAsset(decimatedMesh, decimatedMeshPath);
                 AssetDatabase.SaveAssets();
@@ -341,6 +425,41 @@ namespace TheAlchemistsCrypt.Editor
             var barrel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/barrel.glb");
             var columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_column.glb");
             if (columnPrefab == null) columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_pillar_column.glb");
+
+            // Load new assets for Phase 2 integration
+            var arabicHousePrefabs = new List<GameObject>();
+            string[] housePaths = {
+                "Assets/Resources/more_items_for_map/arabic_house_4.glb",
+                "Assets/Resources/more_items_for_map/arabic_house_5.glb",
+                "Assets/Resources/more_items_for_map/big_egypt_house.glb",
+                "Assets/Resources/more_items_for_map/egyptian_house.glb",
+                "Assets/Resources/more_items_for_map/lay_house.glb",
+                "Assets/Resources/more_items_for_map/light_house_-_egypt_game_ready_lowpoly.glb",
+                "Assets/Resources/more_items_for_map/medieval_stone_arab_house.glb",
+                "Assets/Resources/more_items_for_map/stylized_egyptian_farmer.glb" // Reclassified as a residential house asset!
+            };
+            foreach (var path in housePaths) {
+                var h = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (h != null) arabicHousePrefabs.Add(h);
+            }
+
+            var stallPrefabs = new List<GameObject>();
+            string[] stallPaths = {
+                "Assets/Resources/more_items_for_map/low_poly_market_stall_pack.glb",
+                "Assets/Resources/more_items_for_map/medieval_stall.glb",
+                "Assets/Resources/more_items_for_map/vietnamese_meat_market_stall.glb"
+            };
+            foreach (var path in stallPaths) {
+                var s = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (s != null) stallPrefabs.Add(s);
+            }
+
+            var sphinxPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/the_great_sphinx_of_giza_-_egypt.glb");
+            var mastabaPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/false_door_chamber_mastaba_of_qar_giza.glb");
+            var templeComplexPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/egyptian_temple_complex_game_asset.glb");
+            var templesPackPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/egyptian_temples.glb");
+            var obeliskNewPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/stylized_egypt_obelisk.glb");
+            var doorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/egyptian_door.glb");
             
             // Create warm golden sandstone gradient texture for houses
             string houseTexPath = "Assets/EgyptianAssets/HouseGradientTex.png";
@@ -471,25 +590,47 @@ namespace TheAlchemistsCrypt.Editor
             float[,] heights = new float[resolution, resolution];
             for (int i = 0; i < resolution; i++) {
                 for (int j = 0; j < resolution; j++) {
-                    float tx = (float)i / (resolution - 1);
-                    float ty = (float)j / (resolution - 1);
+                    float tx = (float)i / (resolution - 1); // Z-axis normalized
+                    float ty = (float)j / (resolution - 1); // X-axis normalized
                     
                     float dune1 = Mathf.PerlinNoise(tx * 3f, ty * 3f) * 0.6f;
                     float dune2 = Mathf.PerlinNoise(tx * 8f + 10f, ty * 8f + 10f) * 0.12f;
                     float baseDune = dune1 + dune2;
 
-                    float distFromCenter = Mathf.Sqrt((tx - 0.5f) * (tx - 0.5f) + (ty - 0.5f) * (ty - 0.5f));
-                    float spawnFlatten = Mathf.SmoothStep(0f, 1f, (distFromCenter - 0.02f) * 25f);
-                    if (distFromCenter < 0.02f) spawnFlatten = 0f;
-                    
-                    heights[i, j] = baseDune * spawnFlatten;
+                    float wx = ty * 1000f - 500f; // World X
+                    float wz = tx * 1000f - 500f; // World Z
+
+                    // Flatten entire city grid (X: [-260, 260], Z: [-80, 260])
+                    float cityFlatten = 1f;
+                    float margin = 50f;
+                    float minCityX = -260f;
+                    float maxCityX = 260f;
+                    float minCityZ = -80f;
+                    float maxCityZ = 260f;
+
+                    if (wx >= minCityX && wx <= maxCityX && wz >= minCityZ && wz <= maxCityZ) {
+                        cityFlatten = 0f;
+                    } else {
+                        float dx = 0f;
+                        if (wx < minCityX) dx = minCityX - wx;
+                        else if (wx > maxCityX) dx = wx - maxCityX;
+
+                        float dz = 0f;
+                        if (wz < minCityZ) dz = minCityZ - wz;
+                        else if (wz > maxCityZ) dz = wz - maxCityZ;
+
+                        float distToCity = Mathf.Max(dx, dz);
+                        cityFlatten = Mathf.Clamp01(distToCity / margin);
+                    }
+
+                    heights[i, j] = baseDune * cityFlatten;
 
                     // SEA & COASTLINE FLATTENING
-                    if (tx < 0.42f) { // Z < -80f
-                        if (tx <= 0.40f) { // Z <= -100f
+                    if (wz < -80f) {
+                        if (wz <= -100f) {
                             heights[i, j] = 0f;
                         } else {
-                            float shoreFactor = Mathf.SmoothStep(0f, 1f, (tx - 0.40f) / 0.02f);
+                            float shoreFactor = Mathf.SmoothStep(0f, 1f, (wz - (-100f)) / 20f);
                             heights[i, j] *= shoreFactor;
                         }
                     }
@@ -554,7 +695,7 @@ namespace TheAlchemistsCrypt.Editor
                 terrainComp.drawInstanced = true;
             }
 
-            float spacing = 32f;
+            float spacing = 60f; // Increased spacing for better movement
             float halfSpan = (gridSize * spacing) / 2f;
             var enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Inspiration-Thirdperson-Controller-Update372022/Assets/Enemy-AI/Prefabs/TestZombie.prefab");
 
@@ -562,49 +703,91 @@ namespace TheAlchemistsCrypt.Editor
                 for (int z = 0; z < gridSize; z++) {
                     float posX = -halfSpan + (x * spacing) + (spacing / 2f);
                     float posZ = -halfSpan + (z * spacing) + (spacing / 2f);
-                    if (posZ < -40f) continue;
+                    if (posZ < -60f) continue; // Sea area
 
-                    Vector3 pos = new Vector3(posX, 0, posZ);
+                    Vector3 pos = new Vector3(posX, 0f, posZ);
                     pos.y = GetTerrainHeight(pos);
 
-                    bool isCentralSpawnPlaza = (Mathf.Approximately(posX, 16f) && Mathf.Approximately(posZ, 48f));
-                    if (pos.magnitude > 25f && !isCentralSpawnPlaza) {
-                        float roll = Random.value;
+                    // --- ZONING LOGIC ---
+                    bool isMarketZone = (z == 3 || z == 4) && (x == 3 || x == 4);
+                    bool isAncientDistrict = (z >= 6);
+
+                    if (isAncientDistrict) {
+                        // Skip grid placement in the Ancient District; landmarks are placed manually
+                        continue;
+                    }
+
+                    if (isMarketZone) {
+                        PlacePlaza(root.transform, pos, trees, columnPrefab, floorMat);
                         
-                        if (roll < 0.12f) {
-                            // 12% chance to spawn the monumental Tomb Gateway instead of a normal house
-                            BuildAlchemistTomb(root.transform, pos, wallMat);
+                        // Populate market with multiple stalls
+                        int numStalls = Random.Range(3, 7);
+                        for (int i = 0; i < numStalls; i++) {
+                            if (stallPrefabs.Count > 0) {
+                                Vector3 sOffset = new Vector3(Random.Range(-25f, 25f), 0f, Random.Range(-25f, 25f));
+                                Vector3 sPos = pos + sOffset;
+                                sPos.y = GetTerrainHeight(sPos);
+                                
+                                // Make stalls face the plaza center (pos)
+                                Vector3 lookDir = (new Vector3(pos.x, sPos.y, pos.z) - sPos).normalized;
+                                float yaw = Mathf.Atan2(lookDir.x, lookDir.z) * Mathf.Rad2Deg;
+                                if (Random.value < 0.3f) yaw = Random.Range(0f, 360f); // Add organic variety
+
+                                PlaceIntegratedAsset(root.transform, sPos, stallPrefabs[Random.Range(0, stallPrefabs.Count)], 1.0f, true, false, 0f, yaw, false);
+                            }
+                        }
+                    } 
+                    else {
+                        // Residential Zone (rows z = 3, 4, 5 outside the market)
+                        float roll = Random.value;
+                        if (roll < 0.10f) {
+                             BuildAlchemistTomb(root.transform, pos, wallMat);
                         } 
-                        else if (roll < 0.75f) {
-                            BuildHouse(root.transform, pos, wallMat, woodMat, litWindowMat, darkWindowMat, crate, barrel, floorMat);
+                        else if (roll < 0.70f) {
+                            // Street alignment: even rows (z == 4) face North (180), odd rows (z == 3, 5) face South (0)
+                            float targetAngleY = (z % 2 == 0) ? 180f : 0f;
+
+                            // Weighted split: 75% Arabic House, 25% Procedural
+                            if (Random.value < 0.75f && arabicHousePrefabs.Count > 0) {
+                                var housePrefab = arabicHousePrefabs[Random.Range(0, arabicHousePrefabs.Count)];
+                                PlaceIntegratedAsset(root.transform, pos, housePrefab, 1.0f, true, false, 0f, targetAngleY, false);
+                                
+                                // Occasional stall in residential areas
+                                if (Random.value < 0.15f && stallPrefabs.Count > 0) {
+                                    Vector3 sPos = pos + new Vector3(Random.Range(-10f, 10f), 0f, Random.Range(-10f, 10f));
+                                    sPos.y = GetTerrainHeight(sPos);
+                                    PlaceIntegratedAsset(root.transform, sPos, stallPrefabs[Random.Range(0, stallPrefabs.Count)], 0.8f, true, false, 0f, Random.Range(0f, 360f), true);
+                                }
+                            } else {
+                                BuildHouse(root.transform, pos, wallMat, woodMat, litWindowMat, darkWindowMat, crate, barrel, floorMat, targetAngleY);
+                            }
                         } 
                         else {
                             PlacePlaza(root.transform, pos, trees, columnPrefab, floorMat);
-                            
-                            // 60% chance to drop a procedural obelisk in empty plazas
-                            if (Random.value < 0.6f) {
-                                Vector3 obeliskPos = pos + new Vector3(Random.Range(-6f, 6f), 0f, Random.Range(-6f, 6f));
-                                obeliskPos.y = GetTerrainHeight(obeliskPos);
-                                // 35% chance the obelisk is broken
-                                bool isBroken = Random.value < 0.35f; 
-                                BuildProceduralObelisk(root.transform, obeliskPos, wallMat, isBroken);
+                            // Occasional obelisk
+                            if (Random.value < 0.5f) {
+                                Vector3 obPos = pos + new Vector3(Random.Range(-10f, 10f), 0f, Random.Range(-10f, 10f));
+                                obPos.y = GetTerrainHeight(obPos);
+                                if (Random.value < 0.5f && obeliskNewPrefab != null) {
+                                    PlaceIntegratedAsset(root.transform, obPos, obeliskNewPrefab, 1.0f, true, false, 0f, Random.Range(0f, 360f), true);
+                                } else {
+                                    BuildProceduralObelisk(root.transform, obPos, wallMat, Random.value < 0.3f);
+                                }
                             }
                         }
-                    } else {
-                        PlacePlaza(root.transform, pos, trees, columnPrefab, floorMat);
                     }
 
-                    if (enemyPrefab != null && Random.value < 0.15f) {
+                    // Enemies
+                    if (enemyPrefab != null && Random.value < 0.08f) {
                         var e = (GameObject)PrefabUtility.InstantiatePrefab(enemyPrefab, root.transform);
                         e.transform.position = pos + Vector3.up * 0.5f;
-                        var zai = e.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>();
-                        if (zai == null) zai = e.AddComponent<TheAlchemistsCrypt.AI.ZombieAI>();
+                        var zai = e.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>() ?? e.AddComponent<TheAlchemistsCrypt.AI.ZombieAI>();
                         zai.maxHealth = 10f; zai.currentHealth = 10f;
                     }
                 }
             }
 
-            // Cleanup any columns that overlap with houses to prevent clipping inside walls
+            // Cleanup
             CleanupOverlappingColumns(root);
 
             var surface = root.AddComponent<NavMeshSurface>();
@@ -622,6 +805,56 @@ namespace TheAlchemistsCrypt.Editor
 
             SpawnDesertBrokenPillars(root, wallMat);
             SpawnPalmTreeOasis(root, trees);
+
+            // --- STRATEGIC LANDMARK PLACEMENT ---
+            if (sphinxPrefab != null) {
+                // North-East outlier in Ancient District
+                Vector3 sphinxPos = new Vector3(220f, 0f, 210f);
+                var sphinx = PlaceIntegratedAsset(root.transform, sphinxPos, sphinxPrefab, 1.0f, true, false, 0f, 220f, false);
+                if (sphinx != null) {
+                    sphinx.name = "GreatSphinx";
+                }
+            }
+
+            if (mastabaPrefab != null) {
+                // Center of the Ancient District
+                Vector3 mastabaPos = new Vector3(0f, 0f, 210f);
+                var mastaba = PlaceIntegratedAsset(root.transform, mastabaPos, mastabaPrefab, 1.2f, true, true, 0f, 0f, false);
+                if (mastaba != null) {
+                    mastaba.name = "MastabaOfQar";
+                    
+                    // Add Door frame/slab at the entrance (Z = 205)
+                    // Temporarily disabled egyptian_door as requested
+                    /*
+                    if (doorPrefab != null) {
+                        Vector3 doorPos = new Vector3(0f, 0f, 205f);
+                        var door = PlaceIntegratedAsset(mastaba.transform, doorPos, doorPrefab, 1.0f, true, false, 0f, 0f, false);
+                        if (door != null) door.name = "MastabaDoor";
+                    }
+                    */
+                }
+            }
+
+            if (templeComplexPrefab != null) {
+                // West edge of the Ancient District
+                Vector3 templePos = new Vector3(-220f, 0f, 210f);
+                var tObj = PlaceIntegratedAsset(root.transform, templePos, templeComplexPrefab, 1.0f, true, true, 0f, 90f, false);
+                if (tObj != null) {
+                    tObj.name = "TempleComplex";
+                    // Palm tree inside
+                    Vector3 treeInsidePos = templePos + new Vector3(5f, 0f, 5f);
+                    PlaceIntegratedAsset(tObj.transform, treeInsidePos, trees[Random.Range(0, trees.Length)], 1.0f, true, false, -1.8f, Random.Range(0f, 360f), true);
+                }
+            }
+
+            if (templesPackPrefab != null) {
+                // Interspersed smaller temples in Ancient District
+                Vector3[] extraTemplePositions = { new Vector3(-110f, 0f, 150f), new Vector3(110f, 0f, 150f) };
+                float[] extraTempleYaws = { 45f, -45f };
+                for (int i = 0; i < extraTemplePositions.Length; i++) {
+                    PlaceIntegratedAsset(root.transform, extraTemplePositions[i], templesPackPrefab, 1.0f, true, true, 0f, extraTempleYaws[i], false);
+                }
+            }
 
             CreateSeaAndCoastline(root);
             CreateWorldBounds(root);
@@ -843,9 +1076,9 @@ namespace TheAlchemistsCrypt.Editor
             vol.sharedProfile = profile;
         }
 
-        private void BuildHouse(Transform parent, Vector3 pos, Material wall, Material wood, Material litWindowMat, Material darkWindowMat, GameObject crate, GameObject barrel, Material floorMat = null)
+        private void BuildHouse(Transform parent, Vector3 pos, Material wall, Material wood, Material litWindowMat, Material darkWindowMat, GameObject crate, GameObject barrel, Material floorMat = null, float angleY = 0f)
         {
-            var h = new GameObject("House"); h.transform.SetParent(parent); h.transform.position = pos; h.isStatic = true;
+            var h = new GameObject("House"); h.transform.SetParent(parent); h.transform.position = pos; h.transform.rotation = Quaternion.Euler(0f, angleY, 0f); h.isStatic = true;
             
             // Randomly vary height slightly for organic skyline silhouette
             float heightScale = Random.Range(0.85f, 1.25f);
@@ -1103,8 +1336,9 @@ namespace TheAlchemistsCrypt.Editor
                 var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
                 floor.name = "PlazaFloor";
                 floor.transform.SetParent(p.transform);
-                floor.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+                floor.transform.localPosition = new Vector3(0f, 0.01f, 0f);
                 floor.transform.localScale = new Vector3(3.2f, 1f, 3.2f);
+
                 floor.GetComponent<Renderer>().sharedMaterial = floorMat;
                 floor.isStatic = true;
             }
@@ -1152,18 +1386,7 @@ namespace TheAlchemistsCrypt.Editor
                     }
 
                     GameObject treePrefab = trees[Random.Range(0, trees.Length)];
-                    var t = (GameObject)PrefabUtility.InstantiatePrefab(treePrefab, p.transform);
-                    t.transform.localScale = Vector3.one * 8f; 
-
-                    // Decimate tree meshes first using shared asset caching
-                    var filters = t.GetComponentsInChildren<MeshFilter>();
-                    foreach (var mf in filters) {
-                        if (mf.sharedMesh == null) continue;
-                        var decimated = GetSharedDecimatedMesh(mf.sharedMesh, 0.80f);
-                        if (decimated != null) mf.sharedMesh = decimated;
-                    }
-
-                    AlignToGroundAndAddCollider(t, spawnLoc, Quaternion.Euler(-90, 0, 0), -1.8f);
+                    PlaceIntegratedAsset(p.transform, spawnLoc, treePrefab, 1.0f, true, false, -1.8f);
                 }
             }
 
@@ -1209,8 +1432,23 @@ namespace TheAlchemistsCrypt.Editor
             // Phase 2: Spawn player inside the Mastaba if it exists
             var mastaba = GameObject.Find("MastabaOfQar");
             if (mastaba != null) {
-                // Position player inside the mastaba entrance/chamber
-                p.transform.position = mastaba.transform.position + new Vector3(0f, 1.5f, 0f);
+                var renderers = mastaba.GetComponentsInChildren<Renderer>(true);
+                if (renderers.Length > 0) {
+                    Bounds b = renderers[0].bounds;
+                    foreach (var r in renderers) b.Encapsulate(r.bounds);
+                    p.transform.position = new Vector3(b.center.x, b.min.y + 1.5f, b.center.z);
+                } else {
+                    p.transform.position = mastaba.transform.position + new Vector3(0f, 1.5f, 0f);
+                }
+                
+                // Convert MastabaDoor colliders to triggers to allow exit
+                var door = GameObject.Find("MastabaDoor");
+                if (door != null) {
+                    foreach (var col in door.GetComponentsInChildren<Collider>(true)) {
+                        col.isTrigger = true;
+                    }
+                    Debug.Log("[CityGen] Converted MastabaDoor colliders to triggers for exit access.");
+                }
                 Debug.Log("[CityGen] Player spawned inside Mastaba of Qar.");
             } else {
                 p.transform.position = new Vector3(16f, GetTerrainHeight(new Vector3(16f, 0f, 48f)) + 1.2f, 48f);
@@ -1924,20 +2162,8 @@ namespace TheAlchemistsCrypt.Editor
                 var prefab = treePrefabs[Random.Range(0, treePrefabs.Length)];
                 if (prefab == null) continue;
 
-                var palm = (GameObject)PrefabUtility.InstantiatePrefab(prefab, folder.transform);
-                palm.transform.position = pos;
-                palm.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-                palm.transform.localScale = Vector3.one * Random.Range(0.8f, 1.4f);
-                palm.isStatic = true;
-
-                var cc = palm.GetComponent<CapsuleCollider>();
-                if (cc == null)
-                {
-                    cc = palm.AddComponent<CapsuleCollider>();
-                    cc.center = new Vector3(0f, 4.0f, 0f);
-                    cc.height = 8.0f;
-                    cc.radius = 0.6f;
-                }
+                // Use the centralized placement helper to ensure correct GLB rotation (-90 on X) and scaling
+                PlaceIntegratedAsset(folder.transform, pos, prefab, Random.Range(0.8f, 1.4f), true, false, -1.8f);
 
                 spawnedCount++;
             }
@@ -2042,22 +2268,126 @@ namespace TheAlchemistsCrypt.Editor
             return Mathf.Lerp(n0, n1, 1.0f - v);
         }
 
-        private GameObject PlaceIntegratedAsset(Transform parent, Vector3 pos, GameObject prefab, float scale, bool decimate)
+        private GameObject PlaceIntegratedAsset(Transform parent, Vector3 pos, GameObject prefab, float scaleMultiplier, bool decimate, bool enterable = false, float yOffset = 0f, float targetAngleY = 0f, bool useRandomRotationY = false)
         {
             if (prefab == null) return null;
             var obj = PrefabUtility.InstantiatePrefab(prefab, parent) as GameObject;
-            obj.transform.position = pos;
-            obj.transform.localScale = Vector3.one * scale;
             obj.isStatic = true;
 
-            if (decimate) {
-                DecimateRecursively(obj, 0.25f); // 75% reduction = 0.25 quality
+            // Step 1: Calculate local bounds in root space to find dimensions and offset
+            Bounds localBounds = new Bounds(Vector3.zero, Vector3.zero);
+            bool hasBounds = false;
+            var meshFilters = obj.GetComponentsInChildren<MeshFilter>(true);
+            foreach (var mf in meshFilters) {
+                if (mf.sharedMesh == null) continue;
+                Bounds meshBounds = mf.sharedMesh.bounds;
+                Matrix4x4 childToRoot = obj.transform.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+                Vector3[] corners = GetBoundsCorners(meshBounds);
+                foreach (var corner in corners) {
+                    Vector3 localCorner = childToRoot.MultiplyPoint3x4(corner);
+                    if (!hasBounds) {
+                        localBounds = new Bounds(localCorner, Vector3.zero);
+                        hasBounds = true;
+                    } else {
+                        localBounds.Encapsulate(localCorner);
+                    }
+                }
             }
 
-            // Add colliders if missing
-            var colliders = obj.GetComponentsInChildren<Collider>();
-            if (colliders.Length == 0) {
-                AlignToGroundAndAddCollider(obj, pos, Quaternion.identity, 0f);
+            // Step 2: Determine target size and calculate scale
+            float finalScale = scaleMultiplier;
+            if (hasBounds) {
+                float currentMax = Mathf.Max(localBounds.size.x, localBounds.size.y, localBounds.size.z);
+                float targetSize = -1f;
+                string name = prefab.name.ToLower();
+                if (name.Contains("house")) targetSize = 25f;
+                else if (name.Contains("sphinx")) targetSize = 85f;
+                else if (name.Contains("mastaba")) targetSize = 35f; // Spacious for interior navigation
+                else if (name.Contains("temple_complex")) targetSize = 70f;
+                else if (name.Contains("egyptian_temples")) targetSize = 120f; 
+                else if (name.Contains("obelisk")) targetSize = 16f;
+                else if (name.Contains("stall")) targetSize = 8f;
+                else if (name.Contains("palm")) targetSize = 18f;
+                else if (name.Contains("farmer")) targetSize = 25f; // Reclassified as house
+                else if (name.Contains("door")) targetSize = 4.5f;
+
+                if (targetSize > 0 && currentMax > 0) {
+                    finalScale = (targetSize / currentMax) * scaleMultiplier;
+                }
+            }
+            obj.transform.localScale = Vector3.one * finalScale;
+
+            // Step 3: Intelligent GLB-aware rotation (keep native X/Z, rotate around Y)
+            float nativeRotX = prefab.transform.rotation.eulerAngles.x;
+            float nativeRotZ = prefab.transform.rotation.eulerAngles.z;
+            float yaw = useRandomRotationY ? Random.Range(0f, 360f) : targetAngleY;
+            obj.transform.rotation = Quaternion.Euler(nativeRotX, yaw, nativeRotZ);
+
+            // Step 4: Precise ground alignment and horizontal centering
+            if (hasBounds) {
+                float terrainY = GetTerrainHeight(pos);
+                float targetBottomY = terrainY + yOffset;
+                
+                // Find world bottom Y after scaling and rotation
+                float worldMinY = float.MaxValue;
+                Vector3[] corners = GetBoundsCorners(localBounds);
+                foreach (var corner in corners) {
+                    Vector3 worldCorner = obj.transform.TransformPoint(corner);
+                    if (worldCorner.y < worldMinY) worldMinY = worldCorner.y;
+                }
+                
+                float deltaY = targetBottomY - worldMinY;
+                Vector3 worldCenter = obj.transform.TransformPoint(localBounds.center);
+                
+                obj.transform.position = new Vector3(
+                    pos.x - (worldCenter.x - obj.transform.position.x),
+                    obj.transform.position.y + deltaY,
+                    pos.z - (worldCenter.z - obj.transform.position.z)
+                );
+            } else {
+                obj.transform.position = pos + new Vector3(0f, yOffset, 0f);
+            }
+
+            // Step 5: Optimization and Collision
+            string pName = prefab.name.ToLower();
+            bool skipDecimation = pName.Contains("temple") || 
+                                 pName.Contains("sphinx") || 
+                                 pName.Contains("mastaba") || 
+                                 pName.Contains("obelisk") || 
+                                 pName.Contains("stall") || 
+                                 pName.Contains("farmer");
+
+            if (decimate && !skipDecimation) {
+                DecimateRecursively(obj, 0.25f);
+            }
+
+            if (enterable) {
+                foreach (var mf in obj.GetComponentsInChildren<MeshFilter>(true)) {
+                    if (mf.sharedMesh == null) continue;
+                    var collider = mf.gameObject.GetComponent<MeshCollider>();
+                    if (collider == null) {
+                        collider = mf.gameObject.AddComponent<MeshCollider>();
+                    }
+                    collider.sharedMesh = mf.sharedMesh;
+                    collider.convex = false;
+                }
+            } else {
+                var colliders = obj.GetComponentsInChildren<Collider>(true);
+                if (colliders.Length == 0) {
+                    var filters = obj.GetComponentsInChildren<MeshFilter>(true);
+                    if (filters.Length > 0) {
+                        foreach (var filterObj in filters) {
+                            if (filterObj.sharedMesh == null) continue;
+                            var mc = filterObj.gameObject.GetComponent<MeshCollider>();
+                            if (mc == null) {
+                                mc = filterObj.gameObject.AddComponent<MeshCollider>();
+                            }
+                            mc.sharedMesh = filterObj.sharedMesh;
+                        }
+                    } else {
+                        obj.AddComponent<BoxCollider>();
+                    }
+                }
             }
 
             return obj;
