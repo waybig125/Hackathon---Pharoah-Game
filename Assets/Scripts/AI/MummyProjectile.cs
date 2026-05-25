@@ -30,9 +30,6 @@ namespace TheAlchemistsCrypt.AI
         {
             if (isInitialized) return;
             InitializeInstance();
-            
-            // Non-pooled fallback: auto destroy after lifetime
-            Destroy(gameObject, lifetime);
         }
 
         public void InitializeInstance()
