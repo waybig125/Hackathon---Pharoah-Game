@@ -740,11 +740,11 @@ namespace TheAlchemistsCrypt.Editor
                     else {
                         // Residential Zone (rows z = 3, 4, 5 outside the market)
                         float roll = Random.value;
-                        if (roll < 0.10f) {
+                        if (roll < 0.05f) {
                              BuildAlchemistTomb(root.transform, pos, wallMat);
                              occupiedPositions.Add(pos);
                         } 
-                        else if (roll < 0.70f) {
+                        else if (roll < 0.85f) {
                             // Street alignment: even rows (z == 4) face North (180), odd rows (z == 3, 5) face South (0)
                             float targetAngleY = (z % 2 == 0) ? 180f : 0f;
 
@@ -950,8 +950,7 @@ namespace TheAlchemistsCrypt.Editor
             shallows.isStatic = true;
             DestroyImmediate(shallows.GetComponent<Collider>());
 
-            // BeachZone duplicate sand floor quad removed to prevent duplicate/double floors stacking above the actual DesertTerrain
-            /*
+            // BeachZone sand floor quad restored
             GameObject beach = GameObject.CreatePrimitive(PrimitiveType.Quad);
             beach.name = "BeachZone";
             beach.transform.SetParent(root.transform);
@@ -966,7 +965,6 @@ namespace TheAlchemistsCrypt.Editor
             beach.GetComponent<Renderer>().sharedMaterial = beachMat;
             beach.isStatic = true;
             DestroyImmediate(beach.GetComponent<Collider>());
-            */
 
             // Split the coastline barrier into a left section and a right section to leave a gap at X = 0
             GameObject barrierLeft = new GameObject("CoastlineBarrierLeft");
@@ -1371,6 +1369,8 @@ namespace TheAlchemistsCrypt.Editor
         private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab, Material floorMat = null)
         {
             var p = new GameObject("Plaza"); p.transform.SetParent(parent); p.transform.position = pos; p.isStatic = true;
+            // Plaza floor plane removed to prevent double floors / z-fighting with the desert terrain
+            /*
             if (floorMat != null) {
                 var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
                 floor.name = "PlazaFloor";
@@ -1381,6 +1381,7 @@ namespace TheAlchemistsCrypt.Editor
                 floor.GetComponent<Renderer>().sharedMaterial = floorMat;
                 floor.isStatic = true;
             }
+            */
             
             if (columnPrefab != null) {
                 var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
@@ -2538,19 +2539,19 @@ namespace TheAlchemistsCrypt.Editor
                 else if (name.Contains("egyptian_temples")) targetSize = 120f; 
                 else if (name.Contains("obelisk")) targetSize = 16f;
                 else if (name.Contains("medieval_stall")) {
-                    targetSize = 5.2f; // Bounded Y: 258.94 cm -> Scales to 5.2 meters tall (spacious and realistic)
+                    targetSize = 2.5f; // Restore to original standard size
                     scaleByHeight = true;
                 }
                 else if (name.Contains("vietnamese_meat_market_stall")) {
-                    targetSize = 4.6f; // Bounded Y: 4.64 meters -> Scales to 4.6 meters tall
+                    targetSize = 2.2f; // Restore to original standard size
                     scaleByHeight = true;
                 }
                 else if (name.Contains("low_poly_market_stall_pack")) {
-                    targetSize = 9.5f; // Bounded Y: 1.79 meters -> Scales to 9.5 meters tall (highly visible and realistic)
+                    targetSize = 4.8f; // Set to 2x the standard size (original was 2.4f)
                     scaleByHeight = true;
                 }
                 else if (name.Contains("stall")) {
-                    targetSize = 4.8f; // Fallback for other stalls
+                    targetSize = 2.4f; // Restore fallback to standard size
                     scaleByHeight = true;
                 }
                 else if (name.Contains("palm")) targetSize = 18f;

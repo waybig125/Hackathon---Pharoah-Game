@@ -1222,7 +1222,7 @@ namespace TheAlchemistsCrypt.UI
             guideTxtGo.transform.SetParent(guideContainer.transform, false);
             var gTxtRect = guideTxtGo.GetComponent<RectTransform>();
             gTxtRect.anchorMin = gTxtRect.anchorMax = new Vector2(0.5f, 0.5f);
-            gTxtRect.anchoredPosition = new Vector2(0, 100);
+            gTxtRect.anchoredPosition = new Vector2(0, -50);
             gTxtRect.sizeDelta = new Vector2(250, 45);
             guideArrowText = guideTxtGo.GetComponent<TextMeshProUGUI>();
             guideArrowText.font = GetTitleFont();

@@ -73,7 +73,8 @@ namespace TheAlchemistsCrypt.Gameplay
                 if (go.name.Contains("Plaza"))
                 {
                     float distToCentral = Vector3.Distance(new Vector3(go.transform.position.x, 0f, go.transform.position.z), new Vector3(16f, 0f, 48f));
-                    if (distToCentral > 10f)
+                    float distToBoat = Vector3.Distance(new Vector3(go.transform.position.x, 0f, go.transform.position.z), new Vector3(0f, 0f, -104f));
+                    if (distToCentral > 10f && distToBoat > 120f)
                     {
                         plazas.Add(go);
                     }
