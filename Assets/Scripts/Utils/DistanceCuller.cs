@@ -15,7 +15,7 @@ namespace TheAlchemistsCrypt.Utils
             public bool isCurrentlyVisible = true;
         }
 
-        public float cullDistance = 180f;
+        public float cullDistance = 250f;
         public float checkInterval = 0.3f;
 
         private Transform playerTransform;
@@ -62,7 +62,7 @@ namespace TheAlchemistsCrypt.Utils
                 if (r == null) continue;
                 string nameLower = r.gameObject.name.ToLower();
 
-                // Skip background backdrops, pyramids, sea, terrain, bounds, and anything related to player/enemies
+                // Skip background backdrops, pyramids, sea, terrain, bounds, landmarks, and anything related to player/enemies
                 if (nameLower.Contains("pyramid") || 
                     nameLower.Contains("terrain") || 
                     nameLower.Contains("sea") || 
@@ -72,7 +72,11 @@ namespace TheAlchemistsCrypt.Utils
                     nameLower.Contains("weapon") ||
                     nameLower.Contains("zombie") ||
                     nameLower.Contains("mummy") ||
-                    nameLower.Contains("pharaoh"))
+                    nameLower.Contains("pharaoh") ||
+                    nameLower.Contains("temple") ||
+                    nameLower.Contains("sphinx") ||
+                    nameLower.Contains("mastaba") ||
+                    nameLower.Contains("obelisk"))
                 {
                     continue;
                 }
@@ -90,7 +94,11 @@ namespace TheAlchemistsCrypt.Utils
                     rootNameLower.Contains("terrain") || 
                     rootNameLower.Contains("sea") || 
                     rootNameLower.Contains("water") || 
-                    rootNameLower.Contains("bounds"))
+                    rootNameLower.Contains("bounds") ||
+                    rootNameLower.Contains("temple") ||
+                    rootNameLower.Contains("sphinx") ||
+                    rootNameLower.Contains("mastaba") ||
+                    rootNameLower.Contains("obelisk"))
                 {
                     continue;
                 }
