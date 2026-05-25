@@ -62,6 +62,10 @@ namespace TheAlchemistsCrypt.AI
             }
 
             // Add a point light to glow dynamically
+            // PERFORMANCE: Real-time point lights are extremely expensive on mobile GPUs.
+            // Each active projectile was adding a full pixel light — disabled on Android/iOS.
+            // The emissive material already provides visual glow without GPU cost.
+#if !UNITY_ANDROID && !UNITY_IOS
             var lightGo = new GameObject("LightGlow");
             lightGo.transform.SetParent(transform, false);
             lightGo.transform.localPosition = Vector3.zero;
@@ -71,6 +75,7 @@ namespace TheAlchemistsCrypt.AI
             pointLight.intensity = 8.0f;
             pointLight.range = 4.0f;
             pointLight.shadows = LightShadows.None;
+#endif
 
             // Add a beautiful Sand/Amber TrailRenderer
             var trailGo = new GameObject("Trail");

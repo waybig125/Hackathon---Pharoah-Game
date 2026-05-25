@@ -62,6 +62,14 @@ namespace TheAlchemistsCrypt.AI
         private int speedParamHash;
         private float pathfindCooldown = 0f;
 
+        // ── PERFORMANCE: Pre-cached component arrays ──────────────────────────────
+        // Avoids GetComponentsInChildren<Renderer> allocating a new array on every
+        // elemental status-effect hit. Cached once in Start().
+        private Renderer[] cachedRenderers;
+        private MaterialPropertyBlock cachedMPB;
+        // Dirty flag: only rebuild health-bar fill geometry when HP actually changes
+        private float lastHealthForBar = -1f;
+
         private void CreateHealthBar()
         {
             if (Camera.main != null) mainCameraTransform = Camera.main.transform;
@@ -110,20 +118,26 @@ namespace TheAlchemistsCrypt.AI
 
             if (healthBarObj == null || healthBarFillSr == null) return;
 
+            // Billboard rotation runs every frame (cheap — just a matrix op)
             if (mainCameraTransform == null && Camera.main != null) mainCameraTransform = Camera.main.transform;
             if (mainCameraTransform != null)
             {
-                // Force billboard to face camera exactly
                 healthBarObj.transform.LookAt(healthBarObj.transform.position + mainCameraTransform.forward);
             }
 
-            float fillPct = Mathf.Clamp01(currentHealth / maxHealth);
-            float maxScaleX = 0.88f;
+            // PERFORMANCE: Only rebuild fill visuals when HP has actually changed.
+            // This avoids per-frame localPosition + localScale + Color.Lerp overhead
+            // for every mummy every frame (20 mummies × 60 fps = 1200 wasted calls/s).
+            if (Mathf.Approximately(currentHealth, lastHealthForBar)) return;
+            lastHealthForBar = currentHealth;
+
+            float fillPct    = Mathf.Clamp01(currentHealth / maxHealth);
+            float maxScaleX  = 0.88f;
             float targetScaleX = maxScaleX * fillPct;
-            float posX = -0.5f * maxScaleX * (1f - fillPct);
+            float posX       = -0.5f * maxScaleX * (1f - fillPct);
 
             healthBarFillSr.gameObject.transform.localPosition = new Vector3(posX, 0f, 0f);
-            healthBarFillSr.gameObject.transform.localScale = new Vector3(targetScaleX, 0.10f, 1f);
+            healthBarFillSr.gameObject.transform.localScale    = new Vector3(targetScaleX, 0.10f, 1f);
             healthBarFillSr.color = Color.Lerp(Color.red, Color.green, fillPct);
         }
 
@@ -134,23 +148,26 @@ namespace TheAlchemistsCrypt.AI
 
         private void SetStatusColor(Color col)
         {
-            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
-            MaterialPropertyBlock block = new MaterialPropertyBlock();
-            foreach (Renderer r in renderers)
+            // PERFORMANCE: Use pre-cached renderer array instead of allocating a new
+            // one via GetComponentsInChildren on every elemental hit.
+            if (cachedRenderers == null) cachedRenderers = GetComponentsInChildren<Renderer>(true);
+            if (cachedMPB == null)       cachedMPB = new MaterialPropertyBlock();
+            foreach (Renderer r in cachedRenderers)
             {
                 if (r == null) continue;
-                r.GetPropertyBlock(block);
-                block.SetColor("_Color", col);
-                block.SetColor("_BaseColor", col);
-                block.SetColor("_EmissionColor", col * 0.8f);
-                r.SetPropertyBlock(block);
+                r.GetPropertyBlock(cachedMPB);
+                cachedMPB.SetColor("_Color",         col);
+                cachedMPB.SetColor("_BaseColor",     col);
+                cachedMPB.SetColor("_EmissionColor", col * 0.8f);
+                r.SetPropertyBlock(cachedMPB);
             }
         }
 
         private void RestoreColors()
         {
-            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
-            foreach (Renderer r in renderers)
+            // PERFORMANCE: Use pre-cached array — avoids allocation on every status expiry.
+            if (cachedRenderers == null) return;
+            foreach (Renderer r in cachedRenderers)
             {
                 if (r == null) continue;
                 r.SetPropertyBlock(null);
@@ -204,11 +221,12 @@ namespace TheAlchemistsCrypt.AI
             agent.speed = baseSpeed;
             agent.stoppingDistance = attackDistance;
             
-            // Higher quality avoidance to prevent overlap and clipping
-            agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
-            agent.radius = 0.8f;
-            agent.acceleration = 12f;
-            agent.angularSpeed = 240f;
+            // PERFORMANCE: LowQuality avoidance is sufficient for 20 mummies on mobile.
+            // HighQuality ORCA runs O(n^2) comparisons per agent — very expensive at scale.
+            agent.obstacleAvoidanceType = ObstacleAvoidanceType.LowQualityObstacleAvoidance;
+            agent.radius        = 0.8f;
+            agent.acceleration  = 12f;
+            agent.angularSpeed  = 240f;
             
             currentHealth = maxHealth;
             FindPlayer();
@@ -220,6 +238,11 @@ namespace TheAlchemistsCrypt.AI
             // Same color mummies: backup and do not apply initial vulnerability tint!
             BackupOriginalColors();
             CreateHealthBar();
+
+            // PERFORMANCE: Cache renderer array and MPB once at spawn instead of
+            // allocating on every elemental hit.
+            cachedRenderers = GetComponentsInChildren<Renderer>(true);
+            cachedMPB       = new MaterialPropertyBlock();
 
             // ── NavMesh snap: ensure agent starts ON the nav mesh ──
             // If spawned slightly off-mesh (floating, on steep slope), SetDestination silently
@@ -361,13 +384,18 @@ namespace TheAlchemistsCrypt.AI
             Vector3 currentTargetPos = player.position;
             float currentSpeed = baseSpeed;
 
-            float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+            // PERFORMANCE: Compute player distance ONCE using sqrMagnitude (no sqrt).
+            // Previously this was called 3 separate times (lines ~364, ~444, ~500)
+            // with identical inputs — 60 wasted sqrt() calls per second per mummy.
+            float sqrDistToPlayer  = (transform.position - player.position).sqrMagnitude;
+            float distanceToPlayer = Mathf.Sqrt(sqrDistToPlayer); // Single sqrt, reused everywhere
 
             // ── Priority 1: HiveMind tactical target ──
             // API "Standard Patrol/idle" fallback returns target = mummy's own coords,
             // so we reject any target within 3m of self (raised from 1.5m).
+            // Use sqrMagnitude to avoid sqrt on the tactical check too.
             bool hasMeaningfulTactical = hasTacticalTarget &&
-                                         Vector3.Distance(tacticalTarget, transform.position) > 3f;
+                                         (tacticalTarget - transform.position).sqrMagnitude > 9f;
 
             if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null && TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.hasKey)
             {
@@ -439,10 +467,10 @@ namespace TheAlchemistsCrypt.AI
             }
 
             // Check if we should shoot the player in a straight line
+            // PERFORMANCE: Reuse distanceToPlayer computed at top of Update — no redundant sqrt.
             if (!isStunned && !isDead && player != null)
             {
-                float dist = Vector3.Distance(transform.position, player.position);
-                if (dist >= shootMinRange && dist <= shootMaxRange && (Time.time - lastShootTime) >= shootCooldown)
+                if (distanceToPlayer >= shootMinRange && distanceToPlayer <= shootMaxRange && (Time.time - lastShootTime) >= shootCooldown)
                 {
                     ShootPlayer();
                     shootAnimTimer = 0.8f;
@@ -497,10 +525,9 @@ namespace TheAlchemistsCrypt.AI
                 transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 8f);
             }
 
-            float distance = Vector3.Distance(transform.position, player.position);
-
             // Dynamically switch to combat music when mummy closes within 20 units
-            if (!combatMusicTriggered && distance < 20f)
+            // PERFORMANCE: 20^2 = 400, compare sqrDist to avoid sqrt.
+            if (!combatMusicTriggered && sqrDistToPlayer < 400f)
             {
                 combatMusicTriggered = true;
                 TheAlchemistsCrypt.Gameplay.AudioManager.PlayCombatTheme();
@@ -508,6 +535,10 @@ namespace TheAlchemistsCrypt.AI
 
             float vel = agent.velocity.magnitude;
             
+            // PERFORMANCE: Reuse distanceToPlayer — third usage in this Update(), zero extra cost.
+            // (Previously a new Vector3.Distance call was made here, identical to lines ~364 and ~444.)
+            // distanceToPlayer is already computed at the top of Update().
+
             // Set Speed parameter safely only if it exists for automatic transitions
             if (animator != null && animator.runtimeAnimatorController != null && hasSpeedParameter) {
                 try {
@@ -525,7 +556,7 @@ namespace TheAlchemistsCrypt.AI
                 PlayAnimation("Walk");
                 if (animator != null) animator.speed = 1.2f; 
             }
-            else if (distance <= attackDistance) {
+            else if (distanceToPlayer <= attackDistance) { // Reuse pre-computed distance
                 PlayAnimation("Attack");
                 if (animator != null) animator.speed = 1.0f;
                 
@@ -588,8 +619,11 @@ namespace TheAlchemistsCrypt.AI
             if (isDead) return;
 
             currentHealth -= damage;
+            // PERFORMANCE: Strip debug log from production builds — string.Format has measurable
+            // cost when called on every hit across 20 mummies.
+#if UNITY_EDITOR
             Debug.Log($"Zombie took {damage} damage. Health: {currentHealth}/{maxHealth}");
-
+#endif
             if (currentHealth <= 0f)
             {
                 Die();

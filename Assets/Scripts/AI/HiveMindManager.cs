@@ -78,13 +78,22 @@ namespace TheAlchemistsCrypt.AI
     {
         [Header("Backend Connection")]
         // Updated API base to Render deployment
-        [SerializeField] private string primaryEndpoint = "https://alchemists-crypt-backend.onrender.com/api/v1/hive-mind";
+        [SerializeField] private string primaryEndpoint  = "https://alchemists-crypt-backend.onrender.com/api/v1/hive-mind";
         [SerializeField] private string baselineEndpoint = "https://alchemists-crypt-backend.onrender.com/api/v1/hive-mind/baseline";
         [SerializeField] private float pollInterval = 2.0f;
 
         private int currentTick = 0;
         private bool lastTacticSuccess = true;
         private float difficultyScaling = 1.0f;
+
+        // ── PERFORMANCE: Cached references ──────────────────────────────────
+        // Avoids FindGameObjectWithTag / FindObjectsByType / OverlapSphere allocations
+        // every 2-second poll tick.
+        private GameObject cachedPlayerObj;                         // Cache player GO across ticks
+        private ZombieAI[] cachedZombieArray = new ZombieAI[0];    // Cache zombie list, refresh every N ticks
+        private int zombieCacheRefreshInterval = 5;                 // Refresh every 5 ticks (~10 seconds)
+        private readonly List<MummyState> mStates = new List<MummyState>(); // Reused list, avoids new List<> per tick
+        private readonly Collider[] overlapBuffer = new Collider[64];       // Pre-alloc buffer for NonAlloc physics
 
         private void Start()
         {
@@ -102,14 +111,20 @@ namespace TheAlchemistsCrypt.AI
 
         private IEnumerator SendGameStateAndRoute()
         {
-            // Find player
-            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-            if (playerObj == null)
+            // ── 1. Find / cache player ────────────────────────────────────────
+            // PERFORMANCE: Only call expensive Find* APIs when the cached reference is null
+            // (e.g. first tick, or after scene reload). Normally returns the cached GO.
+            if (cachedPlayerObj == null)
             {
-                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
-                if (character != null) playerObj = character.gameObject;
+                cachedPlayerObj = GameObject.FindGameObjectWithTag("Player");
+                if (cachedPlayerObj == null)
+                {
+                    var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                    if (character != null) cachedPlayerObj = character.gameObject;
+                }
             }
 
+            GameObject playerObj = cachedPlayerObj;
             if (playerObj == null) yield break;
 
             // 1. Gather player state
@@ -153,56 +168,72 @@ namespace TheAlchemistsCrypt.AI
             pState.health = healthVal;
             pState.is_firing = TheAlchemistsCrypt.Input.MobileInputManager.Instance != null && TheAlchemistsCrypt.Input.MobileInputManager.Instance.IsFiring;
 
-            // 2. Gather mummies state
-            var mStates = new List<MummyState>();
-            var zombies = GameObject.FindObjectsByType<ZombieAI>(FindObjectsInactive.Exclude);
-            foreach (var z in zombies)
+            // ── 2. Gather mummies state ────────────────────────────────────────
+            // PERFORMANCE: Refresh zombie array only every N ticks; reuse list with Clear()
+            // instead of allocating a new List<MummyState> every poll.
+            if (currentTick % zombieCacheRefreshInterval == 1 || cachedZombieArray.Length == 0)
+            {
+                cachedZombieArray = GameObject.FindObjectsByType<ZombieAI>(FindObjectsInactive.Exclude);
+            }
+
+            mStates.Clear(); // Reuse existing list — no GC allocation
+            foreach (var z in cachedZombieArray)
             {
                 if (z == null || z.IsDead) continue;
-
-                var mState = new MummyState();
-                mState.id = z.mummyId;
-                mState.pos = new List<float> { z.transform.position.x, z.transform.position.y, z.transform.position.z };
-                mState.hp = Mathf.RoundToInt(z.currentHealth);
-                mState.state = "walk"; // default active movement state
+                var mState = new MummyState
+                {
+                    id    = z.mummyId,
+                    pos   = new List<float> { z.transform.position.x, z.transform.position.y, z.transform.position.z },
+                    hp    = Mathf.RoundToInt(z.currentHealth),
+                    state = "walk"
+                };
                 mStates.Add(mState);
             }
 
             // If no mummies left, don't ping
             if (mStates.Count == 0) yield break;
 
-            // 3. Construct GameState payload
-            var payload = new GameStatePayload();
-            payload.gameState = "running";
-            
-            payload.session_metadata = new SessionMetadata();
-            payload.session_metadata.tick_id = ++currentTick;
-            payload.session_metadata.last_tactic_success = lastTacticSuccess;
-            payload.session_metadata.difficulty_scaling = difficultyScaling;
-            
-            payload.player = pState;
-            payload.mummies = mStates;
-
-            // Pharaoh Active flag
+            // ── Pharaoh check ────────────────────────────────────────────────
             var pharaoh = GameObject.Find("Pharaoh_Prefab(Clone)");
             if (pharaoh == null) pharaoh = GameObject.Find("Pharaoh_Prefab");
-            payload.pharaoh_active = (pharaoh != null);
+            bool pharaoh_active_flag = (pharaoh != null);
 
-            // Check Environment using OverlapSphere
-            int treeCount = 0;
+            // ── Environment scan (NonAlloc) ───────────────────────────────────
+            // PERFORMANCE: Physics.OverlapSphereNonAlloc writes into a pre-allocated buffer
+            // instead of allocating a new Collider[] array on every poll tick.
+            int treeCount  = 0;
             int houseCount = 0;
-            var colliders = Physics.OverlapSphere(playerObj.transform.position, 25f);
-            foreach (var col in colliders)
+            int hitCount = Physics.OverlapSphereNonAlloc(playerObj.transform.position, 25f, overlapBuffer);
+            for (int i = 0; i < hitCount; i++)
             {
-                if (col.gameObject.name.ToLower().Contains("tree") || col.gameObject.name.ToLower().Contains("palm")) treeCount++;
-                if (col.gameObject.name.ToLower().Contains("house")) houseCount++;
+                if (overlapBuffer[i] == null) continue;
+                string colName = overlapBuffer[i].gameObject.name.ToLower();
+                if (colName.Contains("tree") || colName.Contains("palm")) treeCount++;
+                if (colName.Contains("house")) houseCount++;
             }
-            payload.nearby_environment = $"{treeCount} trees, {houseCount} houses";
+            string nearbyEnv = $"{treeCount} trees, {houseCount} houses";
+
+            // ── 3. Construct GameState payload ─────────────────────────────────
+            var payload = new GameStatePayload
+            {
+                gameState = "running",
+                session_metadata = new SessionMetadata
+                {
+                    tick_id             = ++currentTick,
+                    last_tactic_success = lastTacticSuccess,
+                    difficulty_scaling  = difficultyScaling
+                },
+                player             = pState,
+                mummies            = mStates,
+                pharaoh_active     = pharaoh_active_flag,
+                nearby_environment = nearbyEnv
+            };
 
             string jsonPayload = JsonUtility.ToJson(payload);
 
             // 4. Send network request
-            yield return StartCoroutine(PostRequest(primaryEndpoint, jsonPayload, zombies, true));
+            yield return StartCoroutine(PostRequest(primaryEndpoint, jsonPayload, cachedZombieArray, true));
+
         }
 
         private IEnumerator PostRequest(string endpoint, string json, ZombieAI[] zombies, bool fallbackAllowed)
