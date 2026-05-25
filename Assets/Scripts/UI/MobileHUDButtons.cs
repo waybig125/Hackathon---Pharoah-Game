@@ -1521,10 +1521,11 @@ namespace TheAlchemistsCrypt.UI
                 if (c.gameObject.name == "MobileHUD_Root" || 
                     c.gameObject.name == "StartScreenOverlay" || 
                     c.gameObject.name == "DeathCanvas" || 
+                    c.gameObject.name == "VictoryCanvas" || 
                     (c.gameObject.name == "Canvas" && c.gameObject.GetComponent<MobileHUDButtons>() != null)) continue;
                 string nameLower = c.gameObject.name.ToLower();
                 if (nameLower.Contains("lpsp") || nameLower.Contains("weaponui") || nameLower.Contains("hud") || nameLower.Contains("canvas") || nameLower.Contains("joystick")) {
-                    if (c.gameObject != gameObject && c.gameObject.name != "MobileHUD_Root" && c.gameObject.name != "StartScreenOverlay" && c.gameObject.name != "DeathCanvas") {
+                    if (c.gameObject != gameObject && c.gameObject.name != "MobileHUD_Root" && c.gameObject.name != "StartScreenOverlay" && c.gameObject.name != "DeathCanvas" && c.gameObject.name != "VictoryCanvas") {
                         c.gameObject.SetActive(false);
                     }
                 }
