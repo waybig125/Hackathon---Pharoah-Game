@@ -36,7 +36,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
                 using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
                 {
-                    activity.Call("runOnUiThread", new System.Action(() =>
+                    activity.Call("runOnUiThread", new AndroidJavaRunnable(() =>
                     {
                         try
                         {
