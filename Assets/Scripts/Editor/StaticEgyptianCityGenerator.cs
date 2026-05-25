@@ -843,7 +843,7 @@ namespace TheAlchemistsCrypt.Editor
             if (mastabaPrefab != null) {
                 // Center of the Ancient District
                 Vector3 mastabaPos = new Vector3(0f, 0f, 210f);
-                var mastaba = PlaceIntegratedAsset(root.transform, mastabaPos, mastabaPrefab, 0.84f, true, true, 0f, 0f, false);
+                var mastaba = PlaceIntegratedAsset(root.transform, mastabaPos, mastabaPrefab, 0.84f, true, true, -2.2f, 0f, false);
                 if (mastaba != null) {
                     mastaba.name = "MastabaOfQar";
                     
@@ -2535,7 +2535,7 @@ namespace TheAlchemistsCrypt.Editor
                 else if (name.Contains("egyptian_temples")) targetSize = 120f; 
                 else if (name.Contains("obelisk")) targetSize = 16f;
                 else if (name.Contains("stall")) {
-                    targetSize = 3.6f; // Target uniform height for all stalls!
+                    targetSize = 6.2f; // Target uniform height for all stalls!
                     scaleByHeight = true;
                 }
                 else if (name.Contains("palm")) targetSize = 18f;
@@ -2586,7 +2586,12 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             // Step 5: Optimization and Collision
-            // Decimation disabled as requested by the user to preserve full model quality and prevent offset/flying mesh artifacts in Unity 6.
+            // Keep 80% decimation for trees (date palm), disable for all other models as requested to preserve quality and prevent offsets.
+            if (decimate) {
+                if (pName.Contains("palm") || pName.Contains("tree")) {
+                    DecimateRecursively(obj, 0.8f);
+                }
+            }
 
             if (enterable) {
                 foreach (var mf in obj.GetComponentsInChildren<MeshFilter>(true)) {
