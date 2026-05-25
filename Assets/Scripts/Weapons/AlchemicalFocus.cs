@@ -38,90 +38,6 @@ namespace TheAlchemistsCrypt.Weapons
         {
             isReloading = false;
             UpdateWeaponColor();
-
-            try
-            {
-                var sb = new System.Text.StringBuilder();
-                sb.AppendLine("--- RUNTIME LIGHT CHECK ---");
-                var lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Include);
-                foreach (var l in lights)
-                {
-                    var path = l.name;
-                    var t = l.transform.parent;
-                    while (t != null)
-                    {
-                        path = t.name + "/" + path;
-                        t = t.parent;
-                    }
-                    sb.AppendLine($"Light Path: {path} | Type: {l.type} | Range: {l.range} | Intensity: {l.intensity} | Enabled: {l.enabled} | Color: {l.color} | Position: {l.transform.position}");
-                }
-
-                sb.AppendLine("\n--- PLAYER HIERARCHY ---");
-                var player = GameObject.Find("Player");
-                if (player == null)
-                {
-                    var character = UnityEngine.Object.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>(FindObjectsInactive.Include);
-                    if (character != null) player = character.gameObject;
-                }
-
-                if (player != null)
-                {
-                    sb.AppendLine("Player Name: " + player.name);
-                    DumpTransform(player.transform, "", sb);
-                }
-                else
-                {
-                    sb.AppendLine("Player not found in scene.");
-                }
-
-                System.IO.File.WriteAllText("Assets/lights_log.txt", sb.ToString());
-
-                // Find and log TestRoot
-                var tr = GameObject.Find("TestRoot");
-                if (tr == null) tr = GameObject.Find("Player/TestRoot");
-                if (tr == null)
-                {
-                    // Search all GameObjects for any containing TestRoot
-                    foreach (var go in UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include))
-                    {
-                        if (go.name.Contains("TestRoot")) { tr = go; break; }
-                    }
-                }
-                if (tr != null)
-                {
-                    var trSb = new System.Text.StringBuilder();
-                    trSb.AppendLine("TestRoot path: " + tr.name);
-                    var parent = tr.transform.parent;
-                    while (parent != null)
-                    {
-                        trSb.AppendLine("Parent: " + parent.name);
-                        parent = parent.parent;
-                    }
-                    trSb.AppendLine("Components on TestRoot:");
-                    foreach (var c in tr.GetComponents<Component>())
-                    {
-                        if (c != null) trSb.AppendLine("  " + c.GetType().Name);
-                    }
-                    trSb.AppendLine("Children of TestRoot:");
-                    foreach (Transform child in tr.transform)
-                    {
-                        trSb.AppendLine("  " + child.name);
-                        foreach (var c in child.GetComponents<Component>())
-                        {
-                            if (c != null) trSb.AppendLine("    [Comp] " + c.GetType().Name);
-                        }
-                    }
-                    System.IO.File.WriteAllText("Assets/testroot_log.txt", trSb.ToString());
-                }
-                else
-                {
-                    System.IO.File.WriteAllText("Assets/testroot_log.txt", "TestRoot not found in scene");
-                }
-            }
-            catch (System.Exception ex)
-            {
-                System.IO.File.WriteAllText("Assets/lights_log_error.txt", ex.ToString());
-            }
         }
 
         private void OnDisable()
@@ -409,20 +325,6 @@ namespace TheAlchemistsCrypt.Weapons
             if (l != null) l.enabled = false;
         }
 
-        private void DumpTransform(Transform t, string indent, System.Text.StringBuilder sb)
-        {
-            sb.AppendLine($"{indent}- {t.name} (Position: {t.localPosition}, Active: {t.gameObject.activeSelf})");
-            foreach (var comp in t.GetComponents<Component>())
-            {
-                if (comp != null && comp != t)
-                {
-                    sb.AppendLine($"{indent}  [Comp] {comp.GetType().Name}");
-                }
-            }
-            for (int i = 0; i < t.childCount; i++)
-            {
-                DumpTransform(t.GetChild(i), indent + "  ", sb);
-            }
-        }
+
     }
 }
