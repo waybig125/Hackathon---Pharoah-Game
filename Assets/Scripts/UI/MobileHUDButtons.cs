@@ -2944,7 +2944,7 @@ namespace TheAlchemistsCrypt.UI
             panelGo.offsetMin = panelGo.offsetMax = Vector2.zero;
             
             var bgImg = panelGo.GetComponent<Image>();
-            bgImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.12f, 0.22f, 0.32f, 0.0f), new Color(0.02f, 0.06f, 0.12f, 0.98f));
+            bgImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.24f, 0.18f, 0.04f, 0.0f), new Color(0.04f, 0.03f, 0.0f, 0.98f));
             bgImg.color = new Color(1f, 1f, 1f, 0f); // Set alpha to 0 for fade-in
 
             // Triumphant golden glowing vignette
@@ -2953,81 +2953,59 @@ namespace TheAlchemistsCrypt.UI
             vignetteGo.anchorMin = Vector2.zero; vignetteGo.anchorMax = Vector2.one;
             vignetteGo.offsetMin = vignetteGo.offsetMax = Vector2.zero;
             var vigImg = vignetteGo.GetComponent<Image>();
-            vigImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.95f, 0.8f, 0.2f, 0.0f), new Color(0.45f, 0.3f, 0.05f, 0.85f));
+            vigImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.95f, 0.8f, 0.2f, 0.0f), new Color(0.45f, 0.35f, 0.05f, 0.95f));
             vigImg.color = new Color(1f, 1f, 1f, 0f);
 
-            var modalGo = new GameObject("VictoryCard", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            modalGo.SetParent(panelGo, false);
-            modalGo.anchorMin = modalGo.anchorMax = new Vector2(0.5f, 0.5f);
-            modalGo.anchoredPosition = Vector2.zero;
-            modalGo.sizeDelta = new Vector2(850, 640);
-            var cardImg = modalGo.GetComponent<Image>();
-            cardImg.sprite = null;
-            cardImg.color = new Color(0.06f, 0.05f, 0.05f, 0.95f);
-
-            var cardBorder = new GameObject("CardBorder", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            cardBorder.SetParent(modalGo, false);
-            cardBorder.anchorMin = Vector2.zero; cardBorder.anchorMax = Vector2.one;
-            cardBorder.offsetMin = cardBorder.offsetMax = Vector2.zero;
-            Shader borderShader = Shader.Find("UI/NormalMappedFrame");
-            Texture2D uiNormalMap = Resources.Load<Texture2D>("Textures/EgyptianNormalMap");
-            if (borderShader != null && uiNormalMap != null)
-            {
-                Material victoryBorderMat = new Material(borderShader);
-                victoryBorderMat.SetTexture("_BumpMap", uiNormalMap);
-                victoryBorderMat.SetFloat("_BumpScale", 1.8f);
-                victoryBorderMat.SetColor("_Color", new Color(0.95f, 0.8f, 0.2f, 0.95f));
-                victoryBorderMat.SetVector("_Tiling", new Vector4(12, 10, 0, 0));
-                
-                var borderImg = cardBorder.GetComponent<Image>();
-                borderImg.sprite = CreateBorderSprite(100, 100, 8, Color.white);
-                borderImg.type = Image.Type.Sliced;
-                borderImg.material = victoryBorderMat;
-            }
+            // Container for all content that will fade in smoothly (without background/modal card)
+            var contentContainerGo = new GameObject("VictoryContent", typeof(RectTransform)).GetComponent<RectTransform>();
+            contentContainerGo.SetParent(panelGo, false);
+            contentContainerGo.anchorMin = contentContainerGo.anchorMax = new Vector2(0.5f, 0.5f);
+            contentContainerGo.anchoredPosition = Vector2.zero;
+            contentContainerGo.sizeDelta = new Vector2(850, 640);
             
-            var cardGroup = modalGo.gameObject.AddComponent<CanvasGroup>();
+            var cardGroup = contentContainerGo.gameObject.AddComponent<CanvasGroup>();
             cardGroup.alpha = 0f;
 
             var titleGo = new GameObject("TitleText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
-            titleGo.SetParent(modalGo, false);
-            titleGo.anchoredPosition = new Vector2(0, 230); titleGo.sizeDelta = new Vector2(700, 120);
+            titleGo.SetParent(contentContainerGo, false);
+            titleGo.anchoredPosition = new Vector2(0, 100); titleGo.sizeDelta = new Vector2(900, 150);
             var titleText = titleGo.GetComponent<TextMeshProUGUI>();
             titleText.font = GetTitleFont();
-            titleText.fontSize = 110;
+            titleText.fontSize = 130; // Massive Impact Title
             titleText.fontStyle = FontStyles.Bold;
             titleText.alignment = TextAlignmentOptions.Center;
             titleText.color = new Color(0.95f, 0.8f, 0.2f, 0.98f); // Golden Victory Color
             titleText.text = "ESCAPED!";
-            titleText.outlineColor = new Color(1.0f, 0.55f, 0.05f, 0.8f);
-            titleText.outlineWidth = 0.2f;
+            titleText.outlineColor = new Color(0.25f, 0.18f, 0.02f, 0.8f);
+            titleText.outlineWidth = 0.25f;
 
-            // Gold divider line
-            var dividerGo = new GameObject("Divider", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            dividerGo.SetParent(modalGo, false);
-            dividerGo.anchoredPosition = new Vector2(0, 155);
-            dividerGo.sizeDelta = new Vector2(500, 2);
-            dividerGo.GetComponent<Image>().color = new Color(0.95f, 0.8f, 0.2f, 0.5f);
-
-            var descGo = new GameObject("DescriptionText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
-            descGo.SetParent(modalGo, false);
-            descGo.anchoredPosition = new Vector2(0, 30); descGo.sizeDelta = new Vector2(700, 200);
-            var descText = descGo.GetComponent<TextMeshProUGUI>();
-            descText.font = GetTitleFont();
-            descText.fontSize = 28;
-            descText.alignment = TextAlignmentOptions.Center;
-            descText.color = new Color(0.9f, 0.9f, 0.9f, 0.9f);
-            descText.text = "You successfully retrieved the Ancient Papyrus and reached the boat.\n\nThe Alchemist's Crypt is finally behind you.";
-
-            CreateSettingsActionButton(modalGo, "PLAY AGAIN", new Vector2(-160, -180), new Vector2(300, 70), () => {
+            var btnRestart = CreateSettingsActionButton(contentContainerGo, "PLAY AGAIN", new Vector2(-180, -80), new Vector2(320, 80), () => {
                 Time.timeScale = 1f;
                 UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
-            }, new Color(0.1f, 0.5f, 0.2f, 0.15f));
+            }, new Color(0.95f, 0.8f, 0.2f, 0.20f));
 
-            CreateSettingsActionButton(modalGo, "MAIN MENU", new Vector2(160, -180), new Vector2(300, 70), () => {
+            var btnMenu = CreateSettingsActionButton(contentContainerGo, "MAIN MENU", new Vector2(180, -80), new Vector2(320, 80), () => {
                 Time.timeScale = 1f;
                 HasStartedGame = false;
                 UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
-            }, new Color(0.2f, 0.3f, 0.6f, 0.15f));
+            }, new Color(0.95f, 0.8f, 0.2f, 0.20f));
+
+            // Style buttons to be yellow/gold with dark charcoal text for high contrast legibility
+            var restartImg = btnRestart.GetComponent<Image>();
+            if (restartImg != null) restartImg.color = new Color(0.85f, 0.65f, 0.05f, 1.0f);
+            var restartTxt = btnRestart.GetComponentInChildren<TextMeshProUGUI>();
+            if (restartTxt != null) {
+                restartTxt.color = new Color(0.08f, 0.08f, 0.08f, 1.0f);
+                restartTxt.fontSize = 20;
+            }
+
+            var menuImg = btnMenu.GetComponent<Image>();
+            if (menuImg != null) menuImg.color = new Color(0.85f, 0.65f, 0.05f, 1.0f);
+            var menuTxt = btnMenu.GetComponentInChildren<TextMeshProUGUI>();
+            if (menuTxt != null) {
+                menuTxt.color = new Color(0.08f, 0.08f, 0.08f, 1.0f);
+                menuTxt.fontSize = 20;
+            }
 
             // Play celebratory audio on victory!
             TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_vision");
