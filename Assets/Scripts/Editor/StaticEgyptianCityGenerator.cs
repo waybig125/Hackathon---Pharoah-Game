@@ -2534,8 +2534,20 @@ namespace TheAlchemistsCrypt.Editor
                 else if (name.Contains("temple_complex")) targetSize = 70f;
                 else if (name.Contains("egyptian_temples")) targetSize = 120f; 
                 else if (name.Contains("obelisk")) targetSize = 16f;
+                else if (name.Contains("medieval_stall")) {
+                    targetSize = 2.5f; // Bounded Y: 258.94 cm -> Scales to 2.5 meters tall
+                    scaleByHeight = true;
+                }
+                else if (name.Contains("vietnamese_meat_market_stall")) {
+                    targetSize = 2.2f; // Bounded Y: 4.64 meters -> Scales to 2.2 meters tall
+                    scaleByHeight = true;
+                }
+                else if (name.Contains("low_poly_market_stall_pack")) {
+                    targetSize = 2.4f; // Bounded Y: 1.79 meters -> Scales to 2.4 meters tall
+                    scaleByHeight = true;
+                }
                 else if (name.Contains("stall")) {
-                    targetSize = 6.2f; // Target uniform height for all stalls!
+                    targetSize = 2.4f; // Fallback for other stalls
                     scaleByHeight = true;
                 }
                 else if (name.Contains("palm")) targetSize = 18f;

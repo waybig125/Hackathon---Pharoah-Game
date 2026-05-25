@@ -2813,80 +2813,57 @@ namespace TheAlchemistsCrypt.UI
             vigImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.8f, 0.0f, 0.0f, 0.0f), new Color(0.4f, 0.0f, 0.0f, 0.95f));
             vigImg.color = new Color(1f, 1f, 1f, 0f);
 
-            var modalGo = new GameObject("DeathCard", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            modalGo.SetParent(deathPanelGo, false);
-            modalGo.anchorMin = modalGo.anchorMax = new Vector2(0.5f, 0.5f);
-            modalGo.anchoredPosition = Vector2.zero;
-            modalGo.sizeDelta = new Vector2(850, 640);
+            // Container for all content that will fade in smoothly (without background/modal card)
+            var contentContainerGo = new GameObject("DeathContent", typeof(RectTransform)).GetComponent<RectTransform>();
+            contentContainerGo.SetParent(deathPanelGo, false);
+            contentContainerGo.anchorMin = contentContainerGo.anchorMax = new Vector2(0.5f, 0.5f);
+            contentContainerGo.anchoredPosition = Vector2.zero;
+            contentContainerGo.sizeDelta = new Vector2(850, 640);
             
-            var cardImg = modalGo.GetComponent<Image>();
-            cardImg.sprite = null;
-            cardImg.color = new Color(0.06f, 0.05f, 0.05f, 0.95f);
-
-            var cardBorder = new GameObject("CardBorder", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            cardBorder.SetParent(modalGo, false);
-            cardBorder.anchorMin = Vector2.zero; cardBorder.anchorMax = Vector2.one;
-            cardBorder.offsetMin = cardBorder.offsetMax = Vector2.zero;
-            Material deathBorderMat = new Material(Shader.Find("UI/NormalMappedFrame"));
-            Texture2D uiNormalMap = Resources.Load<Texture2D>("Textures/EgyptianNormalMap");
-            if (uiNormalMap != null && deathBorderMat != null)
-            {
-                deathBorderMat.SetTexture("_BumpMap", uiNormalMap);
-                deathBorderMat.SetFloat("_BumpScale", 1.8f);
-                deathBorderMat.SetColor("_Color", new Color(0.85f, 0.15f, 0.15f, 0.95f));
-                deathBorderMat.SetVector("_Tiling", new Vector4(12, 10, 0, 0));
-                
-                var borderImg = cardBorder.GetComponent<Image>();
-                borderImg.sprite = CreateBorderSprite(100, 100, 8, Color.white);
-                borderImg.type = Image.Type.Sliced;
-                borderImg.material = deathBorderMat;
-            }
-            
-            // Add a CanvasGroup for fading the card content
-            var cardGroup = modalGo.gameObject.AddComponent<CanvasGroup>();
+            var cardGroup = contentContainerGo.gameObject.AddComponent<CanvasGroup>();
             cardGroup.alpha = 0f;
 
             var titleGo = new GameObject("TitleText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
-            titleGo.SetParent(modalGo, false);
-            titleGo.anchoredPosition = new Vector2(0, 230); titleGo.sizeDelta = new Vector2(700, 120);
+            titleGo.SetParent(contentContainerGo, false);
+            titleGo.anchoredPosition = new Vector2(0, 100); titleGo.sizeDelta = new Vector2(900, 150);
             var titleText = titleGo.GetComponent<TextMeshProUGUI>();
             titleText.font = GetTitleFont();
-            titleText.fontSize = 110; // Massive Impact Title
+            titleText.fontSize = 130; // Massive Impact Title
             titleText.fontStyle = FontStyles.Bold;
             titleText.alignment = TextAlignmentOptions.Center;
-            titleText.color = new Color(0.9f, 0.1f, 0.1f, 0.98f); // Warning Red
+            titleText.color = new Color(0.95f, 0.1f, 0.1f, 0.98f); // Warning Red
             titleText.text = "YOU DIED";
-            titleText.outlineColor = new Color(0.95f, 0.35f, 0.05f, 0.8f);
-            titleText.outlineWidth = 0.2f;
-
-            // Gold divider line below title
-            var dividerGo = new GameObject("Divider", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-            dividerGo.SetParent(modalGo, false);
-            dividerGo.anchoredPosition = new Vector2(0, 155);
-            dividerGo.sizeDelta = new Vector2(500, 2);
-            dividerGo.GetComponent<Image>().color = new Color(0.95f, 0.8f, 0.2f, 0.5f);
-
-            var descGo = new GameObject("DescriptionText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
-            descGo.SetParent(modalGo, false);
-            descGo.anchoredPosition = new Vector2(0, 30); descGo.sizeDelta = new Vector2(700, 200);
-            var descText = descGo.GetComponent<TextMeshProUGUI>();
-            descText.font = GetTitleFont();
-            descText.fontSize = 28;
-            descText.alignment = TextAlignmentOptions.Center;
-            descText.color = new Color(0.9f, 0.9f, 0.9f, 0.9f);
-            descText.text = "The shifting dunes of Egypt reclaim another lost soul.\n\nYour elements have decayed, and the Alchemist's Crypt has locked your fate in eternal stone.";
+            titleText.outlineColor = new Color(0.2f, 0.0f, 0.0f, 0.8f);
+            titleText.outlineWidth = 0.25f;
 
             // Action Buttons with micro-squeezing feedback in ButtonInputHelper
-            CreateSettingsActionButton(modalGo, "RESTART VOYAGE", new Vector2(-160, -180), new Vector2(300, 70), () => {
+            var btnRestart = CreateSettingsActionButton(contentContainerGo, "RESTART VOYAGE", new Vector2(-180, -80), new Vector2(320, 80), () => {
                 Time.timeScale = 1f;
                 UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
-            }, new Color(0.7f, 0.1f, 0.1f, 0.20f));
+            }, new Color(0.8f, 0.1f, 0.1f, 0.20f));
 
-            CreateSettingsActionButton(modalGo, "MAIN MENU", new Vector2(160, -180), new Vector2(300, 70), () => {
+            var btnMenu = CreateSettingsActionButton(contentContainerGo, "MAIN MENU", new Vector2(180, -80), new Vector2(320, 80), () => {
                 Time.timeScale = 1f;
                 HasStartedGame = false;
                 UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
-            }, new Color(0.2f, 0.3f, 0.6f, 0.20f));
+            }, new Color(0.8f, 0.1f, 0.1f, 0.20f));
+
+            // Style buttons to be red with white text for premium legibility
+            var restartImg = btnRestart.GetComponent<Image>();
+            if (restartImg != null) restartImg.color = new Color(0.75f, 0.08f, 0.08f, 1.0f);
+            var restartTxt = btnRestart.GetComponentInChildren<TextMeshProUGUI>();
+            if (restartTxt != null) {
+                restartTxt.color = Color.white;
+                restartTxt.fontSize = 20;
+            }
+
+            var menuImg = btnMenu.GetComponent<Image>();
+            if (menuImg != null) menuImg.color = new Color(0.75f, 0.08f, 0.08f, 1.0f);
+            var menuTxt = btnMenu.GetComponentInChildren<TextMeshProUGUI>();
+            if (menuTxt != null) {
+                menuTxt.color = Color.white;
+                menuTxt.fontSize = 20;
+            }
 
             // Play a scary voice line on death to make it feel dangerous!
             string[] deathTaunts = { "Voice/vo_taunt_01", "Voice/vo_taunt_02", "Voice/vo_taunt_03", "Voice/vo_taunt_04", "Voice/vo_taunt_05", "Voice/vo_taunt_06", "Voice/vo_taunt_07", "Voice/vo_taunt_08" };
