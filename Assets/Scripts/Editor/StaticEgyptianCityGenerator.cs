@@ -530,6 +530,8 @@ namespace TheAlchemistsCrypt.Editor
                 wallMat.SetTexture("_BaseMap", houseTex);
                 wallMat.SetTextureScale("_BaseMap", new Vector2(10, 10));
             }
+
+            Texture2D normalMapTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalMapPath);
             if (normalMapTex != null)
             {
                 wallMat.SetTexture("_BumpMap", normalMapTex);
@@ -1790,7 +1792,9 @@ namespace TheAlchemistsCrypt.Editor
                         float metallic = oldMat.HasProperty("_Metallic") ? oldMat.GetFloat("_Metallic") : 0f;
                         float smoothness = oldMat.HasProperty("_Glossiness") ? oldMat.GetFloat("_Glossiness") : 0f;
 
-                        string cacheKey = $"{oldMat.name}_{mainTex?.GetInstanceID()}_{bumpMap?.GetInstanceID()}_{col}_{metallic}_{smoothness}";
+                        string mainTexId = mainTex != null ? mainTex.name + "_" + mainTex.GetHashCode() : "null";
+                        string bumpMapId = bumpMap != null ? bumpMap.name + "_" + bumpMap.GetHashCode() : "null";
+                        string cacheKey = $"{oldMat.name}_{mainTexId}_{bumpMapId}_{col}_{metallic}_{smoothness}";
                         
                         if (!convertedMaterialsCache.TryGetValue(cacheKey, out Material newMat))
                         {
