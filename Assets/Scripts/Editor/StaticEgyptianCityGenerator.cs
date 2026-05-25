@@ -950,6 +950,8 @@ namespace TheAlchemistsCrypt.Editor
             shallows.isStatic = true;
             DestroyImmediate(shallows.GetComponent<Collider>());
 
+            // BeachZone duplicate sand floor quad removed to prevent duplicate/double floors stacking above the actual DesertTerrain
+            /*
             GameObject beach = GameObject.CreatePrimitive(PrimitiveType.Quad);
             beach.name = "BeachZone";
             beach.transform.SetParent(root.transform);
@@ -964,6 +966,7 @@ namespace TheAlchemistsCrypt.Editor
             beach.GetComponent<Renderer>().sharedMaterial = beachMat;
             beach.isStatic = true;
             DestroyImmediate(beach.GetComponent<Collider>());
+            */
 
             // Split the coastline barrier into a left section and a right section to leave a gap at X = 0
             GameObject barrierLeft = new GameObject("CoastlineBarrierLeft");
@@ -2543,7 +2546,7 @@ namespace TheAlchemistsCrypt.Editor
                     scaleByHeight = true;
                 }
                 else if (name.Contains("low_poly_market_stall_pack")) {
-                    targetSize = 4.8f; // Bounded Y: 1.79 meters -> Scales to 4.8 meters tall
+                    targetSize = 9.5f; // Bounded Y: 1.79 meters -> Scales to 9.5 meters tall (highly visible and realistic)
                     scaleByHeight = true;
                 }
                 else if (name.Contains("stall")) {
