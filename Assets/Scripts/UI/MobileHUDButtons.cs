@@ -2968,10 +2968,11 @@ namespace TheAlchemistsCrypt.UI
             cardBorder.SetParent(modalGo, false);
             cardBorder.anchorMin = Vector2.zero; cardBorder.anchorMax = Vector2.one;
             cardBorder.offsetMin = cardBorder.offsetMax = Vector2.zero;
-            Material victoryBorderMat = new Material(Shader.Find("UI/NormalMappedFrame"));
+            Shader borderShader = Shader.Find("UI/NormalMappedFrame");
             Texture2D uiNormalMap = Resources.Load<Texture2D>("Textures/EgyptianNormalMap");
-            if (uiNormalMap != null && victoryBorderMat != null)
+            if (borderShader != null && uiNormalMap != null)
             {
+                Material victoryBorderMat = new Material(borderShader);
                 victoryBorderMat.SetTexture("_BumpMap", uiNormalMap);
                 victoryBorderMat.SetFloat("_BumpScale", 1.8f);
                 victoryBorderMat.SetColor("_Color", new Color(0.95f, 0.8f, 0.2f, 0.95f));

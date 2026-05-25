@@ -83,9 +83,14 @@ namespace TheAlchemistsCrypt.Gameplay
 
             if (plazas.Count > 0)
             {
-                var targetPlaza = plazas[Random.Range(0, plazas.Count)];
+                // Sort by Z descending to keep plazas farthest from the boat (Z = -104) at the front of the list
+                plazas.Sort((a, b) => b.transform.position.z.CompareTo(a.transform.position.z));
+                // Choose randomly from the top 30% of farthest plazas (or at least the first 2 if list is small)
+                int rangeLimit = Mathf.Max(2, Mathf.RoundToInt(plazas.Count * 0.3f));
+                rangeLimit = Mathf.Min(rangeLimit, plazas.Count);
+                var targetPlaza = plazas[Random.Range(0, rangeLimit)];
                 chosenLoc = targetPlaza.transform.position;
-                Debug.Log($"[EscapeManager] Spawning Papyrus at random Plaza: {targetPlaza.name} at {chosenLoc}");
+                Debug.Log($"[EscapeManager] Spawning Papyrus at far-end Plaza: {targetPlaza.name} at {chosenLoc}");
             }
             else
             {
@@ -458,7 +463,7 @@ namespace TheAlchemistsCrypt.Gameplay
             float distToBoat = boatObj != null ? Vector3.Distance(playerObj.transform.position, boatObj.transform.position) : 9999f;
 
             nearKey = !hasKey && distToKey < 15f; 
-            nearBoat = distToBoat < 18f;
+            nearBoat = distToBoat < 32f; // Increased from 18f to allow detection from dry beach
 
             if (nearKey)
             {
@@ -486,7 +491,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 if (promptUiGo != null) promptUiGo.SetActive(true);
                 if (hasKey)
                 { 
-                    if (distToBoat < 15.0f)
+                    if (distToBoat < 30.0f) // Increased from 15f to allow escape from dry beach water's edge
                     {
                         StartEscapeSequence(playerObj);
                     }

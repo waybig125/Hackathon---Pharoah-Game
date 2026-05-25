@@ -2547,7 +2547,7 @@ namespace TheAlchemistsCrypt.Editor
                     scaleByHeight = true;
                 }
                 else if (name.Contains("low_poly_market_stall_pack")) {
-                    targetSize = 4.8f; // Set to 2x the standard size (original was 2.4f)
+                    targetSize = 14.4f; // Set to 3x the previous size (4.8f * 3) as requested
                     scaleByHeight = true;
                 }
                 else if (name.Contains("stall")) {
