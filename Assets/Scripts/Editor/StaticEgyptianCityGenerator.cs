@@ -1382,11 +1382,6 @@ namespace TheAlchemistsCrypt.Editor
             if (columnPrefab != null) {
                 var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
                 colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
-                var decimatedMesh = GetSharedDecimatedColumnMesh(columnPrefab);
-                if (decimatedMesh != null) {
-                    var mf = colObj.GetComponentInChildren<MeshFilter>();
-                    if (mf != null) mf.sharedMesh = decimatedMesh;
-                }
                 AlignToGroundAndAddCollider(colObj, pos + new Vector3(-14.5f, 0f, -14.5f), Quaternion.Euler(-90f, 0f, 0f), 0f);
 
                 // Add NavMeshObstacle to column to carve the NavMesh
@@ -2491,6 +2486,13 @@ namespace TheAlchemistsCrypt.Editor
             var obj = PrefabUtility.InstantiatePrefab(prefab, parent) as GameObject;
             obj.isStatic = true;
 
+            // Programmatically remove floor elements from temple and landmark assets to prevent overlap/clipping with the sand terrain
+            string pName = prefab.name.ToLower();
+            if (pName.Contains("temple") || pName.Contains("mastaba"))
+            {
+                RemoveFloorsFromLandmarks(obj);
+            }
+
             // Step 1: Calculate local bounds in root space using pure local hierarchy math
             Bounds localBounds = new Bounds(Vector3.zero, Vector3.zero);
             bool hasBounds = false;
@@ -2584,19 +2586,7 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             // Step 5: Optimization and Collision
-            string pName = prefab.name.ToLower();
-            
-            // Intelligent decimation: Decimate all models based on visual details.
-            // Landmarks are simplified to 50% rather than skipped, preserving visual aesthetics while saving massive VRAM and draw calls.
-            if (decimate) {
-                if (pName.Contains("temple") || pName.Contains("sphinx") || pName.Contains("mastaba")) {
-                    DecimateRecursively(obj, 0.5f); // High-detail landmarks
-                } else if (pName.Contains("obelisk") || pName.Contains("stall") || pName.Contains("farmer")) {
-                    DecimateRecursively(obj, 0.4f); // Medium-detail environmental props
-                } else {
-                    DecimateRecursively(obj, 0.25f); // Low-poly / background trees
-                }
-            }
+            // Decimation disabled as requested by the user to preserve full model quality and prevent offset/flying mesh artifacts in Unity 6.
 
             if (enterable) {
                 foreach (var mf in obj.GetComponentsInChildren<MeshFilter>(true)) {
@@ -2637,6 +2627,27 @@ namespace TheAlchemistsCrypt.Editor
                 if (mf.sharedMesh != null) {
                     var decimated = GetSharedDecimatedMesh(mf.sharedMesh, quality);
                     if (decimated != null) mf.sharedMesh = decimated;
+                }
+            }
+        }
+
+        private void RemoveFloorsFromLandmarks(GameObject obj)
+        {
+            if (obj == null) return;
+            var renderers = obj.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in renderers)
+            {
+                if (r == null) continue;
+                string nameLower = r.gameObject.name.ToLower();
+                // Deactivate children containing floor, ground, plane, platform, or deck in their names
+                if (nameLower.Contains("floor") || 
+                    nameLower.Contains("ground") || 
+                    nameLower.Contains("plane") || 
+                    nameLower.Contains("platform") ||
+                    nameLower.Contains("deck"))
+                {
+                    r.gameObject.SetActive(false);
+                    Debug.Log($"[CityGen] Programmatically disabled floor/ground element: '{r.gameObject.name}' in '{obj.name}'");
                 }
             }
         }
