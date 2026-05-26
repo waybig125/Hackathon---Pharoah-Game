@@ -93,6 +93,66 @@ namespace TheAlchemistsCrypt.Editor
             EditorUtility.DisplayDialog("Scene Shaders Inspection", report, "OK");
         }
 
+        [MenuItem("Egyptian/🧪 Test Material Properties", false, 14)]
+        public static void TestMaterialProperties()
+        {
+            // Search all assets in the project for glTF materials
+            string[] guids = AssetDatabase.FindAssets("t:Material");
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (mat == null || mat.shader == null) continue;
+                if (mat.shader.name.Contains("glTF-pbr"))
+                {
+                    string msg = $"Asset Material: {mat.name} ({path}), Shader: {mat.shader.name}\nProperties:\n";
+                    var shader = mat.shader;
+                    int count = ShaderUtil.GetPropertyCount(shader);
+                    for (int i = 0; i < count; i++)
+                    {
+                        string name = ShaderUtil.GetPropertyName(shader, i);
+                        var type = ShaderUtil.GetPropertyType(shader, i);
+                        msg += $"- {name} ({type})\n";
+                    }
+                    Debug.Log(msg);
+                    EditorUtility.DisplayDialog("Material Properties", msg, "OK");
+                    return;
+                }
+            }
+
+            // If no standalone material assets, try finding a gltf/glb asset and loading its sub-assets
+            string[] glbGuids = AssetDatabase.FindAssets("t:GameObject");
+            foreach (string guid in glbGuids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (!path.EndsWith(".glb") && !path.EndsWith(".gltf")) continue;
+                
+                var assets = AssetDatabase.LoadAllAssetsAtPath(path);
+                foreach (var asset in assets)
+                {
+                    var mat = asset as Material;
+                    if (mat == null || mat.shader == null) continue;
+                    if (mat.shader.name.Contains("glTF-pbr"))
+                    {
+                        string msg = $"GLB Sub-Material: {mat.name} in {path}, Shader: {mat.shader.name}\nProperties:\n";
+                        var shader = mat.shader;
+                        int count = ShaderUtil.GetPropertyCount(shader);
+                        for (int i = 0; i < count; i++)
+                        {
+                            string name = ShaderUtil.GetPropertyName(shader, i);
+                            var type = ShaderUtil.GetPropertyType(shader, i);
+                            msg += $"- {name} ({type})\n";
+                        }
+                        Debug.Log(msg);
+                        EditorUtility.DisplayDialog("Material Properties", msg, "OK");
+                        return;
+                    }
+                }
+            }
+
+            EditorUtility.DisplayDialog("Material Properties", "No glTF material found in the project.", "OK");
+        }
+
         public static void EnableGPUResidentDrawerAllAssets(bool silent)
         {
             // Set BatchRendererGroup Stripping to KeepAll in EditorGraphicsSettings
