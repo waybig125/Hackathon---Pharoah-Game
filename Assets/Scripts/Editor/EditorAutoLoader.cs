@@ -26,6 +26,13 @@ public static class EditorAutoLoader
             Debug.Log("[EditorAutoLoader] Automatically loading the main scene: Assets/Scenes/MainGame.unity");
             EditorSceneManager.OpenScene("Assets/Scenes/MainGame.unity", OpenSceneMode.Single);
         }
+
+        // 4. Automatically regenerate the gorgeous procedural Egyptian City if not playing
+        if (!EditorApplication.isPlaying)
+        {
+            Debug.Log("[EditorAutoLoader] Automatically regenerating the gorgeous procedural Egyptian City...");
+            TheAlchemistsCrypt.Editor.StaticEgyptianCityGenerator.QuickRegen();
+        }
     }
 
     private static void EnsureMainGameInBuildSettings()

@@ -324,6 +324,173 @@ namespace TheAlchemistsCrypt.Editor
             EditorUtility.DisplayDialog("Scene Shaders Inspection", report, "OK");
         }
 
+        [MenuItem("Egyptian/Run Scene Diagnostics", false, 16)]
+        public static void RunSceneDiagnostics()
+        {
+            var report = new System.Text.StringBuilder();
+            report.AppendLine("=== SCENE DIAGNOSTICS REPORT ===");
+            report.AppendLine($"Time: {System.DateTime.Now}");
+            
+            // --- 1. General AlchemicalFocus & Weapons Check ---
+            report.AppendLine("\n--- ALCHEMICAL FOCUS & WEAPON DIAGNOSTICS ---");
+            var focuses = Object.FindObjectsByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>(FindObjectsInactive.Include);
+            report.AppendLine($"Found {focuses.Length} AlchemicalFocus component(s) in the scene.");
+            foreach (var f in focuses)
+            {
+                report.AppendLine($"- AlchemicalFocus on '{f.gameObject.name}' | ActiveInHierarchy: {f.gameObject.activeInHierarchy} | Enabled: {f.enabled} | Mode: {f.CurrentMode}");
+            }
+
+            var character = Object.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>(FindObjectsInactive.Include);
+            if (character != null)
+            {
+                report.AppendLine($"Found Player Character: {character.gameObject.name}");
+                var weapon = character.GetEquippedWeapon();
+                if (weapon != null)
+                    report.AppendLine($"- Equipped Weapon: {weapon.name}");
+                else
+                    report.AppendLine("- No weapon equipped.");
+            }
+            else
+            {
+                report.AppendLine("No Infima Character found in the scene.");
+            }
+
+            // --- 2. Missing Script Check ---
+            report.AppendLine("\n--- MISSING COMPONENTS CHECK ---");
+            var allGo = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
+            int missingCount = 0;
+            foreach (var go in allGo)
+            {
+                var components = go.GetComponents<Component>();
+                foreach (var c in components)
+                {
+                    if (c == null)
+                    {
+                        report.AppendLine($"- Missing Script component on GameObject: '{GetGameObjectPath(go)}'");
+                        missingCount++;
+                    }
+                }
+            }
+            report.AppendLine($"Total missing components found: {missingCount}");
+
+            // --- 3. Lights Check ---
+            report.AppendLine("\n--- LIGHT SOURCE DIAGNOSTICS ---");
+            var lights = Object.FindObjectsByType<Light>(FindObjectsInactive.Include);
+            report.AppendLine($"Found {lights.Length} light(s) in the scene.");
+            foreach (var l in lights)
+            {
+                report.AppendLine($"- Path: {GetGameObjectPath(l.gameObject)} | Type: {l.type} | Range: {l.range} | Intensity: {l.intensity} | Enabled: {l.enabled} | Color: {l.color}");
+            }
+
+            // --- 4. Player Hierarchy Check ---
+            report.AppendLine("\n--- PLAYER HIERARCHY DUMP ---");
+            var player = GameObject.Find("Player");
+            if (player == null && character != null)
+            {
+                player = character.gameObject;
+            }
+            if (player != null)
+            {
+                report.AppendLine("Player GameObject Root Name: " + player.name);
+                DumpTransform(player.transform, "", report);
+            }
+            else
+            {
+                report.AppendLine("Player GameObject not found in scene.");
+            }
+
+            // --- 5. Renderers & Shaders (Original Diagnostics) ---
+            report.AppendLine("\n--- RENDERER & SHADER DIAGNOSTICS ---");
+            var allRenderers = Object.FindObjectsByType<Renderer>(FindObjectsInactive.Include);
+            report.AppendLine($"Total renderers found: {allRenderers.Length}");
+            
+            int gltfShaders = 0;
+            int urpShaders = 0;
+            int nullShaders = 0;
+            int otherShaders = 0;
+            
+            var texturelessColumns = new List<string>();
+            var detailLog = new System.Text.StringBuilder();
+
+            foreach (var r in allRenderers)
+            {
+                if (r == null) continue;
+                string goPath = GetGameObjectPath(r.gameObject);
+                
+                for (int i = 0; i < r.sharedMaterials.Length; i++)
+                {
+                    var mat = r.sharedMaterials[i];
+                    if (mat == null)
+                    {
+                        detailLog.AppendLine($"[NULL MAT] GameObject: {goPath}, Index: {i}");
+                        continue;
+                    }
+                    
+                    string shaderName = mat.shader != null ? mat.shader.name : "Null Shader";
+                    detailLog.AppendLine($"GameObject: {goPath}, Mat: {mat.name}, Shader: {shaderName}");
+                    
+                    if (shaderName == "Null Shader") nullShaders++;
+                    else if (shaderName.Contains("glTF-pbr")) gltfShaders++;
+                    else if (shaderName == "Universal Render Pipeline/Lit") urpShaders++;
+                    else otherShaders++;
+                    
+                    // Check for columns/pillars
+                    if (goPath.ToLower().Contains("column") || goPath.ToLower().Contains("pillar"))
+                    {
+                        Texture mainTex = mat.HasProperty("_BaseMap") ? mat.GetTexture("_BaseMap") : null;
+                        if (mainTex == null)
+                        {
+                            texturelessColumns.Add($"[COLUMN NO TEXTURE] GameObject: {goPath}, Mat: {mat.name}, Shader: {shaderName}");
+                        }
+                    }
+                }
+            }
+            
+            report.AppendLine($"glTF Shaders: {gltfShaders}");
+            report.AppendLine($"URP Lit Shaders: {urpShaders}");
+            report.AppendLine($"Null Shaders: {nullShaders}");
+            report.AppendLine($"Other Shaders: {otherShaders}");
+            
+            report.AppendLine("\n=== TEXTURELESS COLUMNS ===");
+            foreach (var col in texturelessColumns)
+                report.AppendLine(col);
+                
+            report.AppendLine("\n=== DETAILED RENDERER LOG ===");
+            report.AppendLine(detailLog.ToString());
+                
+            System.IO.File.WriteAllText("Assets/diagnostics_log.txt", report.ToString());
+            Debug.Log("[URPSRPBatcherFixer] Diagnostics report written to Assets/diagnostics_log.txt");
+            EditorUtility.DisplayDialog("Scene Diagnostics", $"Diagnostics written to Assets/diagnostics_log.txt\n\nglTF Shaders: {gltfShaders}\nURP Shaders: {urpShaders}\nMissing Scripts: {missingCount}\nLights Check: {lights.Length} light(s)", "OK");
+        }
+
+        private static void DumpTransform(Transform t, string indent, System.Text.StringBuilder sb)
+        {
+            if (t == null) return;
+            sb.AppendLine($"{indent}- {t.name} (Position: {t.localPosition}, Active: {t.gameObject.activeSelf})");
+            foreach (var comp in t.GetComponents<Component>())
+            {
+                if (comp != null && comp != t)
+                {
+                    sb.AppendLine($"{indent}  [Comp] {comp.GetType().Name}");
+                }
+            }
+            for (int i = 0; i < t.childCount; i++)
+            {
+                DumpTransform(t.GetChild(i), indent + "  ", sb);
+            }
+        }
+        
+        private static string GetGameObjectPath(GameObject obj)
+        {
+            string path = obj.name;
+            while (obj.transform.parent != null)
+            {
+                obj = obj.transform.parent.gameObject;
+                path = obj.name + "/" + path;
+            }
+            return path;
+        }
+
         [MenuItem("Egyptian/🧪 Test Material Properties", false, 14)]
         public static void TestMaterialProperties()
         {
