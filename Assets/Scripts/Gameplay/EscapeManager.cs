@@ -27,6 +27,10 @@ namespace TheAlchemistsCrypt.Gameplay
         private bool nearKey = false;
         private bool nearBoat = false;
 
+        // PERFORMANCE: Cache player reference — FindGameObjectWithTag is O(n) over all scene objects.
+        // Previously this was called every single frame in Update(), which is ~60 O(n) searches/second.
+        private GameObject cachedPlayer;
+
         private void Awake()
         {
             if (Instance == null) Instance = this;
@@ -38,6 +42,8 @@ namespace TheAlchemistsCrypt.Gameplay
             SpawnKey();
             SpawnBoat();
             SetupUI();
+            // Cache player once at start — see Update() for null-check fallback
+            cachedPlayer = GameObject.FindGameObjectWithTag("Player");
         }
 
         private void SetupUI()
@@ -431,11 +437,11 @@ namespace TheAlchemistsCrypt.Gameplay
                         float newZ = boatObj.transform.position.z - 4f * Time.deltaTime;
                         boatObj.transform.position = new Vector3(0f, 3.2f + bob, newZ);
                     }
-                    
-                    var player = GameObject.FindGameObjectWithTag("Player");
-                    if (player != null)
+
+                    // Use cached player — no per-frame scene search
+                    if (cachedPlayer != null)
                     {
-                        player.transform.position = boatObj.transform.position + new Vector3(0f, 1.2f, 0f);
+                        cachedPlayer.transform.position = boatObj.transform.position + new Vector3(0f, 1.2f, 0f);
                     }
 
                     if (escapeTimer >= 5.0f)
@@ -456,7 +462,13 @@ namespace TheAlchemistsCrypt.Gameplay
 
             if (!TheAlchemistsCrypt.UI.MobileHUDButtons.HasStartedGame) return;
 
-            var playerObj = GameObject.FindGameObjectWithTag("Player");
+            var playerObj = cachedPlayer;
+            // Null-check: re-find if player was respawned or scene reloaded
+            if (playerObj == null)
+            {
+                playerObj = GameObject.FindGameObjectWithTag("Player");
+                cachedPlayer = playerObj;
+            }
             if (playerObj == null) return;
 
             float distToKey = keyObj != null ? Vector3.Distance(playerObj.transform.position, keyObj.transform.position) : 9999f;

@@ -210,6 +210,10 @@ namespace TheAlchemistsCrypt.AI
             if (animator != null)
             {
                 animator.applyRootMotion = false; // Fix 'dragged' look by disabling root motion
+                // PERFORMANCE: Stop GPU bone skinning and CPU blend-tree updates when off-screen.
+                // With 20 mummies all animating every frame regardless of visibility,
+                // SkinnedMeshRenderer was updating bone transforms even for mummies behind the player.
+                animator.cullingMode = AnimatorCullingMode.CullCompletely;
                 hasSpeedParameter = HasParameter("Speed");
                 if (hasSpeedParameter)
                 {
@@ -329,6 +333,17 @@ namespace TheAlchemistsCrypt.AI
                 if (deathTimer > 1f) transform.position += Vector3.down * 0.6f * Time.deltaTime;
                 if (deathTimer > 4f) Destroy(gameObject);
                 return;
+            }
+
+            // PERFORMANCE: Frame throttle for distant mummies.
+            // Mummies >40m away only run full AI logic every 3rd frame, staggered by mummyId.
+            // The player never notices at that distance — pathfinding is already throttled at 0.2–0.4s.
+            // This spreads CPU load across frames rather than spiking every frame.
+            if (player != null)
+            {
+                float sqrDistCheck = (transform.position - player.position).sqrMagnitude;
+                if (sqrDistCheck > 1600f && (Time.frameCount % 3) != (mummyId % 3))
+                    return;
             }
 
             if (player == null) {

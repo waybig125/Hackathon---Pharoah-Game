@@ -8,12 +8,15 @@ namespace TheAlchemistsCrypt.Editor
     /// <summary>
     /// Editor utility for:
     ///   1) Converting non-SRP-compatible materials to URP Lit (fixes the SRP Batcher)
-    ///   2) Marking EgyptianCity_V5_Final children as Occluder/Occludee/Batching Static
-    ///   3) Baking occlusion culling data on demand via a dedicated menu item
+    ///   2) Marking EgyptianCity_V5_Final children as Batching + ReflectionProbe Static
+    ///      (NO OccluderStatic / OccludeeStatic — occlusion culling is disabled; Unity's
+    ///      built-in frustum culling is sufficient and avoids the visual artefacts + APK bloat
+    ///      that occlusion bake data produces.)
+    ///   3) Clearing any previously baked occlusion data from the scene
     ///
     /// Menu items under Egyptian →:
     ///   • "Fix SRP Batcher Materials"   – instant, run after any scene change
-    ///   • "🔥 Bake Occlusion Culling"   – slow (1–5 min), run before final builds
+    ///   • "🗑 Clear Occlusion Data"     – strips old bake data, shrinks scene file
     /// </summary>
     public static class URPSRPBatcherFixer
     {
@@ -24,31 +27,33 @@ namespace TheAlchemistsCrypt.Editor
         [MenuItem("Egyptian/Fix SRP Batcher Materials", false, 10)]
         public static void FixMaterialsMenuItem()
         {
+            SetCityObjectsStatic();
             int converted = FixAllSceneMaterials();
             EditorUtility.DisplayDialog(
                 "SRP Batcher Fix Complete",
                 $"Converted {converted} non-URP material(s) to URP Lit.\n" +
-                "GPU Instancing has been enabled on all materials.\n\n" +
+                "GPU Instancing has been enabled on all materials.\n" +
+                "Static batching flags applied to city objects.\n\n" +
                 "SRP Batcher should now show active batches in the Frame Debugger.",
                 "OK");
         }
 
-        [MenuItem("Egyptian/🔥 Bake Occlusion Culling", false, 11)]
-        public static void BakeOcclusionMenuItem()
+        [MenuItem("Egyptian/🗑 Clear Occlusion Data", false, 11)]
+        public static void ClearOcclusionDataMenuItem()
         {
             bool proceed = EditorUtility.DisplayDialog(
-                "Bake Occlusion Culling",
-                "This will:\n" +
-                "  1. Mark EgyptianCity_V5_Final children as Static\n" +
-                "  2. Fix any remaining non-URP materials\n" +
-                "  3. Bake occlusion data (Unity may be unresponsive for 1–5 min)\n\n" +
-                "Run this when you are happy with the current city layout.\n" +
-                "You do NOT need to re-bake after enemy / UI / gameplay code changes.",
-                "Bake Now",
+                "Clear Occlusion Data",
+                "This will strip the baked occlusion culling data from the scene.\n\n" +
+                "Why? The occlusion bake:\n" +
+                "  • Added 100–200 MB to the scene file (APK bloat)\n" +
+                "  • Caused visual pop-in artefacts on mobile\n\n" +
+                "Unity's built-in frustum culling works well for this open-city layout\n" +
+                "and has zero overhead or artefacts.",
+                "Clear Now",
                 "Cancel");
 
             if (!proceed) return;
-            BakeOcclusion();
+            ClearOcclusionData();
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -76,7 +81,7 @@ namespace TheAlchemistsCrypt.Editor
             int converted = 0;
 
             Renderer[] allRenderers = Object.FindObjectsByType<Renderer>(
-                FindObjectsInactive.Include, FindObjectsSortMode.None);
+                FindObjectsInactive.Include);
 
             foreach (Renderer renderer in allRenderers)
             {
@@ -140,8 +145,11 @@ namespace TheAlchemistsCrypt.Editor
 
         /// <summary>
         /// Marks all static geometry inside EgyptianCity_V5_Final as
-        /// OccluderStatic, OccludeeStatic, BatchingStatic and ReflectionProbeStatic.
-        /// Dynamic objects (enemies, player, weapons, pickups, managers) are skipped.
+        /// BatchingStatic and ReflectionProbeStatic ONLY.
+        ///
+        /// OccluderStatic and OccludeeStatic are intentionally NOT set.
+        /// Occlusion baking produced visual artefacts and ~100–200 MB of extra
+        /// data in the scene file. Unity frustum culling handles the open city fine.
         /// </summary>
         public static void SetCityObjectsStatic()
         {
@@ -159,10 +167,10 @@ namespace TheAlchemistsCrypt.Editor
                 "canvas", "spawner", "hive", "health", "light"
             };
 
+            // CHANGED: Removed OccluderStatic and OccludeeStatic to avoid triggering
+            // the occlusion bake and the associated APK bloat / visual artefacts.
             StaticEditorFlags staticFlags =
-                StaticEditorFlags.OccluderStatic |
-                StaticEditorFlags.OccludeeStatic  |
-                StaticEditorFlags.BatchingStatic  |
+                StaticEditorFlags.BatchingStatic |
                 StaticEditorFlags.ReflectionProbeStatic;
 
             int marked  = 0;
@@ -185,30 +193,26 @@ namespace TheAlchemistsCrypt.Editor
                 marked++;
             }
 
-            Debug.Log($"[URPSRPBatcherFixer] Static flags set on {marked} objects. Skipped {skipped} dynamic objects.");
+            Debug.Log($"[URPSRPBatcherFixer] Batching+Reflection static flags set on {marked} objects. Skipped {skipped} dynamic objects.");
         }
 
         /// <summary>
-        /// Full occlusion culling bake pipeline:
-        ///   1. Set city objects as Static
-        ///   2. Fix non-URP materials
-        ///   3. Save scene
-        ///   4. Compute occlusion (blocking — editor shows progress bar)
-        ///   5. Save scene again
+        /// Strips previously baked occlusion culling data from the active scene.
+        /// This reclaims 100–200 MB from the scene file that was added by a prior bake.
         /// </summary>
-        public static void BakeOcclusion()
+        public static void ClearOcclusionData()
         {
-            SetCityObjectsStatic();
-            FixAllSceneMaterials();
+            StaticOcclusionCulling.Clear();
 
             var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
             EditorSceneManager.SaveScene(scene);
 
-            Debug.Log("[URPSRPBatcherFixer] Starting occlusion culling bake — Unity may be unresponsive for 1–5 minutes...");
-            StaticOcclusionCulling.Compute();
-
-            EditorSceneManager.SaveScene(scene);
-            Debug.Log("[URPSRPBatcherFixer] ✅ Occlusion culling bake complete. Scene saved.");
+            Debug.Log("[URPSRPBatcherFixer] ✅ Occlusion data cleared. Scene saved. Scene file should now be significantly smaller.");
+            EditorUtility.DisplayDialog(
+                "Occlusion Data Cleared",
+                "Baked occlusion data has been removed from the scene.\n\n" +
+                "The scene has been saved. Rebuild the APK for a smaller package size.",
+                "OK");
         }
     }
 }

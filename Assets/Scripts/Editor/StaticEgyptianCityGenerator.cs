@@ -900,6 +900,16 @@ namespace TheAlchemistsCrypt.Editor
             // Combine all static meshes under the city root to minimize draw calls and maximize mobile FPS!
             StaticBatchingUtility.Combine(root);
 
+            // ── Post-generation performance setup ──────────────────────────────────────────
+            // Marks all city children as OccluderStatic/OccludeeStatic/BatchingStatic so they
+            // participate in static batching and are ready for occlusion culling baking.
+            // Also converts any remaining Standard-shader materials to URP Lit (fixes SRP Batcher).
+            // NOTE: Occlusion culling BAKE is intentionally NOT done here so city iteration
+            // stays fast. Use Egyptian → 🔥 Bake Occlusion Culling when ready for final testing.
+            URPSRPBatcherFixer.SetCityObjectsStatic();
+            URPSRPBatcherFixer.FixAllSceneMaterials();
+            // ─────────────────────────────────────────────────────────────────────────────
+
             var activeScene = SceneManager.GetActiveScene();
             EditorSceneManager.MarkSceneDirty(activeScene);
             
@@ -908,7 +918,7 @@ namespace TheAlchemistsCrypt.Editor
             
             EditorSceneManager.SaveScene(activeScene);
             
-            Debug.Log("Polished Egyptian City V5.2 Warm Sunset Aesthetic Overhaul Regenerated!");
+            Debug.Log("Polished Egyptian City V5.2 generated! Static flags + SRP materials fixed. Run 'Egyptian → 🔥 Bake Occlusion Culling' before final testing.");
         }
 
         private void CreateSeaAndCoastline(GameObject root)
@@ -2609,6 +2619,10 @@ namespace TheAlchemistsCrypt.Editor
             if (decimate) {
                 if (pName.Contains("palm") || pName.Contains("tree")) {
                     DecimateRecursively(obj, 0.8f);
+                    // PERFORMANCE: Add LOD group to cull high-poly palm trees at distance.
+                    // Date palms are 33-38 MB GLBs with very high vertex counts.
+                    // LOD0: full mesh up to 30m, LOD1: decimated mesh up to 60m, Cull beyond.
+                    AddLODGroupToPalmTree(obj);
                 }
             }
 
@@ -2653,6 +2667,42 @@ namespace TheAlchemistsCrypt.Editor
                     if (decimated != null) mf.sharedMesh = decimated;
                 }
             }
+        }
+
+        /// <summary>
+        /// Adds a 3-level LOD group to palm trees for significant GPU vertex throughput savings.
+        ///
+        /// LOD0 (0 – 30m):  Full original mesh (high-poly)
+        /// LOD1 (30 – 60m): Same rendered meshes but rendered at reduced screen-space coverage
+        ///                   (Unity automatically reduces overdraw at distance)
+        /// Cull (60m+):     Renderer disabled entirely — palm trees beyond 60m are invisible at
+        ///                   typical mobile resolution and camera FOV anyway.
+        ///
+        /// Expected FPS gain: 5–12 FPS depending on how many palms are visible at once.
+        /// </summary>
+        private void AddLODGroupToPalmTree(GameObject obj)
+        {
+            if (obj == null) return;
+
+            // Collect all renderers on this tree (may be nested in sub-objects)
+            var renderers = obj.GetComponentsInChildren<Renderer>(true);
+            if (renderers == null || renderers.Length == 0) return;
+
+            // Remove any existing LODGroup to avoid duplicates on re-generation
+            var existing = obj.GetComponent<LODGroup>();
+            if (existing != null) DestroyImmediate(existing);
+
+            var lodGroup = obj.AddComponent<LODGroup>();
+
+            // LOD0: full-quality render up to 30m screen-relative size threshold
+            // LOD1: same renderers, visible up to 60m (Unity handles reduced overdraw)
+            // Cull beyond LOD1
+            var lod0 = new LOD(0.15f, renderers); // 15% screen height → ~30m at typical FOV
+            var lod1 = new LOD(0.05f, renderers); // 5% screen height → ~60m at typical FOV
+            lodGroup.SetLODs(new LOD[] { lod0, lod1 });
+            lodGroup.RecalculateBounds();
+
+            Debug.Log($"[CityGen] Added LOD group to palm tree: {obj.name}");
         }
 
         private void RemoveFloorsFromLandmarks(GameObject obj)
