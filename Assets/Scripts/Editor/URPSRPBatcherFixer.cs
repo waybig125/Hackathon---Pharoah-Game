@@ -66,6 +66,29 @@ namespace TheAlchemistsCrypt.Editor
 
         public static void EnableGPUResidentDrawerAllAssets(bool silent)
         {
+            // Set BatchRendererGroup Stripping to KeepAll in EditorGraphicsSettings
+            try
+            {
+                var assembly = System.Reflection.Assembly.Load("UnityEditor");
+                var editorGraphicsSettingsType = assembly.GetType("UnityEditor.Rendering.EditorGraphicsSettings");
+                var brgStrippingModeType = assembly.GetType("UnityEditor.Rendering.BrgStrippingMode");
+                if (editorGraphicsSettingsType != null && brgStrippingModeType != null)
+                {
+                    var prop = editorGraphicsSettingsType.GetProperty("batchRendererGroupShaderStrippingMode", 
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    if (prop != null)
+                    {
+                        var keepAllVal = System.Enum.Parse(brgStrippingModeType, "KeepAll");
+                        prop.SetValue(null, keepAllVal);
+                        Debug.Log("[URPSRPBatcherFixer] Programmatically set EditorGraphicsSettings.batchRendererGroupShaderStrippingMode to KeepAll.");
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[URPSRPBatcherFixer] Failed to set BatchRendererGroup stripping mode: {ex.Message}");
+            }
+
             string[] guids = AssetDatabase.FindAssets("t:UniversalRenderPipelineAsset");
             int successCount = 0;
             int totalCount = 0;

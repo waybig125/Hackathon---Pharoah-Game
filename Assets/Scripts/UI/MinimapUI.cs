@@ -39,7 +39,9 @@ namespace TheAlchemistsCrypt.UI
         // Icon assets generated procedurally
         private Sprite obsidianCircleSprite;
         private Sprite obsidianRectSprite;
-        private Sprite goldBorderSprite;
+        private Sprite goldBorderCircleSprite;
+        private Sprite goldBorderRectSprite;
+        private Image borderImage;
         private Sprite playerArrowSprite;
         private Sprite brownDotSprite;
         
@@ -115,7 +117,8 @@ private Sprite buildingSprite;
         {
             obsidianCircleSprite = CreateCircleSprite(240, new Color(0.04f, 0.04f, 0.04f, 0.93f));
             obsidianRectSprite = CreateRectSprite(300, 200, new Color(0.04f, 0.04f, 0.04f, 0.93f));
-            goldBorderSprite = CreateRectRingSprite(300, 200, 6, new Color(0.95f, 0.8f, 0.2f, 0.95f));
+            goldBorderCircleSprite = CreateCircleRingSprite(240, 6, new Color(0.95f, 0.8f, 0.2f, 0.95f));
+            goldBorderRectSprite = CreateRectRingSprite(400, 400, 6, new Color(0.95f, 0.8f, 0.2f, 0.95f));
             
             playerArrowSprite = CreatePlayerArrowSprite(64, 64, new Color(0.95f, 0.8f, 0.2f, 0.95f));
             brownDotSprite = CreateSolidCircleSprite(12, new Color(0.6f, 0.4f, 0.2f, 0.8f));
@@ -138,12 +141,12 @@ private Sprite buildingSprite;
             if (minimapFrame == null) minimapFrame = gameObject.AddComponent<RectTransform>();
             
             minimapFrame.anchorMin = minimapFrame.anchorMax = new Vector2(1, 1);
-            minimapFrame.anchoredPosition = new Vector2(-160, -110); 
-            minimapFrame.sizeDelta = new Vector2(300, 200);
+            minimapFrame.anchoredPosition = new Vector2(-130, -130); 
+            minimapFrame.sizeDelta = new Vector2(220, 220);
 
             var frameImage = gameObject.GetComponent<Image>();
             if (frameImage == null) frameImage = gameObject.AddComponent<Image>();
-            frameImage.sprite = obsidianRectSprite;
+            frameImage.sprite = obsidianCircleSprite;
             frameImage.color = Color.white;
             frameImage.raycastTarget = true; 
 
@@ -154,7 +157,7 @@ private Sprite buildingSprite;
             maskContainer.offsetMin = maskContainer.offsetMax = new Vector2(6, 6); 
             
             var maskImg = maskGo.GetComponent<Image>();
-            maskImg.sprite = null; 
+            maskImg.sprite = obsidianCircleSprite; 
             maskImg.color = Color.white; 
             maskImg.raycastTarget = false;
             maskGo.GetComponent<Mask>().showMaskGraphic = false;
@@ -227,8 +230,9 @@ private Sprite buildingSprite;
             borderRect.anchorMin = Vector2.zero; borderRect.anchorMax = Vector2.one;
             borderRect.offsetMin = borderRect.offsetMax = Vector2.zero;
             var borderImg = borderGo.GetComponent<Image>();
-            borderImg.sprite = goldBorderSprite;
+            borderImg.sprite = goldBorderCircleSprite;
             borderImg.color = Color.white;
+            borderImage = borderImg;
 
             var playerGo = new GameObject("PlayerIndicator", typeof(RectTransform), typeof(Image));
             playerIndicator = playerGo.GetComponent<RectTransform>();
@@ -678,29 +682,56 @@ public void OnPointerDown(PointerEventData eventData)
         {
             float elapsed = 0f;
             Vector2 startPos = minimapFrame.anchoredPosition;
-            Vector2 targetPos = expanding ? new Vector2(-Screen.width * 0.5f, -Screen.height * 0.5f) : new Vector2(-180, -240);
-            
             Vector2 startSize = minimapFrame.sizeDelta;
-            Vector2 targetSize = expanding ? new Vector2(Screen.width * 0.9f, Screen.height * 0.85f) : new Vector2(240, 240);
+
+            var canvasRT = minimapFrame.parent as RectTransform;
+            float canvasW = canvasRT != null ? canvasRT.rect.width : Screen.width;
+            float canvasH = canvasRT != null ? canvasRT.rect.height : Screen.height;
+
+            Vector2 targetPos = expanding ? new Vector2(-canvasW * 0.5f, -canvasH * 0.5f) : new Vector2(-130, -130);
+            Vector2 targetSize = expanding ? new Vector2(canvasW * 0.85f, canvasH * 0.8f) : new Vector2(220, 220);
             
             // Toggle UI overlays
             if (expanding)
             {
+                float mapPanelMinDimension = Mathf.Min(targetSize.x, targetSize.y) * 0.85f;
+                expandedScale = mapPanelMinDimension / 400f; // Center and scale within a 400-unit world radius box
+
+                if (MobileHUDButtons.Instance != null)
+                {
+                    MobileHUDButtons.Instance.SetHUDVisible(false);
+                }
+
                 if (bgGridImage != null)
                 {
                     bgGridImage.sprite = minimapBgRectSprite;
                     bgGridImage.type = Image.Type.Simple;
                 }
                 minimapFrame.GetComponent<Image>().sprite = obsidianRectSprite;
+                if (borderImage != null)
+                {
+                    borderImage.sprite = goldBorderRectSprite;
+                    borderImage.type = Image.Type.Sliced;
+                }
                 radarSweep.gameObject.SetActive(false);
                 compassRing.gameObject.SetActive(false);
-                maskContainer.GetComponent<Mask>().enabled = false;
-                maskContainer.GetComponent<Image>().enabled = false; // Hide the circular mask image
+                
+                // Switch mask to rectangular to match gold border bounds perfectly, but KEEP enabled to clip overflow!
+                var maskImg = maskContainer.GetComponent<Image>();
+                maskImg.sprite = obsidianRectSprite;
+                maskImg.type = Image.Type.Simple;
+                maskContainer.GetComponent<Mask>().enabled = true;
+                maskImg.enabled = true;
+
                 legendPanel.SetActive(true);
                 minimapFrame.Find("CloseLabel")?.gameObject.SetActive(true);
             }
             else
             {
+                if (MobileHUDButtons.Instance != null)
+                {
+                    MobileHUDButtons.Instance.SetHUDVisible(true);
+                }
                 legendPanel.SetActive(false);
                 minimapFrame.Find("CloseLabel")?.gameObject.SetActive(false);
             }
@@ -727,10 +758,20 @@ public void OnPointerDown(PointerEventData eventData)
                     bgGridImage.type = Image.Type.Tiled;
                 }
                 minimapFrame.GetComponent<Image>().sprite = obsidianCircleSprite;
+                if (borderImage != null)
+                {
+                    borderImage.sprite = goldBorderCircleSprite;
+                    borderImage.type = Image.Type.Simple;
+                }
                 radarSweep.gameObject.SetActive(true);
                 compassRing.gameObject.SetActive(true);
+                
+                // Reset mask back to circular
+                var maskImg = maskContainer.GetComponent<Image>();
+                maskImg.sprite = obsidianCircleSprite;
+                maskImg.type = Image.Type.Simple;
                 maskContainer.GetComponent<Mask>().enabled = true;
-                maskContainer.GetComponent<Image>().enabled = true;
+                maskImg.enabled = true;
             }
 
             transitionCoroutine = null;
@@ -819,7 +860,32 @@ public void OnPointerDown(PointerEventData eventData)
                 }
             }
             tex.Apply();
-            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(thickness, thickness, thickness, thickness));
+        }
+
+        private Sprite CreateCircleRingSprite(int size, int thickness, Color col)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (float)(x - size / 2) / (size / 2);
+                    float dy = (float)(y - size / 2) / (size / 2);
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    float innerRad = (float)(size / 2 - thickness) / (size / 2);
+                    if (dist <= 1.0f && dist >= innerRad)
+                    {
+                        tex.SetPixel(x, y, col);
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
         }
 private Sprite CreateSolidBarSprite(int w, int h, Color col)
         {

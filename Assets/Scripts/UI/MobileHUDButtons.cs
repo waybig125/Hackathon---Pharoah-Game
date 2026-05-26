@@ -3115,5 +3115,13 @@ namespace TheAlchemistsCrypt.UI
                 }
             }
         }
+
+        public void SetHUDVisible(bool visible)
+        {
+            if (hudRootGo != null)
+            {
+                hudRootGo.SetActive(visible);
+            }
+        }
     }
 }
