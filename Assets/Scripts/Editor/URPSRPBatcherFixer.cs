@@ -135,6 +135,7 @@ namespace TheAlchemistsCrypt.Editor
                     System.Reflection.BindingFlags.NonPublic | 
                     System.Reflection.BindingFlags.Instance);
 
+                // 1. Enable GPU Resident Drawer
                 if (prop != null)
                 {
                     try
@@ -149,6 +150,24 @@ namespace TheAlchemistsCrypt.Editor
                     catch (System.Exception ex)
                     {
                         Debug.LogError($"[URPSRPBatcherFixer] Failed to set gpuResidentDrawerMode on {path}: {ex.Message}");
+                    }
+                }
+
+                // 2. Enable SRP Batcher
+                var srpProp = type.GetProperty("useSRPBatcher", 
+                    System.Reflection.BindingFlags.Public | 
+                    System.Reflection.BindingFlags.Instance);
+                if (srpProp != null)
+                {
+                    try
+                    {
+                        srpProp.SetValue(asset, true);
+                        EditorUtility.SetDirty(asset);
+                        Debug.Log($"[URPSRPBatcherFixer] Enabled SRP Batcher on asset: {path}");
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogError($"[URPSRPBatcherFixer] Failed to set useSRPBatcher on {path}: {ex.Message}");
                     }
                 }
             }
@@ -219,25 +238,60 @@ namespace TheAlchemistsCrypt.Editor
                         shaderName.StartsWith("Mobile/") ||
                         shaderName == "Diffuse" ||
                         shaderName == "VertexLit" ||
-                        shaderName == "Sprites/Default";
+                        shaderName == "Sprites/Default" ||
+                        shaderName.Contains("glTF-pbr");
 
                     if (isNonURP)
                     {
-                        // ── Capture legacy property values before shader swap ──
-                        Color albedo    = mat.HasProperty("_Color")       ? mat.GetColor("_Color")            : Color.white;
-                        Texture mainTex = mat.HasProperty("_MainTex")     ? mat.GetTexture("_MainTex")        : null;
-                        Texture bump    = mat.HasProperty("_BumpMap")     ? mat.GetTexture("_BumpMap")        : null;
-                        float metallic  = mat.HasProperty("_Metallic")    ? mat.GetFloat("_Metallic")         : 0f;
-                        float gloss     = mat.HasProperty("_Glossiness")  ? mat.GetFloat("_Glossiness")       : 0.5f;
+                        // ── Capture property values before shader swap ──
+                        Color albedo = Color.white;
+                        if (mat.HasProperty("baseColorFactor")) albedo = mat.GetColor("baseColorFactor");
+                        else if (mat.HasProperty("_BaseColor")) albedo = mat.GetColor("_BaseColor");
+                        else if (mat.HasProperty("_Color")) albedo = mat.GetColor("_Color");
+
+                        Texture mainTex = null;
+                        if (mat.HasProperty("baseColorTexture")) mainTex = mat.GetTexture("baseColorTexture");
+                        else if (mat.HasProperty("_BaseMap")) mainTex = mat.GetTexture("_BaseMap");
+                        else if (mat.HasProperty("_MainTex")) mainTex = mat.GetTexture("_MainTex");
+
+                        Texture bump = null;
+                        if (mat.HasProperty("normalTexture")) bump = mat.GetTexture("normalTexture");
+                        else if (mat.HasProperty("_BumpMap")) bump = mat.GetTexture("_BumpMap");
+                        else if (mat.HasProperty("_NormalMap")) bump = mat.GetTexture("_NormalMap");
+
+                        float metallic = 0f;
+                        if (mat.HasProperty("metallicFactor")) metallic = mat.GetFloat("metallicFactor");
+                        else if (mat.HasProperty("_Metallic")) metallic = mat.GetFloat("_Metallic");
+
+                        float smoothness = 0.5f;
+                        if (mat.HasProperty("roughnessFactor")) smoothness = 1f - mat.GetFloat("roughnessFactor");
+                        else if (mat.HasProperty("_Roughness")) smoothness = 1f - mat.GetFloat("_Roughness");
+                        else if (mat.HasProperty("_Smoothness")) smoothness = mat.GetFloat("_Smoothness");
+                        else if (mat.HasProperty("_Glossiness")) smoothness = mat.GetFloat("_Glossiness");
+
+                        Color emissive = Color.black;
+                        if (mat.HasProperty("emissiveFactor")) emissive = mat.GetColor("emissiveFactor");
+                        else if (mat.HasProperty("_EmissionColor")) emissive = mat.GetColor("_EmissionColor");
+
+                        Texture emissiveMap = null;
+                        if (mat.HasProperty("emissiveTexture")) emissiveMap = mat.GetTexture("emissiveTexture");
+                        else if (mat.HasProperty("_EmissionMap")) emissiveMap = mat.GetTexture("_EmissionMap");
 
                         mat.shader = urpLit;
 
                         // ── Restore values using URP Lit property names ──
-                        if (mat.HasProperty("_BaseColor"))   mat.SetColor("_BaseColor",   albedo);
+                        if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", albedo);
                         if (mat.HasProperty("_BaseMap") && mainTex != null) mat.SetTexture("_BaseMap", mainTex);
-                        if (mat.HasProperty("_BumpMap") && bump != null)    mat.SetTexture("_BumpMap", bump);
-                        if (mat.HasProperty("_Metallic"))    mat.SetFloat("_Metallic",    metallic);
-                        if (mat.HasProperty("_Smoothness"))  mat.SetFloat("_Smoothness",  gloss);
+                        if (mat.HasProperty("_BumpMap") && bump != null) mat.SetTexture("_BumpMap", bump);
+                        if (mat.HasProperty("_Metallic")) mat.SetFloat("_Metallic", metallic);
+                        if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", smoothness);
+
+                        if (emissive != Color.black)
+                        {
+                            if (mat.HasProperty("_EmissionColor")) mat.SetColor("_EmissionColor", emissive);
+                            if (mat.HasProperty("_EmissionMap") && emissiveMap != null) mat.SetTexture("_EmissionMap", emissiveMap);
+                            mat.EnableKeyword("_EMISSION");
+                        }
 
                         converted++;
                         EditorUtility.SetDirty(mat);
