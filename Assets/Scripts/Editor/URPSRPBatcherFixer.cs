@@ -64,6 +64,35 @@ namespace TheAlchemistsCrypt.Editor
             EnableGPUResidentDrawerAllAssets(silent: false);
         }
 
+        [MenuItem("Egyptian/🔍 Inspect Scene Shaders", false, 13)]
+        public static void InspectSceneShadersMenuItem()
+        {
+            var shaderCounts = new Dictionary<string, int>();
+            Renderer[] allRenderers = Object.FindObjectsByType<Renderer>(FindObjectsInactive.Include);
+            
+            foreach (Renderer r in allRenderers)
+            {
+                if (r == null) continue;
+                foreach (Material mat in r.sharedMaterials)
+                {
+                    if (mat == null) continue;
+                    string name = mat.shader != null ? mat.shader.name : "Null Shader";
+                    if (!shaderCounts.ContainsKey(name))
+                        shaderCounts[name] = 0;
+                    shaderCounts[name]++;
+                }
+            }
+
+            string report = "Shaders used in the active scene:\n";
+            foreach (var kvp in shaderCounts)
+            {
+                report += $"- {kvp.Key}: {kvp.Value} materials/renderers\n";
+            }
+            
+            Debug.Log(report);
+            EditorUtility.DisplayDialog("Scene Shaders Inspection", report, "OK");
+        }
+
         public static void EnableGPUResidentDrawerAllAssets(bool silent)
         {
             // Set BatchRendererGroup Stripping to KeepAll in EditorGraphicsSettings
