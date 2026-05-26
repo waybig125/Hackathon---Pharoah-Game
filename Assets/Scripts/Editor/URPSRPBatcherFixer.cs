@@ -181,7 +181,7 @@ namespace TheAlchemistsCrypt.Editor
                     if (srcTex == null) continue;
                     
                     string texName = srcTex.name;
-                    if (string.IsNullOrEmpty(texName)) texName = "texture_" + srcTex.GetInstanceID();
+                    if (string.IsNullOrEmpty(texName)) texName = "texture_" + srcTex.name + "_" + srcTex.GetHashCode();
                     
                     // Create clean file name
                     string safeName = texName.Replace(":", "_").Replace("/", "_").Replace(" ", "_");
@@ -265,12 +265,14 @@ namespace TheAlchemistsCrypt.Editor
             // 1. Albedo Color & Map
             Color albedo = Color.white;
             if (src.HasProperty("baseColorFactor")) albedo = src.GetColor("baseColorFactor");
+            else if (src.HasProperty("diffuseFactor")) albedo = src.GetColor("diffuseFactor");
             else if (src.HasProperty("_BaseColor")) albedo = src.GetColor("_BaseColor");
             else if (src.HasProperty("_Color")) albedo = src.GetColor("_Color");
             dst.SetColor("_BaseColor", albedo);
             
             Texture mainTex = null;
             if (src.HasProperty("baseColorTexture")) mainTex = src.GetTexture("baseColorTexture");
+            else if (src.HasProperty("diffuseTexture")) mainTex = src.GetTexture("diffuseTexture");
             else if (src.HasProperty("_BaseMap")) mainTex = src.GetTexture("_BaseMap");
             else if (src.HasProperty("_MainTex")) mainTex = src.GetTexture("_MainTex");
             
@@ -280,6 +282,7 @@ namespace TheAlchemistsCrypt.Editor
                 
                 Vector4 tilingOffset = Vector4.one;
                 if (src.HasProperty("baseColorTexture_ST")) tilingOffset = src.GetVector("baseColorTexture_ST");
+                else if (src.HasProperty("diffuseTexture_ST")) tilingOffset = src.GetVector("diffuseTexture_ST");
                 else if (src.HasProperty("_BaseMap_ST")) tilingOffset = src.GetVector("_BaseMap_ST");
                 else if (src.HasProperty("_MainTex_ST")) tilingOffset = src.GetVector("_MainTex_ST");
                 dst.SetVector("_BaseMap_ST", tilingOffset);
@@ -623,11 +626,11 @@ namespace TheAlchemistsCrypt.Editor
                 {
                     string msg = $"Asset Material: {mat.name} ({path}), Shader: {mat.shader.name}\nProperties:\n";
                     var shader = mat.shader;
-                    int count = ShaderUtil.GetPropertyCount(shader);
+                    int count = shader.GetPropertyCount();
                     for (int i = 0; i < count; i++)
                     {
-                        string name = ShaderUtil.GetPropertyName(shader, i);
-                        var type = ShaderUtil.GetPropertyType(shader, i);
+                        string name = shader.GetPropertyName(i);
+                        var type = shader.GetPropertyType(i);
                         msg += $"- {name} ({type})\n";
                     }
                     Debug.Log(msg);
@@ -652,11 +655,11 @@ namespace TheAlchemistsCrypt.Editor
                     {
                         string msg = $"GLB Sub-Material: {mat.name} in {path}, Shader: {mat.shader.name}\nProperties:\n";
                         var shader = mat.shader;
-                        int count = ShaderUtil.GetPropertyCount(shader);
+                        int count = shader.GetPropertyCount();
                         for (int i = 0; i < count; i++)
                         {
-                            string name = ShaderUtil.GetPropertyName(shader, i);
-                            var type = ShaderUtil.GetPropertyType(shader, i);
+                            string name = shader.GetPropertyName(i);
+                            var type = shader.GetPropertyType(i);
                             msg += $"- {name} ({type})\n";
                         }
                         Debug.Log(msg);
@@ -800,10 +803,33 @@ namespace TheAlchemistsCrypt.Editor
                 if (renderer == null) continue;
 
                 Material[] mats = renderer.sharedMaterials;
+                bool changedRenderer = false;
                 for (int i = 0; i < mats.Length; i++)
                 {
                     Material mat = mats[i];
-                    if (mat == null || processed.Contains(mat)) continue;
+                    if (mat == null) continue;
+
+                    // Swap internal read-only GLB/FBX materials with external extracted assets
+                    string assetPath = AssetDatabase.GetAssetPath(mat);
+                    if (!string.IsNullOrEmpty(assetPath) && 
+                        (assetPath.EndsWith(".glb", System.StringComparison.OrdinalIgnoreCase) || 
+                         assetPath.EndsWith(".gltf", System.StringComparison.OrdinalIgnoreCase) || 
+                         assetPath.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase) || 
+                         assetPath.EndsWith(".obj", System.StringComparison.OrdinalIgnoreCase)))
+                    {
+                        string glbName = System.IO.Path.GetFileNameWithoutExtension(assetPath);
+                        string safeName = mat.name.Replace(":", "_").Replace("/", "_");
+                        string extPath = $"Assets/Materials/Extracted/{glbName}_{safeName}.mat";
+                        Material extMat = AssetDatabase.LoadAssetAtPath<Material>(extPath);
+                        if (extMat != null)
+                        {
+                            mats[i] = extMat;
+                            mat = extMat;
+                            changedRenderer = true;
+                        }
+                    }
+
+                    if (processed.Contains(mat)) continue;
                     processed.Add(mat);
 
                     string shaderName = mat.shader != null ? mat.shader.name : string.Empty;
@@ -822,11 +848,13 @@ namespace TheAlchemistsCrypt.Editor
                         // ── Capture property values before shader swap ──
                         Color albedo = Color.white;
                         if (mat.HasProperty("baseColorFactor")) albedo = mat.GetColor("baseColorFactor");
+                        else if (mat.HasProperty("diffuseFactor")) albedo = mat.GetColor("diffuseFactor");
                         else if (mat.HasProperty("_BaseColor")) albedo = mat.GetColor("_BaseColor");
                         else if (mat.HasProperty("_Color")) albedo = mat.GetColor("_Color");
 
                         Texture mainTex = null;
                         if (mat.HasProperty("baseColorTexture")) mainTex = mat.GetTexture("baseColorTexture");
+                        else if (mat.HasProperty("diffuseTexture")) mainTex = mat.GetTexture("diffuseTexture");
                         else if (mat.HasProperty("_BaseMap")) mainTex = mat.GetTexture("_BaseMap");
                         else if (mat.HasProperty("_MainTex")) mainTex = mat.GetTexture("_MainTex");
 
@@ -880,6 +908,10 @@ namespace TheAlchemistsCrypt.Editor
                         mat.enableInstancing = true;
                         EditorUtility.SetDirty(mat);
                     }
+                }
+                if (changedRenderer)
+                {
+                    renderer.sharedMaterials = mats;
                 }
             }
 

@@ -438,8 +438,9 @@ namespace TheAlchemistsCrypt.Editor
             };
             var crate = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/crate.glb");
             var barrel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/barrel.glb");
-            var columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_pillar_column.glb");
-            if (columnPrefab == null) columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_column.glb");
+            var columnPillarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_pillar_column.glb");
+            var columnStandardPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_column.glb");
+            System.Func<GameObject> GetRandomColumn = () => (columnPillarPrefab != null && columnStandardPrefab != null) ? (Random.value > 0.5f ? columnPillarPrefab : columnStandardPrefab) : (columnPillarPrefab ?? columnStandardPrefab);
 
             // Load new assets for Phase 2 integration
             var arabicHousePrefabs = new List<GameObject>();
@@ -721,7 +722,7 @@ namespace TheAlchemistsCrypt.Editor
                     }
 
                     if (isMarketZone) {
-                        PlacePlaza(root.transform, pos, trees, columnPrefab, floorMat);
+                        PlacePlaza(root.transform, pos, trees, GetRandomColumn(), floorMat);
                         occupiedPositions.Add(pos);
                         
                         // Populate market with multiple stalls
@@ -781,7 +782,7 @@ namespace TheAlchemistsCrypt.Editor
                             }
                         } 
                         else {
-                            PlacePlaza(root.transform, pos, trees, columnPrefab, floorMat);
+                            PlacePlaza(root.transform, pos, trees, GetRandomColumn(), floorMat);
                             occupiedPositions.Add(pos);
                             // Occasional obelisk
                             if (Random.value < 0.5f) {
@@ -823,7 +824,7 @@ namespace TheAlchemistsCrypt.Editor
             // --- CENTRAL PLAZA & DOOR MONUMENT ---
             Vector3 centerPlazaPos = new Vector3(0f, 0f, 30f);
             centerPlazaPos.y = GetTerrainHeight(centerPlazaPos);
-            PlacePlaza(root.transform, centerPlazaPos, trees, columnPrefab, floorMat);
+            PlacePlaza(root.transform, centerPlazaPos, trees, GetRandomColumn(), floorMat);
             occupiedPositions.Add(centerPlazaPos);
 
             if (doorPrefab != null) {
@@ -2647,6 +2648,18 @@ namespace TheAlchemistsCrypt.Editor
                     if (filters.Length > 0) {
                         foreach (var filterObj in filters) {
                             if (filterObj.sharedMesh == null) continue;
+                            
+                            // Skip colliders on small decoration meshes to optimize physics and avoid vertex distance warnings
+                            string filterName = filterObj.gameObject.name.ToLower();
+                            if (filterName.Contains("meat") || filterName.Contains("food") || 
+                                filterName.Contains("utensil") || filterName.Contains("plate") || 
+                                filterName.Contains("cup") || filterName.Contains("detail") || 
+                                filterName.Contains("prop") || filterName.Contains("casing") ||
+                                filterName.Contains("barrel") || filterName.Contains("crate")) 
+                            {
+                                continue;
+                            }
+
                             var mc = filterObj.gameObject.GetComponent<MeshCollider>();
                             if (mc == null) {
                                 mc = filterObj.gameObject.AddComponent<MeshCollider>();
