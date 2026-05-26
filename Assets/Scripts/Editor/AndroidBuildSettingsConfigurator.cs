@@ -99,10 +99,15 @@ namespace TheAlchemistsCrypt.Editor
                     importer.isReadable = true;
                     dirty = true;
                 }
+                if (importer.textureCompression != TextureImporterCompression.Uncompressed)
+                {
+                    importer.textureCompression = TextureImporterCompression.Uncompressed;
+                    dirty = true;
+                }
                 if (dirty)
                 {
                     importer.SaveAndReimport();
-                    Debug.Log("[AndroidOptimizer] Reimported LOGO_ALCHEMIST_CRYPT.png as readable Sprite.");
+                    Debug.Log("[AndroidOptimizer] Reimported LOGO_ALCHEMIST_CRYPT.png as uncompressed readable Sprite.");
                 }
             }
             else

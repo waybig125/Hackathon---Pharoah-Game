@@ -2,7 +2,12 @@ fileFormatVersion: 2
 guid: 96f8517900f9246c3969ad06a07c5a91
 ScriptedImporter:
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: barrel
+    second: {fileID: 2100000, guid: 09210a31c0d47434a8118eb833b81c08, type: 2}
   serializedVersion: 2
   userData: 
   assetBundleName: 

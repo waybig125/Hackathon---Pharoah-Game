@@ -30,14 +30,14 @@ namespace TheAlchemistsCrypt.Editor
             SetCityObjectsStatic();
             int extracted = ExtractAndConvertAllGLBMaterials();
             int converted = FixAllSceneMaterials();
-            EnableGPUResidentDrawerAllAssets(silent: true);
+            DisableGPUResidentDrawerAllAssets(silent: true);
             EditorUtility.DisplayDialog(
                 "SRP Batcher Fix Complete",
                 $"Extracted & mapped {extracted} GLB material(s).\n" +
                 $"Converted {converted} non-URP material(s) to URP Lit.\n" +
                 "GPU Instancing has been enabled on all materials.\n" +
                 "Static batching flags applied to city objects.\n" +
-                "GPU Resident Drawer enabled on all pipeline assets.\n\n" +
+                "GPU Resident Drawer disabled on all pipeline assets.\n\n" +
                 "SRP Batcher should now show active batches in the Frame Debugger.",
                 "OK");
         }
@@ -57,7 +57,7 @@ namespace TheAlchemistsCrypt.Editor
             SetCityObjectsStatic();
             ExtractAndConvertAllGLBMaterials();
             FixAllSceneMaterials();
-            EnableGPUResidentDrawerAllAssets(silent: true);
+            DisableGPUResidentDrawerAllAssets(silent: true);
         }
 
         public static int ExtractAndConvertAllGLBMaterials()
@@ -407,10 +407,10 @@ namespace TheAlchemistsCrypt.Editor
             ClearOcclusionData();
         }
 
-        [MenuItem("Egyptian/🚀 Enable GPU Resident Drawer", false, 12)]
-        public static void EnableGPUResidentDrawerMenuItem()
+        [MenuItem("Egyptian/🛑 Disable GPU Resident Drawer", false, 12)]
+        public static void DisableGPUResidentDrawerMenuItem()
         {
-            EnableGPUResidentDrawerAllAssets(silent: false);
+            DisableGPUResidentDrawerAllAssets(silent: false);
         }
 
         [MenuItem("Egyptian/🔍 Inspect Scene Shaders", false, 13)]
@@ -669,7 +669,7 @@ namespace TheAlchemistsCrypt.Editor
             EditorUtility.DisplayDialog("Material Properties", "No glTF material found in the project.", "OK");
         }
 
-        public static void EnableGPUResidentDrawerAllAssets(bool silent)
+        public static void DisableGPUResidentDrawerAllAssets(bool silent)
         {
             // Set BatchRendererGroup Stripping to KeepAll in EditorGraphicsSettings
             try
@@ -711,17 +711,17 @@ namespace TheAlchemistsCrypt.Editor
                     System.Reflection.BindingFlags.NonPublic | 
                     System.Reflection.BindingFlags.Instance);
 
-                // 1. Enable GPU Resident Drawer
+                // 1. Disable GPU Resident Drawer
                 if (prop != null)
                 {
                     try
                     {
                         var enumType = prop.PropertyType;
-                        var value = System.Enum.Parse(enumType, "InstancedDrawing");
+                        var value = System.Enum.Parse(enumType, "Disabled");
                         prop.SetValue(asset, value);
                         EditorUtility.SetDirty(asset);
                         successCount++;
-                        Debug.Log($"[URPSRPBatcherFixer] Enabled GPU Resident Drawer (Instanced Drawing) on asset: {path}");
+                        Debug.Log($"[URPSRPBatcherFixer] Disabled GPU Resident Drawer on asset: {path}");
                     }
                     catch (System.Exception ex)
                     {
@@ -758,12 +758,12 @@ namespace TheAlchemistsCrypt.Editor
                 if (successCount == totalCount && totalCount > 0)
                 {
                     EditorUtility.DisplayDialog("GPU Resident Drawer", 
-                        $"Successfully enabled GPU Resident Drawer on all {successCount} URP assets in the project!", "OK");
+                        $"Successfully disabled GPU Resident Drawer on all {successCount} URP assets in the project!", "OK");
                 }
                 else
                 {
                     EditorUtility.DisplayDialog("GPU Resident Drawer", 
-                        $"Found {totalCount} URP assets. Successfully enabled GPU Resident Drawer on {successCount} of them.\nCheck the Unity console for details.", "OK");
+                        $"Found {totalCount} URP assets. Successfully disabled GPU Resident Drawer on {successCount} of them.\nCheck the Unity console for details.", "OK");
                 }
             }
         }

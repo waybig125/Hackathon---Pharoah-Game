@@ -2,7 +2,12 @@ fileFormatVersion: 2
 guid: 4f21e909393de4c6da6a7d6b7cd3a24e
 ScriptedImporter:
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Crate
+    second: {fileID: 2100000, guid: 6af369dba06b548cb9c73612f7b2002f, type: 2}
   serializedVersion: 2
   userData: 
   assetBundleName: 

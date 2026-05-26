@@ -2,7 +2,17 @@ fileFormatVersion: 2
 guid: 3077488cc1c5a485a8dc705cb33db307
 ScriptedImporter:
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: OutBoard
+    second: {fileID: 2100000, guid: c3767f83466324783b43c726f15e5e53, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tinnie
+    second: {fileID: 2100000, guid: ddd23ea227fb640f2a6c1dbdb1da697c, type: 2}
   serializedVersion: 2
   userData: 
   assetBundleName: 

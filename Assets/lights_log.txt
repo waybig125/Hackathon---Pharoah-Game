@@ -1,21 +1,8 @@
 --- CHECKING ALL LIGHTS ---
-Light Path: Player/SK_FP_CH_Default_Root/Armature/root/ik_hand_root/ik_hand_gun/P_LPSP_Inventory/WEP_Mercury/SKEL_AR_01/root/SOCKET_Muzzle/P_LPSP_WEP_ATT_Muzzles/P_LPSP_WEP_ATT_Muzzle/SOCKET_Muzzle/P_LPSP_WEP_Flash_Light(Clone) | Type: Point | Range: 5 | Intensity: 3 | Enabled: False | Color: RGBA(1.000, 0.575, 0.000, 1.000) | Position: (15.50, 6.30, 48.11)
-Light Path: EgyptianCity_V5_Final/Plaza/MedicinePickup/GlowLight | Type: Point | Range: 5 | Intensity: 6 | Enabled: True | Color: RGBA(0.100, 0.900, 0.200, 1.000) | Position: (11.70, 0.56, -19.10)
-Light Path: Player/SK_FP_CH_Default_Root/Armature/root/ik_hand_root/ik_hand_gun/P_LPSP_Inventory/WEP_Sulfur/SKEL_AR_01/root/SOCKET_Muzzle/P_LPSP_WEP_ATT_Muzzles/P_LPSP_WEP_ATT_Muzzle/SOCKET_Muzzle/P_LPSP_WEP_Flash_Light(Clone) | Type: Point | Range: 5 | Intensity: 3 | Enabled: False | Color: RGBA(1.000, 0.575, 0.000, 1.000) | Position: (15.50, 6.30, 48.11)
-Light Path: EgyptianCity_V5_Final/Plaza/MedicinePickup/GlowLight | Type: Point | Range: 5 | Intensity: 6 | Enabled: True | Color: RGBA(0.100, 0.900, 0.200, 1.000) | Position: (116.15, 5.45, 84.80)
-Light Path: EgyptianCity_V5_Final/Plaza/MedicinePickup/GlowLight | Type: Point | Range: 5 | Intensity: 6 | Enabled: True | Color: RGBA(0.100, 0.900, 0.200, 1.000) | Position: (-14.63, 0.52, -15.42)
-Light Path: EgyptianCity_V5_Final/Plaza/MedicinePickup/GlowLight | Type: Point | Range: 5 | Intensity: 6 | Enabled: True | Color: RGBA(0.100, 0.900, 0.200, 1.000) | Position: (12.67, 0.50, 12.81)
-Light Path: Player/SK_FP_CH_Default_Root/Armature/root/ik_hand_root/ik_hand_gun/P_LPSP_Inventory/WEP_Sulfur/SKEL_AR_01/root/SOCKET_Muzzle/P_LPSP_WEP_ATT_Muzzles/P_LPSP_WEP_ATT_Muzzle/SOCKET_Muzzle | Type: Point | Range: 8 | Intensity: 8 | Enabled: False | Color: RGBA(1.000, 0.550, 0.050, 1.000) | Position: (15.50, 6.30, 48.11)
-Light Path: EgyptianCity_V5_Final/Plaza/MedicinePickup/GlowLight | Type: Point | Range: 5 | Intensity: 6 | Enabled: True | Color: RGBA(0.100, 0.900, 0.200, 1.000) | Position: (-17.95, 0.60, 14.76)
-Light Path: EgyptianCity_V5_Final/Plaza/MedicinePickup/GlowLight | Type: Point | Range: 5 | Intensity: 6 | Enabled: True | Color: RGBA(0.100, 0.900, 0.200, 1.000) | Position: (17.85, 4.84, 51.44)
-Light Path: Player/SK_FP_CH_Default_Root/Armature/root/ik_hand_root/ik_hand_gun/P_LPSP_Inventory/WEP_Salt/SKEL_AR_01/root/SOCKET_Muzzle/P_LPSP_WEP_ATT_Muzzles/P_LPSP_WEP_ATT_Muzzle/SOCKET_Muzzle/P_LPSP_WEP_Flash_Light(Clone) | Type: Point | Range: 5 | Intensity: 3 | Enabled: False | Color: RGBA(1.000, 0.575, 0.000, 1.000) | Position: (15.50, 6.30, 48.11)
-Light Path: EgyptianCity_V5_Final/Plaza/MedicinePickup/GlowLight | Type: Point | Range: 5 | Intensity: 6 | Enabled: True | Color: RGBA(0.100, 0.900, 0.200, 1.000) | Position: (49.00, 5.00, 84.51)
-Light Path: AncientPapyrus/PapyrusLight | Type: Point | Range: 30 | Intensity: 20 | Enabled: True | Color: RGBA(1.000, 0.850, 0.300, 1.000) | Position: (48.00, 6.11, 48.00)
-Light Path: EscapeBoat/BoatBeacon | Type: Point | Range: 25 | Intensity: 15 | Enabled: True | Color: RGBA(1.000, 0.600, 0.200, 1.000) | Position: (0.00, 3.20, -103.46)
 
 --- CHECKING PLAYER HIERARCHY ---
 Player Name: Player
-- Player (Position: (16.00, 5.17, 48.00), Active: True)
+- Player (Position: (0.00, -0.70, 210.00), Active: True)
   [Comp] Rigidbody
   [Comp] CapsuleCollider
   [Comp] AudioSource
@@ -28,8 +15,6 @@ Player Name: Player
   [Comp] PlayerHealth
   [Comp] PlayerImmersiveBody
   [Comp] AlchemicalFocus
-  [Comp] AudioSource
-  [Comp] AudioSource
   - SK_FP_CH_Default_Root (Position: (0.00, 1.80, 0.00), Active: True)
     [Comp] Animator
     [Comp] CharacterAnimationEventHandler
@@ -40,10 +25,10 @@ Player Name: Player
           - ik_foot_l (Position: (-0.17, 0.08, 0.13), Active: True)
           - ik_foot_r (Position: (0.17, 0.08, 0.13), Active: True)
         - ik_hand_root (Position: (0.00, 0.01, -1.61), Active: True)
-          - ik_hand_gun (Position: (-0.18, 0.02, 1.24), Active: True)
-            - ik_hand_l (Position: (-0.02, -0.15, -0.02), Active: True)
+          - ik_hand_gun (Position: (0.57, 0.00, 1.12), Active: True)
+            - ik_hand_l (Position: (-0.78, -0.70, 0.44), Active: True)
               - Effector Hand Left (Position: (0.00, 0.00, 0.00), Active: True)
-            - ik_hand_r (Position: (0.03, 0.15, 0.01), Active: True)
+            - ik_hand_r (Position: (0.00, 0.00, 0.00), Active: True)
               - Effector Hand Right (Position: (0.00, 0.00, 0.00), Active: True)
             - P_LPSP_Inventory (Position: (0.00, 0.00, 0.00), Active: True)
               [Comp] Inventory
@@ -73,19 +58,13 @@ Player Name: Player
                     - SOCKET_Laser (Position: (-0.02, -0.34, 0.05), Active: True)
                     - SOCKET_Muzzle (Position: (0.00, -0.51, 0.06), Active: True)
                       - P_LPSP_WEP_ATT_Muzzles (Position: (0.00, 0.00, 0.00), Active: True)
-                        - P_LPSP_WEP_ATT_Muzzle (Position: (0.00, 0.00, 0.00), Active: True)
+                        - P_LPSP_WEP_ATT_Muzzle (Position: (0.00, 0.00, 0.00), Active: False)
                           [Comp] Muzzle
                           - SOCKET_Muzzle (Position: (0.00, 0.00, 0.00), Active: True)
-                            [Comp] Light
-                            - Flash_Sulfur(Clone) (Position: (0.00, 0.00, 0.00), Active: True)
-                              [Comp] ParticleSystem
-                              [Comp] ParticleSystemRenderer
-                            - P_LPSP_WEP_Flash_Light(Clone) (Position: (0.00, 0.00, 0.00), Active: True)
-                              [Comp] Light
                     - SOCKET_Scope (Position: (0.00, -0.02, 0.10), Active: True)
                 - SM_AR_01 (Position: (0.00, 0.00, 0.00), Active: True)
                   [Comp] SkinnedMeshRenderer
-              - WEP_Mercury (Position: (0.00, 0.00, 0.00), Active: False)
+              - WEP_Mercury (Position: (0.00, 0.00, 0.00), Active: True)
                 [Comp] Animator
                 [Comp] Weapon
                 [Comp] WeaponAttachmentManager
@@ -111,18 +90,13 @@ Player Name: Player
                     - SOCKET_Laser (Position: (-0.02, -0.34, 0.05), Active: True)
                     - SOCKET_Muzzle (Position: (0.00, -0.51, 0.06), Active: True)
                       - P_LPSP_WEP_ATT_Muzzles (Position: (0.00, 0.00, 0.00), Active: True)
-                        - P_LPSP_WEP_ATT_Muzzle (Position: (0.00, 0.00, 0.00), Active: True)
+                        - P_LPSP_WEP_ATT_Muzzle (Position: (0.00, 0.00, 0.00), Active: False)
                           [Comp] Muzzle
                           - SOCKET_Muzzle (Position: (0.00, 0.00, 0.00), Active: True)
-                            - Flash_Mercury(Clone) (Position: (0.00, 0.00, 0.00), Active: True)
-                              [Comp] ParticleSystem
-                              [Comp] ParticleSystemRenderer
-                            - P_LPSP_WEP_Flash_Light(Clone) (Position: (0.00, 0.00, 0.00), Active: True)
-                              [Comp] Light
                     - SOCKET_Scope (Position: (0.00, -0.02, 0.10), Active: True)
                 - SM_AR_01 (Position: (0.00, 0.00, 0.00), Active: True)
                   [Comp] SkinnedMeshRenderer
-              - WEP_Salt (Position: (0.00, 0.00, 0.00), Active: False)
+              - WEP_Salt (Position: (0.00, 0.00, 0.00), Active: True)
                 [Comp] Animator
                 [Comp] Weapon
                 [Comp] WeaponAttachmentManager
@@ -148,22 +122,17 @@ Player Name: Player
                     - SOCKET_Laser (Position: (-0.02, -0.34, 0.05), Active: True)
                     - SOCKET_Muzzle (Position: (0.00, -0.51, 0.06), Active: True)
                       - P_LPSP_WEP_ATT_Muzzles (Position: (0.00, 0.00, 0.00), Active: True)
-                        - P_LPSP_WEP_ATT_Muzzle (Position: (0.00, 0.00, 0.00), Active: True)
+                        - P_LPSP_WEP_ATT_Muzzle (Position: (0.00, 0.00, 0.00), Active: False)
                           [Comp] Muzzle
                           - SOCKET_Muzzle (Position: (0.00, 0.00, 0.00), Active: True)
-                            - Flash_Salt(Clone) (Position: (0.00, 0.00, 0.00), Active: True)
-                              [Comp] ParticleSystem
-                              [Comp] ParticleSystemRenderer
-                            - P_LPSP_WEP_Flash_Light(Clone) (Position: (0.00, 0.00, 0.00), Active: True)
-                              [Comp] Light
                     - SOCKET_Scope (Position: (0.00, -0.02, 0.10), Active: True)
                 - SM_AR_01 (Position: (0.00, 0.00, 0.00), Active: True)
                   [Comp] SkinnedMeshRenderer
         - pelvis (Position: (0.00, 0.06, -0.63), Active: True)
-          - spine_01 (Position: (-0.14, 0.00, 0.00), Active: True)
-            - spine_02 (Position: (-0.12, 0.02, 0.00), Active: True)
-              - spine_03 (Position: (-0.14, 0.00, 0.00), Active: True)
-                - clavicle_l (Position: (-0.10, 0.19, -0.02), Active: True)
+          - spine_01 (Position: (-0.11, -0.01, 0.00), Active: True)
+            - spine_02 (Position: (-0.19, 0.04, 0.00), Active: True)
+              - spine_03 (Position: (-0.13, 0.00, 0.00), Active: True)
+                - clavicle_l (Position: (-0.12, -0.03, -0.04), Active: True)
                   - upperarm_l (Position: (-0.16, 0.00, 0.00), Active: True)
                     - lowerarm_l (Position: (-0.30, 0.00, 0.00), Active: True)
                       - hand_l (Position: (-0.27, 0.00, 0.00), Active: True)
@@ -185,7 +154,7 @@ Player Name: Player
                         - hand_l_holder (Position: (0.00, 0.00, 0.00), Active: True)
                       - lowerarm_twist_01_l (Position: (-0.14, 0.00, 0.00), Active: True)
                     - upperarm_twist_01_l (Position: (0.00, 0.00, 0.00), Active: True)
-                - clavicle_r (Position: (-0.23, 0.16, -0.10), Active: True)
+                - clavicle_r (Position: (-0.12, -0.03, 0.04), Active: True)
                   - upperarm_r (Position: (0.16, 0.00, 0.00), Active: True)
                     - lowerarm_r (Position: (0.30, 0.00, 0.00), Active: True)
                       - hand_r (Position: (0.27, 0.00, 0.00), Active: True)
@@ -206,27 +175,24 @@ Player Name: Player
                             - thumb_03_r (Position: (0.04, 0.00, 0.00), Active: True)
                       - lowerarm_twist_01_r (Position: (0.14, 0.00, 0.00), Active: True)
                     - upperarm_twist_01_r (Position: (0.01, 0.00, 0.00), Active: True)
-                - neck_01 (Position: (-0.18, 0.00, 0.00), Active: True)
-                  - head (Position: (-0.08, 0.00, 0.00), Active: True)
+                - neck_01 (Position: (-0.17, 0.00, 0.00), Active: True)
+                  - head (Position: (-0.09, 0.00, 0.00), Active: True)
                     - SOCKET_Camera (Position: (0.00, 0.00, 0.00), Active: True)
-          - thigh_l (Position: (0.01, -0.04, -0.09), Active: True)
+          - thigh_l (Position: (0.01, -0.01, -0.09), Active: True)
             - calf_l (Position: (0.43, 0.00, 0.00), Active: True)
               - calf_twist_01_l (Position: (0.20, 0.00, 0.00), Active: True)
               - foot_l (Position: (0.40, 0.00, 0.00), Active: True)
                 - ball_l (Position: (0.10, -0.17, 0.00), Active: True)
-            - thigh_twist_01_l (Position: (0.22, 0.02, 0.00), Active: True)
-          - thigh_r (Position: (0.01, -0.04, 0.09), Active: True)
+            - thigh_twist_01_l (Position: (0.22, 0.00, 0.00), Active: True)
+          - thigh_r (Position: (0.01, -0.01, 0.09), Active: True)
             - calf_r (Position: (-0.43, 0.00, 0.00), Active: True)
               - calf_twist_01_r (Position: (-0.20, 0.00, 0.00), Active: True)
               - foot_r (Position: (-0.40, 0.00, 0.00), Active: True)
                 - ball_r (Position: (-0.10, 0.17, 0.00), Active: True)
-            - thigh_twist_01_r (Position: (-0.22, -0.02, 0.00), Active: True)
+            - thigh_twist_01_r (Position: (-0.22, 0.00, 0.00), Active: True)
     - SK_FP_CH_Default (Position: (0.00, -1.61, -0.01), Active: True)
       [Comp] SkinnedMeshRenderer
     - Main Camera (Position: (0.00, 0.00, 0.00), Active: True)
       [Comp] Camera
       [Comp] UniversalAdditionalCameraData
       [Comp] AudioListener
-  - Alchemist_Shadow_Body (Position: (0.00, -1.00, 0.00), Active: True)
-    [Comp] MeshFilter
-    [Comp] MeshRenderer

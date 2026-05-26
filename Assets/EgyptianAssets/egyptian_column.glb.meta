@@ -2,7 +2,42 @@ fileFormatVersion: 2
 guid: 6036c90caf3094055a70534566c2c313
 ScriptedImporter:
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: aiStandardSurface1SG
+    second: {fileID: 2100000, guid: e77e83437e952446fa0f9b183579f3e9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: aiStandardSurface5SG
+    second: {fileID: 2100000, guid: 76c11f38f00354e88bd544ec7fbf0eef, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: aiStandardSurface6SG
+    second: {fileID: 2100000, guid: 5164e878cc3694444bf858bc1dea57b8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: aiStandardSurface7SG
+    second: {fileID: 2100000, guid: cfc566c28d8a5486bb538ce18fb69e66, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: lambert1SG
+    second: {fileID: 2100000, guid: 2deb6e893f8e94ac2a4f8e2a5ab56782, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: pasted__aiStandardSurface2SG
+    second: {fileID: 2100000, guid: dc458f67cae6a4077a61bfd64c253637, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: pasted__aiStandardSurface6SG
+    second: {fileID: 2100000, guid: 026faf4309e924261bbdaf9896e28058, type: 2}
   serializedVersion: 2
   userData: 
   assetBundleName: 

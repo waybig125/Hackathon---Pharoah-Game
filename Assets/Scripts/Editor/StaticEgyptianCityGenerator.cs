@@ -274,7 +274,9 @@ namespace TheAlchemistsCrypt.Editor
         {
             if (columnPrefab == null) return null;
             
-            string decimatedMeshPath = "Assets/EgyptianAssets/egyptian_column_decimated.mesh";
+            string decimatedMeshPath = columnPrefab.name.Contains("pillar") 
+                ? "Assets/EgyptianAssets/egyptian_pillar_column_decimated.mesh" 
+                : "Assets/EgyptianAssets/egyptian_column_decimated.mesh";
             Mesh decimatedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(decimatedMeshPath);
             if (decimatedMesh != null) return decimatedMesh;
             
@@ -329,7 +331,9 @@ namespace TheAlchemistsCrypt.Editor
                     return mf.sharedMesh;
                 }
 
-                decimatedMesh.name = "egyptian_column_decimated";
+                decimatedMesh.name = columnPrefab.name.Contains("pillar") 
+                    ? "egyptian_pillar_column_decimated" 
+                    : "egyptian_column_decimated";
                 AssetDatabase.CreateAsset(decimatedMesh, decimatedMeshPath);
                 AssetDatabase.SaveAssets();
                 Debug.Log("[CityGen] Created low-poly decimated column mesh asset at: " + decimatedMeshPath);
@@ -434,8 +438,8 @@ namespace TheAlchemistsCrypt.Editor
             };
             var crate = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/crate.glb");
             var barrel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/barrel.glb");
-            var columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_column.glb");
-            if (columnPrefab == null) columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_pillar_column.glb");
+            var columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_pillar_column.glb");
+            if (columnPrefab == null) columnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_column.glb");
 
             // Load new assets for Phase 2 integration
             var arabicHousePrefabs = new List<GameObject>();

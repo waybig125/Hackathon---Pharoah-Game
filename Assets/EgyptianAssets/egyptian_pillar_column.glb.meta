@@ -2,7 +2,12 @@ fileFormatVersion: 2
 guid: bbac692f7e5b247fa93757d78bb3db90
 ScriptedImporter:
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: EgyptColumn_BAKED
+    second: {fileID: 2100000, guid: bf6ed119c46f641109b874363c545210, type: 2}
   serializedVersion: 2
   userData: 
   assetBundleName: 

@@ -2,7 +2,97 @@ fileFormatVersion: 2
 guid: 6d82cd36121cc42e0897f10860545f07
 ScriptedImporter:
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Palm_fruit_03
+    second: {fileID: 2100000, guid: 4109a17cb5fb6485b88a5de201a83af3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Palm_fruit_04
+    second: {fileID: 2100000, guid: af7720f800fca4f87a610b86ce58a56d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_crown_02
+    second: {fileID: 2100000, guid: fca5ed45279aa464d806acd88eee4240, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_dac_dead_stk_1
+    second: {fileID: 2100000, guid: 8c2768f40ef3c4730b568a95c4e693e4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_dac_dead_stk_2
+    second: {fileID: 2100000, guid: a2b3145f171cc4bd393ae6893c55b09b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_dac_stk_1
+    second: {fileID: 2100000, guid: 1738f3cad403441298e41025458d40fb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_dac_stk_1a
+    second: {fileID: 2100000, guid: 509a4c89fcc2f415ebbbc0fb91a2bda2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_dac_stk_1b
+    second: {fileID: 2100000, guid: d594acdd2d56d42b194a34c07d00f1d8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_dac_stk_1c
+    second: {fileID: 2100000, guid: 33e727d5052a44bd7bd9d505466223d0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_dact_lft_01a
+    second: {fileID: 2100000, guid: e3384dbf415234977af687eaf84b3c59, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_dact_lft_01b
+    second: {fileID: 2100000, guid: 25d59678a48f44020a9f9a6c102f69fe, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_dact_lft_01c
+    second: {fileID: 2100000, guid: 219b8f10290024ff49e7499b3279a587, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_fruit_stalk
+    second: {fileID: 2100000, guid: 05b62bd7fcebf4e50b2be91dbcf5de01, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_lf_cut_01
+    second: {fileID: 2100000, guid: 0173996a8d6a140bf82993a3c08be6e0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_lf_cut_02
+    second: {fileID: 2100000, guid: f581bdd950d5b45a6900e60bd864afa5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_lf_cut_03
+    second: {fileID: 2100000, guid: 32d74ee4eda3c4dcab81c3f22be4962b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_lf_cut_04
+    second: {fileID: 2100000, guid: d28f22dffda4c4133b3823b6202f080c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Phoenix_trunk
+    second: {fileID: 2100000, guid: cf3264aa021bd49038ca997c826a62bf, type: 2}
   serializedVersion: 2
   userData: 
   assetBundleName: 
