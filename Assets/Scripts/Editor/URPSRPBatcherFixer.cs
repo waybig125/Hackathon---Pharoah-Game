@@ -28,16 +28,247 @@ namespace TheAlchemistsCrypt.Editor
         public static void FixMaterialsMenuItem()
         {
             SetCityObjectsStatic();
+            int extracted = ExtractAndConvertAllGLBMaterials();
             int converted = FixAllSceneMaterials();
             EnableGPUResidentDrawerAllAssets(silent: true);
             EditorUtility.DisplayDialog(
                 "SRP Batcher Fix Complete",
+                $"Extracted & mapped {extracted} GLB material(s).\n" +
                 $"Converted {converted} non-URP material(s) to URP Lit.\n" +
                 "GPU Instancing has been enabled on all materials.\n" +
                 "Static batching flags applied to city objects.\n" +
                 "GPU Resident Drawer enabled on all pipeline assets.\n\n" +
                 "SRP Batcher should now show active batches in the Frame Debugger.",
                 "OK");
+        }
+
+        [MenuItem("Egyptian/Extract and Convert GLB Materials", false, 15)]
+        public static void ExtractMaterialsMenuItem()
+        {
+            int extracted = ExtractAndConvertAllGLBMaterials();
+            EditorUtility.DisplayDialog(
+                "Extract GLB Materials",
+                $"Successfully extracted and mapped {extracted} material(s) from GLB assets to URP Lit.",
+                "OK");
+        }
+
+        public static void FixMaterialsNoDialog()
+        {
+            SetCityObjectsStatic();
+            ExtractAndConvertAllGLBMaterials();
+            FixAllSceneMaterials();
+            EnableGPUResidentDrawerAllAssets(silent: true);
+        }
+
+        public static int ExtractAndConvertAllGLBMaterials()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:GameObject");
+            int extractedTotal = 0;
+            var processedPaths = new HashSet<string>();
+
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (processedPaths.Contains(path)) continue;
+                processedPaths.Add(path);
+
+                if (path.EndsWith(".glb", System.StringComparison.OrdinalIgnoreCase) || 
+                    path.EndsWith(".gltf", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    extractedTotal += ExtractAndMapGLBMaterials(path);
+                }
+            }
+            return extractedTotal;
+        }
+
+        public static int ExtractAndMapGLBMaterials(string glbPath)
+        {
+            var assets = AssetDatabase.LoadAllAssetsAtPath(glbPath);
+            var materials = new List<Material>();
+            foreach (var asset in assets)
+            {
+                if (asset is Material mat)
+                {
+                    materials.Add(mat);
+                }
+            }
+            
+            if (materials.Count == 0) return 0;
+            
+            var importer = AssetImporter.GetAtPath(glbPath) as UnityEditor.AssetImporters.ScriptedImporter;
+            if (importer == null)
+            {
+                Debug.LogWarning($"[URPSRPBatcherFixer] Importer for {glbPath} is not a ScriptedImporter.");
+                return 0;
+            }
+            
+            string targetFolder = "Assets/Materials/Extracted";
+            if (!AssetDatabase.IsValidFolder(targetFolder))
+            {
+                if (!AssetDatabase.IsValidFolder("Assets/Materials"))
+                    AssetDatabase.CreateFolder("Assets", "Materials");
+                AssetDatabase.CreateFolder("Assets/Materials", "Extracted");
+            }
+            
+            int extractedCount = 0;
+            
+            foreach (Material subMat in materials)
+            {
+                if (subMat == null) continue;
+                
+                string safeName = subMat.name.Replace(":", "_").Replace("/", "_");
+                string glbName = System.IO.Path.GetFileNameWithoutExtension(glbPath);
+                string matPath = $"{targetFolder}/{glbName}_{safeName}.mat";
+                
+                Material extMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                bool isNew = false;
+                
+                if (extMat == null)
+                {
+                    Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
+                    if (urpLit == null)
+                    {
+                        Debug.LogError("[URPSRPBatcherFixer] Universal Render Pipeline/Lit shader not found.");
+                        return 0;
+                    }
+                    extMat = new Material(urpLit);
+                    isNew = true;
+                }
+                
+                CopyGltfPropertiesToUrpLit(subMat, extMat);
+                
+                if (isNew)
+                {
+                    AssetDatabase.CreateAsset(extMat, matPath);
+                }
+                else
+                {
+                    EditorUtility.SetDirty(extMat);
+                }
+                
+                var identifier = new AssetImporter.SourceAssetIdentifier(typeof(Material), subMat.name);
+                importer.AddRemap(identifier, extMat);
+                extractedCount++;
+            }
+            
+            if (extractedCount > 0)
+            {
+                AssetDatabase.WriteImportSettingsIfDirty(glbPath);
+                AssetDatabase.ImportAsset(glbPath, ImportAssetOptions.ForceUpdate);
+            }
+            
+            return extractedCount;
+        }
+
+        public static void CopyGltfPropertiesToUrpLit(Material src, Material dst)
+        {
+            // 1. Albedo Color & Map
+            Color albedo = Color.white;
+            if (src.HasProperty("baseColorFactor")) albedo = src.GetColor("baseColorFactor");
+            else if (src.HasProperty("_BaseColor")) albedo = src.GetColor("_BaseColor");
+            else if (src.HasProperty("_Color")) albedo = src.GetColor("_Color");
+            dst.SetColor("_BaseColor", albedo);
+            
+            Texture mainTex = null;
+            if (src.HasProperty("baseColorTexture")) mainTex = src.GetTexture("baseColorTexture");
+            else if (src.HasProperty("_BaseMap")) mainTex = src.GetTexture("_BaseMap");
+            else if (src.HasProperty("_MainTex")) mainTex = src.GetTexture("_MainTex");
+            if (mainTex != null)
+            {
+                dst.SetTexture("_BaseMap", mainTex);
+                
+                Vector4 tilingOffset = Vector4.one;
+                if (src.HasProperty("baseColorTexture_ST")) tilingOffset = src.GetVector("baseColorTexture_ST");
+                else if (src.HasProperty("_BaseMap_ST")) tilingOffset = src.GetVector("_BaseMap_ST");
+                else if (src.HasProperty("_MainTex_ST")) tilingOffset = src.GetVector("_MainTex_ST");
+                dst.SetVector("_BaseMap_ST", tilingOffset);
+            }
+            
+            // 2. Normal Map
+            Texture normalTex = null;
+            if (src.HasProperty("normalTexture")) normalTex = src.GetTexture("normalTexture");
+            else if (src.HasProperty("_BumpMap")) normalTex = src.GetTexture("_BumpMap");
+            else if (src.HasProperty("_NormalMap")) normalTex = src.GetTexture("_NormalMap");
+            if (normalTex != null)
+            {
+                dst.SetTexture("_BumpMap", normalTex);
+                dst.EnableKeyword("_NORMALMAP");
+                
+                Vector4 tilingOffset = Vector4.one;
+                if (src.HasProperty("normalTexture_ST")) tilingOffset = src.GetVector("normalTexture_ST");
+                else if (src.HasProperty("_BumpMap_ST")) tilingOffset = src.GetVector("_BumpMap_ST");
+                dst.SetVector("_BumpMap_ST", tilingOffset);
+                
+                float normalScale = 1.0f;
+                if (src.HasProperty("normalTexture_scale")) normalScale = src.GetFloat("normalTexture_scale");
+                else if (src.HasProperty("_BumpScale")) normalScale = src.GetFloat("_BumpScale");
+                dst.SetFloat("_BumpScale", normalScale);
+            }
+            else
+            {
+                dst.DisableKeyword("_NORMALMAP");
+            }
+            
+            // 3. Metallic & Smoothness / Roughness
+            float metallic = 0.0f;
+            if (src.HasProperty("metallicFactor")) metallic = src.GetFloat("metallicFactor");
+            else if (src.HasProperty("_Metallic")) metallic = src.GetFloat("_Metallic");
+            dst.SetFloat("_Metallic", metallic);
+            
+            float roughness = 0.5f;
+            if (src.HasProperty("roughnessFactor")) roughness = src.GetFloat("roughnessFactor");
+            else if (src.HasProperty("_Roughness")) roughness = src.GetFloat("_Roughness");
+            else if (src.HasProperty("_Glossiness")) roughness = 1.0f - src.GetFloat("_Glossiness");
+            else if (src.HasProperty("_Smoothness")) roughness = 1.0f - src.GetFloat("_Smoothness");
+            dst.SetFloat("_Smoothness", 1.0f - roughness);
+            
+            Texture metallicGlossMap = null;
+            if (src.HasProperty("metallicRoughnessTexture")) metallicGlossMap = src.GetTexture("metallicRoughnessTexture");
+            else if (src.HasProperty("_MetallicGlossMap")) metallicGlossMap = src.GetTexture("_MetallicGlossMap");
+            if (metallicGlossMap != null)
+            {
+                dst.SetTexture("_MetallicGlossMap", metallicGlossMap);
+                dst.EnableKeyword("_METALLICSPECGLOSSMAP");
+                
+                Vector4 tilingOffset = Vector4.one;
+                if (src.HasProperty("metallicRoughnessTexture_ST")) tilingOffset = src.GetVector("metallicRoughnessTexture_ST");
+                else if (src.HasProperty("_MetallicGlossMap_ST")) tilingOffset = src.GetVector("_MetallicGlossMap_ST");
+                dst.SetVector("_MetallicGlossMap_ST", tilingOffset);
+            }
+            else
+            {
+                dst.DisableKeyword("_METALLICSPECGLOSSMAP");
+            }
+            
+            // 4. Emission
+            Color emissive = Color.black;
+            if (src.HasProperty("emissiveFactor")) emissive = src.GetColor("emissiveFactor");
+            else if (src.HasProperty("_EmissionColor")) emissive = src.GetColor("_EmissionColor");
+            dst.SetColor("_EmissionColor", emissive);
+            
+            Texture emissiveMap = null;
+            if (src.HasProperty("emissiveTexture")) emissiveMap = src.GetTexture("emissiveTexture");
+            else if (src.HasProperty("_EmissionMap")) emissiveMap = src.GetTexture("_EmissionMap");
+            if (emissiveMap != null)
+            {
+                dst.SetTexture("_EmissionMap", emissiveMap);
+                Vector4 tilingOffset = Vector4.one;
+                if (src.HasProperty("emissiveTexture_ST")) tilingOffset = src.GetVector("emissiveTexture_ST");
+                else if (src.HasProperty("_EmissionMap_ST")) tilingOffset = src.GetVector("_EmissionMap_ST");
+                dst.SetVector("_EmissionMap_ST", tilingOffset);
+            }
+            
+            if (emissive != Color.black || emissiveMap != null)
+            {
+                dst.EnableKeyword("_EMISSION");
+            }
+            else
+            {
+                dst.DisableKeyword("_EMISSION");
+            }
+            
+            // 5. GPU Instancing
+            dst.enableInstancing = true;
         }
 
         [MenuItem("Egyptian/🗑 Clear Occlusion Data", false, 11)]
