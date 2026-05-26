@@ -29,11 +29,13 @@ namespace TheAlchemistsCrypt.Editor
         {
             SetCityObjectsStatic();
             int converted = FixAllSceneMaterials();
+            EnableGPUResidentDrawerAllAssets(silent: true);
             EditorUtility.DisplayDialog(
                 "SRP Batcher Fix Complete",
                 $"Converted {converted} non-URP material(s) to URP Lit.\n" +
                 "GPU Instancing has been enabled on all materials.\n" +
-                "Static batching flags applied to city objects.\n\n" +
+                "Static batching flags applied to city objects.\n" +
+                "GPU Resident Drawer enabled on all pipeline assets.\n\n" +
                 "SRP Batcher should now show active batches in the Frame Debugger.",
                 "OK");
         }
@@ -54,6 +56,69 @@ namespace TheAlchemistsCrypt.Editor
 
             if (!proceed) return;
             ClearOcclusionData();
+        }
+
+        [MenuItem("Egyptian/🚀 Enable GPU Resident Drawer", false, 12)]
+        public static void EnableGPUResidentDrawerMenuItem()
+        {
+            EnableGPUResidentDrawerAllAssets(silent: false);
+        }
+
+        public static void EnableGPUResidentDrawerAllAssets(bool silent)
+        {
+            string[] guids = AssetDatabase.FindAssets("t:UniversalRenderPipelineAsset");
+            int successCount = 0;
+            int totalCount = 0;
+
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.RenderPipelineAsset>(path);
+                if (asset == null) continue;
+
+                totalCount++;
+                var type = asset.GetType();
+                var prop = type.GetProperty("gpuResidentDrawerMode", 
+                    System.Reflection.BindingFlags.Public | 
+                    System.Reflection.BindingFlags.NonPublic | 
+                    System.Reflection.BindingFlags.Instance);
+
+                if (prop != null)
+                {
+                    try
+                    {
+                        var enumType = prop.PropertyType;
+                        var value = System.Enum.Parse(enumType, "InstancedDrawing");
+                        prop.SetValue(asset, value);
+                        EditorUtility.SetDirty(asset);
+                        successCount++;
+                        Debug.Log($"[URPSRPBatcherFixer] Enabled GPU Resident Drawer (Instanced Drawing) on asset: {path}");
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogError($"[URPSRPBatcherFixer] Failed to set gpuResidentDrawerMode on {path}: {ex.Message}");
+                    }
+                }
+            }
+
+            if (successCount > 0)
+            {
+                AssetDatabase.SaveAssets();
+            }
+
+            if (!silent)
+            {
+                if (successCount == totalCount && totalCount > 0)
+                {
+                    EditorUtility.DisplayDialog("GPU Resident Drawer", 
+                        $"Successfully enabled GPU Resident Drawer on all {successCount} URP assets in the project!", "OK");
+                }
+                else
+                {
+                    EditorUtility.DisplayDialog("GPU Resident Drawer", 
+                        $"Found {totalCount} URP assets. Successfully enabled GPU Resident Drawer on {successCount} of them.\nCheck the Unity console for details.", "OK");
+                }
+            }
         }
 
         // ─────────────────────────────────────────────────────────────────────
