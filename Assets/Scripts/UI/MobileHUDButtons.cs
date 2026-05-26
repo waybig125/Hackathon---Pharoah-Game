@@ -3049,6 +3049,13 @@ namespace TheAlchemistsCrypt.UI
             }
         }
 
+        public void SetHUDVisible(bool visible)
+        {
+            if (hudRootGo != null)
+            {
+                hudRootGo.SetActive(visible);
+            }
+        }
     }
 
     public class LookSwipeZone : MonoBehaviour, IDragHandler, IPointerUpHandler, IPointerDownHandler
@@ -3113,14 +3120,6 @@ namespace TheAlchemistsCrypt.UI
                 {
                     TheAlchemistsCrypt.Input.MobileInputManager.Instance.VirtualJoystickInput = Vector2.zero;
                 }
-            }
-        }
-
-        public void SetHUDVisible(bool visible)
-        {
-            if (hudRootGo != null)
-            {
-                hudRootGo.SetActive(visible);
             }
         }
     }
