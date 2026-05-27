@@ -3,7 +3,7 @@ from PIL import Image
 import os
 
 def generate_seamless_clouds(size=2048):
-    print(f"Generating {size}x{size} seamless cloud texture with domain warping...")
+    print(f"Generating {size}x{size} seamless puffy cloud texture...")
     
     # Generate uniform noise maps for different frequencies
     def generate_perlin_map(res, seed):
@@ -37,15 +37,15 @@ def generate_seamless_clouds(size=2048):
     # Generate standard coordinate grids
     u_base, v_base = np.mgrid[0:1:1/size, 0:1:1/size]
     
-    # Generate warp offset using low frequency noise maps
+    # Generate warp offset using low frequency noise maps (swirly distortion)
     warp_map_x1 = generate_perlin_map(4, 100)
     warp_map_y1 = generate_perlin_map(4, 200)
     warp_map_x2 = generate_perlin_map(8, 300)
     warp_map_y2 = generate_perlin_map(8, 400)
     
     # Warp offset fields
-    warp_x = warp_map_x1 * 0.12 + warp_map_x2 * 0.05
-    warp_y = warp_map_y1 * 0.12 + warp_map_y2 * 0.05
+    warp_x = warp_map_x1 * 0.15 + warp_map_x2 * 0.05
+    warp_y = warp_map_y1 * 0.15 + warp_map_y2 * 0.05
     
     # Apply warp to coordinate grids (wrap to [0, 1] periodically)
     u_warped = (u_base + warp_x) % 1.0
@@ -70,16 +70,12 @@ def generate_seamless_clouds(size=2048):
                 noise_map[y1, x0] * wc +
                 noise_map[y1, x1] * wd)
 
-    # Generate main noise maps and sum them using warped coordinates
+    # Low/medium frequency octaves only — NO high-frequency carpet noise
     octaves = [
-        (4, 0.40, 10),
-        (8, 0.22, 20),
-        (16, 0.15, 30),
-        (32, 0.09, 40),
-        (64, 0.06, 50),
-        (128, 0.04, 60),
-        (256, 0.03, 70),
-        (512, 0.01, 80)
+        (4, 0.50, 10),
+        (8, 0.35, 20),
+        (16, 0.12, 30),
+        (32, 0.03, 40)
     ]
     
     density = np.zeros((size, size))
@@ -95,19 +91,28 @@ def generate_seamless_clouds(size=2048):
     density = density * 0.5 + 0.5
     density = np.clip(density, 0, 1)
 
-    # Enhance contrast using a smooth curve for puffiness (blobby cumulative centers)
-    density = 3 * density**2 - 2 * density**3
-    density = np.power(density, 1.2)
+    # Apply a smooth border fade mask so it fades out completely to 0 at all edges.
+    # This turns the noise sheet into a self-contained puffy cloud clump that has no boxed edges.
+    y_mask = np.sin(np.linspace(0, np.pi, size))[:, None]
+    x_mask = np.sin(np.linspace(0, np.pi, size))[None, :]
+    border_mask = y_mask * x_mask
+    border_mask = np.clip(border_mask * 1.5, 0, 1)
+    border_mask = 3 * border_mask**2 - 2 * border_mask**3  # Smooth transition
     
-    # Calculate normals using finite differences on the warped density
-    eps = 1.0 / size
-    bumpStrength = 4.0
+    density = density * border_mask
+
+    # Puffy contrast mapping
+    density = 3 * density**2 - 2 * density**3
+    density = np.power(density, 1.4)
+    
+    # Calculate normals using finite differences (NO division by tiny eps to prevent scaling noise)
+    bumpStrength = 8.0  # Safe range to get smooth, rounded pillow normals
     
     density_u = np.roll(density, -1, axis=1)
     density_v = np.roll(density, -1, axis=0)
     
-    du = (density_u - density) / eps
-    dv = (density_v - density) / eps
+    du = density_u - density
+    dv = density_v - density
     
     normal_x = -du * bumpStrength
     normal_y = -dv * bumpStrength
@@ -133,4 +138,4 @@ if __name__ == "__main__":
     folder_path = "Assets/Resources/Textures"
     os.makedirs(folder_path, exist_ok=True)
     img.save(os.path.join(folder_path, "SkyCloudNormalMap.png"))
-    print("Saved high-res warped cloud texture successfully!")
+    print("Saved high-res puffy, blobby cloud texture successfully!")
