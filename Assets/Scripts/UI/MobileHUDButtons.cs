@@ -2523,6 +2523,9 @@ namespace TheAlchemistsCrypt.UI
 
         private IEnumerator Start()
         {
+            // Force immersive full screen mode (hides navigation and status bars)
+            Screen.fullScreen = true;
+
             // Apply volume on boot
             float currentVol = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
             AudioListener.volume = currentVol;

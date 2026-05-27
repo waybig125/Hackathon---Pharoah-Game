@@ -176,6 +176,20 @@ namespace TheAlchemistsCrypt.Editor
                         Debug.Log("[AndroidManifestModifier] Updated android:appCategory to \"game\" in manifest.");
                     }
 
+                    // Inject android:isGame="true" for backward compatibility with older devices
+                    if (!applicationElement.HasAttribute("isGame", androidNs))
+                    {
+                        applicationElement.SetAttribute("isGame", androidNs, "true");
+                        changed = true;
+                        Debug.Log("[AndroidManifestModifier] Injected android:isGame=\"true\" into manifest.");
+                    }
+                    else if (applicationElement.GetAttribute("isGame", androidNs) != "true")
+                    {
+                        applicationElement.SetAttribute("isGame", androidNs, "true");
+                        changed = true;
+                        Debug.Log("[AndroidManifestModifier] Updated android:isGame to \"true\" in manifest.");
+                    }
+
                     if (changed)
                     {
                         doc.Save(manifestPath);
