@@ -740,13 +740,14 @@ namespace TheAlchemistsCrypt.Editor
                     // HOTFIX: Native GLB importer sometimes sets BaseColor to pure black or fails to set Transparency for the stalls
                     if (mat.name.Contains("TD_Checker") || mat.name.Contains("low_poly_market_stall_pack_Medieval"))
                     {
-                        if (mat.HasProperty("_BaseColor")) {
-                            Color c = mat.GetColor("_BaseColor");
+                        string colorProp = mat.HasProperty("baseColorFactor") ? "baseColorFactor" : (mat.HasProperty("_BaseColor") ? "_BaseColor" : null);
+                        if (colorProp != null) {
+                            Color c = mat.GetColor(colorProp);
                             // If it's near black, it's bugged. We must clone and fix it.
                             if (c.r < 0.05f && c.g < 0.05f && c.b < 0.05f) {
                                 Material newMat = new Material(mat);
                                 newMat.name = mat.name + "_Fixed";
-                                newMat.SetColor("_BaseColor", Color.white); // Restore texture visibility
+                                newMat.SetColor(colorProp, Color.white); // Restore texture visibility
                                 
                                 if (mat.name.Contains("TD_Checker")) {
                                     // TD_Checker requires alpha blending for its complex structures
@@ -756,6 +757,9 @@ namespace TheAlchemistsCrypt.Editor
                                     newMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                                     newMat.SetInt("_ZWrite", 0);
                                     newMat.EnableKeyword("_ALPHABLEND_ON");
+                                    // For glTF-pbr transparency modes (if using UnityGLTF / glTFast)
+                                    newMat.SetFloat("alphaMode", 2); // BLEND mode
+                                    newMat.EnableKeyword("ALPHAMODE_BLEND");
                                     newMat.renderQueue = 3000;
                                 }
                                 mats[i] = newMat;
