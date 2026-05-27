@@ -2558,7 +2558,7 @@ namespace TheAlchemistsCrypt.Editor
                     scaleByHeight = true;
                 }
                 else if (name.Contains("vietnamese_meat_market_stall")) {
-                    targetSize = 2.2f; // Restore to original standard size
+                    targetSize = 3.3f; // 1.5x the current size (2.2 * 1.5)
                     scaleByHeight = true;
                 }
                 else if (name.Contains("low_poly_market_stall_pack")) {

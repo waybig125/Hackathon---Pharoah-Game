@@ -753,7 +753,14 @@ namespace TheAlchemistsCrypt.Editor
                         newMat.name = mat.name + "_Fixed";
                         
                         string colorProp = newMat.HasProperty("baseColorFactor") ? "baseColorFactor" : (newMat.HasProperty("_BaseColor") ? "_BaseColor" : null);
-                        if (colorProp != null) newMat.SetColor(colorProp, Color.white); // Restore texture visibility
+                        if (colorProp != null) {
+                            if (mat.name.Contains("low_poly_market_stall_pack_Medieval")) {
+                                // Tint the neon cartoon colors to a warm sandy desert hue so they blend into the environment
+                                newMat.SetColor(colorProp, new Color(0.85f, 0.70f, 0.50f, 1f)); 
+                            } else {
+                                newMat.SetColor(colorProp, Color.white); // Restore texture visibility
+                            }
+                        }
                         
                         // Fix the pitch black issue caused by GLTF metallic-roughness map channel mismatch in URP Lit
                         if (newMat.HasProperty("_MetallicGlossMap")) newMat.SetTexture("_MetallicGlossMap", null);
