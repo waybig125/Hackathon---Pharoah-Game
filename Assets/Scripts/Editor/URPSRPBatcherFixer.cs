@@ -271,37 +271,34 @@ namespace TheAlchemistsCrypt.Editor
             dst.SetColor("_BaseColor", albedo);
             
             Texture mainTex = null;
-            if (src.HasProperty("baseColorTexture")) mainTex = src.GetTexture("baseColorTexture");
-            else if (src.HasProperty("diffuseTexture")) mainTex = src.GetTexture("diffuseTexture");
-            else if (src.HasProperty("_BaseMap")) mainTex = src.GetTexture("_BaseMap");
-            else if (src.HasProperty("_MainTex")) mainTex = src.GetTexture("_MainTex");
+            string mainTexProp = null;
+            if (src.HasProperty("baseColorTexture")) mainTexProp = "baseColorTexture";
+            else if (src.HasProperty("diffuseTexture")) mainTexProp = "diffuseTexture";
+            else if (src.HasProperty("_BaseMap")) mainTexProp = "_BaseMap";
+            else if (src.HasProperty("_MainTex")) mainTexProp = "_MainTex";
             
+            if (mainTexProp != null) mainTex = src.GetTexture(mainTexProp);
             if (mainTex != null)
             {
                 dst.SetTexture("_BaseMap", GetMappedTexture(mainTex));
-                
-                Vector4 tilingOffset = Vector4.one;
-                if (src.HasProperty("baseColorTexture_ST")) tilingOffset = src.GetVector("baseColorTexture_ST");
-                else if (src.HasProperty("diffuseTexture_ST")) tilingOffset = src.GetVector("diffuseTexture_ST");
-                else if (src.HasProperty("_BaseMap_ST")) tilingOffset = src.GetVector("_BaseMap_ST");
-                else if (src.HasProperty("_MainTex_ST")) tilingOffset = src.GetVector("_MainTex_ST");
-                dst.SetVector("_BaseMap_ST", tilingOffset);
+                dst.SetTextureScale("_BaseMap", src.GetTextureScale(mainTexProp));
+                dst.SetTextureOffset("_BaseMap", src.GetTextureOffset(mainTexProp));
             }
             
             // 2. Normal Map
             Texture normalTex = null;
-            if (src.HasProperty("normalTexture")) normalTex = src.GetTexture("normalTexture");
-            else if (src.HasProperty("_BumpMap")) normalTex = src.GetTexture("_BumpMap");
-            else if (src.HasProperty("_NormalMap")) normalTex = src.GetTexture("_NormalMap");
+            string normalTexProp = null;
+            if (src.HasProperty("normalTexture")) normalTexProp = "normalTexture";
+            else if (src.HasProperty("_BumpMap")) normalTexProp = "_BumpMap";
+            else if (src.HasProperty("_NormalMap")) normalTexProp = "_NormalMap";
+            
+            if (normalTexProp != null) normalTex = src.GetTexture(normalTexProp);
             if (normalTex != null)
             {
                 dst.SetTexture("_BumpMap", GetMappedTexture(normalTex));
                 dst.EnableKeyword("_NORMALMAP");
-                
-                Vector4 tilingOffset = Vector4.one;
-                if (src.HasProperty("normalTexture_ST")) tilingOffset = src.GetVector("normalTexture_ST");
-                else if (src.HasProperty("_BumpMap_ST")) tilingOffset = src.GetVector("_BumpMap_ST");
-                dst.SetVector("_BumpMap_ST", tilingOffset);
+                dst.SetTextureScale("_BumpMap", src.GetTextureScale(normalTexProp));
+                dst.SetTextureOffset("_BumpMap", src.GetTextureOffset(normalTexProp));
                 
                 float normalScale = 1.0f;
                 if (src.HasProperty("normalTexture_scale")) normalScale = src.GetFloat("normalTexture_scale");
@@ -344,17 +341,17 @@ namespace TheAlchemistsCrypt.Editor
             dst.SetFloat("_Smoothness", 1.0f - roughness);
             
             Texture metallicGlossMap = null;
-            if (src.HasProperty("metallicRoughnessTexture")) metallicGlossMap = src.GetTexture("metallicRoughnessTexture");
-            else if (src.HasProperty("_MetallicGlossMap")) metallicGlossMap = src.GetTexture("_MetallicGlossMap");
+            string metallicGlossProp = null;
+            if (src.HasProperty("metallicRoughnessTexture")) metallicGlossProp = "metallicRoughnessTexture";
+            else if (src.HasProperty("_MetallicGlossMap")) metallicGlossProp = "_MetallicGlossMap";
+            
+            if (metallicGlossProp != null) metallicGlossMap = src.GetTexture(metallicGlossProp);
             if (metallicGlossMap != null)
             {
                 dst.SetTexture("_MetallicGlossMap", GetMappedTexture(metallicGlossMap));
                 dst.EnableKeyword("_METALLICSPECGLOSSMAP");
-                
-                Vector4 tilingOffset = Vector4.one;
-                if (src.HasProperty("metallicRoughnessTexture_ST")) tilingOffset = src.GetVector("metallicRoughnessTexture_ST");
-                else if (src.HasProperty("_MetallicGlossMap_ST")) tilingOffset = src.GetVector("_MetallicGlossMap_ST");
-                dst.SetVector("_MetallicGlossMap_ST", tilingOffset);
+                dst.SetTextureScale("_MetallicGlossMap", src.GetTextureScale(metallicGlossProp));
+                dst.SetTextureOffset("_MetallicGlossMap", src.GetTextureOffset(metallicGlossProp));
             }
             else
             {
@@ -368,15 +365,16 @@ namespace TheAlchemistsCrypt.Editor
             dst.SetColor("_EmissionColor", emissive);
             
             Texture emissiveMap = null;
-            if (src.HasProperty("emissiveTexture")) emissiveMap = src.GetTexture("emissiveTexture");
-            else if (src.HasProperty("_EmissionMap")) emissiveMap = src.GetTexture("_EmissionMap");
+            string emissiveProp = null;
+            if (src.HasProperty("emissiveTexture")) emissiveProp = "emissiveTexture";
+            else if (src.HasProperty("_EmissionMap")) emissiveProp = "_EmissionMap";
+            
+            if (emissiveProp != null) emissiveMap = src.GetTexture(emissiveProp);
             if (emissiveMap != null)
             {
                 dst.SetTexture("_EmissionMap", GetMappedTexture(emissiveMap));
-                Vector4 tilingOffset = Vector4.one;
-                if (src.HasProperty("emissiveTexture_ST")) tilingOffset = src.GetVector("emissiveTexture_ST");
-                else if (src.HasProperty("_EmissionMap_ST")) tilingOffset = src.GetVector("_EmissionMap_ST");
-                dst.SetVector("_EmissionMap_ST", tilingOffset);
+                dst.SetTextureScale("_EmissionMap", src.GetTextureScale(emissiveProp));
+                dst.SetTextureOffset("_EmissionMap", src.GetTextureOffset(emissiveProp));
             }
             
             if (emissive != Color.black || emissiveMap != null)
@@ -853,19 +851,54 @@ namespace TheAlchemistsCrypt.Editor
                         else if (mat.HasProperty("_Color")) albedo = mat.GetColor("_Color");
 
                         Texture mainTex = null;
-                        if (mat.HasProperty("baseColorTexture")) mainTex = mat.GetTexture("baseColorTexture");
-                        else if (mat.HasProperty("diffuseTexture")) mainTex = mat.GetTexture("diffuseTexture");
-                        else if (mat.HasProperty("_BaseMap")) mainTex = mat.GetTexture("_BaseMap");
-                        else if (mat.HasProperty("_MainTex")) mainTex = mat.GetTexture("_MainTex");
+                        string mainTexProp = null;
+                        if (mat.HasProperty("baseColorTexture")) mainTexProp = "baseColorTexture";
+                        else if (mat.HasProperty("diffuseTexture")) mainTexProp = "diffuseTexture";
+                        else if (mat.HasProperty("_BaseMap")) mainTexProp = "_BaseMap";
+                        else if (mat.HasProperty("_MainTex")) mainTexProp = "_MainTex";
+                        if (mainTexProp != null) mainTex = mat.GetTexture(mainTexProp);
+
+                        Vector2 mainTexScale = Vector2.one;
+                        Vector2 mainTexOffset = Vector2.zero;
+                        if (mainTexProp != null && mainTex != null)
+                        {
+                            mainTexScale = mat.GetTextureScale(mainTexProp);
+                            mainTexOffset = mat.GetTextureOffset(mainTexProp);
+                        }
 
                         Texture bump = null;
-                        if (mat.HasProperty("normalTexture")) bump = mat.GetTexture("normalTexture");
-                        else if (mat.HasProperty("_BumpMap")) bump = mat.GetTexture("_BumpMap");
-                        else if (mat.HasProperty("_NormalMap")) bump = mat.GetTexture("_NormalMap");
+                        string bumpProp = null;
+                        if (mat.HasProperty("normalTexture")) bumpProp = "normalTexture";
+                        else if (mat.HasProperty("_BumpMap")) bumpProp = "_BumpMap";
+                        else if (mat.HasProperty("_NormalMap")) bumpProp = "_NormalMap";
+                        if (bumpProp != null) bump = mat.GetTexture(bumpProp);
+
+                        Vector2 bumpScale = Vector2.one;
+                        Vector2 bumpOffset = Vector2.zero;
+                        if (bumpProp != null && bump != null)
+                        {
+                            bumpScale = mat.GetTextureScale(bumpProp);
+                            bumpOffset = mat.GetTextureOffset(bumpProp);
+                        }
+
+                        float normalScale = 1.0f;
+                        if (mat.HasProperty("normalTexture_scale")) normalScale = mat.GetFloat("normalTexture_scale");
+                        else if (mat.HasProperty("_BumpScale")) normalScale = mat.GetFloat("_BumpScale");
 
                         float metallic = 0f;
                         if (mat.HasProperty("metallicFactor")) metallic = mat.GetFloat("metallicFactor");
                         else if (mat.HasProperty("_Metallic")) metallic = mat.GetFloat("_Metallic");
+
+                        // Safety: Force non-metallic for dielectric environment assets (stone, wood, plaster)
+                        string lowerName = mat.name.ToLower();
+                        if (lowerName.Contains("house") || lowerName.Contains("building") || lowerName.Contains("city") ||
+                            lowerName.Contains("stall") || lowerName.Contains("market") || lowerName.Contains("column") ||
+                            lowerName.Contains("pillar") || lowerName.Contains("temple") || lowerName.Contains("stone") ||
+                            lowerName.Contains("wood") || lowerName.Contains("sand") || lowerName.Contains("obelisk") ||
+                            lowerName.Contains("sphinx") || lowerName.Contains("door") || lowerName.Contains("mastaba"))
+                        {
+                            metallic = 0.0f;
+                        }
 
                         float smoothness = 0.5f;
                         if (mat.HasProperty("roughnessFactor")) smoothness = 1f - mat.GetFloat("roughnessFactor");
@@ -873,28 +906,92 @@ namespace TheAlchemistsCrypt.Editor
                         else if (mat.HasProperty("_Smoothness")) smoothness = mat.GetFloat("_Smoothness");
                         else if (mat.HasProperty("_Glossiness")) smoothness = mat.GetFloat("_Glossiness");
 
+                        Texture metallicGlossMap = null;
+                        string metallicGlossProp = null;
+                        if (mat.HasProperty("metallicRoughnessTexture")) metallicGlossProp = "metallicRoughnessTexture";
+                        else if (mat.HasProperty("_MetallicGlossMap")) metallicGlossProp = "_MetallicGlossMap";
+                        if (metallicGlossProp != null) metallicGlossMap = mat.GetTexture(metallicGlossProp);
+
+                        Vector2 metallicGlossScale = Vector2.one;
+                        Vector2 metallicGlossOffset = Vector2.zero;
+                        if (metallicGlossProp != null && metallicGlossMap != null)
+                        {
+                            metallicGlossScale = mat.GetTextureScale(metallicGlossProp);
+                            metallicGlossOffset = mat.GetTextureOffset(metallicGlossProp);
+                        }
+
                         Color emissive = Color.black;
                         if (mat.HasProperty("emissiveFactor")) emissive = mat.GetColor("emissiveFactor");
                         else if (mat.HasProperty("_EmissionColor")) emissive = mat.GetColor("_EmissionColor");
 
                         Texture emissiveMap = null;
-                        if (mat.HasProperty("emissiveTexture")) emissiveMap = mat.GetTexture("emissiveTexture");
-                        else if (mat.HasProperty("_EmissionMap")) emissiveMap = mat.GetTexture("_EmissionMap");
+                        string emissiveProp = null;
+                        if (mat.HasProperty("emissiveTexture")) emissiveProp = "emissiveTexture";
+                        else if (mat.HasProperty("_EmissionMap")) emissiveProp = "_EmissionMap";
+                        if (emissiveProp != null) emissiveMap = mat.GetTexture(emissiveProp);
+
+                        Vector2 emissiveScale = Vector2.one;
+                        Vector2 emissiveOffset = Vector2.zero;
+                        if (emissiveProp != null && emissiveMap != null)
+                        {
+                            emissiveScale = mat.GetTextureScale(emissiveProp);
+                            emissiveOffset = mat.GetTextureOffset(emissiveProp);
+                        }
 
                         mat.shader = urpLit;
 
                         // ── Restore values using URP Lit property names ──
                         if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", albedo);
-                        if (mat.HasProperty("_BaseMap") && mainTex != null) mat.SetTexture("_BaseMap", mainTex);
-                        if (mat.HasProperty("_BumpMap") && bump != null) mat.SetTexture("_BumpMap", bump);
+                        if (mat.HasProperty("_BaseMap") && mainTex != null)
+                        {
+                            mat.SetTexture("_BaseMap", mainTex);
+                            mat.SetTextureScale("_BaseMap", mainTexScale);
+                            mat.SetTextureOffset("_BaseMap", mainTexOffset);
+                        }
+                        if (mat.HasProperty("_BumpMap") && bump != null)
+                        {
+                            mat.SetTexture("_BumpMap", bump);
+                            mat.SetTextureScale("_BumpMap", bumpScale);
+                            mat.SetTextureOffset("_BumpMap", bumpOffset);
+                            mat.EnableKeyword("_NORMALMAP");
+                            if (mat.HasProperty("_BumpScale")) mat.SetFloat("_BumpScale", normalScale);
+                        }
+                        else
+                        {
+                            mat.DisableKeyword("_NORMALMAP");
+                        }
                         if (mat.HasProperty("_Metallic")) mat.SetFloat("_Metallic", metallic);
                         if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", smoothness);
 
-                        if (emissive != Color.black)
+                        if (metallicGlossMap != null)
+                        {
+                            if (mat.HasProperty("_MetallicGlossMap"))
+                            {
+                                mat.SetTexture("_MetallicGlossMap", metallicGlossMap);
+                                mat.SetTextureScale("_MetallicGlossMap", metallicGlossScale);
+                                mat.SetTextureOffset("_MetallicGlossMap", metallicGlossOffset);
+                            }
+                            mat.EnableKeyword("_METALLICSPECGLOSSMAP");
+                        }
+                        else
+                        {
+                            mat.DisableKeyword("_METALLICSPECGLOSSMAP");
+                        }
+
+                        if (emissive != Color.black || emissiveMap != null)
                         {
                             if (mat.HasProperty("_EmissionColor")) mat.SetColor("_EmissionColor", emissive);
-                            if (mat.HasProperty("_EmissionMap") && emissiveMap != null) mat.SetTexture("_EmissionMap", emissiveMap);
+                            if (mat.HasProperty("_EmissionMap") && emissiveMap != null)
+                            {
+                                mat.SetTexture("_EmissionMap", emissiveMap);
+                                mat.SetTextureScale("_EmissionMap", emissiveScale);
+                                mat.SetTextureOffset("_EmissionMap", emissiveOffset);
+                            }
                             mat.EnableKeyword("_EMISSION");
+                        }
+                        else
+                        {
+                            mat.DisableKeyword("_EMISSION");
                         }
 
                         converted++;

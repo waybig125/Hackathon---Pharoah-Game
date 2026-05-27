@@ -365,9 +365,7 @@ namespace TheAlchemistsCrypt.Gameplay
             isEscaping = true;
             escapeTimer = 0f;
 
-            // Disable player controller movement to stop inputs
-            var pc = player.GetComponent<TheAlchemistsCrypt.Player.PlayerController>();
-            if (pc != null) pc.enabled = false;
+
 
             var ph = player.GetComponent<TheAlchemistsCrypt.Player.PlayerHealth>();
             if (ph != null) ph.enabled = false;

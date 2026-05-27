@@ -103,12 +103,7 @@ namespace InfimaGames.LowPolyShooterPack
             //Get Player Character.
             playerCharacter = ServiceLocator.Current.Get<IGameModeService>().GetPlayerCharacter();
 
-            // Hack to fix city materials at runtime
-            GameObject city = GameObject.Find("EgyptianCity");
-            if (city != null && city.GetComponent<CityMaterialFixer>() == null)
-            {
-                city.AddComponent<CityMaterialFixer>();
-            }
+
 
         #if UNITY_EDITOR
             if (audioClipWalking == null) audioClipWalking = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Audio/SFX/Character/Movement/S_CH_Loop_Walking.wav");
