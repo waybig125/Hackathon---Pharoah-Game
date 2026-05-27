@@ -42,6 +42,7 @@ namespace TheAlchemistsCrypt.AI
         private bool isDead = false;
         public bool IsDead => isDead;
         private float deathTimer = 0f;
+        public System.Action<GameObject> onReleaseToPool;
 
         [Header("Elemental Status Settings")]
         public string vulnerableElement = "sulfur";
@@ -245,13 +246,53 @@ namespace TheAlchemistsCrypt.AI
 
             // PERFORMANCE: Cache renderer array and MPB once at spawn instead of
             // allocating on every elemental hit.
-            cachedRenderers = GetComponentsInChildren<Renderer>(true);
-            cachedMPB       = new MaterialPropertyBlock();
+            if (cachedRenderers == null) cachedRenderers = GetComponentsInChildren<Renderer>(true);
+            if (cachedMPB == null)       cachedMPB = new MaterialPropertyBlock();
 
             // ── NavMesh snap: ensure agent starts ON the nav mesh ──
             // If spawned slightly off-mesh (floating, on steep slope), SetDestination silently
             // fails and the mummy stands frozen. Snap to nearest valid surface within 5m.
             StartCoroutine(SnapToNavMeshDelayed());
+        }
+
+        private void OnEnable()
+        {
+            // Reset state for object pooling
+            isDead = false;
+            deathTimer = 0f;
+            currentHealth = maxHealth;
+            isStunned = false;
+            isSlowed = false;
+            hasWanderTarget = false;
+            pathfindCooldown = 0f;
+            combatMusicTriggered = false;
+            stuckTimer = 0f;
+            
+            if (agent != null)
+            {
+                agent.enabled = true;
+                agent.speed = baseSpeed;
+                agent.stoppingDistance = attackDistance;
+            }
+
+            var colliders = GetComponents<Collider>();
+            foreach (var c in colliders) c.enabled = true;
+            var childColliders = GetComponentsInChildren<Collider>();
+            foreach (var c in childColliders) c.enabled = true;
+
+            string[] vulnerabilities = { "sulfur", "mercury", "salt" };
+            vulnerableElement = vulnerabilities[Random.Range(0, vulnerabilities.Length)];
+
+            RestoreColors();
+            if (healthBarObj == null && sharedHealthBarSprite != null)
+            {
+                CreateHealthBar();
+            }
+            
+            if (gameObject.activeInHierarchy)
+            {
+                StartCoroutine(SnapToNavMeshDelayed());
+            }
         }
 
         private System.Collections.IEnumerator SnapToNavMeshDelayed()
@@ -331,7 +372,13 @@ namespace TheAlchemistsCrypt.AI
             if (isDead) {
                 deathTimer += Time.deltaTime;
                 if (deathTimer > 1f) transform.position += Vector3.down * 0.6f * Time.deltaTime;
-                if (deathTimer > 4f) Destroy(gameObject);
+                if (deathTimer > 4f) {
+                    if (onReleaseToPool != null) {
+                        onReleaseToPool(gameObject);
+                    } else {
+                        Destroy(gameObject);
+                    }
+                }
                 return;
             }
 
@@ -354,7 +401,7 @@ namespace TheAlchemistsCrypt.AI
             }
 
             // Stuck detection: if we are supposed to move but haven't changed position much
-            if (Vector3.Distance(transform.position, lastPos) < 0.05f && !isStunned && !isDead && agent.hasPath)
+            if ((transform.position - lastPos).sqrMagnitude < 0.0025f && !isStunned && !isDead && agent.hasPath)
             {
                 stuckTimer += Time.deltaTime;
                 if (stuckTimer > 2.5f) // Stuck for 2.5 seconds
@@ -463,7 +510,7 @@ namespace TheAlchemistsCrypt.AI
                         if (bounded.z < -95f) bounded.z = -95f;
                         currentTargetPos = bounded;
                         currentSpeed = 1.8f;
-                        if (Vector3.Distance(transform.position, wanderTarget) < 2f)
+                        if ((transform.position - wanderTarget).sqrMagnitude < 4f)
                             hasWanderTarget = false;
                     }
                 else
@@ -681,7 +728,7 @@ namespace TheAlchemistsCrypt.AI
                 foreach (var m in allMummies)
                 {
                     if (m != null && !m.IsDead && m != this &&
-                        Vector3.Distance(m.transform.position, player.position) < 25f)
+                        (m.transform.position - player.position).sqrMagnitude < 625f)
                     {
                         anyNearby = true;
                         break;

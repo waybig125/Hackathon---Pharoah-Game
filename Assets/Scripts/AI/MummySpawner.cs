@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Pool;
 
 namespace TheAlchemistsCrypt.AI
 {
@@ -9,6 +10,37 @@ namespace TheAlchemistsCrypt.AI
         [SerializeField] private int maxMummies = 20;
         [SerializeField] private float spawnInterval = 25.0f;
         [SerializeField] private int initialSpawnCount = 3;
+
+        private ObjectPool<GameObject> mummyPool;
+        private ObjectPool<GameObject> pharaohPool;
+        private GameObject mummyPrefab;
+        private GameObject pharaohPrefab;
+
+        private void Awake()
+        {
+            mummyPrefab = Resources.Load<GameObject>("Mummy_Dynamic_Prefab");
+            pharaohPrefab = Resources.Load<GameObject>("Pharaoh_Prefab");
+
+            mummyPool = new ObjectPool<GameObject>(
+                createFunc: () => Instantiate(mummyPrefab),
+                actionOnGet: (obj) => { obj.SetActive(true); },
+                actionOnRelease: (obj) => { obj.SetActive(false); },
+                actionOnDestroy: (obj) => Destroy(obj),
+                collectionCheck: false,
+                defaultCapacity: maxMummies,
+                maxSize: maxMummies + 5
+            );
+
+            pharaohPool = new ObjectPool<GameObject>(
+                createFunc: () => Instantiate(pharaohPrefab),
+                actionOnGet: (obj) => { obj.SetActive(true); },
+                actionOnRelease: (obj) => { obj.SetActive(false); },
+                actionOnDestroy: (obj) => Destroy(obj),
+                collectionCheck: false,
+                defaultCapacity: 2,
+                maxSize: 5
+            );
+        }
 
         private void Start()
         {
@@ -94,9 +126,7 @@ namespace TheAlchemistsCrypt.AI
 
             Vector3 spawnCenter = player != null ? player.transform.position : Vector3.zero;
 
-            // Load prefab directly from Resources
-            GameObject prefab = Resources.Load<GameObject>("Mummy_Dynamic_Prefab");
-            if (prefab == null) 
+            if (mummyPrefab == null) 
             {
                 Debug.LogWarning("[MummySpawner] Mummy_Dynamic_Prefab not found in Resources! Please run Tools > Generate AI Prefabs.");
                 return;
@@ -128,11 +158,16 @@ namespace TheAlchemistsCrypt.AI
                 attempts++;
             }
 
-            GameObject go = Instantiate(prefab, spawnPos, Quaternion.identity);
+            GameObject go = mummyPool.Get();
+            go.transform.position = spawnPos;
+            go.transform.rotation = Quaternion.identity;
             go.name = "Mummy_Dynamic_" + id;
 
             var ai = go.GetComponent<ZombieAI>();
-            if (ai != null) ai.mummyId = id;
+            if (ai != null) {
+                ai.mummyId = id;
+                ai.onReleaseToPool = (obj) => { if (obj.activeSelf) mummyPool.Release(obj); };
+            }
 
             Debug.Log($"[MummySpawner] Successfully spawned active dynamic mummy with ID {id} at {spawnPos}");
 
@@ -148,8 +183,7 @@ namespace TheAlchemistsCrypt.AI
 
             Vector3 spawnCenter = player != null ? player.transform.position : Vector3.zero;
 
-            GameObject prefab = Resources.Load<GameObject>("Pharaoh_Prefab");
-            if (prefab == null) 
+            if (pharaohPrefab == null) 
             {
                 Debug.LogWarning("[MummySpawner] Pharaoh_Prefab not found in Resources! Please run Tools > Generate AI Prefabs.");
                 return;
@@ -164,11 +198,16 @@ namespace TheAlchemistsCrypt.AI
                 spawnPos = hit.position;
             }
 
-            GameObject go = Instantiate(prefab, spawnPos, Quaternion.identity);
+            GameObject go = pharaohPool.Get();
+            go.transform.position = spawnPos;
+            go.transform.rotation = Quaternion.identity;
             go.name = "Pharaoh_Prefab";
 
             var ai = go.GetComponent<ZombieAI>();
-            if (ai != null) ai.mummyId = id;
+            if (ai != null) {
+                ai.mummyId = id;
+                ai.onReleaseToPool = (obj) => { if (obj.activeSelf) pharaohPool.Release(obj); };
+            }
 
             Debug.Log($"[MummySpawner] Boss Spawned: Pharaoh with ID {id} at {spawnPos}");
         }
