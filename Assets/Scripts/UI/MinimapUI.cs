@@ -57,6 +57,11 @@ private Sprite buildingSprite;
         private Sprite pharaohDotSprite;
         private Sprite medicineDotSprite;
 
+        // Fog of War
+        private Texture2D fowTexture;
+        private UnityEngine.UI.RawImage fowImage;
+        private Coroutine fowCoroutine;
+
         // Track dynamic indicators
         private List<ZombieIndicator> zombieIndicators = new List<ZombieIndicator>();
         private List<MedicineIndicator> medicineIndicators = new List<MedicineIndicator>();
@@ -99,7 +104,20 @@ private Sprite buildingSprite;
             radarScale = radarPixelRadius / radarWorldRadius;
             expandedScale = (Screen.width * 0.45f) / 500f;
             GenerateSprites();
+            InitFogOfWar();
             BuildMinimapUI();
+        }
+
+        private void InitFogOfWar()
+        {
+            int texSize = 256;
+            fowTexture = new Texture2D(texSize, texSize, TextureFormat.RGBA32, false);
+            fowTexture.filterMode = FilterMode.Bilinear;
+            Color32 black = new Color32(0, 0, 0, 255);
+            Color32[] pixels = new Color32[texSize * texSize];
+            for (int i = 0; i < pixels.Length; i++) pixels[i] = black;
+            fowTexture.SetPixels32(pixels);
+            fowTexture.Apply();
         }
 
         private void Start()
@@ -111,6 +129,8 @@ private Sprite buildingSprite;
             expandedScale = (Screen.width * 0.45f) / 500f;
             BuildMinimapUI();
             CacheStaticElements();
+
+            fowCoroutine = StartCoroutine(UpdateFogOfWarRoutine());
         }
 
         private void GenerateSprites()
@@ -187,6 +207,21 @@ private Sprite buildingSprite;
             mapContent.anchorMin = mapContent.anchorMax = new Vector2(0.5f, 0.5f);
             mapContent.anchoredPosition = Vector2.zero;
             mapContent.sizeDelta = new Vector2(2000, 2000); 
+
+            // FOW Image (Overlay on background grid, under icons)
+            var fowGo = new GameObject("FogOfWar", typeof(RectTransform), typeof(RawImage));
+            var fowRect = fowGo.GetComponent<RectTransform>();
+            fowRect.SetParent(mapContent, false);
+            fowRect.anchorMin = fowRect.anchorMax = new Vector2(0.5f, 0.5f);
+            fowRect.anchoredPosition = Vector2.zero;
+            fowRect.sizeDelta = new Vector2(2000, 2000); // Must match map bounds exactly
+            fowImage = fowGo.GetComponent<RawImage>();
+            fowImage.texture = fowTexture;
+            fowImage.color = new Color(0.1f, 0.1f, 0.1f, 0.95f); // Opacity of the fog
+            
+            // FOW Material blending to multiply with background (requires custom shader, so we just use UI overlay with soft black/clear)
+            // Wait, RawImage uses standard UI blend, so a texture with alpha 255 is solid.
+            // We want the clear parts to be alpha 0. So black = opaque, white = transparent.
 
             var compassRingGo = new GameObject("CompassRing", typeof(RectTransform));
             compassRing = compassRingGo.GetComponent<RectTransform>();
@@ -435,6 +470,51 @@ private Sprite buildingSprite;
             // Update dynamic indicators
             UpdateZombieIndicators();
             UpdateMedicineIndicators();
+        }
+
+        private IEnumerator UpdateFogOfWarRoutine()
+        {
+            while (true)
+            {
+                yield return new WaitForSeconds(0.25f);
+                if (playerTransform == null) continue;
+
+                Vector3 pPos = playerTransform.position;
+                
+                // Assuming the map area represented by the 2000x2000 UI is roughly 500x500 world units.
+                // Center of map is 0,0. Range is -250 to 250 in world space.
+                float worldMapSize = 2000f / radarScale; // Full size in world coordinates based on radarScale
+                
+                // Convert world position to FOW texture pixel coordinates (0 to 256)
+                // mapContent's center is 0,0 world.
+                float FOW_SIZE = 256f;
+                int px = Mathf.RoundToInt((pPos.x / worldMapSize + 0.5f) * FOW_SIZE);
+                int py = Mathf.RoundToInt((pPos.z / worldMapSize + 0.5f) * FOW_SIZE);
+
+                // Paint a clear circle
+                int radius = 18; // Reveal radius
+                bool changed = false;
+                Color32 clearColor = new Color32(0, 0, 0, 0);
+
+                for (int y = -radius; y <= radius; y++)
+                {
+                    for (int x = -radius; x <= radius; x++)
+                    {
+                        if (x * x + y * y <= radius * radius)
+                        {
+                            int cx = px + x;
+                            int cy = py + y;
+                            if (cx >= 0 && cx < FOW_SIZE && cy >= 0 && cy < FOW_SIZE)
+                            {
+                                fowTexture.SetPixel(cx, cy, clearColor);
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+                
+                if (changed) fowTexture.Apply();
+            }
         }
 
         private void UpdateRadarPositions()
