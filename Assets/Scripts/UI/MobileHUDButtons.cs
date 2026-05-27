@@ -94,6 +94,18 @@ namespace TheAlchemistsCrypt.UI
             return result;
         }
 
+        private Sprite LoadSlicedSpriteFromResources(string path, Vector4 border)
+        {
+            Sprite s = Resources.Load<Sprite>(path);
+            if (s != null && s.border != Vector4.zero) return s; 
+            Texture2D tex = Resources.Load<Texture2D>(path);
+            if (tex != null)
+            {
+                return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, border);
+            }
+            return null;
+        }
+
         private void LoadSprites()
         {
             joystickRingSprite = LoadThemedSprite("joystick_outer", "egypt_themed_icons/joystick_outer");
@@ -124,14 +136,24 @@ namespace TheAlchemistsCrypt.UI
 
         private void GenerateProceduralSprites()
         {
-            obsidianSprite = CreateObsidianSprite();
+            obsidianSprite = LoadSpriteFromResources("egypt_themed_icons_generated/obsidian_texture");
+            if (obsidianSprite == null) obsidianSprite = CreateObsidianSprite();
+
             charcoalSprite = CreateCharcoalSprite(260, 180);
             goldGradientSprite = CreateGoldenGradientSprite();
+
+            if (joystickRingSprite == null) joystickRingSprite = LoadSpriteFromResources("egypt_themed_icons_generated/joystick_ring");
             if (joystickRingSprite == null) joystickRingSprite = CreateRingSprite();
+
+            if (joystickKnobSprite == null) joystickKnobSprite = LoadSpriteFromResources("egypt_themed_icons_generated/joystick_knob");
             if (joystickKnobSprite == null) joystickKnobSprite = CreateKnobSprite();
 
-            sandstoneFrameSprite = CreateSlicedSandstoneFrameSprite();
-            goldTrimmedButtonSprite = CreateSlicedGoldTrimmedButtonSprite();
+            sandstoneFrameSprite = LoadSlicedSpriteFromResources("egypt_themed_icons_generated/sandstone_frame", new Vector4(40, 40, 40, 40));
+            if (sandstoneFrameSprite == null) sandstoneFrameSprite = CreateSlicedSandstoneFrameSprite();
+
+            goldTrimmedButtonSprite = LoadSlicedSpriteFromResources("egypt_themed_icons_generated/gold_trim_button", new Vector4(12, 12, 12, 12));
+            if (goldTrimmedButtonSprite == null) goldTrimmedButtonSprite = CreateSlicedGoldTrimmedButtonSprite();
+
             orangeGlowSprite = CreateSlicedEnergyGlowSprite(new Color(1.0f, 0.55f, 0.05f));
             cyanGlowSprite = CreateSlicedEnergyGlowSprite(new Color(0.0f, 0.9f, 1.0f));
 
