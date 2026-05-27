@@ -101,6 +101,8 @@ namespace TheAlchemistsCrypt.Environment
 
             if (sun != null)
             {
+                sun.enabled = true;
+                sun.gameObject.SetActive(true);
                 sun.color = sunColor;
                 sun.intensity = sunIntensity;
                 // Changed to a lower sunset angle so sunlight falls on the houses

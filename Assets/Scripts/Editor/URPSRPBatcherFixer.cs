@@ -181,7 +181,7 @@ namespace TheAlchemistsCrypt.Editor
                     if (srcTex == null) continue;
                     
                     string texName = srcTex.name;
-                    if (string.IsNullOrEmpty(texName)) texName = "texture_" + srcTex.name + "_" + srcTex.GetHashCode();
+                    if (string.IsNullOrEmpty(texName)) texName = "texture_" + srcTex.name + "_" + srcTex.name.GetHashCode();
                     
                     // Create clean file name
                     string safeName = texName.Replace(":", "_").Replace("/", "_").Replace(" ", "_");
