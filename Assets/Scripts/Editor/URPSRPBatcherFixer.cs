@@ -42,7 +42,7 @@ namespace TheAlchemistsCrypt.Editor
                 "OK");
         }
 
-        [MenuItem("Egyptian/Extract and Convert GLB Materials", false, 15)]
+        // [MenuItem("Egyptian/Extract and Convert GLB Materials", false, 15)]
         public static void ExtractMaterialsMenuItem()
         {
             int extracted = ExtractAndConvertAllGLBMaterials();
@@ -228,7 +228,7 @@ namespace TheAlchemistsCrypt.Editor
                 lowerPath.Contains("stall") || lowerPath.Contains("market") || lowerPath.Contains("column") ||
                 lowerPath.Contains("pillar") || lowerPath.Contains("temple") || lowerPath.Contains("stone") ||
                 lowerPath.Contains("wood") || lowerPath.Contains("sand") || lowerPath.Contains("obelisk") ||
-                lowerPath.Contains("sphinx") || lowerPath.Contains("door") || lowerPath.Contains("mastaba"))
+                lowerPath.Contains("sphinx") || lowerPath.Contains("door") || lowerPath.Contains("mastaba") || lowerPath.Contains("stall") || lowerPath.Contains("egyptian"))
             {
                 metallic = 0.0f;
             }
@@ -292,7 +292,7 @@ namespace TheAlchemistsCrypt.Editor
             dst.enableInstancing = true;
         }
 
-        [MenuItem("Egyptian/🗑 Clear Occlusion Data", false, 11)]
+        // [MenuItem("Egyptian/🗑 Clear Occlusion Data", false, 11)]
         public static void ClearOcclusionDataMenuItem()
         {
             bool proceed = EditorUtility.DisplayDialog(
@@ -310,13 +310,13 @@ namespace TheAlchemistsCrypt.Editor
             ClearOcclusionData();
         }
 
-        [MenuItem("Egyptian/🛑 Disable GPU Resident Drawer", false, 12)]
+        // [MenuItem("Egyptian/🛑 Disable GPU Resident Drawer", false, 12)]
         public static void DisableGPUResidentDrawerMenuItem()
         {
             DisableGPUResidentDrawerAllAssets(silent: false);
         }
 
-        [MenuItem("Egyptian/🔍 Inspect Scene Shaders", false, 13)]
+        // [MenuItem("Egyptian/🔍 Inspect Scene Shaders", false, 13)]
         public static void InspectSceneShadersMenuItem()
         {
             var shaderCounts = new Dictionary<string, int>();
@@ -345,7 +345,7 @@ namespace TheAlchemistsCrypt.Editor
             EditorUtility.DisplayDialog("Scene Shaders Inspection", report, "OK");
         }
 
-        [MenuItem("Egyptian/Run Scene Diagnostics", false, 16)]
+        // [MenuItem("Egyptian/Run Scene Diagnostics", false, 16)]
         public static void RunSceneDiagnostics()
         {
             var report = new System.Text.StringBuilder();
@@ -512,7 +512,7 @@ namespace TheAlchemistsCrypt.Editor
             return path;
         }
 
-        [MenuItem("Egyptian/🧪 Test Material Properties", false, 14)]
+        // [MenuItem("Egyptian/🧪 Test Material Properties", false, 14)]
         public static void TestMaterialProperties()
         {
             // Search all assets in the project for glTF materials
@@ -797,7 +797,7 @@ namespace TheAlchemistsCrypt.Editor
                             lowerName.Contains("stall") || lowerName.Contains("market") || lowerName.Contains("column") ||
                             lowerName.Contains("pillar") || lowerName.Contains("temple") || lowerName.Contains("stone") ||
                             lowerName.Contains("wood") || lowerName.Contains("sand") || lowerName.Contains("obelisk") ||
-                            lowerName.Contains("sphinx") || lowerName.Contains("door") || lowerName.Contains("mastaba"))
+                            lowerName.Contains("sphinx") || lowerName.Contains("door") || lowerName.Contains("mastaba") || lowerName.Contains("stall") || lowerName.Contains("egyptian"))
                         {
                             metallic = 0.0f;
                         }
