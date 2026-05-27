@@ -87,8 +87,8 @@ Shader "Custom/SkyboxGradient"
                 // Render scrolling normal-mapped clouds in the sky hemisphere
                 if (d.y > 0.0)
                 {
-                    // Project skybox sphere onto a flat horizontal plane at height Y = 1.0
-                    float2 skyUV = d.xz / (d.y + 0.05); // Avoid divide-by-zero
+                    // Project skybox sphere onto a flat horizontal plane (bias prevents infinite stretching at zenith)
+                    float2 skyUV = d.xz / (d.y + 0.55);
                     skyUV *= _CloudScale;
 
                     // Scroll over time using Unity's built-in _Time variable
