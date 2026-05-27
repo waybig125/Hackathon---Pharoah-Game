@@ -737,36 +737,40 @@ namespace TheAlchemistsCrypt.Editor
                     if (processed.Contains(mat)) continue;
                     processed.Add(mat);
 
-                    // HOTFIX: Native GLB importer sometimes sets BaseColor to pure black or fails to set Transparency for the stalls
+                    // HOTFIX: Native GLB importer channel mismatch for Metallic/Roughness makes stalls pitch black.
                     if (mat.name.Contains("TD_Checker") || mat.name.Contains("low_poly_market_stall_pack_Medieval"))
                     {
-                        string colorProp = mat.HasProperty("baseColorFactor") ? "baseColorFactor" : (mat.HasProperty("_BaseColor") ? "_BaseColor" : null);
-                        if (colorProp != null) {
-                            Color c = mat.GetColor(colorProp);
-                            // If it's near black, it's bugged. We must clone and fix it.
-                            if (c.r < 0.05f && c.g < 0.05f && c.b < 0.05f) {
-                                Material newMat = new Material(mat);
-                                newMat.name = mat.name + "_Fixed";
-                                newMat.SetColor(colorProp, Color.white); // Restore texture visibility
-                                
-                                if (mat.name.Contains("TD_Checker")) {
-                                    // TD_Checker requires alpha blending for its complex structures
-                                    newMat.SetFloat("_Surface", 1);
-                                    newMat.SetOverrideTag("RenderType", "Transparent");
-                                    newMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                                    newMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                                    newMat.SetInt("_ZWrite", 0);
-                                    newMat.EnableKeyword("_ALPHABLEND_ON");
-                                    // For glTF-pbr transparency modes (if using UnityGLTF / glTFast)
-                                    newMat.SetFloat("alphaMode", 2); // BLEND mode
-                                    newMat.EnableKeyword("ALPHAMODE_BLEND");
-                                    newMat.renderQueue = 3000;
-                                }
-                                mats[i] = newMat;
-                                changedRenderer = true;
-                                mat = newMat; // Update local ref for subsequent checks
-                            }
+                        // We must clone and fix it to remove the broken metallic map
+                        Material newMat = new Material(mat);
+                        newMat.name = mat.name + "_Fixed";
+                        
+                        string colorProp = newMat.HasProperty("baseColorFactor") ? "baseColorFactor" : (newMat.HasProperty("_BaseColor") ? "_BaseColor" : null);
+                        if (colorProp != null) newMat.SetColor(colorProp, Color.white); // Restore texture visibility
+                        
+                        // Fix the pitch black issue caused by GLTF metallic-roughness map channel mismatch in URP Lit
+                        if (newMat.HasProperty("_MetallicGlossMap")) newMat.SetTexture("_MetallicGlossMap", null);
+                        if (newMat.HasProperty("metallicRoughnessTexture")) newMat.SetTexture("metallicRoughnessTexture", null);
+                        if (newMat.HasProperty("_Metallic")) newMat.SetFloat("_Metallic", 0f);
+                        if (newMat.HasProperty("metallicFactor")) newMat.SetFloat("metallicFactor", 0f);
+                        if (newMat.HasProperty("_Smoothness")) newMat.SetFloat("_Smoothness", 0.1f);
+                        if (newMat.HasProperty("roughnessFactor")) newMat.SetFloat("roughnessFactor", 0.9f);
+                        
+                        if (mat.name.Contains("TD_Checker")) {
+                            // TD_Checker requires alpha blending for its complex structures
+                            newMat.SetFloat("_Surface", 1);
+                            newMat.SetOverrideTag("RenderType", "Transparent");
+                            newMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                            newMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                            newMat.SetInt("_ZWrite", 0);
+                            newMat.EnableKeyword("_ALPHABLEND_ON");
+                            // For glTF-pbr transparency modes (if using UnityGLTF / glTFast)
+                            newMat.SetFloat("alphaMode", 2); // BLEND mode
+                            newMat.EnableKeyword("ALPHAMODE_BLEND");
+                            newMat.renderQueue = 3000;
                         }
+                        mats[i] = newMat;
+                        changedRenderer = true;
+                        mat = newMat; // Update local ref for subsequent checks
                     }
 
                     string shaderName = mat.shader != null ? mat.shader.name : string.Empty;
