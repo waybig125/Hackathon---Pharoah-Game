@@ -2335,11 +2335,12 @@ namespace TheAlchemistsCrypt.Editor
             {
                 attempts++;
                 float rx = Random.Range(-450f, 450f);
-                float rz = Random.Range(-95f, -60f);
+                float rz = Random.Range(-70f, -40f); // Constrain to dry beach sand zone
                 Vector3 pos = new Vector3(rx, 0f, rz);
                 pos.y = GetTerrainHeight(pos);
 
-                if (pos.y < 0.2f || pos.y > 6.0f) continue;
+                // Make sure it doesn't spawn in water, shoreline shallows, or extremely high up
+                if (pos.z < -70f || pos.y < 1.1f || pos.y > 6.0f) continue;
 
                 var prefab = treePrefabs[Random.Range(0, treePrefabs.Length)];
                 if (prefab == null) continue;
@@ -2386,8 +2387,8 @@ namespace TheAlchemistsCrypt.Editor
 
                 pos.y = GetTerrainHeight(pos);
 
-                // Make sure it doesn't spawn in water or extremely high up
-                if (pos.y < 0.2f || pos.y > 6.0f) continue;
+                // Make sure it doesn't spawn in water, shoreline shallows, or extremely high up
+                if (pos.z < -70f || pos.y < 1.1f || pos.y > 6.0f) continue;
 
                 var prefab = treePrefabs[Random.Range(0, treePrefabs.Length)];
                 if (prefab == null) continue;
@@ -2403,6 +2404,40 @@ namespace TheAlchemistsCrypt.Editor
         [MenuItem("Egyptian/Generate Sky Cloud Normal Map", false, 2)]
         public static void GenerateSkyCloudNormalMap()
         {
+            string folderPath = "Assets/Resources/Textures";
+            if (!System.IO.Directory.Exists(folderPath))
+            {
+                System.IO.Directory.CreateDirectory(folderPath);
+            }
+            string path = System.IO.Path.Combine(folderPath, "SkyCloudNormalMap.png");
+
+            // If the high-res texture already exists (e.g. generated via python), use it!
+            if (System.IO.File.Exists(path))
+            {
+                var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                if (importer != null && (importer.sRGBTexture || !importer.mipmapEnabled || importer.wrapMode != TextureWrapMode.Repeat))
+                {
+                    importer.textureType = TextureImporterType.Default;
+                    importer.sRGBTexture = false;
+                    importer.alphaSource = TextureImporterAlphaSource.FromInput;
+                    importer.alphaIsTransparency = false;
+                    importer.mipmapEnabled = true;
+                    importer.wrapMode = TextureWrapMode.Repeat;
+                    importer.SaveAndReimport();
+                    AssetDatabase.Refresh();
+                }
+
+                Texture2D cloudTex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                Material skyboxMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Materials/SkyGradientBox.mat");
+                if (skyboxMat != null && cloudTex != null)
+                {
+                    skyboxMat.SetTexture("_CloudTex", cloudTex);
+                    EditorUtility.SetDirty(skyboxMat);
+                }
+                Debug.Log("[SkyCloudNormalMap] Loaded and assigned high-resolution cloud texture.");
+                return;
+            }
+
             int size = 512;
             Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, true);
             tex.wrapMode = TextureWrapMode.Repeat;
@@ -2441,37 +2476,31 @@ namespace TheAlchemistsCrypt.Editor
             tex.SetPixels(pixels);
             tex.Apply(true);
 
-            string folderPath = "Assets/Resources/Textures";
-            if (!System.IO.Directory.Exists(folderPath))
-            {
-                System.IO.Directory.CreateDirectory(folderPath);
-            }
-            string path = System.IO.Path.Combine(folderPath, "SkyCloudNormalMap.png");
             byte[] fileBytes = tex.EncodeToPNG();
             System.IO.File.WriteAllBytes(path, fileBytes);
             AssetDatabase.Refresh();
 
-            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
-            if (importer != null)
+            var newImporter = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (newImporter != null)
             {
-                importer.textureType = TextureImporterType.Default;
-                importer.sRGBTexture = false;
-                importer.alphaSource = TextureImporterAlphaSource.FromInput;
-                importer.alphaIsTransparency = false;
-                importer.mipmapEnabled = true;
-                importer.wrapMode = TextureWrapMode.Repeat;
-                importer.SaveAndReimport();
+                newImporter.textureType = TextureImporterType.Default;
+                newImporter.sRGBTexture = false;
+                newImporter.alphaSource = TextureImporterAlphaSource.FromInput;
+                newImporter.alphaIsTransparency = false;
+                newImporter.mipmapEnabled = true;
+                newImporter.wrapMode = TextureWrapMode.Repeat;
+                newImporter.SaveAndReimport();
                 AssetDatabase.Refresh();
             }
 
-            Texture2D cloudTex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-            Material skyboxMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Materials/SkyGradientBox.mat");
-            if (skyboxMat != null && cloudTex != null)
+            Texture2D fallbackCloudTex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            Material fallbackSkyboxMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Materials/SkyGradientBox.mat");
+            if (fallbackSkyboxMat != null && fallbackCloudTex != null)
             {
-                skyboxMat.SetTexture("_CloudTex", cloudTex);
-                EditorUtility.SetDirty(skyboxMat);
+                fallbackSkyboxMat.SetTexture("_CloudTex", fallbackCloudTex);
+                EditorUtility.SetDirty(fallbackSkyboxMat);
             }
-            Debug.Log("[SkyCloudNormalMap] Generated and imported seamless normal/density texture successfully.");
+            Debug.Log("[SkyCloudNormalMap] Generated and imported fallback seamless normal/density texture successfully.");
         }
 
         private static float GetFBmNoise(float u, float v)
@@ -2502,11 +2531,19 @@ namespace TheAlchemistsCrypt.Editor
         private GameObject PlaceIntegratedAsset(Transform parent, Vector3 pos, GameObject prefab, float scaleMultiplier, bool decimate, bool enterable = false, float yOffset = 0f, float targetAngleY = 0f, bool useRandomRotationY = false)
         {
             if (prefab == null) return null;
+
+            // Hotfix: Prevent spawning trees in the sea or shallows (height < 1.1f or Z < -70f)
+            string pName = prefab.name.ToLower();
+            if (pName.Contains("palm") || pName.Contains("tree"))
+            {
+                if (pos.z < -70f || GetTerrainHeight(pos) < 1.1f)
+                {
+                    return null; // Prevent spawning trees in/near the water
+                }
+            }
+
             var obj = PrefabUtility.InstantiatePrefab(prefab, parent) as GameObject;
             obj.isStatic = true;
-
-            // Programmatically remove floor elements from temple and landmark assets to prevent overlap/clipping with the sand terrain
-            string pName = prefab.name.ToLower();
             if (pName.Contains("temple") || pName.Contains("mastaba"))
             {
                 RemoveFloorsFromLandmarks(obj);
