@@ -740,8 +740,7 @@ namespace TheAlchemistsCrypt.Editor
                         shaderName.StartsWith("Mobile/") ||
                         shaderName == "Diffuse" ||
                         shaderName == "VertexLit" ||
-                        shaderName == "Sprites/Default" ||
-                        shaderName.Contains("glTF-pbr");
+                        shaderName == "Sprites/Default";
 
                     if (isNonURP)
                     {
