@@ -89,19 +89,31 @@ Shader "Custom/SkyboxGradient"
                 {
                     // Project skybox sphere onto a flat horizontal plane (bias prevents infinite stretching at zenith)
                     float2 skyUV = d.xz / (d.y + 0.22);
-                    skyUV *= _CloudScale;
 
-                    // Scroll over time using Unity's built-in _Time variable
-                    float2 scrolledUV = skyUV + _Time.x * _CloudSpeed.xy;
+                    // Dual-scrolling layered texture sampling to completely eliminate repeating grid patterns
+                    // Layer 1: Base scale, scrolls in primary direction
+                    float2 uv1 = skyUV * _CloudScale + _Time.x * _CloudSpeed.xy;
+                    float4 sample1 = tex2D(_CloudTex, uv1);
 
-                    // Sample packed texture (RGB = Normals, A = Density)
-                    float4 cloudSample = tex2D(_CloudTex, scrolledUV);
+                    // Layer 2: Rotated and slightly scaled-down layer, scrolls in secondary direction
+                    float2 speed2 = float2(-_CloudSpeed.y, _CloudSpeed.x) * 0.7; // Rotated and scaled speed vector
+                    float2 uv2 = skyUV * (_CloudScale * 1.63) + _Time.x * speed2; // 1.63x scale breaks grid alignment
+                    float4 sample2 = tex2D(_CloudTex, uv2);
+
+                    // Combine densities: multiplying them breaks up the grid and creates dynamic organic shapes
+                    float density = sample1.a * sample2.a * 1.5; // Multiply by 1.5 to boost contrast and brightness
+                    density = saturate(density);
+
+                    // Blend normals from both scrolling layers
+                    float3 normal1;
+                    normal1.xy = (sample1.rg * 2.0 - 1.0);
+                    normal1.z = sqrt(1.0 - saturate(dot(normal1.xy, normal1.xy)));
                     
-                    float density = cloudSample.a;
-                    float3 normal;
-                    normal.xy = (cloudSample.rg * 2.0 - 1.0);
-                    normal.z = sqrt(1.0 - saturate(dot(normal.xy, normal.xy)));
-                    normal = normalize(normal);
+                    float3 normal2;
+                    normal2.xy = (sample2.rg * 2.0 - 1.0);
+                    normal2.z = sqrt(1.0 - saturate(dot(normal2.xy, normal2.xy)));
+                    
+                    float3 normal = normalize(normal1 + normal2);
 
                     // Apply threshold and smoothstep for puffy organic cloud shapes
                     float edgeWeight = saturate((density - _CloudThreshold) / max(0.01, 1.0 - _CloudThreshold));
