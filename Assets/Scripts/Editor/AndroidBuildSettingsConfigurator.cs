@@ -84,38 +84,7 @@ namespace TheAlchemistsCrypt.Editor
         {
             string logoPath = "Assets/Resources/LOGO_ALCHEMIST_CRYPT.png";
             
-            // Ensure texture importer settings are configured correctly
-            var importer = AssetImporter.GetAtPath(logoPath) as TextureImporter;
-            if (importer != null)
-            {
-                bool dirty = false;
-                if (importer.textureType != TextureImporterType.Sprite)
-                {
-                    importer.textureType = TextureImporterType.Sprite;
-                    dirty = true;
-                }
-                if (!importer.isReadable)
-                {
-                    importer.isReadable = true;
-                    dirty = true;
-                }
-                if (importer.textureCompression != TextureImporterCompression.Uncompressed)
-                {
-                    importer.textureCompression = TextureImporterCompression.Uncompressed;
-                    dirty = true;
-                }
-                if (dirty)
-                {
-                    importer.SaveAndReimport();
-                    Debug.Log("[AndroidOptimizer] Reimported LOGO_ALCHEMIST_CRYPT.png as uncompressed readable Sprite.");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[AndroidOptimizer] Could not find texture importer for: " + logoPath);
-            }
-
-            // Set Icons
+            // Set Icons using the logo texture (if available)
             Texture2D logoTex = AssetDatabase.LoadAssetAtPath<Texture2D>(logoPath);
             if (logoTex != null)
             {
@@ -138,23 +107,18 @@ namespace TheAlchemistsCrypt.Editor
             }
             else
             {
-                Debug.LogError("[AndroidOptimizer] Failed to load logo texture for icons.");
+                Debug.LogWarning("[AndroidOptimizer] Could not find logo texture for icons at: " + logoPath);
             }
 
-            // Set Splash screen
-            Sprite logoSprite = AssetDatabase.LoadAssetAtPath<Sprite>(logoPath);
-            if (logoSprite != null)
-            {
-                var logo = PlayerSettings.SplashScreenLogo.Create(2.0f, logoSprite);
-                PlayerSettings.SplashScreen.logos = new PlayerSettings.SplashScreenLogo[] { logo };
-                PlayerSettings.SplashScreen.show = true;
-                PlayerSettings.SplashScreen.showUnityLogo = false;
-                Debug.Log("[AndroidOptimizer] Logo assigned to Splash Screen.");
-            }
-            else
-            {
-                Debug.LogError("[AndroidOptimizer] Failed to load logo sprite for splash screen.");
-            }
+            // Configure Splash Screen: black background with Unity logo
+            PlayerSettings.SplashScreen.show = true;
+            PlayerSettings.SplashScreen.showUnityLogo = true;
+            PlayerSettings.SplashScreen.backgroundColor = Color.black;
+            PlayerSettings.SplashScreen.unityLogoStyle = PlayerSettings.SplashScreen.UnityLogoStyle.LightOnDark;
+            PlayerSettings.SplashScreen.background = null;
+            PlayerSettings.SplashScreen.backgroundPortrait = null;
+            PlayerSettings.SplashScreen.logos = new PlayerSettings.SplashScreenLogo[0]; // Empty = only show Unity logo
+            Debug.Log("[AndroidOptimizer] Configured black splash screen with Unity logo.");
         }
     }
 
