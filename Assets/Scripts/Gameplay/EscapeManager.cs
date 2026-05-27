@@ -369,13 +369,52 @@ namespace TheAlchemistsCrypt.Gameplay
                 TheAlchemistsCrypt.UI.MinimapUI.Instance.RegisterDynamicStaticIcon(boatObj, new Vector2(24, 24), TheAlchemistsCrypt.UI.MinimapUI.Instance.boatSprite);
             }
             
-            var col = boatObj.GetComponent<Collider>();
-            if (col == null) col = boatObj.AddComponent<MeshCollider>();
-            if (col is MeshCollider mc) mc.convex = true;
-            col.isTrigger = true;
+            // Compute combined bounds of all children renderers in world space to set up a clean trigger BoxCollider
+            Bounds worldBounds = new Bounds(boatObj.transform.position, Vector3.zero);
+            bool hasBounds = false;
+            foreach (var r in boatObj.GetComponentsInChildren<Renderer>(true))
+            {
+                if (!hasBounds)
+                {
+                    worldBounds = r.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    worldBounds.Encapsulate(r.bounds);
+                }
+            }
+
+            var boxCol = boatObj.GetComponent<BoxCollider>();
+            if (boxCol == null) boxCol = boatObj.AddComponent<BoxCollider>();
+            boxCol.isTrigger = true;
+            if (hasBounds)
+            {
+                boxCol.center = boatObj.transform.InverseTransformPoint(worldBounds.center);
+                Vector3 lossyScale = boatObj.transform.lossyScale;
+                boxCol.size = new Vector3(
+                    worldBounds.size.x / (lossyScale.x > 0 ? lossyScale.x : 1f),
+                    worldBounds.size.y / (lossyScale.y > 0 ? lossyScale.y : 1f),
+                    worldBounds.size.z / (lossyScale.z > 0 ? lossyScale.z : 1f)
+                );
+            }
+            else
+            {
+                boxCol.size = new Vector3(20f, 10f, 40f);
+            }
+
+            // Ensure any existing colliders in children are also triggers and have trigger scripts
+            foreach (var c in boatObj.GetComponentsInChildren<Collider>(true))
+            {
+                c.isTrigger = true;
+                if (c.gameObject.GetComponent<BoatTrigger>() == null)
+                {
+                    c.gameObject.AddComponent<BoatTrigger>();
+                }
+            }
         }
 
-        private void StartEscapeSequence(GameObject player)
+        public void StartEscapeSequence(GameObject player)
         {
             hasEscaped = true;
             isEscaping = true;
@@ -552,7 +591,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 if (promptUiGo != null) promptUiGo.SetActive(true);
                 if (hasKey)
                 { 
-                    if (distToBoat < 6.0f) // Decreased from 30f since boat is on beach sand and player can walk right up to it
+                    if (distToBoat < 12.0f) // Decreased from 30f since boat is on beach sand and player can walk right up to it
                     {
                         StartEscapeSequence(playerObj);
                     }
@@ -631,6 +670,20 @@ namespace TheAlchemistsCrypt.Gameplay
         private void Update() {
             transform.position = new Vector3(transform.position.x, startY + Mathf.Sin(Time.time * 2f) * 0.5f, transform.position.z);
             transform.Rotate(0, 45f * Time.deltaTime, 0);
+        }
+    }
+
+    public class BoatTrigger : MonoBehaviour {
+        private void OnTriggerEnter(Collider other) {
+            CheckTrigger(other);
+        }
+        private void OnTriggerStay(Collider other) {
+            CheckTrigger(other);
+        }
+        private void CheckTrigger(Collider other) {
+            if (other.CompareTag("Player") && EscapeManager.Instance != null && EscapeManager.Instance.hasKey && !EscapeManager.Instance.hasEscaped) {
+                EscapeManager.Instance.StartEscapeSequence(other.gameObject);
+            }
         }
     }
 }

@@ -1169,7 +1169,7 @@ namespace TheAlchemistsCrypt.UI
             reticleImg.sprite = CreateTargetingReticleSprite(128);
             reticleImg.raycastTarget = false;
 
-            new GameObject("MinimapCanvasContainer", typeof(RectTransform), typeof(MinimapUI)).transform.SetParent(root, false);
+            new GameObject("MinimapCanvasContainer", typeof(RectTransform), typeof(MinimapUI)).transform.SetParent(transform, false);
 
             // --- GUIDE ARROW & TARGET INDICATOR ---
             guideArrowSprite = CreateProceduralArrowSprite(128);
