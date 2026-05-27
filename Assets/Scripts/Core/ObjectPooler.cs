@@ -50,13 +50,49 @@ namespace TheAlchemistsCrypt.Core
                 return null;
             }
 
-            GameObject objectToSpawn = poolDictionary[tag].Dequeue();
+            Queue<GameObject> queue = poolDictionary[tag];
+            GameObject objectToSpawn = null;
+
+            // Dequeue until we find a valid non-destroyed GameObject, or the queue runs dry
+            int initialCount = queue.Count;
+            for (int i = 0; i < initialCount; i++)
+            {
+                if (queue.Count == 0) break;
+                objectToSpawn = queue.Dequeue();
+                if (objectToSpawn != null)
+                {
+                    break;
+                }
+            }
+
+            // If all objects were destroyed or the queue is empty, instantiate a new one
+            if (objectToSpawn == null)
+            {
+                Pool pool = null;
+                foreach (Pool p in pools)
+                {
+                    if (p.tag == tag)
+                    {
+                        pool = p;
+                        break;
+                    }
+                }
+                if (pool != null && pool.prefab != null)
+                {
+                    objectToSpawn = Instantiate(pool.prefab);
+                }
+                else
+                {
+                    Debug.LogError("Pool with tag " + tag + " has no prefab or is missing.");
+                    return null;
+                }
+            }
 
             objectToSpawn.SetActive(true);
             objectToSpawn.transform.position = position;
             objectToSpawn.transform.rotation = rotation;
 
-            poolDictionary[tag].Enqueue(objectToSpawn);
+            queue.Enqueue(objectToSpawn);
 
             return objectToSpawn;
         }

@@ -58,6 +58,7 @@ namespace TheAlchemistsCrypt.Editor
             ExtractAndConvertAllGLBMaterials();
             FixAllSceneMaterials();
             DisableGPUResidentDrawerAllAssets(silent: true);
+            AssetDatabase.SaveAssets();
         }
 
         public static int ExtractAndConvertAllGLBMaterials()
@@ -335,6 +336,7 @@ namespace TheAlchemistsCrypt.Editor
             
             float roughness = 0.5f;
             if (src.HasProperty("roughnessFactor")) roughness = src.GetFloat("roughnessFactor");
+            else if (src.HasProperty("glossinessFactor")) roughness = 1.0f - src.GetFloat("glossinessFactor");
             else if (src.HasProperty("_Roughness")) roughness = src.GetFloat("_Roughness");
             else if (src.HasProperty("_Glossiness")) roughness = 1.0f - src.GetFloat("_Glossiness");
             else if (src.HasProperty("_Smoothness")) roughness = 1.0f - src.GetFloat("_Smoothness");
@@ -902,6 +904,7 @@ namespace TheAlchemistsCrypt.Editor
 
                         float smoothness = 0.5f;
                         if (mat.HasProperty("roughnessFactor")) smoothness = 1f - mat.GetFloat("roughnessFactor");
+                        else if (mat.HasProperty("glossinessFactor")) smoothness = mat.GetFloat("glossinessFactor");
                         else if (mat.HasProperty("_Roughness")) smoothness = 1f - mat.GetFloat("_Roughness");
                         else if (mat.HasProperty("_Smoothness")) smoothness = mat.GetFloat("_Smoothness");
                         else if (mat.HasProperty("_Glossiness")) smoothness = mat.GetFloat("_Glossiness");
