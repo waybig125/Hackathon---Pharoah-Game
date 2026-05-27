@@ -702,6 +702,11 @@ namespace TheAlchemistsCrypt.Editor
             {
                 if (renderer == null) continue;
 
+                // HOTFIX: Native GLB importer leaves collision meshes visible. We must hide them so they don't render as blue/red boxes.
+                if (renderer.name.Contains("COLLIDER", System.StringComparison.OrdinalIgnoreCase)) {
+                    renderer.enabled = false;
+                }
+
                 Material[] mats = renderer.sharedMaterials;
                 bool changedRenderer = false;
                 for (int i = 0; i < mats.Length; i++)
@@ -731,6 +736,34 @@ namespace TheAlchemistsCrypt.Editor
 
                     if (processed.Contains(mat)) continue;
                     processed.Add(mat);
+
+                    // HOTFIX: Native GLB importer sometimes sets BaseColor to pure black or fails to set Transparency for the stalls
+                    if (mat.name.Contains("TD_Checker") || mat.name.Contains("low_poly_market_stall_pack_Medieval"))
+                    {
+                        if (mat.HasProperty("_BaseColor")) {
+                            Color c = mat.GetColor("_BaseColor");
+                            // If it's near black, it's bugged. We must clone and fix it.
+                            if (c.r < 0.05f && c.g < 0.05f && c.b < 0.05f) {
+                                Material newMat = new Material(mat);
+                                newMat.name = mat.name + "_Fixed";
+                                newMat.SetColor("_BaseColor", Color.white); // Restore texture visibility
+                                
+                                if (mat.name.Contains("TD_Checker")) {
+                                    // TD_Checker requires alpha blending for its complex structures
+                                    newMat.SetFloat("_Surface", 1);
+                                    newMat.SetOverrideTag("RenderType", "Transparent");
+                                    newMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                                    newMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                                    newMat.SetInt("_ZWrite", 0);
+                                    newMat.EnableKeyword("_ALPHABLEND_ON");
+                                    newMat.renderQueue = 3000;
+                                }
+                                mats[i] = newMat;
+                                changedRenderer = true;
+                                mat = newMat; // Update local ref for subsequent checks
+                            }
+                        }
+                    }
 
                     string shaderName = mat.shader != null ? mat.shader.name : string.Empty;
 
