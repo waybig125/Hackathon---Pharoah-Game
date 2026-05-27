@@ -103,8 +103,10 @@ Shader "Custom/SkyboxGradient"
                     normal.z = sqrt(1.0 - saturate(dot(normal.xy, normal.xy)));
                     normal = normalize(normal);
 
-                    // Apply threshold and scaling
-                    float cloudAlpha = saturate((density - _CloudThreshold) * _CloudThickness);
+                    // Apply threshold and smoothstep for puffy organic cloud shapes
+                    float edgeWeight = saturate((density - _CloudThreshold) / max(0.01, 1.0 - _CloudThreshold));
+                    float cloudAlpha = smoothstep(0.0, 1.0, edgeWeight);
+                    cloudAlpha = saturate(cloudAlpha * _CloudThickness);
                     
                     // Fade clouds out near the horizon line to prevent harsh clipping
                     float horizonFade = saturate(d.y * 5.0);
