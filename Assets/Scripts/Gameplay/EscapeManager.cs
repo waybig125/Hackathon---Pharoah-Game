@@ -560,10 +560,10 @@ namespace TheAlchemistsCrypt.Gameplay
             if (playerObj == null) return;
 
             float distToKey = keyObj != null ? Vector3.Distance(playerObj.transform.position, keyObj.transform.position) : 9999f;
-            float distToBoat = boatObj != null ? Vector3.Distance(playerObj.transform.position, boatObj.transform.position) : 9999f;
+            float distToBoat = boatObj != null ? Vector2.Distance(new Vector2(playerObj.transform.position.x, playerObj.transform.position.z), new Vector2(boatObj.transform.position.x, boatObj.transform.position.z)) : 9999f;
 
             nearKey = !hasKey && distToKey < 15f; 
-            nearBoat = distToBoat < 15f; // Decreased from 32f since boat is on the beach and easily reachable
+            nearBoat = distToBoat < 30f; // Shows UI when player is within 30 meters of the boat (horizontal 2D distance)
 
             if (nearKey)
             {
@@ -591,7 +591,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 if (promptUiGo != null) promptUiGo.SetActive(true);
                 if (hasKey)
                 { 
-                    if (distToBoat < 12.0f) // Decreased from 30f since boat is on beach sand and player can walk right up to it
+                    if (distToBoat < 18.0f) // Triggers the escape when the player gets within 18 meters of the boat (horizontal 2D distance)
                     {
                         StartEscapeSequence(playerObj);
                     }
