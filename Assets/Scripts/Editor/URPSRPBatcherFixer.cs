@@ -703,9 +703,28 @@ namespace TheAlchemistsCrypt.Editor
             {
                 if (renderer == null) continue;
 
-                // HOTFIX: Native GLB importer leaves collision meshes visible. We must hide them so they don't render as blue/red boxes.
-                if (renderer.name.Contains("COLLIDER", System.StringComparison.OrdinalIgnoreCase)) {
+                // HOTFIX: Native GLB importer leaves collision meshes visible. We must hide/destroy them so they don't render as blue/red boxes.
+                bool isCollider = renderer.name.Contains("COLLIDER", System.StringComparison.OrdinalIgnoreCase) ||
+                                  renderer.name.Contains("Collider", System.StringComparison.OrdinalIgnoreCase);
+
+                if (!isCollider && renderer.sharedMaterials != null)
+                {
+                    foreach (var mat in renderer.sharedMaterials)
+                    {
+                        if (mat != null && (mat.name.Contains("COLLIDER", System.StringComparison.OrdinalIgnoreCase) ||
+                                            mat.name.Contains("Collider", System.StringComparison.OrdinalIgnoreCase)))
+                        {
+                            isCollider = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (isCollider)
+                {
                     renderer.enabled = false;
+                    Object.DestroyImmediate(renderer);
+                    continue; // Skip further material processing on destroyed renderer
                 }
 
                 Material[] mats = renderer.sharedMaterials;

@@ -2672,6 +2672,33 @@ namespace TheAlchemistsCrypt.Editor
                 }
             }
 
+            // Hotfix: Remove MeshRenderer from any children named "COLLIDER" or whose material is named "COLLIDER"
+            // so they don't render as solid colored boxes and don't get combined by StaticBatchingUtility.Combine.
+            var childRenderers = obj.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in childRenderers)
+            {
+                if (r == null) continue;
+                bool isCollider = r.name.Contains("COLLIDER", System.StringComparison.OrdinalIgnoreCase) ||
+                                  r.name.Contains("Collider", System.StringComparison.OrdinalIgnoreCase);
+                if (!isCollider && r.sharedMaterials != null)
+                {
+                    foreach (var m in r.sharedMaterials)
+                    {
+                        if (m != null && (m.name.Contains("COLLIDER", System.StringComparison.OrdinalIgnoreCase) ||
+                                            m.name.Contains("Collider", System.StringComparison.OrdinalIgnoreCase)))
+                        {
+                            isCollider = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (isCollider)
+                {
+                    UnityEngine.Object.DestroyImmediate(r);
+                }
+            }
+
             return obj;
         }
 
