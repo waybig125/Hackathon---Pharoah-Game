@@ -2432,6 +2432,9 @@ namespace TheAlchemistsCrypt.Editor
                 if (skyboxMat != null && cloudTex != null)
                 {
                     skyboxMat.SetTexture("_CloudTex", cloudTex);
+                    skyboxMat.SetFloat("_CloudScale", 0.8f);
+                    skyboxMat.SetFloat("_CloudThreshold", 0.35f);
+                    skyboxMat.SetFloat("_CloudThickness", 2.5f);
                     EditorUtility.SetDirty(skyboxMat);
                 }
                 Debug.Log("[SkyCloudNormalMap] Loaded and assigned high-resolution cloud texture.");
@@ -2498,6 +2501,9 @@ namespace TheAlchemistsCrypt.Editor
             if (fallbackSkyboxMat != null && fallbackCloudTex != null)
             {
                 fallbackSkyboxMat.SetTexture("_CloudTex", fallbackCloudTex);
+                fallbackSkyboxMat.SetFloat("_CloudScale", 0.8f);
+                fallbackSkyboxMat.SetFloat("_CloudThreshold", 0.35f);
+                fallbackSkyboxMat.SetFloat("_CloudThickness", 2.5f);
                 EditorUtility.SetDirty(fallbackSkyboxMat);
             }
             Debug.Log("[SkyCloudNormalMap] Generated and imported fallback seamless normal/density texture successfully.");

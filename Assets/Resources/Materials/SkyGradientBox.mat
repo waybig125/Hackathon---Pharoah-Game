@@ -36,9 +36,9 @@ Material:
     m_Ints: []
     m_Floats:
     - _AtmosphereThickness: 1.3
-    - _CloudScale: 0.12
+    - _CloudScale: 0.8
     - _CloudThickness: 2.5
-    - _CloudThreshold: 0.38
+    - _CloudThreshold: 0.35
     - _Exposure: 1
     - _ImageType: 0
     - _Layout: 0

@@ -15,6 +15,7 @@ namespace TheAlchemistsCrypt.Gameplay
         private bool isEscaping = false;
         private float escapeTimer = 0f;
         private float papyrusCollectFeedbackTimer = 0f;
+        private float initialBoatY = 3.2f;
         
         [Header("UI References")]
         private GameObject promptUiGo;
@@ -79,7 +80,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 if (go.name.Contains("Plaza"))
                 {
                     float distToCentral = Vector3.Distance(new Vector3(go.transform.position.x, 0f, go.transform.position.z), new Vector3(16f, 0f, 48f));
-                    float distToBoat = Vector3.Distance(new Vector3(go.transform.position.x, 0f, go.transform.position.z), new Vector3(0f, 0f, -104f));
+                    float distToBoat = Vector3.Distance(new Vector3(go.transform.position.x, 0f, go.transform.position.z), new Vector3(0f, 0f, -74f));
                     if (distToCentral > 10f && distToBoat > 120f)
                     {
                         plazas.Add(go);
@@ -320,7 +321,20 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void SpawnBoat()
         {
-            Vector3 spawnPos = new Vector3(0f, 3.2f, -104f); // Raised to 3.2f to float deck and cabin above water
+            float groundY = 0f;
+            RaycastHit hit;
+            if (Physics.Raycast(new Vector3(0f, 50f, -74f), Vector3.down, out hit, 100f))
+            {
+                groundY = hit.point.y;
+            }
+            else
+            {
+                var terrain = Terrain.activeTerrain;
+                if (terrain != null) groundY = terrain.SampleHeight(new Vector3(0f, 0f, -74f));
+            }
+            
+            // To sit on the sand where the lowest point is at groundY, the boat's Y coordinate should be groundY + 4.08f.
+            Vector3 spawnPos = new Vector3(0f, groundY + 4.08f, -74f); // Sits on beach sand
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
@@ -338,6 +352,8 @@ namespace TheAlchemistsCrypt.Gameplay
             }
             boatObj.name = "EscapeBoat";
             boatObj.SetActive(true);
+
+            initialBoatY = boatObj.transform.position.y;
 
             var boatLightGo = new GameObject("BoatBeacon", typeof(Light));
             boatLightGo.transform.SetParent(boatObj.transform);
@@ -365,8 +381,6 @@ namespace TheAlchemistsCrypt.Gameplay
             isEscaping = true;
             escapeTimer = 0f;
 
-
-
             var ph = player.GetComponent<TheAlchemistsCrypt.Player.PlayerHealth>();
             if (ph != null) ph.enabled = false;
 
@@ -384,6 +398,38 @@ namespace TheAlchemistsCrypt.Gameplay
                 {
                     comp.enabled = false;
                 }
+            }
+
+            // Disable character controller and immersive body script to prevent physical updates and shadow animation sync overrides
+            var charController = player.GetComponent<CharacterController>();
+            if (charController != null) charController.enabled = false;
+
+            var immersiveBody = player.GetComponent<TheAlchemistsCrypt.Player.PlayerImmersiveBody>();
+            if (immersiveBody != null) immersiveBody.enabled = false;
+
+            // Reset all animators under the player to stop the running animations
+            var animators = player.GetComponentsInChildren<Animator>();
+            foreach (var anim in animators)
+            {
+                if (anim == null) continue;
+                for (int i = 0; i < anim.parameterCount; i++)
+                {
+                    var param = anim.GetParameter(i);
+                    if (param.type == AnimatorControllerParameterType.Float)
+                    {
+                        anim.SetFloat(param.nameHash, 0f);
+                    }
+                    else if (param.type == AnimatorControllerParameterType.Bool)
+                    {
+                        anim.SetBool(param.nameHash, false);
+                    }
+                    else if (param.type == AnimatorControllerParameterType.Int)
+                    {
+                        anim.SetInteger(param.nameHash, 0);
+                    }
+                }
+                anim.Play("Idle", 0, 0f);
+                anim.Play("idle", 0, 0f);
             }
 
             var rb = player.GetComponent<Rigidbody>();
@@ -433,7 +479,12 @@ namespace TheAlchemistsCrypt.Gameplay
                     {
                         float bob = Mathf.Sin(Time.time * 1.2f) * 0.08f;
                         float newZ = boatObj.transform.position.z - 4f * Time.deltaTime;
-                        boatObj.transform.position = new Vector3(0f, 3.2f + bob, newZ);
+                        
+                        // Lerp Y from initialBoatY on beach (Z = -74) to 3.2f floating in sea (Z = -104)
+                        float t = Mathf.InverseLerp(-74f, -104f, newZ);
+                        float targetY = Mathf.Lerp(initialBoatY, 3.2f, t);
+                        
+                        boatObj.transform.position = new Vector3(0f, targetY + bob, newZ);
                     }
 
                     // Use cached player — no per-frame scene search
@@ -451,11 +502,11 @@ namespace TheAlchemistsCrypt.Gameplay
                 return;
             }
 
-            // Bob the escape boat gently at all times in the water to make it look floaty
+            // Bob the escape boat gently at all times on the beach/shore to make it look floaty
             if (boatObj != null)
             {
                 float bob = Mathf.Sin(Time.time * 1.2f) * 0.08f;
-                boatObj.transform.position = new Vector3(0f, 3.2f + bob, -104f);
+                boatObj.transform.position = new Vector3(0f, initialBoatY + bob, -74f);
             }
 
             if (!TheAlchemistsCrypt.UI.MobileHUDButtons.HasStartedGame) return;
@@ -473,7 +524,7 @@ namespace TheAlchemistsCrypt.Gameplay
             float distToBoat = boatObj != null ? Vector3.Distance(playerObj.transform.position, boatObj.transform.position) : 9999f;
 
             nearKey = !hasKey && distToKey < 15f; 
-            nearBoat = distToBoat < 32f; // Increased from 18f to allow detection from dry beach
+            nearBoat = distToBoat < 15f; // Decreased from 32f since boat is on the beach and easily reachable
 
             if (nearKey)
             {
@@ -501,7 +552,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 if (promptUiGo != null) promptUiGo.SetActive(true);
                 if (hasKey)
                 { 
-                    if (distToBoat < 30.0f) // Increased from 15f to allow escape from dry beach water's edge
+                    if (distToBoat < 6.0f) // Decreased from 30f since boat is on beach sand and player can walk right up to it
                     {
                         StartEscapeSequence(playerObj);
                     }

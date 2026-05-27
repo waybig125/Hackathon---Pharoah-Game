@@ -10,9 +10,9 @@ Shader "Custom/SkyboxGradient"
         [NoScaleOffset] _CloudTex ("Cloud Normal & Density (RGBA)", 2D) = "white" {}
         _CloudSpeed ("Cloud Scroll Speed (XY)", Vector) = (0.05, 0.03, 0, 0)
         _CloudColor ("Cloud Tint Color", Color) = (0.95, 0.85, 0.75, 1)
-        _CloudThreshold ("Cloud Threshold", Range(0, 1)) = 0.38
+        _CloudThreshold ("Cloud Threshold", Range(0, 1)) = 0.35
         _CloudThickness ("Cloud Thickness Multiplier", Range(0, 5)) = 2.5
-        _CloudScale ("Cloud Scale", Float) = 0.12
+        _CloudScale ("Cloud Scale", Float) = 0.8
         _SunDir ("Sun Light Direction", Vector) = (-0.5, 0.3, 0.8, 0)
     }
 
@@ -88,7 +88,7 @@ Shader "Custom/SkyboxGradient"
                 if (d.y > 0.0)
                 {
                     // Project skybox sphere onto a flat horizontal plane (bias prevents infinite stretching at zenith)
-                    float2 skyUV = d.xz / (d.y + 0.55);
+                    float2 skyUV = d.xz / (d.y + 0.22);
                     skyUV *= _CloudScale;
 
                     // Scroll over time using Unity's built-in _Time variable

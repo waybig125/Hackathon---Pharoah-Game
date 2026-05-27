@@ -3,7 +3,7 @@ from PIL import Image
 import os
 
 def generate_seamless_clouds(size=2048):
-    print(f"Generating {size}x{size} seamless puffy cloud texture with increased coverage...")
+    print(f"Generating {size}x{size} seamless puffy cloud texture...")
     
     # Generate uniform noise maps for different frequencies
     def generate_perlin_map(res, seed):
@@ -70,7 +70,7 @@ def generate_seamless_clouds(size=2048):
                 noise_map[y1, x0] * wc +
                 noise_map[y1, x1] * wd)
 
-    # Low/medium frequency octaves only
+    # Low/medium frequency octaves only — NO high-frequency carpet noise
     octaves = [
         (4, 0.50, 10),
         (8, 0.35, 20),
@@ -91,26 +91,22 @@ def generate_seamless_clouds(size=2048):
     density = density * 0.5 + 0.5
     density = np.clip(density, 0, 1)
 
-    # Make the border mask wider so more area is covered by clouds, only fading out near the outer edges
+    # Apply a smooth border fade mask so it fades out completely to 0 at all edges.
+    # This turns the noise sheet into a self-contained puffy cloud clump that has no boxed edges.
     y_mask = np.sin(np.linspace(0, np.pi, size))[:, None]
     x_mask = np.sin(np.linspace(0, np.pi, size))[None, :]
     border_mask = y_mask * x_mask
-    border_mask = np.clip(border_mask * 2.8, 0, 1) # Much wider center area!
-    border_mask = 3 * border_mask**2 - 2 * border_mask**3
+    border_mask = np.clip(border_mask * 1.5, 0, 1)
+    border_mask = 3 * border_mask**2 - 2 * border_mask**3  # Smooth transition
     
-    # Increase base density to make clouds more plentiful and dense
-    density = density * 1.15 + 0.05
-    density = np.clip(density, 0, 1)
-    
-    # Apply border mask
     density = density * border_mask
 
     # Puffy contrast mapping
     density = 3 * density**2 - 2 * density**3
-    density = np.power(density, 0.85) # Puff up and expand coverage
+    density = np.power(density, 1.4)
     
-    # Calculate normals using finite differences
-    bumpStrength = 8.0
+    # Calculate normals using finite differences (NO division by tiny eps to prevent scaling noise)
+    bumpStrength = 8.0  # Safe range to get smooth, rounded pillow normals
     
     density_u = np.roll(density, -1, axis=1)
     density_v = np.roll(density, -1, axis=0)
@@ -142,4 +138,4 @@ if __name__ == "__main__":
     folder_path = "Assets/Resources/Textures"
     os.makedirs(folder_path, exist_ok=True)
     img.save(os.path.join(folder_path, "SkyCloudNormalMap.png"))
-    print("Saved high-res puffy cloud texture with increased coverage successfully!")
+    print("Saved high-res puffy, blobby cloud texture successfully!")
