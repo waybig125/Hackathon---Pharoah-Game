@@ -693,6 +693,7 @@ namespace TheAlchemistsCrypt.Editor
 
             // Track processed material assets to avoid double-processing shared materials
             var processed = new HashSet<Material>();
+            var clonedHotfixCache = new Dictionary<Material, Material>();
             int converted = 0;
 
             Renderer[] allRenderers = Object.FindObjectsByType<Renderer>(
@@ -734,6 +735,13 @@ namespace TheAlchemistsCrypt.Editor
                         }
                     }
 
+                    // Apply cached hotfix clones to ALL instances that share this material
+                    if (clonedHotfixCache.TryGetValue(mat, out Material cachedClone)) {
+                        mats[i] = cachedClone;
+                        mat = cachedClone;
+                        changedRenderer = true;
+                    }
+
                     if (processed.Contains(mat)) continue;
                     processed.Add(mat);
 
@@ -768,9 +776,12 @@ namespace TheAlchemistsCrypt.Editor
                             newMat.EnableKeyword("ALPHAMODE_BLEND");
                             newMat.renderQueue = 3000;
                         }
+                        
                         mats[i] = newMat;
                         changedRenderer = true;
+                        clonedHotfixCache[mat] = newMat; // Save mapping from ORIGINAL to CLONED
                         mat = newMat; // Update local ref for subsequent checks
+                        processed.Add(newMat); // Also mark clone as processed
                     }
 
                     string shaderName = mat.shader != null ? mat.shader.name : string.Empty;
