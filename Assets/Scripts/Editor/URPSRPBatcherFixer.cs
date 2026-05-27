@@ -111,15 +111,6 @@ namespace TheAlchemistsCrypt.Editor
                 AssetDatabase.CreateFolder("Assets/Materials", "Extracted");
             }
             
-            string texFolder = "Assets/Materials/Extracted/Textures";
-            if (!AssetDatabase.IsValidFolder(texFolder))
-            {
-                AssetDatabase.CreateFolder("Assets/Materials/Extracted", "Textures");
-            }
-
-            // Extract textures first to break the circular dependency
-            var textureMap = ExtractAndImportGLBTextures(glbPath, assets, texFolder);
-
             int extractedCount = 0;
             
             foreach (Material subMat in materials)
@@ -145,7 +136,7 @@ namespace TheAlchemistsCrypt.Editor
                     isNew = true;
                 }
                 
-                CopyGltfPropertiesToUrpLit(subMat, extMat, textureMap);
+                CopyGltfPropertiesToUrpLit(subMat, extMat);
                 
                 if (isNew)
                 {
@@ -170,99 +161,8 @@ namespace TheAlchemistsCrypt.Editor
             return extractedCount;
         }
 
-        public static Dictionary<Texture, Texture> ExtractAndImportGLBTextures(string glbPath, UnityEngine.Object[] assets, string texFolder)
+        public static void CopyGltfPropertiesToUrpLit(Material src, Material dst)
         {
-            var textureMap = new Dictionary<Texture, Texture>();
-            string glbName = System.IO.Path.GetFileNameWithoutExtension(glbPath);
-
-            foreach (var asset in assets)
-            {
-                if (asset is Texture2D srcTex)
-                {
-                    if (srcTex == null) continue;
-                    
-                    string texName = srcTex.name;
-                    if (string.IsNullOrEmpty(texName)) texName = "texture_" + srcTex.name + "_" + srcTex.name.GetHashCode();
-                    
-                    // Create clean file name
-                    string safeName = texName.Replace(":", "_").Replace("/", "_").Replace(" ", "_");
-                    string texPath = $"{texFolder}/{glbName}_{safeName}.png";
-                    
-                    Texture existingTex = AssetDatabase.LoadAssetAtPath<Texture>(texPath);
-                    if (existingTex != null)
-                    {
-                        textureMap[srcTex] = existingTex;
-                        continue;
-                    }
-
-                    try
-                    {
-                        // Copy texture using RenderTexture (works for non-readable textures)
-                        RenderTexture renderTex = RenderTexture.GetTemporary(
-                            srcTex.width,
-                            srcTex.height,
-                            0,
-                            RenderTextureFormat.Default,
-                            RenderTextureReadWrite.Linear);
-
-                        Graphics.Blit(srcTex, renderTex);
-                        RenderTexture previous = RenderTexture.active;
-                        RenderTexture.active = renderTex;
-                        
-                        Texture2D readableText = new Texture2D(srcTex.width, srcTex.height, TextureFormat.RGBA32, false);
-                        readableText.ReadPixels(new Rect(0, 0, renderTex.width, renderTex.height), 0, 0);
-                        readableText.Apply();
-                        
-                        RenderTexture.active = previous;
-                        RenderTexture.ReleaseTemporary(renderTex);
-
-                        byte[] bytes = readableText.EncodeToPNG();
-                        GameObject.DestroyImmediate(readableText);
-                        
-                        string absolutePath = System.IO.Path.Combine(Application.dataPath, texPath.Substring(7));
-                        System.IO.File.WriteAllBytes(absolutePath, bytes);
-                        
-                        AssetDatabase.ImportAsset(texPath, ImportAssetOptions.ForceUpdate);
-                        
-                        // Set texture import settings to match color space and bypass compression issues
-                        var texImporter = AssetImporter.GetAtPath(texPath) as TextureImporter;
-                        if (texImporter != null)
-                        {
-                            // If it was a normal map, configure it as one!
-                            if (srcTex.name.ToLower().Contains("normal") || srcTex.name.ToLower().Contains("bump"))
-                            {
-                                texImporter.textureType = TextureImporterType.NormalMap;
-                            }
-                            texImporter.SaveAndReimport();
-                        }
-                        
-                        Texture newTex = AssetDatabase.LoadAssetAtPath<Texture>(texPath);
-                        if (newTex != null)
-                        {
-                            textureMap[srcTex] = newTex;
-                            Debug.Log($"[URPSRPBatcherFixer] Extracted texture '{srcTex.name}' from '{glbName}' to '{texPath}'");
-                        }
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Debug.LogError($"[URPSRPBatcherFixer] Failed to extract texture '{srcTex.name}' from '{glbName}': {ex.Message}");
-                    }
-                }
-            }
-            return textureMap;
-        }
-
-        public static void CopyGltfPropertiesToUrpLit(Material src, Material dst, Dictionary<Texture, Texture> textureMap)
-        {
-            // Helper to get mapped texture
-            Texture GetMappedTexture(Texture original)
-            {
-                if (original == null) return null;
-                if (textureMap.TryGetValue(original, out Texture mapped))
-                    return mapped;
-                return original; // Fallback
-            }
-
             // 1. Albedo Color & Map
             Color albedo = Color.white;
             if (src.HasProperty("baseColorFactor")) albedo = src.GetColor("baseColorFactor");
@@ -281,7 +181,7 @@ namespace TheAlchemistsCrypt.Editor
             if (mainTexProp != null) mainTex = src.GetTexture(mainTexProp);
             if (mainTex != null)
             {
-                dst.SetTexture("_BaseMap", GetMappedTexture(mainTex));
+                dst.SetTexture("_BaseMap", mainTex);
                 dst.SetTextureScale("_BaseMap", src.GetTextureScale(mainTexProp));
                 dst.SetTextureOffset("_BaseMap", src.GetTextureOffset(mainTexProp));
             }
@@ -296,7 +196,7 @@ namespace TheAlchemistsCrypt.Editor
             if (normalTexProp != null) normalTex = src.GetTexture(normalTexProp);
             if (normalTex != null)
             {
-                dst.SetTexture("_BumpMap", GetMappedTexture(normalTex));
+                dst.SetTexture("_BumpMap", normalTex);
                 dst.EnableKeyword("_NORMALMAP");
                 dst.SetTextureScale("_BumpMap", src.GetTextureScale(normalTexProp));
                 dst.SetTextureOffset("_BumpMap", src.GetTextureOffset(normalTexProp));
@@ -350,7 +250,7 @@ namespace TheAlchemistsCrypt.Editor
             if (metallicGlossProp != null) metallicGlossMap = src.GetTexture(metallicGlossProp);
             if (metallicGlossMap != null)
             {
-                dst.SetTexture("_MetallicGlossMap", GetMappedTexture(metallicGlossMap));
+                dst.SetTexture("_MetallicGlossMap", metallicGlossMap);
                 dst.EnableKeyword("_METALLICSPECGLOSSMAP");
                 dst.SetTextureScale("_MetallicGlossMap", src.GetTextureScale(metallicGlossProp));
                 dst.SetTextureOffset("_MetallicGlossMap", src.GetTextureOffset(metallicGlossProp));
@@ -374,7 +274,7 @@ namespace TheAlchemistsCrypt.Editor
             if (emissiveProp != null) emissiveMap = src.GetTexture(emissiveProp);
             if (emissiveMap != null)
             {
-                dst.SetTexture("_EmissionMap", GetMappedTexture(emissiveMap));
+                dst.SetTexture("_EmissionMap", emissiveMap);
                 dst.SetTextureScale("_EmissionMap", src.GetTextureScale(emissiveProp));
                 dst.SetTextureOffset("_EmissionMap", src.GetTextureOffset(emissiveProp));
             }
