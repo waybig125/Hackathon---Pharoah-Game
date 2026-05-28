@@ -858,6 +858,10 @@ namespace TheAlchemistsCrypt.AI
             isDead = true;
             if (healthBarObj != null) Destroy(healthBarObj);
             
+            if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null) {
+                TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.AddKill();
+            }
+            
             if (agent != null)
             {
                 agent.enabled = false;

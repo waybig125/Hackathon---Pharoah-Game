@@ -7,9 +7,9 @@ namespace TheAlchemistsCrypt.AI
     public class MummySpawner : MonoBehaviour
     {
         [Header("Spawn Settings")]
-        [SerializeField] private int maxMummies = 20;
-        [SerializeField] private float spawnInterval = 25.0f;
-        [SerializeField] private int initialSpawnCount = 3;
+        [SerializeField] private int maxMummies = 25;
+        [SerializeField] private float spawnInterval = 20.0f;
+        [SerializeField] private int initialSpawnCount = 6;
 
         private ObjectPool<GameObject> mummyPool;
         private ObjectPool<GameObject> pharaohPool;
@@ -132,9 +132,9 @@ namespace TheAlchemistsCrypt.AI
                 return;
             }
 
-            // Choose a random spawn position around the player at a tactical distance of 35-55 units
+            // Choose a random spawn position around the player at a tactical distance of 15-25 units
             float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-            float distance = Random.Range(35f, 55f);
+            float distance = Random.Range(15f, 25f);
             Vector3 spawnPos = spawnCenter + new Vector3(Mathf.Cos(angle) * distance, 0.5f, Mathf.Sin(angle) * distance);
 
             // Snap to NavMesh, then reject positions south of the beach barrier (Z < -50)
@@ -190,7 +190,7 @@ namespace TheAlchemistsCrypt.AI
             }
 
             float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-            float distance = Random.Range(30f, 45f);
+            float distance = Random.Range(20f, 30f);
             Vector3 spawnPos = spawnCenter + new Vector3(Mathf.Cos(angle) * distance, 0.5f, Mathf.Sin(angle) * distance);
 
             UnityEngine.AI.NavMeshHit hit;

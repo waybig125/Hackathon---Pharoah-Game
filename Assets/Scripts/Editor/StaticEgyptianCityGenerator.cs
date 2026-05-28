@@ -1033,7 +1033,9 @@ namespace TheAlchemistsCrypt.Editor
 
         private Shader GetLitShader()
         {
-            var s = Shader.Find("Universal Render Pipeline/Lit");
+            var s = Shader.Find("Universal Render Pipeline/Simple Lit");
+            if (s == null) s = Shader.Find("Universal Render Pipeline/Lit");
+            if (s == null) s = Shader.Find("URP/Simple Lit");
             if (s == null) s = Shader.Find("URP/Lit");
             if (s == null) s = Shader.Find("Lit");
             if (s == null) s = Shader.Find("Standard");
@@ -1614,13 +1616,13 @@ namespace TheAlchemistsCrypt.Editor
             Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (mat == null)
             {
-                mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                mat = new Material(Shader.Find("Universal Render Pipeline/Simple Lit"));
                 if (!System.IO.Directory.Exists("Assets/Materials")) System.IO.Directory.CreateDirectory("Assets/Materials");
                 AssetDatabase.CreateAsset(mat, path);
             }
             else
             {
-                mat.shader = Shader.Find("Universal Render Pipeline/Lit");
+                mat.shader = Shader.Find("Universal Render Pipeline/Simple Lit");
             }
             
             mat.SetColor("_BaseColor", baseColor);
@@ -2692,7 +2694,6 @@ namespace TheAlchemistsCrypt.Editor
                         foreach (var filterObj in filters) {
                             if (filterObj.sharedMesh == null) continue;
                             
-                            // Skip colliders on small decoration meshes to optimize physics and avoid vertex distance warnings
                             string filterName = filterObj.gameObject.name.ToLower();
                             if (filterName.Contains("meat") || filterName.Contains("food") || 
                                 filterName.Contains("utensil") || filterName.Contains("plate") || 
@@ -2703,11 +2704,11 @@ namespace TheAlchemistsCrypt.Editor
                                 continue;
                             }
 
-                            var mc = filterObj.gameObject.GetComponent<MeshCollider>();
-                            if (mc == null) {
-                                mc = filterObj.gameObject.AddComponent<MeshCollider>();
+                            // PERFORMANCE: Use primitive BoxCollider instead of MeshCollider for non-enterable objects
+                            var bc = filterObj.gameObject.GetComponent<BoxCollider>();
+                            if (bc == null) {
+                                bc = filterObj.gameObject.AddComponent<BoxCollider>();
                             }
-                            mc.sharedMesh = filterObj.sharedMesh;
                         }
                     } else {
                         obj.AddComponent<BoxCollider>();

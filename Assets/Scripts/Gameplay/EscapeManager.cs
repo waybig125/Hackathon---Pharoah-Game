@@ -16,6 +16,11 @@ namespace TheAlchemistsCrypt.Gameplay
         private float escapeTimer = 0f;
         private float papyrusCollectFeedbackTimer = 0f;
         private float initialBoatY = 3.2f;
+
+        [Header("Progression")]
+        public int requiredKills = 20;
+        public int currentKills = 0;
+        public bool papyrusSpawned = false;
         
         [Header("UI References")]
         private GameObject promptUiGo;
@@ -42,7 +47,6 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void Start()
         {
-            SpawnKey();
             SpawnBoat();
             SetupUI();
             // Cache player once at start — see Update() for null-check fallback
@@ -70,6 +74,29 @@ namespace TheAlchemistsCrypt.Gameplay
             promptText.outlineColor = Color.black;
             promptText.outlineWidth = 0.2f;
             promptUiGo.SetActive(false);
+        }
+
+        public void AddKill()
+        {
+            if (papyrusSpawned) return;
+            
+            currentKills++;
+            if (currentKills >= requiredKills)
+            {
+                papyrusSpawned = true;
+                SpawnKey();
+                ShowNotification("The Ancient Papyrus has revealed itself!");
+            }
+        }
+
+        private void ShowNotification(string message)
+        {
+            if (promptUiGo != null && promptText != null)
+            {
+                promptText.text = message;
+                promptUiGo.SetActive(true);
+                papyrusCollectFeedbackTimer = 4f; // Show for 4 seconds
+            }
         }
 
         private void SpawnKey()

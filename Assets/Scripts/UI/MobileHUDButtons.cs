@@ -1388,6 +1388,11 @@ namespace TheAlchemistsCrypt.UI
             go.SetParent(parent, false); go.anchoredPosition = pos; go.sizeDelta = new Vector2(diameter, diameter);
             var img = go.GetComponent<Image>(); img.color = new Color(0, 0, 0, 0); img.raycastTarget = true;
 
+            var shadowGo = new GameObject("Shadow", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            shadowGo.SetParent(go, false); shadowGo.anchorMin = Vector2.zero; shadowGo.anchorMax = Vector2.one; shadowGo.offsetMin = shadowGo.offsetMax = Vector2.zero;
+            var shadowImg = shadowGo.GetComponent<Image>(); shadowImg.sprite = goldGradientSprite; shadowImg.raycastTarget = false;
+            shadowGo.SetActive(false);
+
             var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             iconGo.SetParent(go, false); iconGo.anchorMin = Vector2.zero; iconGo.anchorMax = Vector2.one; iconGo.offsetMin = iconGo.offsetMax = Vector2.zero;
             var iImg = iconGo.GetComponent<Image>(); iImg.sprite = iconSprite; iImg.color = Color.white; iImg.raycastTarget = false;
@@ -1395,6 +1400,7 @@ namespace TheAlchemistsCrypt.UI
 
             var helper = go.gameObject.AddComponent<ButtonInputHelper>();
             helper.isDraggable = true;
+            helper.glowObject = shadowGo;
             helper.onDown = () => { go.localScale = new Vector3(0.9f, 0.9f, 1f); iImg.color = new Color(0.8f, 0.8f, 0.8f, 1f); onDown?.Invoke(); };
             helper.onUp = () => { go.localScale = new Vector3(1f, 1f, 1f); iImg.color = Color.white; onUp?.Invoke(); };
         }
@@ -1407,7 +1413,8 @@ namespace TheAlchemistsCrypt.UI
 
             var shadowGo = new GameObject("Shadow", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             shadowGo.SetParent(go, false); shadowGo.anchorMin = Vector2.zero; shadowGo.anchorMax = Vector2.one; shadowGo.offsetMin = shadowGo.offsetMax = Vector2.zero;
-            sprintShadowImage = shadowGo.GetComponent<Image>(); sprintShadowImage.sprite = obsidianSprite; sprintShadowImage.raycastTarget = false;
+            sprintShadowImage = shadowGo.GetComponent<Image>(); sprintShadowImage.sprite = goldGradientSprite; sprintShadowImage.raycastTarget = false;
+            shadowGo.SetActive(false);
 
             var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             iconGo.SetParent(go, false); iconGo.anchorMin = Vector2.zero; iconGo.anchorMax = Vector2.one; iconGo.offsetMin = iconGo.offsetMax = Vector2.zero;
@@ -1424,7 +1431,6 @@ namespace TheAlchemistsCrypt.UI
         private void UpdateSprintVisuals() {
             if (sprintShadowImage && sprintIconImage) {
                 sprintShadowImage.gameObject.SetActive(sprintToggleState);
-                sprintShadowImage.sprite = goldGradientSprite;
                 sprintIconImage.color = sprintToggleState ? Color.white : new Color(0.8f, 0.8f, 0.8f, 1f);
             }
         }
@@ -1509,6 +1515,37 @@ namespace TheAlchemistsCrypt.UI
             foreach (var n in names) { var l = GameObject.Find(n); if (l != null) l.SetActive(false); }
         }
 
+        private TheAlchemistsCrypt.Weapons.AlchemicalFocus cachedFocus;
+        private InfimaGames.LowPolyShooterPack.Character cachedCharacter;
+        private TheAlchemistsCrypt.Player.PlayerHealth cachedHealth;
+        private bool isCacheInitialized = false;
+
+        private void TryInitializeCache()
+        {
+            if (cachedCharacter == null) cachedCharacter = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>(FindObjectsInactive.Include);
+            if (cachedFocus == null) cachedFocus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>(FindObjectsInactive.Include);
+            if (cachedHealth == null) cachedHealth = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Player.PlayerHealth>();
+            isCacheInitialized = (cachedCharacter != null || cachedHealth != null);
+        }
+
+        private void DisableCompetingCanvases()
+        {
+            var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include);
+            foreach (var c in canvases) {
+                if (c.gameObject.name == "MobileHUD_Root" || 
+                    c.gameObject.name == "StartScreenOverlay" || 
+                    c.gameObject.name == "DeathCanvas" || 
+                    c.gameObject.name == "VictoryCanvas" || 
+                    (c.gameObject.name == "Canvas" && c.gameObject.GetComponent<MobileHUDButtons>() != null)) continue;
+                string nameLower = c.gameObject.name.ToLower();
+                if (nameLower.Contains("lpsp") || nameLower.Contains("weaponui") || nameLower.Contains("hud") || nameLower.Contains("canvas") || nameLower.Contains("joystick")) {
+                    if (c.gameObject != gameObject && c.gameObject.name != "MobileHUD_Root" && c.gameObject.name != "StartScreenOverlay" && c.gameObject.name != "DeathCanvas" && c.gameObject.name != "VictoryCanvas") {
+                        c.gameObject.SetActive(false);
+                    }
+                }
+            }
+        }
+
         private void Update()
         {
             if (!HasStartedGame || settingsModalInstance != null || deathPanelInstance != null)
@@ -1540,28 +1577,17 @@ namespace TheAlchemistsCrypt.UI
                 }
             }
 
-            // Aggressively disable competing canvases, including clones and weapon UI
-            var canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Include);
-            foreach (var c in canvases) {
-                if (c.gameObject.name == "MobileHUD_Root" || 
-                    c.gameObject.name == "StartScreenOverlay" || 
-                    c.gameObject.name == "DeathCanvas" || 
-                    c.gameObject.name == "VictoryCanvas" || 
-                    (c.gameObject.name == "Canvas" && c.gameObject.GetComponent<MobileHUDButtons>() != null)) continue;
-                string nameLower = c.gameObject.name.ToLower();
-                if (nameLower.Contains("lpsp") || nameLower.Contains("weaponui") || nameLower.Contains("hud") || nameLower.Contains("canvas") || nameLower.Contains("joystick")) {
-                    if (c.gameObject != gameObject && c.gameObject.name != "MobileHUD_Root" && c.gameObject.name != "StartScreenOverlay" && c.gameObject.name != "DeathCanvas" && c.gameObject.name != "VictoryCanvas") {
-                        c.gameObject.SetActive(false);
-                    }
-                }
+            // Optimize: Initialize cache periodically if not fully found, instead of every frame
+            if (!isCacheInitialized || Time.frameCount % 60 == 0)
+            {
+                TryInitializeCache();
             }
 
             // Update alchemical mode icon in Ammo panel
             Sprite activeElementIcon = sulphurIconSprite;
-            var focus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>(FindObjectsInactive.Include);
-            if (focus != null)
+            if (cachedFocus != null)
             {
-                switch (focus.CurrentMode)
+                switch (cachedFocus.CurrentMode)
                 {
                     case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Sulfur:
                         activeElementIcon = sulphurIconSprite;
@@ -1574,21 +1600,18 @@ namespace TheAlchemistsCrypt.UI
                         break;
                 }
             }
-            else
+            else if (cachedCharacter != null)
             {
-                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
-                if (character != null)
+                var weapon = cachedCharacter.GetEquippedWeapon();
+                if (weapon != null)
                 {
-                    var weapon = character.GetEquippedWeapon();
-                    if (weapon != null)
-                    {
-                        string wName = weapon.name.ToLower();
-                        if (wName.Contains("sulfur")) activeElementIcon = sulphurIconSprite;
-                        else if (wName.Contains("mercury")) activeElementIcon = mercuryIconSprite;
-                        else if (wName.Contains("salt")) activeElementIcon = saltIconSprite;
-                    }
+                    string wName = weapon.name.ToLower();
+                    if (wName.Contains("sulfur")) activeElementIcon = sulphurIconSprite;
+                    else if (wName.Contains("mercury")) activeElementIcon = mercuryIconSprite;
+                    else if (wName.Contains("salt")) activeElementIcon = saltIconSprite;
                 }
             }
+            
             if (ammoIconImage != null && activeElementIcon != null)
             {
                 ammoIconImage.sprite = activeElementIcon;
@@ -1596,25 +1619,22 @@ namespace TheAlchemistsCrypt.UI
 
             int current = 30;
             int total = 30;
-            if (focus != null)
+            if (cachedFocus != null)
             {
-                current = focus.CurrentAmmo;
-                total = focus.MaxAmmo;
+                current = cachedFocus.CurrentAmmo;
+                total = cachedFocus.MaxAmmo;
             }
-            else
+            else if (cachedCharacter != null)
             {
-                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
-                if (character != null) {
-                    var weapon = character.GetEquippedWeapon();
-                    if (weapon != null) {
-                        current = weapon.GetAmmunitionCurrent();
-                        total = weapon.GetAmmunitionTotal();
-                    }
+                var weapon = cachedCharacter.GetEquippedWeapon();
+                if (weapon != null) {
+                    current = weapon.GetAmmunitionCurrent();
+                    total = weapon.GetAmmunitionTotal();
                 }
             }
+
             UpdateAmmo(current, total);
-            var health = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Player.PlayerHealth>();
-            if (health != null) UpdateHealth(health.currentHealth);
+            if (cachedHealth != null) UpdateHealth(cachedHealth.currentHealth);
             UpdateGuideArrow();
         }
 
@@ -1706,12 +1726,8 @@ namespace TheAlchemistsCrypt.UI
                 return;
             }
 
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            if (player == null)
-            {
-                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>(FindObjectsInactive.Include);
-                if (character != null) player = character.gameObject;
-            }
+            GameObject player = null;
+            if (cachedCharacter != null) player = cachedCharacter.gameObject;
 
             if (player == null)
             {
@@ -2660,6 +2676,7 @@ namespace TheAlchemistsCrypt.UI
                 Cursor.lockState = CursorLockMode.Locked;
                 if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
                 Destroy(startCanvasGo);
+                DisableCompetingCanvases();
             };
 
             var quitBtnGo = new GameObject("QuitButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
