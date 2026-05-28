@@ -8,7 +8,7 @@ public class PostProcessSetup : EditorWindow
     [MenuItem("Tools/Enhance Post Processing")]
     public static void Enhance()
     {
-        var volumes = Object.FindObjectsByType<Volume>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        var volumes = Object.FindObjectsByType<Volume>(FindObjectsInactive.Include);
         Volume globalVolume = null;
         
         foreach (var v in volumes)

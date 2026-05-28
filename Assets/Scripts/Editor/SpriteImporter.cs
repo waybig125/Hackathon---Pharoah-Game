@@ -14,10 +14,12 @@ public class SpriteImporter
         string[] paths = new string[]
         {
             "Assets/Resources/egypt_themed_icons_generated/joystick_ring.png",
-            "Assets/Resources/egypt_themed_icons_generated/joystick_knob.png"
+            "Assets/Resources/egypt_themed_icons_generated/joystick_knob.png",
+            "Assets/Resources/egypt_themed_icons_generated/obsidian_texture.png",
+            "Assets/Resources/egypt_themed_icons_generated/gold_trim_button.png",
+            "Assets/Resources/egypt_themed_icons_generated/sandstone_frame.png"
         };
 
-        bool importedAny = false;
         foreach (var path in paths)
         {
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -27,7 +29,6 @@ public class SpriteImporter
                 importer.spriteImportMode = SpriteImportMode.Single;
                 importer.alphaIsTransparency = true;
                 importer.SaveAndReimport();
-                importedAny = true;
                 Debug.Log($"[SpriteImporter] Converted {path} to Sprite.");
             }
         }
