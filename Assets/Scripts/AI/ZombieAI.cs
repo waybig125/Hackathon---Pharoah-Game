@@ -1,12 +1,13 @@
 using UnityEngine;
 using UnityEngine.AI;
+using System.Collections;
 
 namespace TheAlchemistsCrypt.AI
 {
     public class ZombieAI : MonoBehaviour
     {
         private NavMeshAgent agent;
-        private Transform player;
+        protected Transform player;
         private float attackDistance = 2.5f;
         private float checkInterval = 0.5f;
         private float timer;
@@ -50,6 +51,10 @@ namespace TheAlchemistsCrypt.AI
         private float mercurySlowTimer = 0f;
         private bool isStunned = false;
         private float saltStunTimer = 0f;
+        
+        public enum AlchemicalResidue { None, Sulfur, Mercury, Salt }
+        public AlchemicalResidue activeResidue = AlchemicalResidue.None;
+        private float residueTimer = 0f;
         
         [Header("Procedural Health Bar HUD")]
         private GameObject healthBarObj;
@@ -147,7 +152,7 @@ namespace TheAlchemistsCrypt.AI
             // Deprecated: using high-performance MaterialPropertyBlock overrides instead
         }
 
-        private void SetStatusColor(Color col)
+        protected void SetStatusColor(Color col)
         {
             // PERFORMANCE: Use pre-cached renderer array instead of allocating a new
             // one via GetComponentsInChildren on every elemental hit.
@@ -187,6 +192,150 @@ namespace TheAlchemistsCrypt.AI
             isStunned = true;
             saltStunTimer = duration;
             SetStatusColor(new Color(0.85f, 0.3f, 1.0f)); // Sparkling crystalline royal purple/violet
+        }
+
+        public void ApplyAlchemicalElement(AlchemicalResidue element)
+        {
+            if (isDead) return;
+            if (vulnerableElement == "none") return; // Boss handles reactions separately
+
+            if (activeResidue == AlchemicalResidue.None)
+            {
+                activeResidue = element;
+                residueTimer = 4.0f;
+                switch (element)
+                {
+                    case AlchemicalResidue.Sulfur: SetStatusColor(new Color(1.0f, 0.55f, 0.05f)); break;
+                    case AlchemicalResidue.Mercury: SetStatusColor(new Color(0.15f, 0.6f, 1.0f)); break;
+                    case AlchemicalResidue.Salt: SetStatusColor(new Color(0.85f, 0.3f, 1.0f)); break;
+                }
+            }
+            else if (activeResidue != element)
+            {
+                TriggerAlchemicalReaction(activeResidue, element);
+                activeResidue = AlchemicalResidue.None;
+                residueTimer = 0f;
+            }
+            else
+            {
+                residueTimer = 4.0f;
+            }
+        }
+
+        private void TriggerAlchemicalReaction(AlchemicalResidue r1, AlchemicalResidue r2)
+        {
+            if ((r1 == AlchemicalResidue.Sulfur && r2 == AlchemicalResidue.Salt) ||
+                (r1 == AlchemicalResidue.Salt && r2 == AlchemicalResidue.Sulfur))
+            {
+                TriggerAcidicExplosion();
+            }
+            else if ((r1 == AlchemicalResidue.Sulfur && r2 == AlchemicalResidue.Mercury) ||
+                     (r1 == AlchemicalResidue.Mercury && r2 == AlchemicalResidue.Sulfur))
+            {
+                TriggerThermiteBlaze();
+            }
+            else if ((r1 == AlchemicalResidue.Mercury && r2 == AlchemicalResidue.Salt) ||
+                     (r1 == AlchemicalResidue.Salt && r2 == AlchemicalResidue.Mercury))
+            {
+                TriggerCrystalShatter();
+            }
+        }
+
+        private void TriggerAcidicExplosion()
+        {
+            TakeDamage(25f);
+            TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mummy_death", false, 0.8f, 0.1f);
+            SetStatusColor(new Color(0.2f, 0.9f, 0.2f));
+
+            Collider[] colliders = Physics.OverlapSphere(transform.position, 5.0f);
+            foreach (Collider c in colliders)
+            {
+                var z = c.GetComponent<ZombieAI>();
+                if (z == null) z = c.GetComponentInParent<ZombieAI>();
+                if (z != null && z != this && !z.IsDead)
+                {
+                    z.TakeDamage(12f);
+                    z.ApplySaltStun(1.5f);
+                }
+            }
+
+            GameObject exp = new GameObject("AcidExplosionLight");
+            exp.transform.position = transform.position + Vector3.up;
+            Light l = exp.AddComponent<Light>();
+            l.type = LightType.Point;
+            l.color = Color.green;
+            l.intensity = 18f;
+            l.range = 7f;
+            Destroy(exp, 0.5f);
+        }
+
+        private void TriggerThermiteBlaze()
+        {
+            TakeDamage(15f);
+            SetStatusColor(new Color(1f, 0.1f, 0f));
+            StartCoroutine(ThermiteBurnRoutine());
+        }
+
+        private IEnumerator ThermiteBurnRoutine()
+        {
+            float duration = 5f;
+            float elapsed = 0f;
+            float originalSpeed = baseSpeed;
+            baseSpeed = 7f;
+            if (agent != null) agent.speed = baseSpeed;
+
+            while (elapsed < duration && !isDead)
+            {
+                TakeDamage(4f);
+                elapsed += 0.5f;
+
+                Collider[] colliders = Physics.OverlapSphere(transform.position, 2.0f);
+                foreach (Collider c in colliders)
+                {
+                    var z = c.GetComponent<ZombieAI>();
+                    if (z == null) z = c.GetComponentInParent<ZombieAI>();
+                    if (z != null && z != this && !z.IsDead && z.activeResidue == AlchemicalResidue.None)
+                    {
+                        z.TakeDamage(2f);
+                    }
+                }
+                yield return new WaitForSeconds(0.5f);
+            }
+
+            if (!isDead)
+            {
+                baseSpeed = originalSpeed;
+                if (agent != null) agent.speed = baseSpeed;
+                RestoreColors();
+            }
+        }
+
+        private void TriggerCrystalShatter()
+        {
+            TakeDamage(30f);
+            TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mummy_death", false, 0.8f, 0f);
+            SetStatusColor(new Color(0.7f, 0.9f, 1f));
+
+            Collider[] colliders = Physics.OverlapSphere(transform.position, 6.0f);
+            foreach (Collider c in colliders)
+            {
+                var z = c.GetComponent<ZombieAI>();
+                if (z == null) z = c.GetComponentInParent<ZombieAI>();
+                if (z != null && z != this && !z.IsDead)
+                {
+                    z.ApplyMercurySlow(4f);
+                    z.TakeDamage(8f);
+                }
+            }
+
+            GameObject exp = new GameObject("IceExplosionLight");
+            exp.transform.position = transform.position + Vector3.up;
+            Light l = exp.AddComponent<Light>();
+            l.type = LightType.Point;
+            l.color = new Color(0.5f, 0.8f, 1f);
+            l.intensity = 15f;
+            l.range = 8f;
+            Destroy(exp, 0.5f);
         }
 
         private bool combatMusicTriggered = false;
@@ -440,6 +589,18 @@ namespace TheAlchemistsCrypt.AI
                 {
                     isSlowed = false;
                     RestoreColors();
+                }
+            }
+            if (residueTimer > 0f)
+            {
+                residueTimer -= Time.deltaTime;
+                if (residueTimer <= 0f)
+                {
+                    activeResidue = AlchemicalResidue.None;
+                    if (!isSlowed && !isStunned)
+                    {
+                        RestoreColors();
+                    }
                 }
             }
 

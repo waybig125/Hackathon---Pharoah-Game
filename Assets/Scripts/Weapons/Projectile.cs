@@ -66,22 +66,36 @@ namespace TheAlchemistsCrypt.Weapons
                     Debug.Log($"[HEADSHOT] Hit mummy head bone {other.name} (relativeY: {relativeY:F2})!");
                 }
 
+                var pharaoh = zombie as TheAlchemistsCrypt.AI.PharaohAI;
+
                 switch (element)
                 {
                     case ElementType.Sulfur:
                         float sulfurDamage = isHeadshot ? 10f : 5f;
                         zombie.TakeDamage(sulfurDamage);
+                        if (pharaoh != null) pharaoh.ApplyBossReaction("Sulfur");
+                        else zombie.ApplyAlchemicalElement(TheAlchemistsCrypt.AI.ZombieAI.AlchemicalResidue.Sulfur);
                         ApplySulfurAOE(transform.position, zombie);
                         break;
                     case ElementType.Mercury:
                         float mercuryDamage = isHeadshot ? 5f : 2f;
                         zombie.TakeDamage(mercuryDamage);
-                        zombie.ApplyMercurySlow(4f);
+                        if (pharaoh != null) pharaoh.ApplyBossReaction("Mercury");
+                        else
+                        {
+                            zombie.ApplyMercurySlow(4f);
+                            zombie.ApplyAlchemicalElement(TheAlchemistsCrypt.AI.ZombieAI.AlchemicalResidue.Mercury);
+                        }
                         break;
                     case ElementType.Salt:
                         float saltDamage = isHeadshot ? 5f : 2f;
                         zombie.TakeDamage(saltDamage);
-                        zombie.ApplySaltStun(3f);
+                        if (pharaoh != null) pharaoh.ApplyBossReaction("Salt");
+                        else
+                        {
+                            zombie.ApplySaltStun(3f);
+                            zombie.ApplyAlchemicalElement(TheAlchemistsCrypt.AI.ZombieAI.AlchemicalResidue.Salt);
+                        }
                         break;
                 }
             }
