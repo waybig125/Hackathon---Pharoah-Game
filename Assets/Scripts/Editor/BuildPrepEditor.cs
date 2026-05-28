@@ -41,7 +41,7 @@ namespace TheAlchemistsCrypt.Editor
 
         private static void GenerateMummyPrefab()
         {
-            string fbxPath = "Assets/Mummy_Assets/mummy_base.fbx";
+            string fbxPath = "Assets/Art/Mummy_Assets/mummy_base.fbx";
             GameObject modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
             if (modelPrefab == null)
             {
@@ -56,8 +56,8 @@ namespace TheAlchemistsCrypt.Editor
             // 1. Materials
             Renderer[] renderers = instance.GetComponentsInChildren<Renderer>(true);
             Shader urpShader = Shader.Find("Universal Render Pipeline/Lit");
-            Texture2D diffTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Mummy_Assets/texture/texture_diffuse.png");
-            Texture2D normTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Mummy_Assets/texture/texture_normal.png");
+            Texture2D diffTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Art/Mummy_Assets/texture/texture_diffuse.png");
+            Texture2D normTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Art/Mummy_Assets/texture/texture_normal.png");
             
             Material mummyMat = new Material(urpShader);
             if (diffTex != null) mummyMat.SetTexture("_BaseMap", diffTex);
@@ -83,7 +83,7 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             // 2. Animator
-            RuntimeAnimatorController controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Mummy_Assets/MummyTestController.controller");
+            RuntimeAnimatorController controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Art/Mummy_Assets/MummyTestController.controller");
             var anim = instance.GetComponent<Animator>();
             if (anim == null) anim = instance.AddComponent<Animator>();
             anim.runtimeAnimatorController = controller;
@@ -179,7 +179,7 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             // 2. Animator
-            RuntimeAnimatorController controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Mummy_Assets/MummyTestController.controller");
+            RuntimeAnimatorController controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Art/Mummy_Assets/MummyTestController.controller");
             var anim = instance.GetComponent<Animator>();
             if (anim == null) anim = instance.AddComponent<Animator>();
             anim.runtimeAnimatorController = controller;

@@ -45,21 +45,21 @@ namespace TheAlchemistsCrypt.Editor
         private void SetupMummyAnimations()
         {
             string[] fbxPaths = {
-                "Assets/Mummy_Assets/base.fbx",
-                "Assets/Mummy_Assets/base_basic_pbr.fbx",
-                "Assets/Mummy_Assets/base_basic_shaded.fbx",
-                "Assets/Mummy_Assets/mummy_base.fbx",
-                "Assets/Mummy_Assets/mummy_idle.fbx",
-                "Assets/Mummy_Assets/new_Walking.fbx",
-                "Assets/Mummy_Assets/mummy_attack.fbx",
-                "Assets/Mummy_Assets/mummy_death.fbx",
+                "Assets/Art/Mummy_Assets/base.fbx",
+                "Assets/Art/Mummy_Assets/base_basic_pbr.fbx",
+                "Assets/Art/Mummy_Assets/base_basic_shaded.fbx",
+                "Assets/Art/Mummy_Assets/mummy_base.fbx",
+                "Assets/Art/Mummy_Assets/mummy_idle.fbx",
+                "Assets/Art/Mummy_Assets/new_Walking.fbx",
+                "Assets/Art/Mummy_Assets/mummy_attack.fbx",
+                "Assets/Art/Mummy_Assets/mummy_death.fbx",
                 "Assets/Resources/Pharaoh/base_basic_shaded (3).fbx"
             };
             foreach (var p in fbxPaths) {
                 ConfigureFbxToHumanoid(p);
             }
 
-            string controllerPath = "Assets/Mummy_Assets/MummyTestController.controller";
+            string controllerPath = "Assets/Art/Mummy_Assets/MummyTestController.controller";
             var controller = AssetDatabase.LoadAssetAtPath<UnityEditor.Animations.AnimatorController>(controllerPath);
             if (controller == null) {
                 controller = UnityEditor.Animations.AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
@@ -78,13 +78,13 @@ namespace TheAlchemistsCrypt.Editor
             var layer = controller.layers[0];
             var rootStateMachine = layer.stateMachine;
 
-            if (!System.IO.Directory.Exists("Assets/Mummy_Assets")) {
-                System.IO.Directory.CreateDirectory("Assets/Mummy_Assets");
+            if (!System.IO.Directory.Exists("Assets/Art/Mummy_Assets")) {
+                System.IO.Directory.CreateDirectory("Assets/Art/Mummy_Assets");
             }
 
-            var idleClip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Mummy_Assets/mummy_idle.fbx");
-            var walkClip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Mummy_Assets/new_Walking.fbx");
-            var attackClip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Mummy_Assets/mummy_attack.fbx");
+            var idleClip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Art/Mummy_Assets/mummy_idle.fbx");
+            var walkClip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Art/Mummy_Assets/new_Walking.fbx");
+            var attackClip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Art/Mummy_Assets/mummy_attack.fbx");
 
             var idleState = GetOrAddState(rootStateMachine, "Idle", idleClip);
             var walkState = GetOrAddState(rootStateMachine, "Walk", walkClip);
@@ -275,8 +275,8 @@ namespace TheAlchemistsCrypt.Editor
             if (columnPrefab == null) return null;
             
             string decimatedMeshPath = columnPrefab.name.Contains("pillar") 
-                ? "Assets/EgyptianAssets/egyptian_pillar_column_decimated.mesh" 
-                : "Assets/EgyptianAssets/egyptian_column_decimated.mesh";
+                ? "Assets/Art/EgyptianAssets/egyptian_pillar_column_decimated.mesh" 
+                : "Assets/Art/EgyptianAssets/egyptian_column_decimated.mesh";
             Mesh decimatedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(decimatedMeshPath);
             if (decimatedMesh != null) return decimatedMesh;
             
@@ -352,7 +352,7 @@ namespace TheAlchemistsCrypt.Editor
             if (string.IsNullOrEmpty(meshName)) meshName = "unnamed_mesh_" + originalMesh.GetHashCode();
             
             string sanitizedName = System.Text.RegularExpressions.Regex.Replace(meshName, @"[^a-zA-Z0-9_\-]", "_");
-            string decimatedDir = "Assets/EgyptianAssets/DecimatedMeshes";
+            string decimatedDir = "Assets/Art/EgyptianAssets/DecimatedMeshes";
             if (!System.IO.Directory.Exists(decimatedDir)) {
                 System.IO.Directory.CreateDirectory(decimatedDir);
             }
@@ -433,13 +433,13 @@ namespace TheAlchemistsCrypt.Editor
             root.isStatic = true;
 
             var trees = new GameObject[] {
-                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/realistic_hd_date_palm_2178.glb"),
-                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/realistic_hd_date_palm_378.glb")
+                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/EgyptianAssets/realistic_hd_date_palm_2178.glb"),
+                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/EgyptianAssets/realistic_hd_date_palm_378.glb")
             };
-            var crate = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/crate.glb");
-            var barrel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/barrel.glb");
-            var columnPillarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_pillar_column.glb");
-            var columnStandardPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/EgyptianAssets/egyptian_column.glb");
+            var crate = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/EgyptianAssets/crate.glb");
+            var barrel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/EgyptianAssets/barrel.glb");
+            var columnPillarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/EgyptianAssets/egyptian_pillar_column.glb");
+            var columnStandardPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/EgyptianAssets/egyptian_column.glb");
             System.Func<GameObject> GetRandomColumn = () => (columnPillarPrefab != null && columnStandardPrefab != null) ? (Random.value > 0.5f ? columnPillarPrefab : columnStandardPrefab) : (columnPillarPrefab ?? columnStandardPrefab);
 
             // Load new assets for Phase 2 integration
@@ -477,7 +477,7 @@ namespace TheAlchemistsCrypt.Editor
             var doorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/egyptian_door.glb");
             
             // Create warm golden sandstone gradient texture for houses
-            string houseTexPath = "Assets/EgyptianAssets/HouseGradientTex.png";
+            string houseTexPath = "Assets/Art/EgyptianAssets/HouseGradientTex.png";
             if (System.IO.File.Exists(houseTexPath)) {
                 System.IO.File.Delete(houseTexPath);
                 System.IO.File.Delete(houseTexPath + ".meta");
@@ -485,7 +485,7 @@ namespace TheAlchemistsCrypt.Editor
             }
             Texture2D houseTex = null;
             if (houseTex == null) {
-                if (!System.IO.Directory.Exists("Assets/EgyptianAssets")) System.IO.Directory.CreateDirectory("Assets/EgyptianAssets");
+                if (!System.IO.Directory.Exists("Assets/Art/EgyptianAssets")) System.IO.Directory.CreateDirectory("Assets/Art/EgyptianAssets");
                 int texSize = 512;
                 houseTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
                 houseTex.wrapMode = TextureWrapMode.Clamp;
@@ -576,8 +576,8 @@ namespace TheAlchemistsCrypt.Editor
             probe.importance = 1;
 
             try {
-                string exrPath = "Assets/Materials/GlobalReflectionProbe.exr";
-                if (!System.IO.Directory.Exists("Assets/Materials")) System.IO.Directory.CreateDirectory("Assets/Materials");
+                string exrPath = "Assets/Art/Materials/GlobalReflectionProbe.exr";
+                if (!System.IO.Directory.Exists("Assets/Art/Materials")) System.IO.Directory.CreateDirectory("Assets/Art/Materials");
 #if UNITY_EDITOR
                 UnityEditor.Lightmapping.BakeReflectionProbe(probe, exrPath);
                 Debug.Log($"[CityGen] Baked GlobalReflectionProbe to {exrPath}");
@@ -642,16 +642,16 @@ namespace TheAlchemistsCrypt.Editor
             }
             terrainData.SetHeights(0, 0, heights);
 
-            string layerPath = "Assets/EgyptianAssets/DesertSandLayer_V2.terrainlayer";
+            string layerPath = "Assets/Art/EgyptianAssets/DesertSandLayer_V2.terrainlayer";
             TerrainLayer layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
             if (layer == null) {
                 layer = new TerrainLayer();
-                if (!System.IO.Directory.Exists("Assets/EgyptianAssets")) System.IO.Directory.CreateDirectory("Assets/EgyptianAssets");
+                if (!System.IO.Directory.Exists("Assets/Art/EgyptianAssets")) System.IO.Directory.CreateDirectory("Assets/Art/EgyptianAssets");
                 AssetDatabase.CreateAsset(layer, layerPath);
             }
 
             // Always recreate the sand gradient texture with new golden yellow sandstone color
-            string sandTexPath = "Assets/EgyptianAssets/SandTexGradient_1024.png";
+            string sandTexPath = "Assets/Art/EgyptianAssets/SandTexGradient_1024.png";
             if (System.IO.File.Exists(sandTexPath)) {
                 System.IO.File.Delete(sandTexPath);
                 System.IO.File.Delete(sandTexPath + ".meta");
@@ -1612,12 +1612,12 @@ namespace TheAlchemistsCrypt.Editor
 
         private static Material GetOrCreateMaterial(string name, Color baseColor, float smoothness, float metallic, Color emissionColor, bool useEmission)
         {
-            string path = "Assets/Materials/" + name + ".mat";
+            string path = "Assets/Art/Materials/" + name + ".mat";
             Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (mat == null)
             {
                 mat = new Material(Shader.Find("Universal Render Pipeline/Simple Lit"));
-                if (!System.IO.Directory.Exists("Assets/Materials")) System.IO.Directory.CreateDirectory("Assets/Materials");
+                if (!System.IO.Directory.Exists("Assets/Art/Materials")) System.IO.Directory.CreateDirectory("Assets/Art/Materials");
                 AssetDatabase.CreateAsset(mat, path);
             }
             else
@@ -1815,7 +1815,7 @@ namespace TheAlchemistsCrypt.Editor
                         if (!convertedMaterialsCache.TryGetValue(cacheKey, out Material newMat))
                         {
                             string safeName = System.Text.RegularExpressions.Regex.Replace(oldMat.name, @"[^a-zA-Z0-9_\-]", "_");
-                            string materialAssetPath = $"Assets/Materials/Generated/{safeName}_URP.mat";
+                            string materialAssetPath = $"Assets/Art/Materials/Generated/{safeName}_URP.mat";
                             newMat = AssetDatabase.LoadAssetAtPath<Material>(materialAssetPath);
                             
                             if (newMat == null)
@@ -1832,8 +1832,8 @@ namespace TheAlchemistsCrypt.Editor
                                 newMat.SetFloat("_Metallic", metallic);
                                 newMat.SetFloat("_Smoothness", smoothness);
 
-                                if (!System.IO.Directory.Exists("Assets/Materials/Generated")) 
-                                    System.IO.Directory.CreateDirectory("Assets/Materials/Generated");
+                                if (!System.IO.Directory.Exists("Assets/Art/Materials/Generated")) 
+                                    System.IO.Directory.CreateDirectory("Assets/Art/Materials/Generated");
                                 AssetDatabase.CreateAsset(newMat, materialAssetPath);
                             }
                             

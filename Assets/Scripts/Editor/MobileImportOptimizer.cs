@@ -223,9 +223,9 @@ namespace TheAlchemistsCrypt.Editor
         private void OnPreprocessTexture()
         {
             // Only auto-apply to assets inside our game directories
-            if (!assetPath.StartsWith("Assets/EgyptianAssets") &&
+            if (!assetPath.StartsWith("Assets/Art/EgyptianAssets") &&
                 !assetPath.StartsWith("Assets/Resources/more_items_for_map") &&
-                !assetPath.StartsWith("Assets/Materials"))
+                !assetPath.StartsWith("Assets/Art/Materials"))
                 return;
 
             var texImporter = assetImporter as TextureImporter;
@@ -246,7 +246,7 @@ namespace TheAlchemistsCrypt.Editor
 
         private void OnPreprocessModel()
         {
-            if (!assetPath.StartsWith("Assets/EgyptianAssets") &&
+            if (!assetPath.StartsWith("Assets/Art/EgyptianAssets") &&
                 !assetPath.StartsWith("Assets/Resources/more_items_for_map"))
                 return;
 

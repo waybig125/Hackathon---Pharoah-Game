@@ -103,12 +103,12 @@ namespace TheAlchemistsCrypt.Editor
                 return 0;
             }
             
-            string targetFolder = "Assets/Materials/Extracted";
+            string targetFolder = "Assets/Art/Materials/Extracted";
             if (!AssetDatabase.IsValidFolder(targetFolder))
             {
-                if (!AssetDatabase.IsValidFolder("Assets/Materials"))
+                if (!AssetDatabase.IsValidFolder("Assets/Art/Materials"))
                     AssetDatabase.CreateFolder("Assets", "Materials");
-                AssetDatabase.CreateFolder("Assets/Materials", "Extracted");
+                AssetDatabase.CreateFolder("Assets/Art/Materials", "Extracted");
             }
             
             int extractedCount = 0;
@@ -744,7 +744,7 @@ namespace TheAlchemistsCrypt.Editor
                     {
                         string glbName = System.IO.Path.GetFileNameWithoutExtension(assetPath);
                         string safeName = mat.name.Replace(":", "_").Replace("/", "_");
-                        string extPath = $"Assets/Materials/Extracted/{glbName}_{safeName}.mat";
+                        string extPath = $"Assets/Art/Materials/Extracted/{glbName}_{safeName}.mat";
                         Material extMat = AssetDatabase.LoadAssetAtPath<Material>(extPath);
                         if (extMat != null)
                         {
