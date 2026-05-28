@@ -1417,11 +1417,14 @@ namespace TheAlchemistsCrypt.UI
             var helper = go.gameObject.AddComponent<ButtonInputHelper>();
             helper.isDraggable = true;
             helper.onDown = () => { sprintToggleState = !sprintToggleState; UpdateSprintVisuals(); SetSprint(sprintToggleState); };
+
+            UpdateSprintVisuals();
         }
 
         private void UpdateSprintVisuals() {
             if (sprintShadowImage && sprintIconImage) {
-                sprintShadowImage.sprite = sprintToggleState ? goldGradientSprite : obsidianSprite;
+                sprintShadowImage.gameObject.SetActive(sprintToggleState);
+                sprintShadowImage.sprite = goldGradientSprite;
                 sprintIconImage.color = sprintToggleState ? Color.white : new Color(0.8f, 0.8f, 0.8f, 1f);
             }
         }
