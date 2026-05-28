@@ -152,14 +152,22 @@ namespace TheAlchemistsCrypt.Gameplay
             beamGo.transform.localScale = new Vector3(2.5f, 375f, 2.5f); // scaled to go high up (key is 0.4f scale)
             DestroyImmediate(beamGo.GetComponent<Collider>());
 
-            Shader beamShader = Shader.Find("Universal Render Pipeline/Unlit");
+            Shader beamShader = Shader.Find("Custom/VolumetricBeam");
+            if (beamShader == null) beamShader = Shader.Find("Universal Render Pipeline/Unlit");
             if (beamShader == null) beamShader = Shader.Find("Universal Render Pipeline/Lit");
             if (beamShader == null) beamShader = Shader.Find("Lit");
             Material beamMat = new Material(beamShader);
             beamMat.name = "VolumetricBeamMat";
 
             Color beamColor = new Color(0.96f, 0.75f, 0.5f, 0.12f); // Soft glowing translucent sunset gold
-            if (beamShader.name != null && beamShader.name.Contains("Universal Render Pipeline"))
+            if (beamShader != null && beamShader.name == "Custom/VolumetricBeam")
+            {
+                beamMat.SetColor("_Color", beamColor);
+                beamMat.SetFloat("_GlowIntensity", 3.0f);
+                beamMat.SetFloat("_FresnelPower", 2.0f);
+                beamMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            }
+            else if (beamShader != null && beamShader.name != null && beamShader.name.Contains("Universal Render Pipeline"))
             {
                 beamMat.SetFloat("_Surface", 1f); // Transparent
                 beamMat.SetFloat("_Blend", 0f); // Alpha blend
