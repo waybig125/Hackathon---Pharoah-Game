@@ -9,7 +9,7 @@ namespace TheAlchemistsCrypt.Gameplay
     public class BootManager : MonoBehaviour
     {
         [Header("Scene Settings")]
-        [SerializeField] private string targetSceneName = "SampleScene"; // Main game scene
+        [SerializeField] private string targetSceneName = "MainGame"; // Main game scene
 
         [Header("UI References")]
         private GameObject loadingUiGo;
