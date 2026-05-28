@@ -42,6 +42,58 @@ namespace TheAlchemistsCrypt.Gameplay
             if (voiceSource == null) InitializeSources();
         }
 
+        private void OnEnable()
+        {
+            if (Application.isPlaying)
+            {
+                TheAlchemistsCrypt.Core.EventManager.Subscribe<TheAlchemistsCrypt.Core.EnemyDeathEvent>(OnEnemyDeath);
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (Application.isPlaying)
+            {
+                TheAlchemistsCrypt.Core.EventManager.Unsubscribe<TheAlchemistsCrypt.Core.EnemyDeathEvent>(OnEnemyDeath);
+            }
+        }
+
+        private void OnEnemyDeath(TheAlchemistsCrypt.Core.EnemyDeathEvent evt)
+        {
+            StartCoroutine(CheckNearbyMummiesDeferred());
+        }
+
+        private IEnumerator CheckNearbyMummiesDeferred()
+        {
+            yield return null; // Wait for the dying mummy to deactivate/complete its state change
+
+            var allMummies = GameObject.FindObjectsByType<TheAlchemistsCrypt.AI.ZombieAI>(FindObjectsInactive.Exclude);
+            bool anyNearby = false;
+
+            var player = GameObject.FindGameObjectWithTag("Player");
+            if (player == null) {
+                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                if (character != null) player = character.gameObject;
+            }
+
+            if (player != null)
+            {
+                foreach (var m in allMummies)
+                {
+                    if (m != null && !m.IsDead &&
+                        (m.transform.position - player.transform.position).sqrMagnitude < 625f)
+                    {
+                        anyNearby = true;
+                        break;
+                    }
+                }
+            }
+            if (!anyNearby)
+            {
+                PlayMainTheme();
+            }
+        }
+
         private void InitializeSources()
         {
             // Clean up existing sources if they exist (to avoid duplicates in editor)

@@ -720,25 +720,12 @@ namespace TheAlchemistsCrypt.AI
                 TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mummy_death", false, 0.6f, 0.2f);
             }
 
-            // Switch back to main theme if no other mummies are nearby
-            var allMummies = GameObject.FindObjectsByType<ZombieAI>(FindObjectsInactive.Exclude);
-            bool anyNearby = false;
-            if (player != null)
+            // Trigger decoupled death event
+            TheAlchemistsCrypt.Core.EventManager.Trigger(new TheAlchemistsCrypt.Core.EnemyDeathEvent
             {
-                foreach (var m in allMummies)
-                {
-                    if (m != null && !m.IsDead && m != this &&
-                        (m.transform.position - player.position).sqrMagnitude < 625f)
-                    {
-                        anyNearby = true;
-                        break;
-                    }
-                }
-            }
-            if (!anyNearby)
-            {
-                TheAlchemistsCrypt.Gameplay.AudioManager.PlayMainTheme();
-            }
+                EnemyObject = gameObject,
+                Position = transform.position
+            });
 
             // Attempt to trigger Die/Death animation
             PlayAnimation("Die");
