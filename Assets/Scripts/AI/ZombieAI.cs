@@ -259,14 +259,9 @@ namespace TheAlchemistsCrypt.AI
                 }
             }
 
-            GameObject exp = new GameObject("AcidExplosionLight");
-            exp.transform.position = transform.position + Vector3.up;
-            Light l = exp.AddComponent<Light>();
-            l.type = LightType.Point;
-            l.color = Color.green;
-            l.intensity = 18f;
-            l.range = 7f;
-            Destroy(exp, 0.5f);
+            if (TheAlchemistsCrypt.Gameplay.VFXManager.Instance != null) {
+                TheAlchemistsCrypt.Gameplay.VFXManager.Instance.PlayAcidExplosion(transform.position + Vector3.up);
+            }
         }
 
         private void TriggerThermiteBlaze()
@@ -312,30 +307,23 @@ namespace TheAlchemistsCrypt.AI
 
         private void TriggerCrystalShatter()
         {
-            TakeDamage(30f);
-            TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mummy_death", false, 0.8f, 0f);
-            SetStatusColor(new Color(0.7f, 0.9f, 1f));
-
-            Collider[] colliders = Physics.OverlapSphere(transform.position, 6.0f);
+            TakeDamage(10f);
+            SetStatusColor(new Color(0f, 0.8f, 1f));
+            
+            Collider[] colliders = Physics.OverlapSphere(transform.position, 4.0f);
             foreach (Collider c in colliders)
             {
                 var z = c.GetComponent<ZombieAI>();
                 if (z == null) z = c.GetComponentInParent<ZombieAI>();
                 if (z != null && z != this && !z.IsDead)
                 {
-                    z.ApplyMercurySlow(4f);
-                    z.TakeDamage(8f);
+                    z.ApplyMercurySlow(3.0f);
                 }
             }
 
-            GameObject exp = new GameObject("IceExplosionLight");
-            exp.transform.position = transform.position + Vector3.up;
-            Light l = exp.AddComponent<Light>();
-            l.type = LightType.Point;
-            l.color = new Color(0.5f, 0.8f, 1f);
-            l.intensity = 15f;
-            l.range = 8f;
-            Destroy(exp, 0.5f);
+            if (TheAlchemistsCrypt.Gameplay.VFXManager.Instance != null) {
+                TheAlchemistsCrypt.Gameplay.VFXManager.Instance.PlayShatterExplosion(transform.position + Vector3.up);
+            }
         }
 
         private bool combatMusicTriggered = false;
