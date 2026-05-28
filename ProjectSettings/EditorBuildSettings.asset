@@ -11,6 +11,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/MainGame.unity
     guid: b21b0120eec4f41a5829cd46ceafdd3d
+  - enabled: 1
+    path: Assets/Scenes/EscapeCinematicScene.unity
+    guid: 8267228cc240046fd976978751c5e590
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: 9eb07e2d669e9c94e9d7d3c782a916f7,
       type: 2}
