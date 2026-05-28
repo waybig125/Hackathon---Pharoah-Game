@@ -29,6 +29,13 @@ namespace TheAlchemistsCrypt.Gameplay
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 9999;
             
+            // Add a simple camera to satisfy Unity's rendering pipeline and avoid "No cameras rendering" warnings
+            var camGo = new GameObject("BootCamera", typeof(Camera));
+            var cam = camGo.GetComponent<Camera>();
+            cam.backgroundColor = new Color(0.05f, 0.05f, 0.05f, 1f);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.orthographic = true;
+            
             var scaler = canvasGo.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);

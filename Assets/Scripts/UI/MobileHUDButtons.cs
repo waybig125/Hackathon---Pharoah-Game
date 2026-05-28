@@ -1391,7 +1391,7 @@ namespace TheAlchemistsCrypt.UI
             var shadowGo = new GameObject("Shadow", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             shadowGo.SetParent(go, false); shadowGo.anchorMin = Vector2.zero; shadowGo.anchorMax = Vector2.one; shadowGo.offsetMin = shadowGo.offsetMax = Vector2.zero;
             var shadowImg = shadowGo.GetComponent<Image>(); shadowImg.sprite = goldGradientSprite; shadowImg.raycastTarget = false;
-            shadowGo.SetActive(false);
+            shadowGo.gameObject.SetActive(false);
 
             var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             iconGo.SetParent(go, false); iconGo.anchorMin = Vector2.zero; iconGo.anchorMax = Vector2.one; iconGo.offsetMin = iconGo.offsetMax = Vector2.zero;
@@ -1400,7 +1400,7 @@ namespace TheAlchemistsCrypt.UI
 
             var helper = go.gameObject.AddComponent<ButtonInputHelper>();
             helper.isDraggable = true;
-            helper.glowObject = shadowGo;
+            helper.glowObject = shadowGo.gameObject;
             helper.onDown = () => { go.localScale = new Vector3(0.9f, 0.9f, 1f); iImg.color = new Color(0.8f, 0.8f, 0.8f, 1f); onDown?.Invoke(); };
             helper.onUp = () => { go.localScale = new Vector3(1f, 1f, 1f); iImg.color = Color.white; onUp?.Invoke(); };
         }
@@ -1414,7 +1414,7 @@ namespace TheAlchemistsCrypt.UI
             var shadowGo = new GameObject("Shadow", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             shadowGo.SetParent(go, false); shadowGo.anchorMin = Vector2.zero; shadowGo.anchorMax = Vector2.one; shadowGo.offsetMin = shadowGo.offsetMax = Vector2.zero;
             sprintShadowImage = shadowGo.GetComponent<Image>(); sprintShadowImage.sprite = goldGradientSprite; sprintShadowImage.raycastTarget = false;
-            shadowGo.SetActive(false);
+            shadowGo.gameObject.SetActive(false);
 
             var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             iconGo.SetParent(go, false); iconGo.anchorMin = Vector2.zero; iconGo.anchorMax = Vector2.one; iconGo.offsetMin = iconGo.offsetMax = Vector2.zero;
