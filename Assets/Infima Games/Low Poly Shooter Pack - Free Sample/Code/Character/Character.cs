@@ -519,6 +519,9 @@ namespace InfimaGames.LowPolyShooterPack
 		/// </summary>
 		private void UpdateCursorState()
 		{
+			// HACKATHON FIX: Do not enforce cursor lock if the game is paused (e.g., Settings menu is open).
+			if (Time.timeScale <= 0.01f) return;
+			
 			//Update lock state.
 			Cursor.lockState = cursorLocked ? CursorLockMode.Locked : CursorLockMode.None;
 			//Update visible state.

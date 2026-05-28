@@ -47,7 +47,19 @@ namespace TheAlchemistsCrypt.Gameplay
             var bgRect = bgGo.GetComponent<RectTransform>();
             bgRect.anchorMin = Vector2.zero; bgRect.anchorMax = Vector2.one;
             bgRect.offsetMin = bgRect.offsetMax = Vector2.zero;
-            bgGo.GetComponent<Image>().color = new Color(0.05f, 0.05f, 0.05f, 1f);
+            var bgImg = bgGo.GetComponent<Image>();
+            bgImg.color = Color.white;
+            
+            // Load the generated background sprite
+            var bgTex = Resources.Load<Texture2D>("egyptian_items/BootBackground");
+            if (bgTex != null)
+            {
+                bgImg.sprite = Sprite.Create(bgTex, new Rect(0, 0, bgTex.width, bgTex.height), new Vector2(0.5f, 0.5f));
+            }
+            else
+            {
+                bgImg.color = new Color(0.05f, 0.05f, 0.05f, 1f);
+            }
 
             // Title
             var titleGo = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -57,7 +69,7 @@ namespace TheAlchemistsCrypt.Gameplay
             titleRect.anchoredPosition = new Vector2(0, 100);
             titleRect.sizeDelta = new Vector2(800, 100);
             var titleTxt = titleGo.GetComponent<TextMeshProUGUI>();
-            titleTxt.text = "THE PHARAOH'S VAULT";
+            titleTxt.text = "THE ALCHEMIST CRYPT";
             titleTxt.fontSize = 64;
             titleTxt.fontStyle = FontStyles.Bold;
             titleTxt.alignment = TextAlignmentOptions.Center;
@@ -82,18 +94,7 @@ namespace TheAlchemistsCrypt.Gameplay
             progressBar = pbFillGo.GetComponent<Image>();
             progressBar.color = new Color(0.95f, 0.8f, 0.2f, 1f);
 
-            // Loading Text
-            loadingUiGo = new GameObject("LoadingText", typeof(RectTransform), typeof(TextMeshProUGUI));
-            loadingUiGo.transform.SetParent(canvasGo.transform, false);
-            var loadingRect = loadingUiGo.GetComponent<RectTransform>();
-            loadingRect.anchorMin = loadingRect.anchorMax = new Vector2(0.5f, 0.5f);
-            loadingRect.anchoredPosition = new Vector2(0, -140);
-            loadingRect.sizeDelta = new Vector2(400, 50);
-            loadingText = loadingUiGo.GetComponent<TextMeshProUGUI>();
-            loadingText.text = "Loading Vault Environment... 0%";
-            loadingText.fontSize = 24;
-            loadingText.alignment = TextAlignmentOptions.Center;
-            loadingText.color = Color.white;
+            // Removed Loading Text to simplify the bootloader design
         }
 
         private IEnumerator LoadMainGameAsync()
@@ -114,11 +115,6 @@ namespace TheAlchemistsCrypt.Gameplay
                 {
                     var rect = progressBar.GetComponent<RectTransform>();
                     rect.anchorMax = new Vector2(progress, 1f);
-                }
-                
-                if (loadingText != null)
-                {
-                    loadingText.text = $"Loading Vault Environment... {Mathf.RoundToInt(progress * 100)}%";
                 }
                 
                 yield return null;

@@ -304,6 +304,9 @@ private Sprite buildingSprite;
                 var item = new GameObject("LegendItem_" + labels[i], typeof(RectTransform), typeof(Text));
                 var itemRect = item.GetComponent<RectTransform>();
                 itemRect.SetParent(legendRect, false);
+                itemRect.anchorMin = new Vector2(0, 1);
+                itemRect.anchorMax = new Vector2(0, 1);
+                itemRect.pivot = new Vector2(0, 1);
                 itemRect.anchoredPosition = new Vector2(20, -20 - (i * 22)); // Tighter spacing
                 itemRect.sizeDelta = new Vector2(200, 25);
                 
@@ -320,7 +323,8 @@ private Sprite buildingSprite;
             closeRect.SetParent(minimapFrame, false);
             closeRect.anchorMin = new Vector2(1, 1);
             closeRect.anchorMax = new Vector2(1, 1);
-            closeRect.anchoredPosition = new Vector2(-120, -40);
+            closeRect.pivot = new Vector2(1, 1);
+            closeRect.anchoredPosition = new Vector2(-20, -20);
             closeRect.sizeDelta = new Vector2(200, 40);
             var closeTxt = closeGo.GetComponent<Text>();
             closeTxt.text = "TAP TO CLOSE [X]";
