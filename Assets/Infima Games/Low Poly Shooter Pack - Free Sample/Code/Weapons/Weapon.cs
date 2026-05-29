@@ -214,9 +214,9 @@ namespace InfimaGames.LowPolyShooterPack
             //Get Muzzle Socket. This is the point we fire from.
             Transform muzzleSocket = muzzleBehaviour.GetSocket();
             
-            //Play the firing animation.
+            //Play the firing animation with a smooth blend to prevent violent snapping (stutter bug)
             const string stateName = "Fire";
-            animator.Play(stateName, 0, 0.0f);
+            animator.CrossFade(stateName, 0.02f, 0, 0.0f);
             //Reduce ammunition! We just shot, so we need to get rid of one!
             ammunitionCurrent = Mathf.Clamp(ammunitionCurrent - 1, 0, magazineBehaviour.GetAmmunitionTotal());
 
@@ -231,11 +231,21 @@ namespace InfimaGames.LowPolyShooterPack
                 out RaycastHit hit, maximumDistance, mask))
                 rotation = Quaternion.LookRotation(hit.point - muzzleSocket.position);
                 
-            //Spawn projectile from the projectile spawn point.
-            GameObject projectile = Instantiate(prefabProjectile, muzzleSocket.position, rotation);
+            //Spawn projectile slightly forward to prevent clipping with the player/gun colliders
+            Vector3 spawnOffset = rotation * Vector3.forward * 0.25f;
+            GameObject projectile = Instantiate(prefabProjectile, muzzleSocket.position + spawnOffset, rotation);
             //Add velocity to the projectile.
-            projectile.GetComponent<Rigidbody>().linearVelocity = projectile.transform.forward * projectileImpulse;   
-        }
+            projectile.GetComponent<Rigidbody>().linearVelocity = projectile.transform.forward * projectileImpulse;
+
+            // --- HACKATHON: Dynamic Muzzle Flash Light ---
+            GameObject flash = new GameObject("MuzzleFlashLight");
+            flash.transform.position = muzzleSocket.position;
+            var light = flash.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = new Color(1f, 0.8f, 0.3f);
+            light.range = 8f;
+            light.intensity = 5f;
+            Destroy(flash, 0.05f); // Super fast flash
 
         public override void FillAmmunition(int amount)
         {

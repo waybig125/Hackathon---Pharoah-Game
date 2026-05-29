@@ -976,7 +976,7 @@ namespace TheAlchemistsCrypt.UI
                         }
                     }
                     tex.Apply();
-                    return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+                    return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(cornerRadius, cornerRadius, cornerRadius, cornerRadius));
                 }
 
                 private Sprite CreateDiamondTickSprite(int w, int h)

@@ -300,9 +300,9 @@ namespace TheAlchemistsCrypt.Editor
 
             bool isUnifiedAlbedoAsset = isStoneAsset;
             if (srcLower.Contains("column") || srcLower.Contains("pillar") || 
-                srcLower.Contains("ladder") || 
+                srcLower.Contains("ladder") || srcLower.Contains("crate") || srcLower.Contains("barrel") || 
                 glbLower.Contains("column") || glbLower.Contains("pillar") || 
-                glbLower.Contains("ladder"))
+                glbLower.Contains("ladder") || glbLower.Contains("crate") || glbLower.Contains("barrel"))
             {
                 isStoneAsset = false;
                 isUnifiedAlbedoAsset = false;

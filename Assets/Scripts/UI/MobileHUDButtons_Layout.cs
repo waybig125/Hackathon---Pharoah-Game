@@ -237,7 +237,10 @@ namespace TheAlchemistsCrypt.UI
                     hpLblTxt.fontSize = 14;
                     hpLblTxt.fontStyle = FontStyles.Bold;
                     hpLblTxt.alignment = TextAlignmentOptions.Left;
-                    hpLblTxt.color = new Color(0.95f, 0.62f, 0.15f, 1f); // Amber label
+                    hpLblTxt.color = new Color(1.0f, 0.75f, 0.15f, 1f); // Brighter Amber
+                    var hpOut = hpLblGo.gameObject.AddComponent<UnityEngine.UI.Outline>();
+                    hpOut.effectColor = new Color(0, 0, 0, 0.8f);
+                    hpOut.effectDistance = new Vector2(1, -1);
                     hpLblTxt.text = "HP";
 
                     // Hidden healthText (kept for compatibility)
@@ -280,7 +283,10 @@ namespace TheAlchemistsCrypt.UI
                     healthValueText.fontSize = 16;
                     healthValueText.fontStyle = FontStyles.Bold;
                     healthValueText.alignment = TextAlignmentOptions.Right;
-                    healthValueText.color = new Color(0.25f, 0.95f, 0.38f, 1f); // Vivid green
+                    healthValueText.color = new Color(0.4f, 1.0f, 0.5f, 1f); // Vivid bright green
+                    var hpValOut = hpValGo.gameObject.AddComponent<UnityEngine.UI.Outline>();
+                    hpValOut.effectColor = new Color(0, 0, 0, 0.8f);
+                    hpValOut.effectDistance = new Vector2(1, -1);
                     healthValueText.text = "100%";
 
                     // DOTween entrance slide-in
@@ -338,7 +344,10 @@ namespace TheAlchemistsCrypt.UI
                     ammoLblTxt.fontSize = 14;
                     ammoLblTxt.fontStyle = FontStyles.Bold;
                     ammoLblTxt.alignment = TextAlignmentOptions.Left;
-                    ammoLblTxt.color = new Color(0.95f, 0.62f, 0.15f, 1f);
+                    ammoLblTxt.color = new Color(1.0f, 0.75f, 0.15f, 1f); // Brighter Amber
+                    var amOut = ammoLblGo.gameObject.AddComponent<UnityEngine.UI.Outline>();
+                    amOut.effectColor = new Color(0, 0, 0, 0.8f);
+                    amOut.effectDistance = new Vector2(1, -1);
                     ammoLblTxt.text = "AM";
 
                     // Bar background
@@ -359,7 +368,8 @@ namespace TheAlchemistsCrypt.UI
                     amFillGo.anchorMin = new Vector2(0f, 0f); amFillGo.anchorMax = new Vector2(1f, 1f);
                     amFillGo.offsetMin = new Vector2(0f, 0f); amFillGo.offsetMax = new Vector2(0f, 0f);
                     ammoBarFill = amFillGo.GetComponent<Image>();
-                    ammoBarFill.fillAmount = 1.0f;
+                    ammoBarFill.sprite = CreateRoundedRectSprite(24, 24, new Color(0.95f, 0.55f, 0.05f, 0.85f), 12);
+                    ammoBarFill.type = Image.Type.Sliced;
 
                     // Ammo Count text value on the right
                     var ammoCountValGo = new GameObject("AmmoCountValueText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
@@ -373,7 +383,10 @@ namespace TheAlchemistsCrypt.UI
                     ammoValueText.fontSize = 16;
                     ammoValueText.fontStyle = FontStyles.Bold;
                     ammoValueText.alignment = TextAlignmentOptions.Right;
-                    ammoValueText.color = new Color(0.95f, 0.72f, 0.12f, 1f); // Gold/Amber matching element theme
+                    ammoValueText.color = new Color(1.0f, 0.85f, 0.3f, 1f); // Bright yellow
+                    var amValOut = ammoCountValGo.gameObject.AddComponent<UnityEngine.UI.Outline>();
+                    amValOut.effectColor = new Color(0, 0, 0, 0.8f);
+                    amValOut.effectDistance = new Vector2(1, -1);
                     ammoValueText.text = "30/30";
 
                     // DOTween entrance slide-in (slight delay after HP bar)

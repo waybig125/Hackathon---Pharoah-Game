@@ -499,12 +499,7 @@ namespace TheAlchemistsCrypt.Editor
                                     BuildProceduralLadderRamp(root.transform, ladderBasePos, houseHeight, targetAngleY);
                                 }
                                 
-                                // Occasional stall in residential areas
-                                if (Random.value < 0.15f && stallPrefabs.Count > 0) {
-                                    Vector3 sPos = pos + new Vector3(Random.Range(-10f, 10f), 0f, Random.Range(-10f, 10f));
-                                    sPos.y = GetTerrainHeight(sPos);
-                                    PlaceIntegratedAsset(root.transform, sPos, stallPrefabs[Random.Range(0, stallPrefabs.Count)], 0.8f, true, false, 0f, Random.Range(0f, 360f), true);
-                                }
+
                             } else {
                                 BuildHouse(root.transform, pos, wallMat, woodMat, litWindowMat, darkWindowMat, crate, barrel, floorMat, targetAngleY);
                                 occupiedPositions.Add(pos);
@@ -600,6 +595,33 @@ namespace TheAlchemistsCrypt.Editor
                 if (pos.y > 0.5f) {
                     BuildProceduralObelisk(root.transform, pos, wallMat, Random.value < 0.5f, Random.value < 0.4f);
                     occupiedPositions.Add(pos);
+                }
+            }
+
+            // Spawn extra crates and barrels
+            int extraCrates = 200;
+            var cratePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/EgyptianAssets/crate.glb");
+            var barrelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/EgyptianAssets/barrel.glb");
+            if (cratePrefab != null && barrelPrefab != null) {
+                for (int i = 0; i < extraCrates; i++) {
+                    float rx = Random.Range(-240f, 240f);
+                    float rz = Random.Range(-40f, 240f);
+                    Vector3 pos = new Vector3(rx, 0f, rz);
+                    
+                    bool tooClose = false;
+                    foreach (var occ in occupiedPositions) {
+                        if (Vector3.Distance(pos, occ) < 4f) { // Crates can be closer to buildings
+                            tooClose = true;
+                            break;
+                        }
+                    }
+                    if (tooClose) continue;
+
+                    pos.y = GetTerrainHeight(pos);
+                    if (pos.y > 0.5f) {
+                        GameObject prefabToUse = (Random.value < 0.5f) ? cratePrefab : barrelPrefab;
+                        PlaceIntegratedAsset(root.transform, pos, prefabToUse, 1.0f, true, false, 0f, Random.Range(0f, 360f), false);
+                    }
                 }
             }
 
@@ -901,10 +923,19 @@ namespace TheAlchemistsCrypt.Editor
                                 continue;
                             }
 
-                            // PERFORMANCE: Use primitive BoxCollider instead of MeshCollider for non-enterable objects
-                            var bc = filterObj.gameObject.GetComponent<BoxCollider>();
-                            if (bc == null) {
-                                bc = filterObj.gameObject.AddComponent<BoxCollider>();
+                            // PERFORMANCE: Use MeshCollider for complex structures like houses to support roof walking, otherwise BoxCollider
+                            if (pName.Contains("house") || filterName.Contains("house") || pName.Contains("building")) {
+                                var mc = filterObj.gameObject.GetComponent<MeshCollider>();
+                                if (mc == null) {
+                                    mc = filterObj.gameObject.AddComponent<MeshCollider>();
+                                }
+                                mc.sharedMesh = filterObj.sharedMesh;
+                                mc.convex = false;
+                            } else {
+                                var bc = filterObj.gameObject.GetComponent<BoxCollider>();
+                                if (bc == null) {
+                                    bc = filterObj.gameObject.AddComponent<BoxCollider>();
+                                }
                             }
                         }
                     } else {

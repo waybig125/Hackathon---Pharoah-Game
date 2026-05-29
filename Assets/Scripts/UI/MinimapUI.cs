@@ -374,10 +374,7 @@ private Sprite buildingSprite;
                 {
                     CreateSeaZoneIcon(go.transform.position, new Vector2(go.transform.localScale.x, go.transform.localScale.y), ColorBeach);
                 }
-                else if (lowerName.Contains("pyramid"))
-                {
-                    CreateStaticIcon(go, new Vector2(80, 80), buildingSprite);
-                }
+
                 else if (lowerName.Contains("house") || lowerName.Contains("building") || lowerName.Contains("temple"))
                 {
                     CreateStaticIcon(go, new Vector2(40, 40), buildingSprite);

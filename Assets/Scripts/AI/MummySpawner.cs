@@ -156,7 +156,7 @@ namespace TheAlchemistsCrypt.AI
             {
                 if (UnityEngine.AI.NavMesh.SamplePosition(spawnPos, out hit, 50f, UnityEngine.AI.NavMesh.AllAreas))
                 {
-                    if (hit.position.z >= -50f) // Valid city-side position
+                    if (hit.position.z >= -50f && !Physics.CheckSphere(hit.position + Vector3.up * 1f, 0.5f)) // Reject beach and walls
                     {
                         spawnPos = hit.position;
                         break;
@@ -211,8 +211,21 @@ namespace TheAlchemistsCrypt.AI
             Vector3 spawnPos = spawnCenter + new Vector3(Mathf.Cos(angle) * distance, 0.5f, Mathf.Sin(angle) * distance);
 
             UnityEngine.AI.NavMeshHit hit;
-            if (UnityEngine.AI.NavMesh.SamplePosition(spawnPos, out hit, 50f, UnityEngine.AI.NavMesh.AllAreas)) {
-                spawnPos = hit.position;
+            int attempts = 0;
+            while (attempts < 10)
+            {
+                if (UnityEngine.AI.NavMesh.SamplePosition(spawnPos, out hit, 50f, UnityEngine.AI.NavMesh.AllAreas))
+                {
+                    if (hit.position.z >= -50f && !Physics.CheckSphere(hit.position + Vector3.up * 1f, 0.5f))
+                    {
+                        spawnPos = hit.position;
+                        break;
+                    }
+                }
+                angle = Random.Range(30f, 330f) * Mathf.Deg2Rad;
+                distance = Random.Range(20f, 30f);
+                spawnPos = spawnCenter + new Vector3(Mathf.Cos(angle) * distance, 0.5f, Mathf.Sin(angle) * distance);
+                attempts++;
             }
 
             GameObject go = pharaohPool.Get();

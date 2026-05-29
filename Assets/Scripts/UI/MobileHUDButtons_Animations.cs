@@ -30,7 +30,7 @@ namespace TheAlchemistsCrypt.UI
         private void SetupAnimationsUI(RectTransform root)
         {
             // 1. Setup Visceral Catch-up Health Bar
-            var hpBgBarGo = GameObject.Find("MobileHUD_Root/CustomHealthPanel/HpBarBg");
+            var hpBgBarGo = GameObject.Find("MobileHUD_Root/HealthPanel/HpBarBg");
             if (hpBgBarGo != null)
             {
                 var catchUpGo = new GameObject("HpCatchUpFill", typeof(RectTransform), typeof(Image));
@@ -220,7 +220,7 @@ namespace TheAlchemistsCrypt.UI
             {
                 StartHUDBarBubbles(hpBgBarGo.transform, healthBarFill, new Vector2(208f, 22f), new Color(1.0f, 0.6f, 0.2f, 0.6f));
             }
-            var amBgBarGo = GameObject.Find("MobileHUD_Root/CustomAmmoPanel/AmBarBg");
+            var amBgBarGo = GameObject.Find("MobileHUD_Root/AmmoPanel/AmBarBg");
             if (amBgBarGo != null && ammoBarFill != null)
             {
                 StartHUDBarBubbles(amBgBarGo.transform, ammoBarFill, new Vector2(208f, 22f), new Color(0.95f, 0.82f, 0.12f, 0.6f));
