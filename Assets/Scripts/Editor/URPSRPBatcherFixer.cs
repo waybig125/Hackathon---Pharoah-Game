@@ -31,6 +31,7 @@ namespace TheAlchemistsCrypt.Editor
             int extracted = ExtractAndConvertAllGLBMaterials();
             int converted = FixAllSceneMaterials();
             FixDarkExtractedMaterials(); // Clean metallic/emission maps/keywords
+            RemoveTerrainPackTrees(); // Clean up unwanted terrain pack trees
             DisableGPUResidentDrawerAllAssets(silent: true);
             EditorUtility.DisplayDialog(
                 "SRP Batcher Fix Complete",
@@ -38,9 +39,35 @@ namespace TheAlchemistsCrypt.Editor
                 $"Converted {converted} non-URP material(s) to URP Lit.\n" +
                 "GPU Instancing has been enabled on all materials.\n" +
                 "Static batching flags applied to city objects.\n" +
-                "GPU Resident Drawer disabled on all pipeline assets.\n\n" +
+                "GPU Resident Drawer disabled on all pipeline assets.\n" +
+                "Unwanted terrain-pack trees removed from scene.\n\n" +
                 "SRP Batcher should now show active batches in the Frame Debugger.",
                 "OK");
+        }
+
+        public static void RemoveTerrainPackTrees()
+        {
+            GameObject desertTerrain = GameObject.Find("DesertTerrain");
+            if (desertTerrain != null)
+            {
+                var children = desertTerrain.GetComponentsInChildren<Transform>(true);
+                int count = 0;
+                foreach (var child in children)
+                {
+                    if (child != null && child != desertTerrain.transform &&
+                        (child.name.StartsWith("Tree", System.StringComparison.OrdinalIgnoreCase) ||
+                         child.name.Contains("Tree") ||
+                         child.name.Contains("tree")))
+                    {
+                        Object.DestroyImmediate(child.gameObject);
+                        count++;
+                    }
+                }
+                if (count > 0)
+                {
+                    Debug.Log($"[URPSRPBatcherFixer] Destroyed {count} unwanted terrain trees from DesertTerrain.");
+                }
+            }
         }
 
         // [MenuItem("Egyptian/Extract and Convert GLB Materials", false, 15)]
@@ -273,13 +300,9 @@ namespace TheAlchemistsCrypt.Editor
 
             bool isUnifiedAlbedoAsset = isStoneAsset;
             if (srcLower.Contains("column") || srcLower.Contains("pillar") || 
-                srcLower.Contains("ladder") || srcLower.Contains("door") || 
-                srcLower.Contains("gate") || srcLower.Contains("stall") || 
-                srcLower.Contains("obelisk") || srcLower.Contains("prop") ||
+                srcLower.Contains("ladder") || 
                 glbLower.Contains("column") || glbLower.Contains("pillar") || 
-                glbLower.Contains("ladder") || glbLower.Contains("door") || 
-                glbLower.Contains("gate") || glbLower.Contains("stall") || 
-                glbLower.Contains("obelisk") || glbLower.Contains("prop"))
+                glbLower.Contains("ladder"))
             {
                 isStoneAsset = false;
                 isUnifiedAlbedoAsset = false;

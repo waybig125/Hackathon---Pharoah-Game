@@ -415,7 +415,7 @@ namespace TheAlchemistsCrypt.Editor
             var unityTerrainGo = Terrain.CreateTerrainGameObject(terrainData);
             unityTerrainGo.name = "TerrainFloor";
             unityTerrainGo.transform.SetParent(root.transform);
-            unityTerrainGo.transform.position = new Vector3(-500f, -0.15f, -500f);
+            unityTerrainGo.transform.position = new Vector3(-500f, -15f, -500f);
             unityTerrainGo.isStatic = true;
             var unityTerrainComp = unityTerrainGo.GetComponent<Terrain>();
             if (unityTerrainComp != null) {
@@ -452,6 +452,7 @@ namespace TheAlchemistsCrypt.Editor
                     var mc = terrainGo.GetComponent<MeshCollider>();
                     if (mc == null) mc = terrainGo.AddComponent<MeshCollider>();
                     mc.convex = false;
+                    Physics.SyncTransforms();
                     
                     // Apply sandstone texture
                     var renderer = terrainGo.GetComponent<MeshRenderer>();

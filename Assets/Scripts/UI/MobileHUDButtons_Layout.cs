@@ -90,15 +90,15 @@ namespace TheAlchemistsCrypt.UI
                     if (smogSprite != null)
                     {
                         horrorImg.sprite = smogSprite;
-                        // Green fog vignette — alpha 0.42 is clearly visible but not oppressive
-                        horrorImg.color = new Color(0.04f, 0.22f, 0.08f, 0.42f);
+                        // Green fog vignette — alpha 0.45 is clearly visible but not oppressive
+                        horrorImg.color = new Color(0.2f, 0.55f, 0.25f, 0.45f);
                         horrorImg.type = Image.Type.Simple;
                         horrorImg.preserveAspect = false;
                     }
                     else
                     {
                         // Fallback: Soft radial vignette — dark green only at screen edges (fog effect)
-                        horrorImg.sprite = CreateProceduralGradientSprite(256, 256, new Color(0f, 0.12f, 0.03f, 0f), new Color(0f, 0.22f, 0.06f, 0.55f));
+                        horrorImg.sprite = CreateProceduralGradientSprite(256, 256, new Color(0f, 0.35f, 0.1f, 0f), new Color(0.1f, 0.55f, 0.2f, 0.55f));
                         horrorImg.color = Color.white;
                     }
                     horrorImg.raycastTarget = false;

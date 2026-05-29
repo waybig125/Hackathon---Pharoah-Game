@@ -225,7 +225,7 @@ namespace TheAlchemistsCrypt.Editor
                                 var smogRenderer = smogGo.GetComponent<Renderer>();
                                 if (smogRenderer != null) {
                                     var smogMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-                                    var smogTex = AssetDatabase.LoadAssetAtPath<Texture>("Assets/#NVJOB Dynamic Sky/Example Scenes/Environment/Spaceship/Materials/Smog.png");
+                                    var smogTex = AssetDatabase.LoadAssetAtPath<Texture>("Assets/Resources/Textures/Smog.png");
                                     if (smogTex != null) {
                                         smogMat.SetTexture("_BaseMap", smogTex);
                                     }

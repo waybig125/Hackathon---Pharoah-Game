@@ -20,7 +20,8 @@ public class SpriteImporter
             "Assets/Resources/egypt_themed_icons/swap_weapon.png",
             "Assets/Resources/egypt_themed_icons/sprint.png",
             "Assets/Resources/egypt_themed_icons/jump.png",
-            "Assets/Resources/egypt_themed_icons/focus_icon.png"
+            "Assets/Resources/egypt_themed_icons/focus_icon.png",
+            "Assets/Resources/Textures/Smog.png"
         };
 
         foreach (var path in paths)
