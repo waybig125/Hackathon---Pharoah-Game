@@ -420,11 +420,50 @@ namespace TheAlchemistsCrypt.Editor
                     Vector3 apex = new Vector3(0, height, 0); Vector3 fl = new Vector3(-half, 0, -half), fr = new Vector3(half, 0, -half), br = new Vector3(half, 0, half), bl = new Vector3(-half, 0, half);
                     mesh.vertices = new Vector3[] { fl, fr, apex, fr, br, apex, br, bl, apex, bl, fl, apex, bl, br, fl, br, fr, fl };
                     mesh.triangles = new int[] { 0, 2, 1, 3, 5, 4, 6, 8, 7, 9, 11, 10, 12, 14, 13, 15, 17, 16 };
+                    
+                    // Add UV mapping for texturing
+                    Vector2[] uvs = new Vector2[18];
+                    // Face 1 (fl, fr, apex)
+                    uvs[0] = new Vector2(0f, 0f); uvs[1] = new Vector2(1f, 0f); uvs[2] = new Vector2(0.5f, 1f);
+                    // Face 2 (fr, br, apex)
+                    uvs[3] = new Vector2(0f, 0f); uvs[4] = new Vector2(1f, 0f); uvs[5] = new Vector2(0.5f, 1f);
+                    // Face 3 (br, bl, apex)
+                    uvs[6] = new Vector2(0f, 0f); uvs[7] = new Vector2(1f, 0f); uvs[8] = new Vector2(0.5f, 1f);
+                    // Face 4 (bl, fl, apex)
+                    uvs[9] = new Vector2(0f, 0f); uvs[10] = new Vector2(1f, 0f); uvs[11] = new Vector2(0.5f, 1f);
+                    // Base Triangle 1
+                    uvs[12] = new Vector2(0f, 0f); uvs[13] = new Vector2(1f, 0f); uvs[14] = new Vector2(0f, 1f);
+                    // Base Triangle 2
+                    uvs[15] = new Vector2(1f, 0f); uvs[16] = new Vector2(1f, 1f); uvs[17] = new Vector2(0f, 1f);
+                    mesh.uv = uvs;
+
                     mesh.RecalculateNormals(); mesh.RecalculateBounds();
                     pGo.AddComponent<MeshFilter>().sharedMesh = mesh;
                     var renderer = pGo.AddComponent<MeshRenderer>();
                     var pMat = new Material(mat);
-                    pMat.SetColor("_BaseColor", new Color(0.78f, 0.52f, 0.35f)); 
+                    
+                    if (baseSize > 20f)
+                    {
+                        pMat.SetColor("_BaseColor", new Color(1f, 0.95f, 0.85f)); 
+                        var albedoTex = Resources.Load<Texture2D>("Textures/Pyramid_Albedo");
+                        var normalTex = Resources.Load<Texture2D>("Textures/Pyramid_Normal");
+                        if (albedoTex != null)
+                        {
+                            pMat.SetTexture("_BaseMap", albedoTex);
+                            pMat.SetTextureScale("_BaseMap", new Vector2(15f, 15f));
+                        }
+                        if (normalTex != null)
+                        {
+                            pMat.SetTexture("_BumpMap", normalTex);
+                            pMat.SetTextureScale("_BumpMap", new Vector2(15f, 15f));
+                            pMat.EnableKeyword("_NORMALMAP");
+                        }
+                    }
+                    else
+                    {
+                        pMat.SetColor("_BaseColor", new Color(0.78f, 0.52f, 0.35f)); 
+                    }
+                    
                     pMat.SetColor("_EmissionColor", glowColor * 1.5f);
                     if (glowColor != Color.clear) pMat.EnableKeyword("_EMISSION");
                     renderer.sharedMaterial = pMat;

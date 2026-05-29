@@ -248,14 +248,16 @@ namespace TheAlchemistsCrypt.UI
                     healthText.text = "";
 
                     // Bar background — narrower to fit label+value on same row
-                    var hpBgBar = new GameObject("HpBarBg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                    var hpBgBar = new GameObject("HpBarBg", typeof(RectTransform), typeof(Image), typeof(Mask)).GetComponent<RectTransform>();
                     hpBgBar.SetParent(healthPanel, false);
                     hpBgBar.anchorMin = hpBgBar.anchorMax = new Vector2(0f, 0.5f);
                     hpBgBar.pivot = new Vector2(0f, 0.5f);
                     hpBgBar.anchoredPosition = new Vector2(90, 0);
                     hpBgBar.sizeDelta = new Vector2(208, 22);
                     var hpBgImg = hpBgBar.GetComponent<Image>();
-                    hpBgImg.sprite = CreateRoundedRectSprite(208, 22, new Color(0.08f, 0.05f, 0.02f, 0.9f), 4);
+                    hpBgImg.sprite = CreateRoundedRectSprite(208, 22, new Color(0.08f, 0.05f, 0.02f, 0.9f), 11);
+                    var hpMask = hpBgBar.GetComponent<Mask>();
+                    hpMask.showMaskGraphic = true;
 
                     // Inner fill (red→orange→gold gradient)
                     var hpFillGo = new GameObject("HpFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
@@ -342,14 +344,16 @@ namespace TheAlchemistsCrypt.UI
                     ammoLblTxt.text = "AM";
 
                     // Bar background
-                    var amBgBar = new GameObject("AmBarBg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                    var amBgBar = new GameObject("AmBarBg", typeof(RectTransform), typeof(Image), typeof(Mask)).GetComponent<RectTransform>();
                     amBgBar.SetParent(ammoPanel, false);
                     amBgBar.anchorMin = amBgBar.anchorMax = new Vector2(0f, 0.5f);
                     amBgBar.pivot = new Vector2(0f, 0.5f);
                     amBgBar.anchoredPosition = new Vector2(90, 0);
                     amBgBar.sizeDelta = new Vector2(208, 22);
                     var amBgImg = amBgBar.GetComponent<Image>();
-                    amBgImg.sprite = CreateRoundedRectSprite(208, 22, new Color(0.04f, 0.04f, 0.06f, 0.9f), 4);
+                    amBgImg.sprite = CreateRoundedRectSprite(208, 22, new Color(0.04f, 0.04f, 0.06f, 0.9f), 11);
+                    var amMask = amBgBar.GetComponent<Mask>();
+                    amMask.showMaskGraphic = true;
 
                     // Inner fill
                     var amFillGo = new GameObject("AmFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();

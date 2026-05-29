@@ -283,37 +283,32 @@ namespace TheAlchemistsCrypt.Editor
                 }
 
         private float GetTerrainHeight(Vector3 pos) {
-                    // Force raycast against the low-poly mesh terrain "DesertTerrain"
-                    Ray ray = new Ray(new Vector3(pos.x, 250f, pos.z), Vector3.down);
-                    RaycastHit[] hits = Physics.RaycastAll(ray, 300f);
-                    foreach (var hit in hits)
+                    var activeTerrain = Terrain.activeTerrain;
+                    if (activeTerrain != null && activeTerrain.terrainData != null)
                     {
-                        if (hit.collider.gameObject.name == "DesertTerrain")
-                        {
-                            return hit.point.y;
-                        }
+                        return activeTerrain.SampleHeight(pos) + activeTerrain.transform.position.y;
                     }
-                    if (hits.Length > 0)
+                    Ray ray = new Ray(new Vector3(pos.x, 250f, pos.z), Vector3.down);
+                    if (Physics.Raycast(ray, out RaycastHit hit, 300f))
                     {
-                        return hits[0].point.y;
+                        return hit.point.y;
                     }
                     return 0f;
                 }
 
         private Vector3 GetTerrainNormal(Vector3 worldPos) {
-                    // Force raycast against the low-poly mesh terrain "DesertTerrain"
-                    Ray ray = new Ray(new Vector3(worldPos.x, 250f, worldPos.z), Vector3.down);
-                    RaycastHit[] hits = Physics.RaycastAll(ray, 300f);
-                    foreach (var hit in hits)
+                    var activeTerrain = Terrain.activeTerrain;
+                    if (activeTerrain != null && activeTerrain.terrainData != null)
                     {
-                        if (hit.collider.gameObject.name == "DesertTerrain")
-                        {
-                            return hit.normal;
-                        }
+                        Vector3 terrainPos = worldPos - activeTerrain.transform.position;
+                        float normX = terrainPos.x / activeTerrain.terrainData.size.x;
+                        float normZ = terrainPos.z / activeTerrain.terrainData.size.z;
+                        return activeTerrain.terrainData.GetInterpolatedNormal(normX, normZ);
                     }
-                    if (hits.Length > 0)
+                    Ray ray = new Ray(new Vector3(worldPos.x, 250f, worldPos.z), Vector3.down);
+                    if (Physics.Raycast(ray, out RaycastHit hit, 300f))
                     {
-                        return hits[0].normal;
+                        return hit.normal;
                     }
                     return Vector3.up;
                 }

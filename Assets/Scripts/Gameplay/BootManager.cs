@@ -62,13 +62,21 @@ namespace TheAlchemistsCrypt.Gameplay
             }
 
             // Progress Bar Background
-            var pbBgGo = new GameObject("ProgressBarBg", typeof(RectTransform), typeof(Image));
+            var pbBgGo = new GameObject("ProgressBarBg", typeof(RectTransform), typeof(Image), typeof(Mask));
             pbBgGo.transform.SetParent(canvasGo.transform, false);
             var pbBgRect = pbBgGo.GetComponent<RectTransform>();
             pbBgRect.anchorMin = pbBgRect.anchorMax = new Vector2(0.5f, 0.5f);
-            pbBgRect.anchoredPosition = new Vector2(0f, -72f);
-            pbBgRect.sizeDelta = new Vector2(755f, 45f);
-            pbBgGo.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
+            
+            // Align slightly better: adjusted to -73.5f for perfect alignment on the JPEG artwork
+            pbBgRect.anchoredPosition = new Vector2(0f, -73.5f);
+            pbBgRect.sizeDelta = new Vector2(748f, 40f);
+            
+            var pbBgImg = pbBgGo.GetComponent<Image>();
+            pbBgImg.sprite = CreateRoundedRectSprite(748, 40, 20f); // Fully rounded capsule
+            pbBgImg.color = new Color(0.02f, 0.08f, 0.04f, 0.65f); // Deep dark translucent chemical green
+
+            var mask = pbBgGo.GetComponent<Mask>();
+            mask.showMaskGraphic = true;
 
             // Progress Bar Fill
             var pbFillGo = new GameObject("ProgressBarFill", typeof(RectTransform), typeof(Image));
@@ -78,7 +86,161 @@ namespace TheAlchemistsCrypt.Gameplay
             pbFillRect.anchorMax = new Vector2(0f, 1f); // Starts empty
             pbFillRect.offsetMin = pbFillRect.offsetMax = Vector2.zero;
             progressBar = pbFillGo.GetComponent<Image>();
-            progressBar.color = new Color(0.0f, 0.85f, 0.35f, 0.55f);
+            progressBar.color = new Color(0.0f, 0.9f, 0.3f, 0.85f); // Bright premium chemical green matching HUD
+
+            // Start bubble animation
+            StartBubblesEffect(pbBgGo.transform, new Vector2(748f, 40f));
+        }
+
+        private Sprite CreateRoundedRectSprite(int width, int height, float cornerRadius)
+        {
+            Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            Color[] colors = new Color[width * height];
+            
+            float cx1 = cornerRadius;
+            float cy1 = cornerRadius;
+            float cx2 = width - cornerRadius;
+            float cy2 = height - cornerRadius;
+            
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    bool inside = true;
+                    if (x < cx1 && y < cy1) // Bottom-left corner
+                    {
+                        float d = Vector2.Distance(new Vector2(x, y), new Vector2(cx1, cy1));
+                        if (d > cornerRadius) inside = false;
+                    }
+                    else if (x > cx2 && y < cy1) // Bottom-right corner
+                    {
+                        float d = Vector2.Distance(new Vector2(x, y), new Vector2(cx2, cy1));
+                        if (d > cornerRadius) inside = false;
+                    }
+                    else if (x < cx1 && y > cy2) // Top-left corner
+                    {
+                        float d = Vector2.Distance(new Vector2(x, y), new Vector2(cx1, cy2));
+                        if (d > cornerRadius) inside = false;
+                    }
+                    else if (x > cx2 && y > cy2) // Top-right corner
+                    {
+                        float d = Vector2.Distance(new Vector2(x, y), new Vector2(cx2, cy2));
+                        if (d > cornerRadius) inside = false;
+                    }
+                    
+                    colors[y * width + x] = inside ? Color.white : Color.clear;
+                }
+            }
+            
+            tex.SetPixels(colors);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateCircleSprite(int size)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color[] colors = new Color[size * size];
+            float radius = size / 2f;
+            float cx = size / 2f;
+            float cy = size / 2f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x, y), new Vector2(cx, cy));
+                    if (d < radius - 1f)
+                    {
+                        float ratio = d / radius;
+                        if (ratio > 0.6f)
+                            colors[y * size + x] = new Color(1f, 1f, 1f, 1f);
+                        else
+                            colors[y * size + x] = new Color(1f, 1f, 1f, 0.35f);
+                    }
+                    else if (d < radius)
+                    {
+                        colors[y * size + x] = new Color(1f, 1f, 1f, (radius - d));
+                    }
+                    else
+                    {
+                        colors[y * size + x] = Color.clear;
+                    }
+                }
+            }
+            tex.SetPixels(colors);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private void StartBubblesEffect(Transform parent, Vector2 barSize)
+        {
+            StartCoroutine(GenerateBubbles(parent, barSize));
+        }
+
+        private IEnumerator GenerateBubbles(Transform parent, Vector2 barSize)
+        {
+            var bubbleSprite = CreateCircleSprite(16);
+            while (parent != null)
+            {
+                float progress = (progressBar != null) ? progressBar.rectTransform.anchorMax.x : 0f;
+                if (progress > 0.02f)
+                {
+                    var bubbleGo = new GameObject("Bubble", typeof(RectTransform), typeof(Image));
+                    bubbleGo.transform.SetParent(parent, false);
+                    var rect = bubbleGo.GetComponent<RectTransform>();
+                    
+                    float fillWidth = progress * barSize.x;
+                    // Position X relative to the filled portion of the bar
+                    float randomX = Random.Range(-barSize.x / 2f, -barSize.x / 2f + fillWidth);
+                    rect.anchoredPosition = new Vector2(randomX, -barSize.y / 2f);
+                    
+                    float bubbleSize = Random.Range(3f, 8f);
+                    rect.sizeDelta = new Vector2(bubbleSize, bubbleSize);
+                    
+                    var img = bubbleGo.GetComponent<Image>();
+                    img.sprite = bubbleSprite;
+                    img.color = new Color(0.5f, 1f, 0.6f, Random.Range(0.3f, 0.7f));
+                    
+                    StartCoroutine(AnimateBubble(rect, img, barSize.y));
+                }
+                
+                yield return new WaitForSeconds(Random.Range(0.08f, 0.2f));
+            }
+        }
+
+        private IEnumerator AnimateBubble(RectTransform bubbleRect, Image bubbleImg, float barHeight)
+        {
+            float duration = Random.Range(0.8f, 1.4f);
+            float elapsed = 0f;
+            Vector2 startPos = bubbleRect.anchoredPosition;
+            float endY = barHeight / 2f + 5f;
+            float driftWidth = Random.Range(-12f, 12f);
+            float driftSpeed = Random.Range(1.5f, 4f);
+            
+            while (elapsed < duration && bubbleRect != null)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                
+                float currentY = Mathf.Lerp(startPos.y, endY, t);
+                float currentX = startPos.x + Mathf.Sin(t * Mathf.PI * driftSpeed) * driftWidth * t;
+                
+                bubbleRect.anchoredPosition = new Vector2(currentX, currentY);
+                
+                if (bubbleImg != null)
+                {
+                    Color c = bubbleImg.color;
+                    c.a = Mathf.Lerp(c.a, 0f, t);
+                    bubbleImg.color = c;
+                }
+                
+                yield return null;
+            }
+            
+            if (bubbleRect != null)
+            {
+                Destroy(bubbleRect.gameObject);
+            }
         }
 
         private IEnumerator LoadMainGameAsync()

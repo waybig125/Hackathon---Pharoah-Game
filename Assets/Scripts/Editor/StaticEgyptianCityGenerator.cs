@@ -409,101 +409,24 @@ namespace TheAlchemistsCrypt.Editor
             AssetDatabase.SaveAssets();
             terrainData.terrainLayers = new TerrainLayer[] { layer };
 
-            // ── PRIMARY TERRAIN: Unity Terrain as the solid collision floor ────────────
+            // ── PRIMARY TERRAIN: Unity Terrain as the solid visual & collision floor ────────────
             // Always create a full 1000x1000 Unity Terrain underneath to guarantee ZERO
-            // fall-through regardless of any gaps in the LowPoly visual mesh.
+            // fall-through.
             var unityTerrainGo = Terrain.CreateTerrainGameObject(terrainData);
             unityTerrainGo.name = "TerrainFloor";
             unityTerrainGo.transform.SetParent(root.transform);
-            unityTerrainGo.transform.position = new Vector3(-500f, -15f, -500f);
+            unityTerrainGo.transform.position = new Vector3(-500f, -0.15f, -500f);
             unityTerrainGo.isStatic = true;
             var unityTerrainComp = unityTerrainGo.GetComponent<Terrain>();
             if (unityTerrainComp != null) {
-                unityTerrainComp.enabled = false; // Turn off rendering to prevent visual Z-fighting/cutting
+                unityTerrainComp.enabled = true; // Enabled visual rendering as it is now our main floor
                 unityTerrainComp.basemapDistance = 2000f;
                 unityTerrainComp.drawInstanced = true;
-                // Apply sand texture layer to the Unity Terrain as well
+                // Apply sand texture layer to the Unity Terrain
                 unityTerrainComp.terrainData = terrainData;
             }
 
-            // ── VISUAL LAYER: LowPoly mesh on top for aesthetics ─────────────────────
-            GameObject terrainPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/LowPoly Environment Pack/Prefabs/Terrain_1.prefab");
-            GameObject terrainGo = null;
-            if (terrainPrefab != null) {
-                terrainGo = PrefabUtility.InstantiatePrefab(terrainPrefab, root.transform) as GameObject;
-                if (terrainGo != null) {
-                    terrainGo.name = "DesertTerrain";
-                    terrainGo.transform.position = new Vector3(0f, 0.0f, 0f);
-                    terrainGo.transform.localScale = new Vector3(15f, 1f, 15f);
-                    terrainGo.isStatic = true;
-
-                    // Remove any trees baked/included in the low-poly terrain prefab
-                    var childTransforms = terrainGo.GetComponentsInChildren<Transform>(true);
-                    foreach (var child in childTransforms) {
-                        if (child != null && child != terrainGo.transform && 
-                            (child.name.StartsWith("Tree", System.StringComparison.OrdinalIgnoreCase) || 
-                             child.name.Contains("Tree") || 
-                             child.name.Contains("tree"))) {
-                            UnityEngine.Object.DestroyImmediate(child.gameObject);
-                        }
-                    }
-                    
-                    // Add mesh collider so GetTerrainHeight raycasts can sample the LowPoly surface
-                    var mc = terrainGo.GetComponent<MeshCollider>();
-                    if (mc == null) mc = terrainGo.AddComponent<MeshCollider>();
-                    mc.convex = false;
-                    Physics.SyncTransforms();
-                    
-                    // Apply sandstone texture
-                    var renderer = terrainGo.GetComponent<MeshRenderer>();
-                    if (renderer == null) renderer = terrainGo.GetComponentInChildren<MeshRenderer>();
-                    if (renderer != null) {
-                        var mats = renderer.sharedMaterials;
-                        var urpShader = Shader.Find("Universal Render Pipeline/Lit");
-                        if (urpShader != null) {
-                            for (int i = 0; i < mats.Length; i++) {
-                                Material uMat = new Material(urpShader);
-                                uMat.name = (mats[i] != null ? mats[i].name : "Sand") + "_URP";
-                                uMat.SetColor("_BaseColor", new Color(0.85f, 0.72f, 0.55f));
-                                if (sandTex != null) {
-                                    uMat.SetTexture("_BaseMap", sandTex);
-                                    uMat.SetTextureScale("_BaseMap", new Vector2(8f, 8f));
-                                }
-                                uMat.SetFloat("_Smoothness", 0.04f);
-                                uMat.enableInstancing = true;
-                                mats[i] = uMat;
-                            }
-                            renderer.sharedMaterials = mats;
-                        }
-                    }
-
-                    // Also check children for renderers (some prefabs nest the mesh)
-                    if (renderer == null) {
-                        foreach (var mr in terrainGo.GetComponentsInChildren<MeshRenderer>(true)) {
-                            if (mr == null) continue;
-                            var mats = mr.sharedMaterials;
-                            var urpShader = Shader.Find("Universal Render Pipeline/Lit");
-                            if (urpShader != null) {
-                                for (int i = 0; i < mats.Length; i++) {
-                                    Material uMat = new Material(urpShader);
-                                    uMat.name = (mats[i] != null ? mats[i].name : "Sand") + "_URP";
-                                    uMat.SetColor("_BaseColor", new Color(0.85f, 0.72f, 0.55f));
-                                    if (sandTex != null) {
-                                        uMat.SetTexture("_BaseMap", sandTex);
-                                        uMat.SetTextureScale("_BaseMap", new Vector2(8f, 8f));
-                                    }
-                                    uMat.SetFloat("_Smoothness", 0.04f);
-                                    uMat.enableInstancing = true;
-                                    mats[i] = uMat;
-                                }
-                                mr.sharedMaterials = mats;
-                            }
-                        }
-                    }
-                }
-            }
-            // If no LowPoly prefab, the Unity Terrain serves as both visual and collision
-            if (terrainGo == null) terrainGo = unityTerrainGo;
+            GameObject terrainGo = unityTerrainGo;
 
             float spacing = 20f; // Decreased spacing to bring houses closer together for a denser residential feel
             float halfSpan = (gridSize * spacing) / 2f;

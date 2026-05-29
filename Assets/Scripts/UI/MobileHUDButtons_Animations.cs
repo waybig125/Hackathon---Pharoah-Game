@@ -214,6 +214,17 @@ namespace TheAlchemistsCrypt.UI
             damageOverlayImg.sprite = CreateClawVignetteTexture(256, 256);
             damageOverlayImg.color = new Color(1f, 1f, 1f, 0f);
             damageOverlayImg.raycastTarget = false;
+
+            // Start alchemical bubble effects on HUD health and ammo bars
+            if (hpBgBarGo != null && healthBarFill != null)
+            {
+                StartHUDBarBubbles(hpBgBarGo.transform, healthBarFill, new Vector2(208f, 22f), new Color(1.0f, 0.6f, 0.2f, 0.6f));
+            }
+            var amBgBarGo = GameObject.Find("MobileHUD_Root/CustomAmmoPanel/AmBarBg");
+            if (amBgBarGo != null && ammoBarFill != null)
+            {
+                StartHUDBarBubbles(amBgBarGo.transform, ammoBarFill, new Vector2(208f, 22f), new Color(0.95f, 0.82f, 0.12f, 0.6f));
+            }
         }
 
         public void SplashHealthParticles()
@@ -585,6 +596,112 @@ namespace TheAlchemistsCrypt.UI
             }
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateCircleSprite(int size)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color[] colors = new Color[size * size];
+            float radius = size / 2f;
+            float cx = size / 2f;
+            float cy = size / 2f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x, y), new Vector2(cx, cy));
+                    if (d < radius - 1f)
+                    {
+                        float ratio = d / radius;
+                        if (ratio > 0.6f)
+                            colors[y * size + x] = new Color(1f, 1f, 1f, 1f);
+                        else
+                            colors[y * size + x] = new Color(1f, 1f, 1f, 0.35f);
+                    }
+                    else if (d < radius)
+                    {
+                        colors[y * size + x] = new Color(1f, 1f, 1f, (radius - d));
+                    }
+                    else
+                    {
+                        colors[y * size + x] = Color.clear;
+                    }
+                }
+            }
+            tex.SetPixels(colors);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private void StartHUDBarBubbles(Transform parent, Image fillImage, Vector2 barSize, Color bubbleColor)
+        {
+            StartCoroutine(GenerateHUDBubbles(parent, fillImage, barSize, bubbleColor));
+        }
+
+        private IEnumerator GenerateHUDBubbles(Transform parent, Image fillImage, Vector2 barSize, Color bubbleColor)
+        {
+            var bubbleSprite = CreateCircleSprite(16);
+            while (parent != null)
+            {
+                float fillTarget = (fillImage != null) ? fillImage.fillAmount : 0f;
+                if (fillTarget > 0.02f)
+                {
+                    var bubbleGo = new GameObject("Bubble", typeof(RectTransform), typeof(Image));
+                    bubbleGo.transform.SetParent(parent, false);
+                    var rect = bubbleGo.GetComponent<RectTransform>();
+                    
+                    float fillWidth = fillTarget * barSize.x;
+                    // Position X relative to the filled portion of the bar
+                    float randomX = Random.Range(-barSize.x / 2f, -barSize.x / 2f + fillWidth);
+                    rect.anchoredPosition = new Vector2(randomX, -barSize.y / 2f);
+                    
+                    float bubbleSize = Random.Range(3f, 7f);
+                    rect.sizeDelta = new Vector2(bubbleSize, bubbleSize);
+                    
+                    var img = bubbleGo.GetComponent<Image>();
+                    img.sprite = bubbleSprite;
+                    img.color = bubbleColor;
+                    
+                    StartCoroutine(AnimateHUDBubble(rect, img, barSize.y));
+                }
+                
+                yield return new WaitForSeconds(Random.Range(0.12f, 0.28f));
+            }
+        }
+
+        private IEnumerator AnimateHUDBubble(RectTransform bubbleRect, Image bubbleImg, float barHeight)
+        {
+            float duration = Random.Range(0.6f, 1.2f);
+            float elapsed = 0f;
+            Vector2 startPos = bubbleRect.anchoredPosition;
+            float endY = barHeight / 2f + 3f;
+            float driftWidth = Random.Range(-8f, 8f);
+            float driftSpeed = Random.Range(1.5f, 3.5f);
+            
+            while (elapsed < duration && bubbleRect != null)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                
+                float currentY = Mathf.Lerp(startPos.y, endY, t);
+                float currentX = startPos.x + Mathf.Sin(t * Mathf.PI * driftSpeed) * driftWidth * t;
+                
+                bubbleRect.anchoredPosition = new Vector2(currentX, currentY);
+                
+                if (bubbleImg != null)
+                {
+                    Color c = bubbleImg.color;
+                    c.a = Mathf.Lerp(c.a, 0f, t);
+                    bubbleImg.color = c;
+                }
+                
+                yield return null;
+            }
+            
+            if (bubbleRect != null)
+            {
+                Destroy(bubbleRect.gameObject);
+            }
         }
     }
 }
