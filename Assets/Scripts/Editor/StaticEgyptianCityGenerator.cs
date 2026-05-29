@@ -190,7 +190,7 @@ namespace TheAlchemistsCrypt.Editor
                 houseTex.SetPixels(pixels);
                 houseTex.Apply(true);
                 byte[] bytes = houseTex.EncodeToPNG();
-                System.IO.File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath, "EgyptianAssets/HouseGradientTex.png"), bytes);
+                System.IO.File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath, "Art/EgyptianAssets/HouseGradientTex.png"), bytes);
                 AssetDatabase.Refresh();
                 houseTex = AssetDatabase.LoadAssetAtPath<Texture2D>(houseTexPath);
             }
@@ -396,7 +396,7 @@ namespace TheAlchemistsCrypt.Editor
                 sandTex.SetPixels(pixels);
                 sandTex.Apply(true);
                 byte[] pngBytes = sandTex.EncodeToPNG();
-                System.IO.File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath, "EgyptianAssets/SandTexGradient_1024.png"), pngBytes);
+                System.IO.File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath, "Art/EgyptianAssets/SandTexGradient_1024.png"), pngBytes);
                 AssetDatabase.Refresh();
                 sandTex = AssetDatabase.LoadAssetAtPath<Texture2D>(sandTexPath);
             }

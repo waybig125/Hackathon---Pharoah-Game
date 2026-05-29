@@ -171,6 +171,37 @@ namespace TheAlchemistsCrypt.Editor
                             if (playerGo != null) dsc.player = playerGo.transform;
                             dsc.ssgUvRotateSpeed = 0.1f;  // Very slow — mobile friendly
                             dsc.sky2d = true;
+
+                            // Convert cloud dome renderers to URP Unlit to avoid pink fallback
+                            var skyRenderers = skyDome.GetComponentsInChildren<Renderer>(true);
+                            foreach (var r in skyRenderers) {
+                                if (r == null) continue;
+                                Material[] mats = r.sharedMaterials;
+                                for (int i = 0; i < mats.Length; i++) {
+                                    if (mats[i] == null) continue;
+                                    Shader s = mats[i].shader;
+                                    if (s != null && !s.name.Contains("Universal Render Pipeline")) {
+                                        Material instMat = new Material(mats[i]);
+                                        instMat.shader = Shader.Find("Universal Render Pipeline/Unlit");
+                                        if (instMat.shader != null) {
+                                            Texture mainTex = mats[i].HasProperty("_MainTex") ? mats[i].GetTexture("_MainTex") : null;
+                                            if (mainTex != null) {
+                                                instMat.SetTexture("_BaseMap", mainTex);
+                                            }
+                                            // Set to transparent surface type in URP Unlit
+                                            instMat.SetFloat("_Surface", 1.0f); // Transparent
+                                            instMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                                            instMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                                            instMat.SetInt("_ZWrite", 0);
+                                            instMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                                            instMat.renderQueue = 3000;
+                                            
+                                            mats[i] = instMat;
+                                        }
+                                    }
+                                }
+                                r.sharedMaterials = mats;
+                            }
                         }
                     }
 
