@@ -181,32 +181,25 @@ namespace TheAlchemistsCrypt.Editor
             string glbLower = string.IsNullOrEmpty(glbPath) ? "" : System.IO.Path.GetFileNameWithoutExtension(glbPath).ToLower();
             bool isStoneAsset =
                 srcLower.Contains("house") || srcLower.Contains("building") ||
-                srcLower.Contains("column") || srcLower.Contains("pillar") ||
-                srcLower.Contains("temple") || srcLower.Contains("stone") ||
-                srcLower.Contains("wall")   || srcLower.Contains("obelisk") ||
-                srcLower.Contains("sphinx") || srcLower.Contains("door")   ||
-                srcLower.Contains("mastaba")|| srcLower.Contains("egyptian")||
-                srcLower.Contains("stall")  || srcLower.Contains("arabic") ||
-                srcLower.Contains("medieval")|| srcLower.Contains("sand")  ||
-                srcLower.Contains("brick") || srcLower.Contains("tomb")    ||
-                srcLower.Contains("ruin")   || srcLower.Contains("fort")   ||
+                srcLower.Contains("temple") || srcLower.Contains("tomb") ||
+                srcLower.Contains("sphinx") || srcLower.Contains("mastaba") ||
+                srcLower.Contains("ruin")   || srcLower.Contains("fort") ||
                 glbLower.Contains("house") || glbLower.Contains("building") ||
-                glbLower.Contains("column") || glbLower.Contains("pillar") ||
-                glbLower.Contains("temple") || glbLower.Contains("stone") ||
-                glbLower.Contains("wall")   || glbLower.Contains("obelisk") ||
-                glbLower.Contains("sphinx") || glbLower.Contains("door")   ||
-                glbLower.Contains("mastaba")|| glbLower.Contains("egyptian")||
-                glbLower.Contains("stall")  || glbLower.Contains("arabic") ||
-                glbLower.Contains("medieval")|| glbLower.Contains("sand")  ||
-                glbLower.Contains("brick") || glbLower.Contains("tomb")    ||
+                glbLower.Contains("temple") || glbLower.Contains("tomb") ||
+                glbLower.Contains("sphinx") || glbLower.Contains("mastaba") ||
                 glbLower.Contains("ruin")   || glbLower.Contains("fort");
 
             bool isUnifiedAlbedoAsset = isStoneAsset;
             if (srcLower.Contains("column") || srcLower.Contains("pillar") || 
-                srcLower.Contains("ladder") || 
+                srcLower.Contains("ladder") || srcLower.Contains("door") || 
+                srcLower.Contains("gate") || srcLower.Contains("stall") || 
+                srcLower.Contains("obelisk") || srcLower.Contains("prop") ||
                 glbLower.Contains("column") || glbLower.Contains("pillar") || 
-                glbLower.Contains("ladder"))
+                glbLower.Contains("ladder") || glbLower.Contains("door") || 
+                glbLower.Contains("gate") || glbLower.Contains("stall") || 
+                glbLower.Contains("obelisk") || glbLower.Contains("prop"))
             {
+                isStoneAsset = false;
                 isUnifiedAlbedoAsset = false;
             }
 

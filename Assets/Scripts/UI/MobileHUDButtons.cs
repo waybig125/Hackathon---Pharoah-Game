@@ -76,6 +76,8 @@ namespace TheAlchemistsCrypt.UI
             BuildHUD();
         }
 
+
+
         private class ButtonInputHelper : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler, IDragHandler, IPointerEnterHandler, IPointerExitHandler {
             public System.Action onDown; public System.Action onUp; public System.Action onClick;
             public GameObject glowObject;
@@ -1108,6 +1110,13 @@ namespace TheAlchemistsCrypt.UI
 
         private IEnumerator Start()
         {
+            var canvas = GetComponent<Canvas>();
+            if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera && canvas.worldCamera == null)
+            {
+                canvas.worldCamera = Camera.main;
+                canvas.planeDistance = 5f;
+            }
+
             // Force immersive full screen mode (hides navigation and status bars)
             Screen.fullScreen = true;
 

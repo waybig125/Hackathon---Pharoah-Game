@@ -416,7 +416,7 @@ namespace TheAlchemistsCrypt.Editor
                 if (terrainGo != null) {
                     terrainGo.name = "DesertTerrain";
                     terrainGo.transform.position = new Vector3(0f, 0f, 0f);
-                    terrainGo.transform.localScale = new Vector3(5f, 1f, 5f);
+                    terrainGo.transform.localScale = new Vector3(15f, 1f, 15f);
                     terrainGo.isStatic = true;
                     
                     var mc = terrainGo.GetComponent<MeshCollider>();
@@ -1010,15 +1010,17 @@ namespace TheAlchemistsCrypt.Editor
                     // Identify building/stone materials
                     bool isStoneAsset =
                         matName.Contains("house") || matName.Contains("building") ||
-                        matName.Contains("column") || matName.Contains("pillar") ||
-                        matName.Contains("temple") || matName.Contains("stone") ||
-                        matName.Contains("wall")   || matName.Contains("obelisk") ||
-                        matName.Contains("sphinx") || matName.Contains("door")   ||
-                        matName.Contains("mastaba")|| matName.Contains("egyptian")||
-                        matName.Contains("stall")  || matName.Contains("arabic") ||
-                        matName.Contains("medieval")|| matName.Contains("sand")  ||
-                        matName.Contains("brick") || matName.Contains("tomb")    ||
+                        matName.Contains("temple") || matName.Contains("tomb") ||
+                        matName.Contains("sphinx") || matName.Contains("mastaba") ||
                         matName.Contains("ruin")   || matName.Contains("fort");
+                        
+                    if (matName.Contains("column") || matName.Contains("pillar") || 
+                        matName.Contains("ladder") || matName.Contains("door") || 
+                        matName.Contains("gate") || matName.Contains("stall") || 
+                        matName.Contains("obelisk") || matName.Contains("prop"))
+                    {
+                        isStoneAsset = false;
+                    }
                         
                     if (isStoneAsset)
                     {
