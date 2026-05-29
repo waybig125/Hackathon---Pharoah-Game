@@ -48,23 +48,23 @@ namespace TheAlchemistsCrypt.UI
 
                 private void LoadSprites()
                 {
-                    joystickRingSprite = LoadThemedSprite("joystick_outer", "egypt_themed_icons/joystick_outer");
-                    joystickKnobSprite = LoadThemedSprite("joystick_knob", "egypt_themed_icons/joystick_knob");
+                    joystickRingSprite = LoadSpriteFromResources("egypt_themed_icons/joystick_outer");
+                    joystickKnobSprite = LoadSpriteFromResources("egypt_themed_icons/joystick_knob");
                     
-                    fireIcon = LoadSpriteFromResources("egypt_themed_icons_generated/icon_fire");
-                    if (fireIcon == null) fireIcon = LoadThemedSprite("fire", "UI/Icons/Inspiration/bullet");
+                    fireIcon = LoadSpriteFromResources("egypt_themed_icons/fire");
+                    if (fireIcon == null) fireIcon = LoadSpriteFromResources("UI/Icons/Inspiration/bullet");
                     
-                    reloadIcon = LoadSpriteFromResources("egypt_themed_icons_generated/icon_reload");
-                    if (reloadIcon == null) reloadIcon = LoadThemedSprite("reload_ammo", "UI/Icons/Inspiration/reload");
+                    reloadIcon = LoadSpriteFromResources("egypt_themed_icons/reload_ammo");
+                    if (reloadIcon == null) reloadIcon = LoadSpriteFromResources("UI/Icons/Inspiration/reload");
                     
-                    swapIcon = LoadSpriteFromResources("egypt_themed_icons_generated/icon_swap");
-                    if (swapIcon == null) swapIcon = LoadThemedSprite("swap_weapon", "UI/Icons/icon_swap");
+                    swapIcon = LoadSpriteFromResources("egypt_themed_icons/swap_weapon");
+                    if (swapIcon == null) swapIcon = LoadSpriteFromResources("UI/Icons/icon_swap");
                     
-                    sprintIcon = LoadSpriteFromResources("egypt_themed_icons_generated/icon_sprint");
-                    if (sprintIcon == null) sprintIcon = LoadThemedSprite("sprint", "UI/Icons/icon_sprint");
+                    sprintIcon = LoadSpriteFromResources("egypt_themed_icons/sprint");
+                    if (sprintIcon == null) sprintIcon = LoadSpriteFromResources("UI/Icons/icon_sprint");
                     
-                    jumpIcon = LoadSpriteFromResources("egypt_themed_icons_generated/icon_jump");
-                    if (jumpIcon == null) jumpIcon = LoadThemedSprite("jump", "UI/Icons/icon_jump");
+                    jumpIcon = LoadSpriteFromResources("egypt_themed_icons/jump");
+                    if (jumpIcon == null) jumpIcon = LoadSpriteFromResources("UI/Icons/icon_jump");
 
                     healthIconSprite = LoadSpriteFromResources("egyptian_items/health_icon");
                     if (healthIconSprite == null) healthIconSprite = CreateProceduralHealthIconSprite();
@@ -79,7 +79,8 @@ namespace TheAlchemistsCrypt.UI
                     if (saltIconSprite == null) saltIconSprite = CreateProceduralSaltSprite();
 
                     welcomeBgSprite = LoadSpriteFromResources("egyptian_items/GameStartImage");
-                    focusIcon = LoadThemedSprite("focus_icon", "UI/Icons/icon_focus");
+                    focusIcon = LoadSpriteFromResources("egypt_themed_icons/focus_icon");
+                    if (focusIcon == null) focusIcon = LoadSpriteFromResources("UI/Icons/icon_focus");
                     if (focusIcon == null) focusIcon = CreateProceduralFocusIconSprite();
                 }
 
@@ -93,10 +94,10 @@ namespace TheAlchemistsCrypt.UI
                     charcoalSprite = CreateCharcoalSprite(260, 180);
                     goldGradientSprite = CreateGoldenGradientSprite();
 
-                    if (joystickRingSprite == null) joystickRingSprite = LoadSpriteFromResources("egypt_themed_icons_generated/joystick_ring");
+                    if (joystickRingSprite == null) joystickRingSprite = LoadSpriteFromResources("egypt_themed_icons/joystick_outer");
                     if (joystickRingSprite == null) joystickRingSprite = CreateRingSprite();
 
-                    if (joystickKnobSprite == null) joystickKnobSprite = LoadSpriteFromResources("egypt_themed_icons_generated/joystick_knob");
+                    if (joystickKnobSprite == null) joystickKnobSprite = LoadSpriteFromResources("egypt_themed_icons/joystick_knob");
                     if (joystickKnobSprite == null) joystickKnobSprite = CreateKnobSprite();
 
                     sandstoneFrameSprite = LoadSlicedSpriteFromResources("egypt_themed_icons_generated/sandstone_frame", new Vector4(40, 40, 40, 40));

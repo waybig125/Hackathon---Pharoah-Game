@@ -13,6 +13,14 @@ public class SpriteImporter
     {
         string[] paths = new string[]
         {
+            "Assets/Resources/egypt_themed_icons/joystick_outer.png",
+            "Assets/Resources/egypt_themed_icons/joystick_knob.png",
+            "Assets/Resources/egypt_themed_icons/fire.png",
+            "Assets/Resources/egypt_themed_icons/reload_ammo.png",
+            "Assets/Resources/egypt_themed_icons/swap_weapon.png",
+            "Assets/Resources/egypt_themed_icons/sprint.png",
+            "Assets/Resources/egypt_themed_icons/jump.png",
+            "Assets/Resources/egypt_themed_icons/focus_icon.png",
             "Assets/Resources/egypt_themed_icons_generated/joystick_ring.png",
             "Assets/Resources/egypt_themed_icons_generated/joystick_knob.png",
             "Assets/Resources/egypt_themed_icons_generated/obsidian_texture.png",

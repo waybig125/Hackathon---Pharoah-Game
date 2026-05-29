@@ -201,6 +201,17 @@ namespace TheAlchemistsCrypt.Editor
                 glbLower.Contains("brick") || glbLower.Contains("tomb")    ||
                 glbLower.Contains("ruin")   || glbLower.Contains("fort");
 
+            bool isUnifiedAlbedoAsset = isStoneAsset;
+            if (srcLower.Contains("column") || srcLower.Contains("pillar") || 
+                srcLower.Contains("ladder") || srcLower.Contains("door") || 
+                srcLower.Contains("gate") ||
+                glbLower.Contains("column") || glbLower.Contains("pillar") || 
+                glbLower.Contains("ladder") || glbLower.Contains("door") || 
+                glbLower.Contains("gate"))
+            {
+                isUnifiedAlbedoAsset = false;
+            }
+
             if (isStoneAsset) {
                 // Sandstone: warm golden-tan, the colour of Egyptian limestone
                 Color sandstone = new Color(0.88f, 0.74f, 0.52f, albedo.a);
@@ -217,7 +228,7 @@ namespace TheAlchemistsCrypt.Editor
             else if (src.HasProperty("_BaseMap")) mainTexProp = "_BaseMap";
             else if (src.HasProperty("_MainTex")) mainTexProp = "_MainTex";
             
-            if (isStoneAsset && commonAlbedo != null)
+            if (isUnifiedAlbedoAsset && commonAlbedo != null)
             {
                 dst.SetTexture("_BaseMap", commonAlbedo);
                 dst.SetTextureScale("_BaseMap", new Vector2(4, 4));
@@ -241,15 +252,7 @@ namespace TheAlchemistsCrypt.Editor
             else if (src.HasProperty("_BumpMap")) normalTexProp = "_BumpMap";
             else if (src.HasProperty("_NormalMap")) normalTexProp = "_NormalMap";
             
-            if (isStoneAsset && commonNormal != null)
-            {
-                dst.SetTexture("_BumpMap", commonNormal);
-                dst.EnableKeyword("_NORMALMAP");
-                dst.SetTextureScale("_BumpMap", new Vector2(4, 4));
-                dst.SetTextureOffset("_BumpMap", Vector2.zero);
-                dst.SetFloat("_BumpScale", 1.5f);
-            }
-            else if (normalTexProp != null)
+            if (normalTexProp != null)
             {
                 normalTex = src.GetTexture(normalTexProp);
                 if (normalTex != null)
