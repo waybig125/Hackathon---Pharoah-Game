@@ -80,7 +80,7 @@ namespace TheAlchemistsCrypt.UI
             tcRect.offsetMax = new Vector2(10, 10);
             var tcImg = threatCompassGo.GetComponent<Image>();
             tcImg.sprite = CreateAlchemicalCompassBezel(144, 144);
-            tcImg.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+            tcImg.color = new Color(1.0f, 0.85f, 0.1f, 0.95f);
             
             var fillGo = new GameObject("ThreatFill", typeof(RectTransform), typeof(Image));
             fillGo.transform.SetParent(threatMeterGo.transform, false);
@@ -108,7 +108,7 @@ namespace TheAlchemistsCrypt.UI
             threatEyeGlyphImg = eyeGo.GetComponent<Image>();
             threatEyeGlyphImg.sprite = CreateEyeGlyphSprite(64, 64);
             threatEyeGlyphImg.preserveAspect = true;
-            threatEyeGlyphImg.color = new Color(0.9f, 0.5f, 0.1f, 0.7f);
+            threatEyeGlyphImg.color = new Color(1.0f, 0.2f, 0.05f, 0.85f);
             
             var lblGo = new GameObject("ThreatLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
             lblGo.transform.SetParent(threatMeterGo.transform, false);

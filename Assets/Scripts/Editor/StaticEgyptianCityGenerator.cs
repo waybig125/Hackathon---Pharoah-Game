@@ -540,7 +540,7 @@ namespace TheAlchemistsCrypt.Editor
             CleanupOverlappingColumns(root);
 
             // Add dynamic distance-based culling for mobile optimization
-            root.AddComponent<TheAlchemistsCrypt.Utils.DistanceCuller>();
+            // root.AddComponent<TheAlchemistsCrypt.Utils.DistanceCuller>(); //disabled due to weird results: do not delete comment
 
             CreateProceduralPyramid(root, new Vector3(-450f, 0f, 400f), 150f, 95f, wallMat, new Color(1f, 0.85f, 0.4f));
             CreateProceduralPyramid(root, new Vector3(450f, 0f, 400f), 160f, 100f, wallMat, new Color(1f, 0.5f, 0.2f)); 

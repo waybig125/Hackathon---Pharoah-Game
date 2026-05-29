@@ -24,19 +24,6 @@ namespace TheAlchemistsCrypt.Editor
             if (stonePrefab != null) rockPrefabs.Add(stonePrefab);
 
             var plantPrefabs = new List<GameObject>();
-            for (int i = 1; i <= 7; i++) {
-                var p = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/LowPoly Environment Pack/Prefabs/Plant_{i}.prefab");
-                if (p != null) plantPrefabs.Add(p);
-            }
-            for (int i = 1; i <= 3; i++) {
-                var p = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/LowPoly Environment Pack/Prefabs/Bush_{i}.prefab");
-                if (p != null) plantPrefabs.Add(p);
-            }
-            // Use our existing date palms instead of the low-poly terrain pack trees
-            var tree1 = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/EgyptianAssets/realistic_hd_date_palm_2178.glb");
-            if (tree1 != null) plantPrefabs.Add(tree1);
-            var tree2 = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/EgyptianAssets/realistic_hd_date_palm_378.glb");
-            if (tree2 != null) plantPrefabs.Add(tree2);
             for (int i = 1; i <= 2; i++) {
                 var p = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/LowPoly Environment Pack/Prefabs/Grass_{i}.prefab");
                 if (p != null) plantPrefabs.Add(p);

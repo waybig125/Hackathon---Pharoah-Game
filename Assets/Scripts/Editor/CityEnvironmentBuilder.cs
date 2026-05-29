@@ -30,7 +30,10 @@ namespace TheAlchemistsCrypt.Editor
                     seaMat.SetFloat("_Metallic", 0.95f);
                     seaMat.enableInstancing = true;
                     sea.GetComponent<Renderer>().sharedMaterial = seaMat;
-                    sea.isStatic = true;
+                    sea.isStatic = false;
+                    var seaBobber = sea.AddComponent<TheAlchemistsCrypt.Utils.SeaBobber>();
+                    seaBobber.height = 0.4f;
+                    seaBobber.speed = 1.2f;
                     DestroyImmediate(sea.GetComponent<Collider>());
 
                     GameObject shallows = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -48,7 +51,11 @@ namespace TheAlchemistsCrypt.Editor
                     shallowMat.SetFloat("_Smoothness", 0.95f);
                     shallowMat.enableInstancing = true;
                     shallows.GetComponent<Renderer>().sharedMaterial = shallowMat;
-                    shallows.isStatic = true;
+                    shallows.isStatic = false;
+                    var shallowBobber = shallows.AddComponent<TheAlchemistsCrypt.Utils.SeaBobber>();
+                    shallowBobber.height = 0.25f;
+                    shallowBobber.speed = 1.2f;
+                    shallowBobber.timeOffset = Mathf.PI / 4f; // slightly offset from main sea
                     DestroyImmediate(shallows.GetComponent<Collider>());
 
                     // BeachZone sand floor quad restored

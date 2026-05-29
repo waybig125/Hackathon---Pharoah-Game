@@ -67,13 +67,13 @@ namespace TheAlchemistsCrypt.Gameplay
             var pbBgRect = pbBgGo.GetComponent<RectTransform>();
             pbBgRect.anchorMin = pbBgRect.anchorMax = new Vector2(0.5f, 0.5f);
             
-            // Align slightly better: adjusted to -73.5f for perfect alignment on the JPEG artwork
-            pbBgRect.anchoredPosition = new Vector2(0f, -73.5f);
-            pbBgRect.sizeDelta = new Vector2(748f, 40f);
+            // Align slightly better
+            pbBgRect.anchoredPosition = new Vector2(0f, -65f);
+            pbBgRect.sizeDelta = new Vector2(800f, 56f);
             
             var pbBgImg = pbBgGo.GetComponent<Image>();
-            pbBgImg.sprite = CreateRoundedRectSprite(748, 40, 20f); // Fully rounded capsule
-            pbBgImg.color = new Color(0.02f, 0.08f, 0.04f, 0.65f); // Deep dark translucent chemical green
+            pbBgImg.sprite = CreateRoundedRectSprite(800, 56, 28f); // Fully rounded capsule
+            pbBgImg.color = new Color(0.02f, 0.08f, 0.04f, 1f); // Solid dark green for better masking
 
             var mask = pbBgGo.GetComponent<Mask>();
             mask.showMaskGraphic = true;
@@ -89,7 +89,7 @@ namespace TheAlchemistsCrypt.Gameplay
             progressBar.color = new Color(0.0f, 0.9f, 0.3f, 0.85f); // Bright premium chemical green matching HUD
 
             // Start bubble animation
-            StartBubblesEffect(pbBgGo.transform, new Vector2(748f, 40f));
+            StartBubblesEffect(pbBgGo.transform, new Vector2(800f, 56f));
         }
 
         private Sprite CreateRoundedRectSprite(int width, int height, float cornerRadius)
@@ -194,17 +194,17 @@ namespace TheAlchemistsCrypt.Gameplay
                     float randomX = Random.Range(-barSize.x / 2f, -barSize.x / 2f + fillWidth);
                     rect.anchoredPosition = new Vector2(randomX, -barSize.y / 2f);
                     
-                    float bubbleSize = Random.Range(3f, 8f);
+                    float bubbleSize = Random.Range(10f, 22f);
                     rect.sizeDelta = new Vector2(bubbleSize, bubbleSize);
                     
                     var img = bubbleGo.GetComponent<Image>();
                     img.sprite = bubbleSprite;
-                    img.color = new Color(0.5f, 1f, 0.6f, Random.Range(0.3f, 0.7f));
+                    img.color = new Color(0.7f, 1f, 0.8f, Random.Range(0.6f, 0.9f));
                     
                     StartCoroutine(AnimateBubble(rect, img, barSize.y));
                 }
                 
-                yield return new WaitForSeconds(Random.Range(0.08f, 0.2f));
+                yield return new WaitForSeconds(Random.Range(0.04f, 0.12f));
             }
         }
 
@@ -249,18 +249,26 @@ namespace TheAlchemistsCrypt.Gameplay
 
             AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(targetSceneName);
             
-            // Allow scene to activate immediately upon load
-            asyncLoad.allowSceneActivation = true;
+            // Do not allow immediate activation so we can animate the bar
+            asyncLoad.allowSceneActivation = false;
+
+            float displayProgress = 0f;
 
             while (!asyncLoad.isDone)
             {
-                // asyncLoad.progress stops at 0.9 if allowSceneActivation is false, but we set it true
-                float progress = Mathf.Clamp01(asyncLoad.progress / 0.9f);
+                // asyncLoad.progress stops at 0.9 if allowSceneActivation is false
+                float targetProgress = asyncLoad.progress / 0.9f;
+                displayProgress = Mathf.MoveTowards(displayProgress, targetProgress, Time.deltaTime * 0.4f); // ~2.5s to fill
                 
                 if (progressBar != null)
                 {
                     var rect = progressBar.GetComponent<RectTransform>();
-                    rect.anchorMax = new Vector2(progress, 1f);
+                    rect.anchorMax = new Vector2(displayProgress, 1f);
+                }
+
+                if (displayProgress >= 0.99f && asyncLoad.progress >= 0.9f)
+                {
+                    asyncLoad.allowSceneActivation = true;
                 }
                 
                 yield return null;

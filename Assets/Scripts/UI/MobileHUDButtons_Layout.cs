@@ -247,15 +247,15 @@ namespace TheAlchemistsCrypt.UI
                     healthText = healthTxtGo.GetComponent<TextMeshProUGUI>();
                     healthText.text = "";
 
-                    // Bar background — narrower to fit label+value on same row
+                    // Bar background — slightly taller and sleeker
                     var hpBgBar = new GameObject("HpBarBg", typeof(RectTransform), typeof(Image), typeof(Mask)).GetComponent<RectTransform>();
                     hpBgBar.SetParent(healthPanel, false);
                     hpBgBar.anchorMin = hpBgBar.anchorMax = new Vector2(0f, 0.5f);
                     hpBgBar.pivot = new Vector2(0f, 0.5f);
                     hpBgBar.anchoredPosition = new Vector2(90, 0);
-                    hpBgBar.sizeDelta = new Vector2(208, 22);
+                    hpBgBar.sizeDelta = new Vector2(220, 24);
                     var hpBgImg = hpBgBar.GetComponent<Image>();
-                    hpBgImg.sprite = CreateRoundedRectSprite(208, 22, new Color(0.08f, 0.05f, 0.02f, 0.9f), 11);
+                    hpBgImg.sprite = CreateRoundedRectSprite(220, 24, new Color(0.12f, 0.12f, 0.15f, 0.85f), 12);
                     var hpMask = hpBgBar.GetComponent<Mask>();
                     hpMask.showMaskGraphic = true;
 
@@ -263,9 +263,9 @@ namespace TheAlchemistsCrypt.UI
                     var hpFillGo = new GameObject("HpFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     hpFillGo.SetParent(hpBgBar, false);
                     hpFillGo.anchorMin = Vector2.zero; hpFillGo.anchorMax = Vector2.one;
-                    hpFillGo.offsetMin = new Vector2(2, 2); hpFillGo.offsetMax = new Vector2(-2, -2);
+                    hpFillGo.offsetMin = new Vector2(1, 1); hpFillGo.offsetMax = new Vector2(-1, -1);
                     healthBarFill = hpFillGo.GetComponent<Image>();
-                    healthBarFill.sprite = CreateHealthBarFillSprite(204, 18);
+                    healthBarFill.sprite = CreateHealthBarFillSprite(218, 22);
                     healthBarFill.type = Image.Type.Filled;
                     healthBarFill.fillMethod = Image.FillMethod.Horizontal;
                     healthBarFill.fillAmount = 1.0f;
@@ -344,22 +344,22 @@ namespace TheAlchemistsCrypt.UI
                     ammoLblTxt.text = "AM";
 
                     // Bar background
-                    var amBgBar = new GameObject("AmBarBg", typeof(RectTransform), typeof(Image), typeof(Mask)).GetComponent<RectTransform>();
+                    var amBgBar = new GameObject("AmmoBarBg", typeof(RectTransform), typeof(Image), typeof(Mask)).GetComponent<RectTransform>();
                     amBgBar.SetParent(ammoPanel, false);
                     amBgBar.anchorMin = amBgBar.anchorMax = new Vector2(0f, 0.5f);
                     amBgBar.pivot = new Vector2(0f, 0.5f);
-                    amBgBar.anchoredPosition = new Vector2(90, 0);
-                    amBgBar.sizeDelta = new Vector2(208, 22);
+                    amBgBar.anchoredPosition = new Vector2(80, 0);
+                    amBgBar.sizeDelta = new Vector2(220, 24);
                     var amBgImg = amBgBar.GetComponent<Image>();
-                    amBgImg.sprite = CreateRoundedRectSprite(208, 22, new Color(0.04f, 0.04f, 0.06f, 0.9f), 11);
+                    amBgImg.sprite = CreateRoundedRectSprite(220, 24, new Color(0.12f, 0.12f, 0.15f, 0.85f), 12);
                     var amMask = amBgBar.GetComponent<Mask>();
                     amMask.showMaskGraphic = true;
 
                     // Inner fill
-                    var amFillGo = new GameObject("AmFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                    var amFillGo = new GameObject("AmmoFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     amFillGo.SetParent(amBgBar, false);
                     amFillGo.anchorMin = Vector2.zero; amFillGo.anchorMax = Vector2.one;
-                    amFillGo.offsetMin = new Vector2(2, 2); amFillGo.offsetMax = new Vector2(-2, -2);
+                    amFillGo.offsetMin = new Vector2(1, 1); amFillGo.offsetMax = new Vector2(-1, -1);
                     ammoBarFill = amFillGo.GetComponent<Image>();
                     ammoBarFill.sprite = sulfurBarSprite;
                     ammoBarFill.type = Image.Type.Filled;
@@ -380,46 +380,6 @@ namespace TheAlchemistsCrypt.UI
                     ammoValueText.alignment = TextAlignmentOptions.Right;
                     ammoValueText.color = new Color(0.95f, 0.72f, 0.12f, 1f); // Gold/Amber matching element theme
                     ammoValueText.text = "30/30";
-
-                    // ── Ammo tick grid (2 rows × 15 columns) ────────────────────────────
-                    // Container for the tick grid
-                    var ammoGridGo = new GameObject("AmmoGrid", typeof(RectTransform)).GetComponent<RectTransform>();
-                    ammoGridGo.SetParent(ammoPanel, false);
-                    ammoGridGo.anchorMin = ammoGridGo.anchorMax = new Vector2(0f, 0.5f);
-                    ammoGridGo.pivot = new Vector2(0f, 0.5f);
-                    ammoGridGo.anchoredPosition = new Vector2(106, 0);
-                    ammoGridGo.sizeDelta = new Vector2(262, 42);
-
-                    ammoTicks.Clear();
-                    // 2 rows × 15 = 30 ticks, each a small diamond/pill shape
-                    float tickW = 12f;   // wider tick
-                    float tickH = 16f;   // shorter tick
-                    float gapX = 5f;     // horizontal gap
-                    float gapY = 5f;     // vertical gap between rows
-                    float rowHeight = 42f;
-                    // Row offsets: 2 rows centered vertically
-                    float[] rowY = new float[] { rowHeight * 0.25f, rowHeight * 0.75f };
-
-                    for (int row = 0; row < 2; row++)
-                    {
-                        for (int col = 0; col < 15; col++)
-                        {
-                            int idx = row * 15 + col;
-                            var tickGo = new GameObject("Tick_" + idx, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-                            tickGo.SetParent(ammoGridGo, false);
-                            tickGo.anchorMin = tickGo.anchorMax = Vector2.zero;
-                            tickGo.pivot = new Vector2(0f, 0f);
-                            float xPos = col * (tickW + gapX);
-                            float yPos = row == 0 ? (rowHeight * 0.5f + gapY * 0.5f) : gapY;
-                            tickGo.anchoredPosition = new Vector2(xPos, yPos - tickH * 0.5f);
-                            tickGo.sizeDelta = new Vector2(tickW, tickH);
-
-                            var img = tickGo.GetComponent<Image>();
-                            img.sprite = CreateDiamondTickSprite((int)tickW, (int)tickH);
-                            img.color = new Color(1.0f, 0.82f, 0.12f, 0.95f); // Gold active
-                            ammoTicks.Add(img);
-                        }
-                    }
 
                     // DOTween entrance slide-in (slight delay after HP bar)
                     var amPanelRect = ammoPanel.GetComponent<RectTransform>();
