@@ -189,27 +189,25 @@ namespace TheAlchemistsCrypt.Editor
 
                     p.tag = "Player";
                     
-                    // Phase 2: Spawn player inside the Mastaba if it exists
-                    var mastaba = GameObject.Find("MastabaOfQar");
-                    if (mastaba != null) {
-                        var renderers = mastaba.GetComponentsInChildren<Renderer>(true);
+                    // Phase 2: Spawn player inside the BigEgyptHouse_Spawn if it exists
+                    var spawnHouse = GameObject.Find("BigEgyptHouse_Spawn");
+                    if (spawnHouse != null) {
+                        var renderers = spawnHouse.GetComponentsInChildren<Renderer>(true);
                         if (renderers.Length > 0) {
                             Bounds b = renderers[0].bounds;
                             foreach (var r in renderers) b.Encapsulate(r.bounds);
                             p.transform.position = new Vector3(b.center.x, b.min.y + 1.5f, b.center.z);
                         } else {
-                            p.transform.position = mastaba.transform.position + new Vector3(0f, 1.5f, 0f);
+                            p.transform.position = spawnHouse.transform.position + new Vector3(0f, 1.5f, 0f);
                         }
                         
-                        // Convert MastabaDoor colliders to triggers to allow exit
                         var door = GameObject.Find("MastabaDoor");
                         if (door != null) {
                             foreach (var col in door.GetComponentsInChildren<Collider>(true)) {
                                 col.isTrigger = true;
                             }
-                            Debug.Log("[CityGen] Converted MastabaDoor colliders to triggers for exit access.");
                         }
-                        Debug.Log("[CityGen] Player spawned inside Mastaba of Qar.");
+                        Debug.Log("[CityGen] Player spawned inside big_egypt_house.glb.");
                     } else {
                         p.transform.position = new Vector3(16f, GetTerrainHeight(new Vector3(16f, 0f, 48f)) + 1.2f, 48f);
                     }

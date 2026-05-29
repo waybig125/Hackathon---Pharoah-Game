@@ -61,13 +61,14 @@ namespace TheAlchemistsCrypt.UI
             var tmRect = threatMeterGo.GetComponent<RectTransform>();
             tmRect.anchorMin = tmRect.anchorMax = new Vector2(0, 1);
             tmRect.pivot = new Vector2(0f, 1f);
-            tmRect.anchoredPosition = new Vector2(50, -225);
-            tmRect.sizeDelta = new Vector2(70, 70);
+            tmRect.anchoredPosition = new Vector2(60, -235);
+            tmRect.sizeDelta = new Vector2(85, 85);
             
             var tmBg = threatMeterGo.GetComponent<Image>();
+            tmBg.sprite = CreateCircularSandstoneMedallionSprite(128);
+            tmBg.color = Color.white;
+            
             Sprite ringSprite = CreateRadialSprite(128, 128);
-            tmBg.sprite = ringSprite;
-            tmBg.color = new Color(0.15f, 0.05f, 0.05f, 0.75f);
             
             // Outer golden alchemical bezel (rotates dynamically)
             threatCompassGo = new GameObject("ThreatCompass", typeof(RectTransform), typeof(Image));
@@ -75,7 +76,7 @@ namespace TheAlchemistsCrypt.UI
             var tcRect = threatCompassGo.GetComponent<RectTransform>();
             tcRect.anchorMin = Vector2.zero;
             tcRect.anchorMax = Vector2.one;
-            tcRect.offsetMin = tcRect.offsetMax = new Vector2(-8, -8);
+            tcRect.offsetMin = tcRect.offsetMax = new Vector2(-10, -10);
             var tcImg = threatCompassGo.GetComponent<Image>();
             tcImg.sprite = CreateAlchemicalCompassBezel(144, 144);
             tcImg.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
@@ -100,8 +101,8 @@ namespace TheAlchemistsCrypt.UI
             var eyeGo = new GameObject("ThreatEye", typeof(RectTransform), typeof(Image));
             eyeGo.transform.SetParent(threatMeterGo.transform, false);
             var eyeRect = eyeGo.GetComponent<RectTransform>();
-            eyeRect.anchorMin = new Vector2(0.25f, 0.25f);
-            eyeRect.anchorMax = new Vector2(0.75f, 0.75f);
+            eyeRect.anchorMin = new Vector2(0.22f, 0.22f);
+            eyeRect.anchorMax = new Vector2(0.78f, 0.78f);
             eyeRect.offsetMin = eyeRect.offsetMax = Vector2.zero;
             threatEyeGlyphImg = eyeGo.GetComponent<Image>();
             threatEyeGlyphImg.sprite = CreateEyeGlyphSprite(64, 64);
@@ -111,18 +112,19 @@ namespace TheAlchemistsCrypt.UI
             var lblGo = new GameObject("ThreatLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
             lblGo.transform.SetParent(threatMeterGo.transform, false);
             var lblRect = lblGo.GetComponent<RectTransform>();
-            lblRect.anchorMin = new Vector2(0.5f, 0.5f);
-            lblRect.anchorMax = new Vector2(0.5f, 0.5f);
-            lblRect.anchoredPosition = new Vector2(0, 0);
-            lblRect.sizeDelta = new Vector2(60, 20);
+            lblRect.anchorMin = new Vector2(0.5f, 0f);
+            lblRect.anchorMax = new Vector2(0.5f, 0f);
+            lblRect.pivot = new Vector2(0.5f, 1f);
+            lblRect.anchoredPosition = new Vector2(0, -12f);
+            lblRect.sizeDelta = new Vector2(120, 25);
             
             var lblTxt = lblGo.GetComponent<TextMeshProUGUI>();
-            lblTxt.text = "THREAT";
+            lblTxt.text = "THREAT LEVEL";
             lblTxt.font = GetTitleFont();
-            lblTxt.fontSize = 10;
+            lblTxt.fontSize = 11;
             lblTxt.fontStyle = FontStyles.Bold;
             lblTxt.alignment = TextAlignmentOptions.Center;
-            lblTxt.color = new Color(1.0f, 0.7f, 0.2f, 0.85f);
+            lblTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
 
             // 3. Setup Scroll of Thoth UI
             scrollUiGo = new GameObject("ScrollOfThothUI", typeof(RectTransform), typeof(Image));
@@ -542,6 +544,46 @@ namespace TheAlchemistsCrypt.UI
             }
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateCircularSandstoneMedallionSprite(int size)
+        {
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float cx = size / 2f;
+            float cy = size / 2f;
+            float rOuter = size / 2f - 2f;
+            float rInner = rOuter - 6f;
+            
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - cx;
+                    float dy = y - cy;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    
+                    if (dist > rOuter)
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                    else if (dist <= rOuter && dist > rInner)
+                    {
+                        float noise = (float)Mathf.PerlinNoise(x * 0.15f, y * 0.15f) * 0.2f - 0.1f;
+                        tex.SetPixel(x, y, new Color(0.95f, 0.8f, 0.2f, 0.95f) * (1.0f + noise));
+                    }
+                    else if (dist <= rInner)
+                    {
+                        float noise = (float)Mathf.PerlinNoise(x * 0.25f, y * 0.25f) * 0.12f;
+                        tex.SetPixel(x, y, new Color(0.04f, 0.04f, 0.04f, 0.85f) * (1.0f + noise));
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
         }
     }
 }

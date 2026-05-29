@@ -190,6 +190,13 @@ namespace TheAlchemistsCrypt.Player
             if (Time.time - lastShakeTime < 0.4f) return; // Cooldown to prevent overlapping shakes
             lastShakeTime = Time.time;
 
+            // Ensure the Cinemachine Camera has an Impulse Listener attached to listen to our impulses
+            var vcam = GameObject.FindAnyObjectByType<Unity.Cinemachine.CinemachineCamera>();
+            if (vcam != null && vcam.GetComponent<Unity.Cinemachine.CinemachineImpulseListener>() == null)
+            {
+                vcam.gameObject.AddComponent<Unity.Cinemachine.CinemachineImpulseListener>();
+            }
+
             var source = GetComponent<Unity.Cinemachine.CinemachineImpulseSource>();
             if (source == null)
             {
@@ -197,7 +204,10 @@ namespace TheAlchemistsCrypt.Player
             }
             if (source != null)
             {
-                source.GenerateImpulse(0.3f);
+                var definition = source.m_ImpulseDefinition;
+                definition.m_ImpulseDuration = 0.25f;
+                definition.m_ImpulseShape = Unity.Cinemachine.CinemachineImpulseDefinition.ImpulseShapes.Bump;
+                source.GenerateImpulse(0.65f); // Solid noticeable hit shake!
             }
 
             if (shakeCoroutine != null)
@@ -224,8 +234,8 @@ namespace TheAlchemistsCrypt.Player
             }
 
             float elapsed = 0f;
-            float duration = 0.15f;
-            float magnitude = 0.08f; // Reduced magnitude to look subtle/genuine rather than a glitchy warp
+            float duration = 0.2f;
+            float magnitude = 0.15f; // Solid fallback shake if Cinemachine isn't active
 
             while (elapsed < duration)
             {

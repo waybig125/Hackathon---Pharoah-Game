@@ -135,7 +135,6 @@ namespace TheAlchemistsCrypt.Editor
             string[] housePaths = {
                 "Assets/Resources/more_items_for_map/arabic_house_4.glb",
                 "Assets/Resources/more_items_for_map/arabic_house_5.glb",
-                "Assets/Resources/more_items_for_map/big_egypt_house.glb",
                 "Assets/Resources/more_items_for_map/egyptian_house.glb",
                 "Assets/Resources/more_items_for_map/lay_house.glb",
                 "Assets/Resources/more_items_for_map/medieval_stone_arab_house.glb"
@@ -162,6 +161,7 @@ namespace TheAlchemistsCrypt.Editor
             var templesPackPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/egyptian_temples.glb");
             var obeliskNewPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/stylized_egypt_obelisk.glb");
             var lighthousePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/light_house_-_egypt_game_ready_lowpoly.glb");
+            var bigHousePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/big_egypt_house.glb");
             var doorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/egyptian_door.glb");
             
             // Create warm golden sandstone gradient texture for houses
@@ -387,7 +387,7 @@ namespace TheAlchemistsCrypt.Editor
                 terrainComp.drawInstanced = true;
             }
 
-            float spacing = 30f; // Decreased spacing to bring houses closer together for a denser residential feel
+            float spacing = 20f; // Decreased spacing to bring houses closer together for a denser residential feel
             float halfSpan = (gridSize * spacing) / 2f;
             var enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Inspiration-Thirdperson-Controller-Update372022/Assets/Enemy-AI/Prefabs/TestZombie.prefab");
 
@@ -520,27 +520,60 @@ namespace TheAlchemistsCrypt.Editor
                 occupiedPositions.Add(lighthousePos);
             }
 
-            // Spawn extra obelisks and columns in the city (some fallen/broken/shattered)
-            int extraObelisks = 10;
+            // Spawn player house (big_egypt_house.glb) explicitly so player starts inside it
+            if (bigHousePrefab != null) {
+                Vector3 spawnHousePos = new Vector3(0f, 0f, 60f); // Near central plaza
+                spawnHousePos.y = GetTerrainHeight(spawnHousePos);
+                var spawnHouse = PlaceIntegratedAsset(root.transform, spawnHousePos, bigHousePrefab, 1.0f, true, true, 0f, 180f, false);
+                if (spawnHouse != null) {
+                    spawnHouse.name = "BigEgyptHouse_Spawn";
+                }
+                occupiedPositions.Add(spawnHousePos);
+            }
+
+            // Spawn extra obelisks and columns in the city (some fallen/broken/shattered) to fill empty spaces
+            int extraObelisks = 25;
             for (int i = 0; i < extraObelisks; i++) {
-                float rx = Random.Range(-220f, 220f);
-                float rz = Random.Range(-30f, 180f);
+                float rx = Random.Range(-240f, 240f);
+                float rz = Random.Range(-40f, 240f);
                 Vector3 pos = new Vector3(rx, 0f, rz);
+                
+                bool tooClose = false;
+                foreach (var occ in occupiedPositions) {
+                    if (Vector3.Distance(pos, occ) < 18f) {
+                        tooClose = true;
+                        break;
+                    }
+                }
+                if (tooClose) continue;
+
                 pos.y = GetTerrainHeight(pos);
                 if (pos.y > 0.5f) {
                     BuildProceduralObelisk(root.transform, pos, wallMat, Random.value < 0.5f, Random.value < 0.4f);
+                    occupiedPositions.Add(pos);
                 }
             }
 
-            int extraFallenCols = 8;
+            int extraFallenCols = 20;
             for (int i = 0; i < extraFallenCols; i++) {
-                float rx = Random.Range(-200f, 200f);
-                float rz = Random.Range(-35f, 170f);
+                float rx = Random.Range(-220f, 220f);
+                float rz = Random.Range(-45f, 220f);
                 Vector3 pos = new Vector3(rx, 0f, rz);
+                
+                bool tooClose = false;
+                foreach (var occ in occupiedPositions) {
+                    if (Vector3.Distance(pos, occ) < 15f) {
+                        tooClose = true;
+                        break;
+                    }
+                }
+                if (tooClose) continue;
+
                 pos.y = GetTerrainHeight(pos);
                 var colPrefab = GetRandomColumn();
                 if (pos.y > 0.5f && colPrefab != null) {
                     SpawnFallenColumn(root.transform, pos, colPrefab);
+                    occupiedPositions.Add(pos);
                 }
             }
 
