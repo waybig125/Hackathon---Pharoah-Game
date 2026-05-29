@@ -60,6 +60,34 @@ namespace TheAlchemistsCrypt.Gameplay
             sc.isTrigger = true;
             sc.radius = 1.2f;
 
+            // Add a continuous ambient particle system emitting soft crimson sparkles
+            var psGo = new GameObject("AmbientSparks");
+            psGo.transform.SetParent(transform, false);
+            psGo.transform.localPosition = Vector3.zero;
+            
+            var ps = psGo.AddComponent<ParticleSystem>();
+            var psMain = ps.main;
+            psMain.duration = 1f;
+            psMain.loop = true;
+            psMain.startLifetime = 1.2f;
+            psMain.startSpeed = 0.5f;
+            psMain.startSize = 0.12f;
+            psMain.startColor = new Color(0.9f, 0.15f, 0.3f, 0.8f);
+            psMain.simulationSpace = ParticleSystemSimulationSpace.Local;
+            
+            var psEmission = ps.emission;
+            psEmission.rateOverTime = 8f;
+            
+            var psShape = ps.shape;
+            psShape.shapeType = ParticleSystemShapeType.Sphere;
+            psShape.radius = 0.5f;
+            
+            var psRend = psGo.GetComponent<ParticleSystemRenderer>();
+            if (psRend != null)
+            {
+                psRend.sharedMaterial = CreateParticleMaterial(new Color(0.9f, 0.15f, 0.3f));
+            }
+
             FindPlayer();
         }
 
@@ -197,6 +225,49 @@ namespace TheAlchemistsCrypt.Gameplay
             {
                 isMagnetized = true;
             }
+        }
+
+        private Material CreateParticleMaterial(Color baseColor)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+            
+            Material mat = new Material(shader);
+            mat.SetColor("_Color", baseColor);
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", baseColor);
+            
+            // Set particles transparent in URP to prevent solid box rendering
+            if (shader.name.Contains("Universal Render Pipeline"))
+            {
+                mat.SetFloat("_Surface", 1f);
+                mat.SetFloat("_Blend", 0f);
+                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                mat.SetInt("_ZWrite", 0);
+                mat.DisableKeyword("_ALPHATEST_ON");
+                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            }
+
+            // Create a gorgeous soft anti-aliased circular brush texture
+            Texture2D tex = new Texture2D(16, 16, TextureFormat.RGBA32, false);
+            for (int y = 0; y < 16; y++)
+            {
+                for (int x = 0; x < 16; x++)
+                {
+                    float dx = x - 7.5f;
+                    float dy = y - 7.5f;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    float alpha = Mathf.Clamp01(1f - (dist / 7.5f));
+                    alpha = Mathf.Pow(alpha, 2.5f);
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            tex.Apply();
+            mat.mainTexture = tex;
+            if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+            if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", tex);
+            return mat;
         }
     }
 }

@@ -163,8 +163,8 @@ namespace TheAlchemistsCrypt.UI
                     healthPanel.anchoredPosition = new Vector2(50, -50);
                     healthPanel.sizeDelta = new Vector2(550, 85);
                     var hpPanelImg = healthPanel.GetComponent<Image>();
-                    hpPanelImg.sprite = null;
-                    hpPanelImg.color = Color.clear; // Fully borderless/transparent background
+                    hpPanelImg.sprite = CreateFramedBarSprite(550, 85, new Color(0.95f, 0.8f, 0.2f, 0.85f), new Color(0.04f, 0.04f, 0.04f, 0.75f), 3);
+                    hpPanelImg.type = Image.Type.Simple;
                     
                     var hpIconGo = new GameObject("HealthIcon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     hpIconGo.SetParent(healthPanel, false);
@@ -224,8 +224,8 @@ namespace TheAlchemistsCrypt.UI
                     ammoPanel.anchoredPosition = new Vector2(50, -135);
                     ammoPanel.sizeDelta = new Vector2(550, 85);
                     var amPanelImg = ammoPanel.GetComponent<Image>();
-                    amPanelImg.sprite = null;
-                    amPanelImg.color = Color.clear; // Fully borderless/transparent background
+                    amPanelImg.sprite = CreateFramedBarSprite(550, 85, new Color(0.95f, 0.8f, 0.2f, 0.85f), new Color(0.04f, 0.04f, 0.04f, 0.75f), 3);
+                    amPanelImg.type = Image.Type.Simple;
                     
                     var amIconGo = new GameObject("AmmoIcon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     amIconGo.SetParent(ammoPanel, false);

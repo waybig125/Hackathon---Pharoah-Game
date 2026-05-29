@@ -23,9 +23,8 @@ namespace TheAlchemistsCrypt.AI
 
             mummyPool = new ObjectPool<GameObject>(
                 createFunc: () => Instantiate(mummyPrefab),
-                actionOnGet: (obj) => { obj.SetActive(true); },
+                actionOnGet: (obj) => { /* Handled manually after positioning */ },
                 actionOnRelease: (obj) => { obj.SetActive(false); },
-                actionOnDestroy: (obj) => Destroy(obj),
                 collectionCheck: false,
                 defaultCapacity: maxMummies,
                 maxSize: maxMummies + 5
@@ -33,9 +32,8 @@ namespace TheAlchemistsCrypt.AI
 
             pharaohPool = new ObjectPool<GameObject>(
                 createFunc: () => Instantiate(pharaohPrefab),
-                actionOnGet: (obj) => { obj.SetActive(true); },
+                actionOnGet: (obj) => { /* Handled manually after positioning */ },
                 actionOnRelease: (obj) => { obj.SetActive(false); },
-                actionOnDestroy: (obj) => Destroy(obj),
                 collectionCheck: false,
                 defaultCapacity: 2,
                 maxSize: 5
@@ -159,6 +157,9 @@ namespace TheAlchemistsCrypt.AI
             }
 
             GameObject go = mummyPool.Get();
+            var agent = go.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (agent != null) agent.enabled = false;
+
             go.transform.position = spawnPos;
             go.transform.rotation = Quaternion.identity;
             go.name = "Mummy_Dynamic_" + id;
@@ -168,6 +169,9 @@ namespace TheAlchemistsCrypt.AI
                 ai.mummyId = id;
                 ai.onReleaseToPool = (obj) => { if (obj.activeSelf) mummyPool.Release(obj); };
             }
+
+            go.SetActive(true);
+            if (agent != null) agent.enabled = true;
 
             Debug.Log($"[MummySpawner] Successfully spawned active dynamic mummy with ID {id} at {spawnPos}");
 
@@ -199,6 +203,9 @@ namespace TheAlchemistsCrypt.AI
             }
 
             GameObject go = pharaohPool.Get();
+            var agent = go.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (agent != null) agent.enabled = false;
+
             go.transform.position = spawnPos;
             go.transform.rotation = Quaternion.identity;
             go.name = "Pharaoh_Prefab";
@@ -208,6 +215,9 @@ namespace TheAlchemistsCrypt.AI
                 ai.mummyId = id;
                 ai.onReleaseToPool = (obj) => { if (obj.activeSelf) pharaohPool.Release(obj); };
             }
+
+            go.SetActive(true);
+            if (agent != null) agent.enabled = true;
 
             Debug.Log($"[MummySpawner] Boss Spawned: Pharaoh with ID {id} at {spawnPos}");
         }

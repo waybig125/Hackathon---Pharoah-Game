@@ -15,6 +15,8 @@ namespace TheAlchemistsCrypt.UI
         private Image healthIconBg;
         private GameObject threatMeterGo;
         private Image threatMeterFill;
+        private GameObject threatCompassGo;
+        private Image threatEyeGlyphImg;
         private GameObject scrollUiGo;
         private RectTransform scrollUiRect;
         private Image scrollUiIcon;
@@ -65,7 +67,18 @@ namespace TheAlchemistsCrypt.UI
             var tmBg = threatMeterGo.GetComponent<Image>();
             Sprite ringSprite = CreateRadialSprite(128, 128);
             tmBg.sprite = ringSprite;
-            tmBg.color = new Color(0.15f, 0.05f, 0.05f, 0.6f);
+            tmBg.color = new Color(0.15f, 0.05f, 0.05f, 0.75f);
+            
+            // Outer golden alchemical bezel (rotates dynamically)
+            threatCompassGo = new GameObject("ThreatCompass", typeof(RectTransform), typeof(Image));
+            threatCompassGo.transform.SetParent(threatMeterGo.transform, false);
+            var tcRect = threatCompassGo.GetComponent<RectTransform>();
+            tcRect.anchorMin = Vector2.zero;
+            tcRect.anchorMax = Vector2.one;
+            tcRect.offsetMin = tcRect.offsetMax = new Vector2(-8, -8);
+            var tcImg = threatCompassGo.GetComponent<Image>();
+            tcImg.sprite = CreateAlchemicalCompassBezel(144, 144);
+            tcImg.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
             
             var fillGo = new GameObject("ThreatFill", typeof(RectTransform), typeof(Image));
             fillGo.transform.SetParent(threatMeterGo.transform, false);
@@ -82,6 +95,18 @@ namespace TheAlchemistsCrypt.UI
             threatMeterFill.fillClockwise = true;
             threatMeterFill.color = new Color(0.9f, 0.1f, 0.1f, 0.95f);
             threatMeterFill.fillAmount = 0f;
+            
+            // Central warning alchemical eye
+            var eyeGo = new GameObject("ThreatEye", typeof(RectTransform), typeof(Image));
+            eyeGo.transform.SetParent(threatMeterGo.transform, false);
+            var eyeRect = eyeGo.GetComponent<RectTransform>();
+            eyeRect.anchorMin = new Vector2(0.25f, 0.25f);
+            eyeRect.anchorMax = new Vector2(0.75f, 0.75f);
+            eyeRect.offsetMin = eyeRect.offsetMax = Vector2.zero;
+            threatEyeGlyphImg = eyeGo.GetComponent<Image>();
+            threatEyeGlyphImg.sprite = CreateEyeGlyphSprite(64, 64);
+            threatEyeGlyphImg.preserveAspect = true;
+            threatEyeGlyphImg.color = new Color(0.9f, 0.5f, 0.1f, 0.7f);
             
             var lblGo = new GameObject("ThreatLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
             lblGo.transform.SetParent(threatMeterGo.transform, false);
@@ -213,7 +238,22 @@ namespace TheAlchemistsCrypt.UI
                 threat = hm.AggressionScore;
             }
             
+            if (threatCompassGo != null)
+            {
+                float rotSpeed = Mathf.Lerp(15f, 120f, threat);
+                threatCompassGo.transform.Rotate(0, 0, rotSpeed * Time.deltaTime);
+            }
+            
             threatMeterFill.fillAmount = Mathf.Lerp(threatMeterFill.fillAmount, threat, Time.deltaTime * 5f);
+            
+            Color threatColor = Color.Lerp(new Color(0.95f, 0.6f, 0.1f, 0.95f), new Color(0.95f, 0.05f, 0.05f, 0.95f), threat);
+            threatMeterFill.color = threatColor;
+            
+            if (threatEyeGlyphImg != null)
+            {
+                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * Mathf.Lerp(3f, 15f, threat));
+                threatEyeGlyphImg.color = Color.Lerp(new Color(0.95f, 0.6f, 0.1f, 0.6f), new Color(0.95f, 0.05f, 0.05f, 1.0f), threat) * (0.5f + 0.5f * pulse);
+            }
             
             if (threat > 0.6f && Time.frameCount % 120 == 0)
             {
@@ -396,6 +436,79 @@ namespace TheAlchemistsCrypt.UI
             }
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateAlchemicalCompassBezel(int w, int h)
+        {
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            float cx = w / 2f;
+            float cy = h / 2f;
+            float rOuter = w / 2f - 2f;
+            float rInner = rOuter - 6f;
+            
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float dx = x - cx;
+                    float dy = y - cy;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    
+                    if ((dist >= rInner && dist <= rOuter) || (dist >= rInner - 12f && dist <= rInner - 10f))
+                    {
+                        tex.SetPixel(x, y, Color.white);
+                    }
+                    else if (dist >= rInner - 10f && dist <= rInner)
+                    {
+                        float angle = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
+                        if (Mathf.Abs(angle % 30f) < 2f || Mathf.Abs((angle + 15f) % 90f) < 1f)
+                        {
+                            tex.SetPixel(x, y, Color.white);
+                        }
+                        else
+                        {
+                            tex.SetPixel(x, y, Color.clear);
+                        }
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateEyeGlyphSprite(int w, int h)
+        {
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            float cx = w / 2f;
+            float cy = h / 2f;
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float dx = (x - cx) / cx;
+                    float dy = (y - cy) / cy;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < 0.2f)
+                    {
+                        tex.SetPixel(x, y, Color.white);
+                    }
+                    else if (dist > 0.4f && dist < 0.5f && Mathf.Abs(dy) < 0.3f)
+                    {
+                        tex.SetPixel(x, y, Color.white);
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
         }
     }
 }

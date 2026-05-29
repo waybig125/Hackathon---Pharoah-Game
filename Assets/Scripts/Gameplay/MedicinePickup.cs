@@ -56,6 +56,34 @@ namespace TheAlchemistsCrypt.Gameplay
             glowLight.intensity = 6.0f;
             glowLight.range = 5.0f;
             glowLight.shadows = LightShadows.None;
+
+            // Add a continuous ambient particle system emitting soft green sparkles
+            var psGo = new GameObject("AmbientSparks");
+            psGo.transform.SetParent(transform, false);
+            psGo.transform.localPosition = Vector3.zero;
+            
+            var ps = psGo.AddComponent<ParticleSystem>();
+            var psMain = ps.main;
+            psMain.duration = 1f;
+            psMain.loop = true;
+            psMain.startLifetime = 1.2f;
+            psMain.startSpeed = 0.5f;
+            psMain.startSize = 0.12f;
+            psMain.startColor = new Color(0.2f, 1f, 0.4f, 0.8f);
+            psMain.simulationSpace = ParticleSystemSimulationSpace.Local;
+            
+            var psEmission = ps.emission;
+            psEmission.rateOverTime = 8f;
+            
+            var psShape = ps.shape;
+            psShape.shapeType = ParticleSystemShapeType.Sphere;
+            psShape.radius = 0.5f;
+            
+            var psRend = psGo.GetComponent<ParticleSystemRenderer>();
+            if (psRend != null)
+            {
+                psRend.sharedMaterial = CreateParticleMaterial(new Color(0.2f, 1f, 0.4f));
+            }
         }
 
         private void Update()
@@ -118,6 +146,19 @@ namespace TheAlchemistsCrypt.Gameplay
             mat.SetColor("_Color", baseColor);
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", baseColor);
             
+            // Set particles transparent in URP to prevent solid box rendering
+            if (shader.name.Contains("Universal Render Pipeline"))
+            {
+                mat.SetFloat("_Surface", 1f);
+                mat.SetFloat("_Blend", 0f);
+                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                mat.SetInt("_ZWrite", 0);
+                mat.DisableKeyword("_ALPHATEST_ON");
+                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            }
+
             // Create a gorgeous soft anti-aliased circular brush texture
             Texture2D tex = new Texture2D(16, 16, TextureFormat.RGBA32, false);
             for (int y = 0; y < 16; y++)

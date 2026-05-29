@@ -92,6 +92,20 @@ namespace TheAlchemistsCrypt.AI
             var trailMat = new Material(trailShader);
             trailMat.color = new Color(0.9f, 0.7f, 0.2f, 0.6f);
             if (trailMat.HasProperty("_BaseColor")) trailMat.SetColor("_BaseColor", new Color(0.9f, 0.7f, 0.2f, 0.6f));
+            
+            // Set trail transparent in URP
+            if (trailShader.name.Contains("Universal Render Pipeline"))
+            {
+                trailMat.SetFloat("_Surface", 1f);
+                trailMat.SetFloat("_Blend", 0f);
+                trailMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                trailMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                trailMat.SetInt("_ZWrite", 0);
+                trailMat.DisableKeyword("_ALPHATEST_ON");
+                trailMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                trailMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            }
+            
             trailMat.SetColor("_EmissionColor", new Color(0.9f, 0.6f, 0.1f) * 2f);
             trailMat.EnableKeyword("_EMISSION");
             trail.sharedMaterial = trailMat;
@@ -160,6 +174,19 @@ namespace TheAlchemistsCrypt.AI
             sharedParticleMaterial.SetColor("_Color", baseColor);
             if (sharedParticleMaterial.HasProperty("_BaseColor")) sharedParticleMaterial.SetColor("_BaseColor", baseColor);
             
+            // Set particles transparent in URP to prevent solid box rendering
+            if (shader.name.Contains("Universal Render Pipeline"))
+            {
+                sharedParticleMaterial.SetFloat("_Surface", 1f);
+                sharedParticleMaterial.SetFloat("_Blend", 0f);
+                sharedParticleMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                sharedParticleMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                sharedParticleMaterial.SetInt("_ZWrite", 0);
+                sharedParticleMaterial.DisableKeyword("_ALPHATEST_ON");
+                sharedParticleMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                sharedParticleMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            }
+
             // Create a gorgeous soft anti-aliased circular brush texture once
             sharedParticleTexture = new Texture2D(16, 16, TextureFormat.RGBA32, false);
             for (int y = 0; y < 16; y++)
