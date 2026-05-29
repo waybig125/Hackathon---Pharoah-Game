@@ -156,7 +156,7 @@ namespace TheAlchemistsCrypt.Editor
                     }
 
                     if (skyMat != null) RenderSettings.skybox = skyMat;
-                    RenderSettings.ambientMode = AmbientMode.Color;
+                    RenderSettings.ambientMode = AmbientMode.Flat;
                     RenderSettings.ambientLight = new Color(0.45f, 0.32f, 0.18f); // Warm indirect light to match dusk
 
                     // ── NVJOB cloud dome (visual cloud mesh only — NOT the scene skybox) ─────
