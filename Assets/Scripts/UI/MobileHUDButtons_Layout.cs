@@ -75,8 +75,9 @@ namespace TheAlchemistsCrypt.UI
                     horrorGo.anchorMin = Vector2.zero; horrorGo.anchorMax = Vector2.one;
                     horrorGo.offsetMin = horrorGo.offsetMax = Vector2.zero;
                     var horrorImg = horrorGo.GetComponent<Image>();
-                    horrorImg.sprite = CreateProceduralGradientSprite(256, 256, new Color(0.02f, 0.15f, 0.05f, 0.05f), new Color(0f, 0.04f, 0.01f, 0.35f));
-                    horrorImg.color = new Color(1f, 1f, 1f, 0.45f);
+                    // Strong dark horror green vignette: transparent center tapering to a rich, visible horror green at the edges
+                    horrorImg.sprite = CreateProceduralGradientSprite(256, 256, new Color(0f, 0.15f, 0.03f, 0f), new Color(0f, 0.25f, 0.04f, 0.85f));
+                    horrorImg.color = Color.white;
                     horrorImg.raycastTarget = false;
 
                     var lookZone = new GameObject("LookZone", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();

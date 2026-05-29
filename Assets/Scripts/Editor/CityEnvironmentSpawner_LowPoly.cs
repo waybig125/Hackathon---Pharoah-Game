@@ -51,10 +51,7 @@ namespace TheAlchemistsCrypt.Editor
             envFolder.transform.SetParent(root.transform);
             envFolder.isStatic = true;
 
-            var mountainFolder = new GameObject("Mountains");
-            mountainFolder.transform.SetParent(envFolder.transform);
-            mountainFolder.isStatic = true;
-
+            // Mountains have been removed to avoid disturbing city generation.
             var rockFolder = new GameObject("Rocks");
             rockFolder.transform.SetParent(envFolder.transform);
             rockFolder.isStatic = true;
@@ -62,43 +59,6 @@ namespace TheAlchemistsCrypt.Editor
             var vegetationFolder = new GameObject("Vegetation");
             vegetationFolder.transform.SetParent(envFolder.transform);
             vegetationFolder.isStatic = true;
-
-            // 2. Spawn Mountains (natural enclosures around the edges)
-            // North border (Z between 280 and 460, X from -460 to 460)
-            if (mountingPrefabs.Count > 0)
-            {
-                int northCount = 12;
-                for (int i = 0; i < northCount; i++)
-                {
-                    float rx = Mathf.Lerp(-450f, 450f, (float)i / (northCount - 1)) + Random.Range(-20f, 20f);
-                    float rz = Random.Range(300f, 460f);
-                    Vector3 pos = new Vector3(rx, 0f, rz);
-                    var prefab = mountingPrefabs[Random.Range(0, mountingPrefabs.Count)];
-                    PlaceIntegratedAsset(mountainFolder.transform, pos, prefab, Random.Range(18f, 32f), false, false, 0f, Random.Range(0f, 360f), true);
-                }
-
-                // West border (X between -460 and -320, Z from -60 to 300)
-                int westCount = 8;
-                for (int i = 0; i < westCount; i++)
-                {
-                    float rx = Random.Range(-460f, -320f);
-                    float rz = Mathf.Lerp(-60f, 300f, (float)i / (westCount - 1)) + Random.Range(-15f, 15f);
-                    Vector3 pos = new Vector3(rx, 0f, rz);
-                    var prefab = mountingPrefabs[Random.Range(0, mountingPrefabs.Count)];
-                    PlaceIntegratedAsset(mountainFolder.transform, pos, prefab, Random.Range(18f, 32f), false, false, 0f, Random.Range(0f, 360f), true);
-                }
-
-                // East border (X between 320 and 460, Z from -60 to 300)
-                int eastCount = 8;
-                for (int i = 0; i < eastCount; i++)
-                {
-                    float rx = Random.Range(320f, 460f);
-                    float rz = Mathf.Lerp(-60f, 300f, (float)i / (eastCount - 1)) + Random.Range(-15f, 15f);
-                    Vector3 pos = new Vector3(rx, 0f, rz);
-                    var prefab = mountingPrefabs[Random.Range(0, mountingPrefabs.Count)];
-                    PlaceIntegratedAsset(mountainFolder.transform, pos, prefab, Random.Range(18f, 32f), false, false, 0f, Random.Range(0f, 360f), true);
-                }
-            }
 
             // 3. Scatter Rocks (near mountains and outer spaces)
             if (rockPrefabs.Count > 0)

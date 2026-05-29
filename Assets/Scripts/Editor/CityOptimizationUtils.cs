@@ -283,35 +283,37 @@ namespace TheAlchemistsCrypt.Editor
                 }
 
         private float GetTerrainHeight(Vector3 pos) {
-                    var terrain = Terrain.activeTerrain;
-                    if (terrain != null) return terrain.SampleHeight(pos);
-
-                    // Downward raycast fallback against MeshColliders
+                    // Force raycast against the low-poly mesh terrain "DesertTerrain"
                     Ray ray = new Ray(new Vector3(pos.x, 250f, pos.z), Vector3.down);
-                    RaycastHit hit;
-                    if (Physics.Raycast(ray, out hit, 300f))
+                    RaycastHit[] hits = Physics.RaycastAll(ray, 300f);
+                    foreach (var hit in hits)
                     {
-                        return hit.point.y;
+                        if (hit.collider.gameObject.name == "DesertTerrain")
+                        {
+                            return hit.point.y;
+                        }
+                    }
+                    if (hits.Length > 0)
+                    {
+                        return hits[0].point.y;
                     }
                     return 0f;
                 }
 
         private Vector3 GetTerrainNormal(Vector3 worldPos) {
-                    var terrain = Terrain.activeTerrain;
-                    if (terrain != null && terrain.terrainData != null)
-                    {
-                        Vector3 terrainLocalPos = worldPos - terrain.transform.position;
-                        float normX = Mathf.Clamp01(terrainLocalPos.x / terrain.terrainData.size.x);
-                        float normZ = Mathf.Clamp01(terrainLocalPos.z / terrain.terrainData.size.z);
-                        return terrain.terrainData.GetInterpolatedNormal(normX, normZ);
-                    }
-
-                    // Downward raycast fallback
+                    // Force raycast against the low-poly mesh terrain "DesertTerrain"
                     Ray ray = new Ray(new Vector3(worldPos.x, 250f, worldPos.z), Vector3.down);
-                    RaycastHit hit;
-                    if (Physics.Raycast(ray, out hit, 300f))
+                    RaycastHit[] hits = Physics.RaycastAll(ray, 300f);
+                    foreach (var hit in hits)
                     {
-                        return hit.normal;
+                        if (hit.collider.gameObject.name == "DesertTerrain")
+                        {
+                            return hit.normal;
+                        }
+                    }
+                    if (hits.Length > 0)
+                    {
+                        return hits[0].normal;
                     }
                     return Vector3.up;
                 }
