@@ -118,6 +118,8 @@ namespace TheAlchemistsCrypt.Editor
                     {
                         if (mats[i] != null && !mats[i].shader.name.Contains("Universal Render Pipeline"))
                         {
+                            if (mr.gameObject.name.ToLower().Contains("palm") || mr.gameObject.name.ToLower().Contains("tree")) continue;
+                            
                             Material newM = new Material(urpShader);
                             newM.name = mats[i].name + "_URP";
                             Color origCol = mats[i].HasProperty("_Color") ? mats[i].color : 

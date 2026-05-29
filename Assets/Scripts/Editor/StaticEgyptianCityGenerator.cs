@@ -721,6 +721,8 @@ namespace TheAlchemistsCrypt.Editor
             
             EditorSceneManager.SaveScene(activeScene);
             
+            StaticOcclusionCulling.Clear();
+            
             Debug.Log("Polished Egyptian City V5.2 generated! Static flags + SRP materials fixed. Run 'Egyptian → 🔥 Bake Occlusion Culling' before final testing.");
         }
 

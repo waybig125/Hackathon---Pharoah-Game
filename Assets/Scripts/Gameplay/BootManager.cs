@@ -86,6 +86,8 @@ namespace TheAlchemistsCrypt.Gameplay
             pbFillRect.anchorMax = new Vector2(0f, 1f); // Starts empty
             pbFillRect.offsetMin = pbFillRect.offsetMax = Vector2.zero;
             progressBar = pbFillGo.GetComponent<Image>();
+            progressBar.sprite = CreateRoundedRectSprite(730, 44, 22f); // Sliced sprite for rounded right edge
+            progressBar.type = Image.Type.Sliced;
             progressBar.color = new Color(0.0f, 0.9f, 0.3f, 0.85f); // Bright premium chemical green matching HUD
 
             // Start bubble animation
@@ -134,7 +136,7 @@ namespace TheAlchemistsCrypt.Gameplay
             
             tex.SetPixels(colors);
             tex.Apply();
-            return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+            return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(cornerRadius, cornerRadius, cornerRadius, cornerRadius));
         }
 
         private Sprite CreateCircleSprite(int size)
