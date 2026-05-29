@@ -30,6 +30,7 @@ namespace TheAlchemistsCrypt.Editor
             SetCityObjectsStatic();
             int extracted = ExtractAndConvertAllGLBMaterials();
             int converted = FixAllSceneMaterials();
+            FixDarkExtractedMaterials(); // Clean metallic/emission maps/keywords
             DisableGPUResidentDrawerAllAssets(silent: true);
             EditorUtility.DisplayDialog(
                 "SRP Batcher Fix Complete",
@@ -380,8 +381,40 @@ namespace TheAlchemistsCrypt.Editor
             else if (src.HasProperty("_MetallicGlossMap")) metallicGlossProp = "_MetallicGlossMap";
             
             if (metallicGlossProp != null) metallicGlossMap = src.GetTexture(metallicGlossProp);
-            if (metallicGlossMap != null)
+
+            // ── KEY FIX: Stone/dielectric assets must NEVER use the GLTF metallic-roughness map ──
+            // GLTF packs Metallic in the BLUE channel and Roughness in the GREEN channel.
+            // URP Lit reads metallic from the RED channel → every GLTF stone asset with this map
+            // samples near-zero red → appears jet-black in URP (pitch-dark buildings).
+            // For any non-metallic dielectric surface (stone, wood, plaster, fabric, ceramics)
+            // we strip the map entirely and force _Metallic = 0 / _Smoothness = low.
+            bool isDielectric = isStoneAsset ||
+                lowerName.Contains("column") || lowerName.Contains("pillar") ||
+                lowerName.Contains("obelisk") || lowerName.Contains("sphinx") ||
+                lowerName.Contains("temple") || lowerName.Contains("tomb") ||
+                lowerName.Contains("papyrus") || lowerName.Contains("barrel") ||
+                lowerName.Contains("crate") || lowerName.Contains("stall") ||
+                lowerName.Contains("market") || lowerName.Contains("door") ||
+                lowerName.Contains("ladder") || lowerName.Contains("gate") ||
+                glbLower.Contains("house") || glbLower.Contains("building") ||
+                glbLower.Contains("egypt") || glbLower.Contains("sphinx") ||
+                glbLower.Contains("mastaba") || glbLower.Contains("temple") ||
+                glbLower.Contains("obelisk") || glbLower.Contains("pillar") ||
+                glbLower.Contains("column") || glbLower.Contains("farmer") ||
+                glbLower.Contains("papyrus") || glbLower.Contains("barrel") ||
+                glbLower.Contains("stall") || glbLower.Contains("medieval");
+
+            if (isDielectric)
             {
+                // Hard reset: clear the metallic map, disable keyword, ensure non-metallic values
+                dst.SetTexture("_MetallicGlossMap", null);
+                dst.DisableKeyword("_METALLICSPECGLOSSMAP");
+                dst.SetFloat("_Metallic", 0f);
+                // Keep smoothness already set above (rough stone: ~0.25)
+            }
+            else if (metallicGlossMap != null)
+            {
+                // Non-dielectric assets (boats, metallic props) — copy the map normally
                 dst.SetTexture("_MetallicGlossMap", metallicGlossMap);
                 dst.EnableKeyword("_METALLICSPECGLOSSMAP");
                 dst.SetTextureScale("_MetallicGlossMap", src.GetTextureScale(metallicGlossProp));
@@ -389,6 +422,7 @@ namespace TheAlchemistsCrypt.Editor
             }
             else
             {
+                dst.SetTexture("_MetallicGlossMap", null);
                 dst.DisableKeyword("_METALLICSPECGLOSSMAP");
             }
             
@@ -396,14 +430,27 @@ namespace TheAlchemistsCrypt.Editor
             Color emissive = Color.black;
             if (src.HasProperty("emissiveFactor")) emissive = src.GetColor("emissiveFactor");
             else if (src.HasProperty("_EmissionColor")) emissive = src.GetColor("_EmissionColor");
-            dst.SetColor("_EmissionColor", emissive);
-            
+
             Texture emissiveMap = null;
             string emissiveProp = null;
             if (src.HasProperty("emissiveTexture")) emissiveProp = "emissiveTexture";
             else if (src.HasProperty("_EmissionMap")) emissiveProp = "_EmissionMap";
-            
             if (emissiveProp != null) emissiveMap = src.GetTexture(emissiveProp);
+
+            // Guard against spurious full-white emission from GLB files.
+            // A GLTF that hasn't configured emissiveFactor defaults to white (1,1,1) in many
+            // exporters, which in URP causes the object to glow solid white / blow out.
+            // If emissive color is white AND the asset is a non-emissive environment object,
+            // treat it as no emission.
+            bool isSpuriousWhiteEmission = emissive.r > 0.9f && emissive.g > 0.9f && emissive.b > 0.9f;
+            if (isDielectric && isSpuriousWhiteEmission)
+            {
+                emissive = Color.black;
+                emissiveMap = null;
+            }
+
+            dst.SetColor("_EmissionColor", emissive);
+
             if (emissiveMap != null)
             {
                 dst.SetTexture("_EmissionMap", emissiveMap);

@@ -892,8 +892,44 @@ namespace TheAlchemistsCrypt.AI
         {
             if (animator != null && animator.runtimeAnimatorController != null && currentAnimState != stateName) {
                 currentAnimState = stateName;
-                // Double fallback: some rigs use trigger, some use CrossFade. Explicitly specify layer 0 to avoid -1 layer warnings.
-                animator.CrossFadeInFixedTime(stateName, 0.2f, 0);
+                
+                // Safety check: verify if stateName exists on Layer 0. If not, try common fallbacks to prevent log warnings.
+                int stateHash = Animator.StringToHash(stateName);
+                if (animator.HasState(0, stateHash))
+                {
+                    animator.CrossFadeInFixedTime(stateName, 0.2f, 0);
+                }
+                else
+                {
+                    string fallbackState = null;
+                    if (stateName == "Walk")
+                    {
+                        if (animator.HasState(0, Animator.StringToHash("walk"))) fallbackState = "walk";
+                        else if (animator.HasState(0, Animator.StringToHash("Run"))) fallbackState = "Run";
+                        else if (animator.HasState(0, Animator.StringToHash("run"))) fallbackState = "run";
+                    }
+                    else if (stateName == "Attack")
+                    {
+                        if (animator.HasState(0, Animator.StringToHash("attack"))) fallbackState = "attack";
+                        else if (animator.HasState(0, Animator.StringToHash("Shoot"))) fallbackState = "Shoot";
+                        else if (animator.HasState(0, Animator.StringToHash("shoot"))) fallbackState = "shoot";
+                    }
+                    else if (stateName == "Idle")
+                    {
+                        if (animator.HasState(0, Animator.StringToHash("idle"))) fallbackState = "idle";
+                    }
+                    else if (stateName == "Die")
+                    {
+                        if (animator.HasState(0, Animator.StringToHash("die"))) fallbackState = "die";
+                        else if (animator.HasState(0, Animator.StringToHash("Death"))) fallbackState = "Death";
+                        else if (animator.HasState(0, Animator.StringToHash("death"))) fallbackState = "death";
+                    }
+
+                    if (fallbackState != null)
+                    {
+                        animator.CrossFadeInFixedTime(fallbackState, 0.2f, 0);
+                    }
+                }
 
                 if (audioSource != null)
                 {

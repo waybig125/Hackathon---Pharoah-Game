@@ -18,17 +18,7 @@ namespace TheAlchemistsCrypt.UI
                     var canvas = GetComponent<Canvas>();
                     if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
                     
-                    var mainCam = Camera.main;
-                    if (mainCam != null)
-                    {
-                        canvas.renderMode = RenderMode.ScreenSpaceCamera;
-                        canvas.worldCamera = mainCam;
-                        canvas.planeDistance = 5f; // Render close to camera but behind WeaponCamera
-                    }
-                    else
-                    {
-                        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                    }
+                    canvas.renderMode = RenderMode.ScreenSpaceOverlay;
                     canvas.sortingOrder = 999;
                     
                     var scaler = GetComponent<CanvasScaler>();

@@ -419,6 +419,7 @@ namespace TheAlchemistsCrypt.Editor
             unityTerrainGo.isStatic = true;
             var unityTerrainComp = unityTerrainGo.GetComponent<Terrain>();
             if (unityTerrainComp != null) {
+                unityTerrainComp.enabled = false; // Turn off rendering to prevent visual Z-fighting/cutting
                 unityTerrainComp.basemapDistance = 2000f;
                 unityTerrainComp.drawInstanced = true;
                 // Apply sand texture layer to the Unity Terrain as well
@@ -435,6 +436,17 @@ namespace TheAlchemistsCrypt.Editor
                     terrainGo.transform.position = new Vector3(0f, 0.0f, 0f);
                     terrainGo.transform.localScale = new Vector3(15f, 1f, 15f);
                     terrainGo.isStatic = true;
+
+                    // Remove any trees baked/included in the low-poly terrain prefab
+                    var childTransforms = terrainGo.GetComponentsInChildren<Transform>(true);
+                    foreach (var child in childTransforms) {
+                        if (child != null && child != terrainGo.transform && 
+                            (child.name.StartsWith("Tree", System.StringComparison.OrdinalIgnoreCase) || 
+                             child.name.Contains("Tree") || 
+                             child.name.Contains("tree"))) {
+                            UnityEngine.Object.DestroyImmediate(child.gameObject);
+                        }
+                    }
                     
                     // Add mesh collider so GetTerrainHeight raycasts can sample the LowPoly surface
                     var mc = terrainGo.GetComponent<MeshCollider>();
