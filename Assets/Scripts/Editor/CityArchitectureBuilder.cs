@@ -434,65 +434,96 @@ namespace TheAlchemistsCrypt.Editor
                     mc.convex = true;
                 }
 
-        private void BuildProceduralObelisk(Transform parent, Vector3 pos, Material stoneMat, bool isBroken = false)
+        private void BuildProceduralObelisk(Transform parent, Vector3 pos, Material stoneMat, bool isBroken = false, bool isFallen = false)
+        {
+            if (!isFallen && Random.value < 0.35f) isFallen = true;
+
+            var obRoot = new GameObject((isBroken ? "Broken" : "") + (isFallen ? "Fallen" : "") + "Obelisk");
+            
+            var dynamicProps = GameObject.Find("DynamicProps");
+            if (dynamicProps == null)
+            {
+                dynamicProps = new GameObject("DynamicProps");
+                dynamicProps.isStatic = false;
+            }
+            obRoot.transform.SetParent(dynamicProps.transform);
+            
+            Vector3 spawnPos = pos;
+            spawnPos.y = pos.y + (isFallen ? 0.8f : 0.1f);
+            obRoot.transform.position = spawnPos;
+            obRoot.isStatic = false;
+
+            float height = isBroken ? Random.Range(4f, 7f) : 14f;
+            float baseWidth = 2.0f;
+            float topWidth = isBroken ? 1.4f : 0.8f;
+
+            int segments = isBroken ? Random.Range(3, 5) : 8;
+            float segHeight = height / segments;
+
+            for (int i = 0; i < segments; i++)
+            {
+                float currentWidth = Mathf.Lerp(baseWidth, topWidth, (float)i / (segments - 1));
+                var seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                seg.transform.SetParent(obRoot.transform);
+                seg.transform.localPosition = new Vector3(0f, (i * segHeight) + (segHeight / 2f), 0f);
+                seg.transform.localScale = new Vector3(currentWidth, segHeight, currentWidth);
+                seg.GetComponent<Renderer>().sharedMaterial = stoneMat;
+                seg.isStatic = false;
+            }
+
+            if (!isBroken)
+            {
+                CreateProceduralPyramid(obRoot, new Vector3(0f, height, 0f), topWidth, topWidth * 1.5f, stoneMat, Color.clear, false);
+            }
+
+            var rb = obRoot.AddComponent<Rigidbody>();
+            rb.mass = 10000000f;
+            rb.useGravity = true;
+
+            if (isFallen)
+            {
+                obRoot.transform.rotation = Quaternion.Euler(Random.Range(85f, 95f), Random.Range(0f, 360f), Random.Range(-5f, 5f));
+            }
+            
+            rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
+            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+            var nmoObelisk = obRoot.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+            nmoObelisk.carving = true;
+            if (isFallen)
+            {
+                nmoObelisk.size = new Vector3(3f, 3f, height + 2f);
+                nmoObelisk.center = new Vector3(0f, 0f, height / 2f);
+            }
+            else
+            {
+                nmoObelisk.size = new Vector3(3f, height + 2f, 3f);
+                nmoObelisk.center = new Vector3(0f, height / 2f, 0f);
+            }
+
+            if (isBroken && isFallen)
+            {
+                int pieces = Random.Range(1, 3);
+                for (int p = 0; p < pieces; p++)
                 {
-                    var obRoot = new GameObject(isBroken ? "BrokenObelisk" : "Obelisk");
+                    var piece = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    piece.name = "ObeliskShatteredChunk";
+                    piece.transform.SetParent(dynamicProps.transform);
                     
-                    // Find or create DynamicProps as parent (never use a static parent for active Rigidbodies)
-                    var dynamicProps = GameObject.Find("DynamicProps");
-                    if (dynamicProps == null)
-                    {
-                        dynamicProps = new GameObject("DynamicProps");
-                        dynamicProps.isStatic = false;
-                    }
-                    obRoot.transform.SetParent(dynamicProps.transform);
+                    Vector3 piecePos = pos + new Vector3(Random.Range(-4f, 4f), 0.5f, Random.Range(-4f, 4f));
+                    piecePos.y = GetTerrainHeight(piecePos) + 0.3f;
+                    piece.transform.position = piecePos;
+                    piece.transform.localScale = new Vector3(Random.Range(1.2f, 1.8f), Random.Range(1.0f, 2.0f), Random.Range(1.2f, 1.8f));
+                    piece.transform.rotation = Quaternion.Euler(Random.Range(0f, 360f), Random.Range(0f, 360f), Random.Range(0f, 360f));
+                    piece.GetComponent<Renderer>().sharedMaterial = stoneMat;
                     
-                    // Spawn slightly above terrain to prevent initial collider penetration/stuck states
-                    Vector3 spawnPos = pos;
-                    spawnPos.y = pos.y + 0.1f;
-                    obRoot.transform.position = spawnPos;
-                    obRoot.isStatic = false;
-
-                    float height = isBroken ? Random.Range(4f, 7f) : 14f;
-                    float baseWidth = 2.0f;
-                    float topWidth = isBroken ? 1.4f : 0.8f;
-
-                    // Stack segments to create a smooth taper without needing a custom mesh
-                    int segments = isBroken ? Random.Range(3, 5) : 8;
-                    float segHeight = height / segments;
-
-                    for (int i = 0; i < segments; i++)
-                    {
-                        float currentWidth = Mathf.Lerp(baseWidth, topWidth, (float)i / (segments - 1));
-                        var seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                        seg.transform.SetParent(obRoot.transform);
-                        // Stack segments perfectly on top of each other starting at local y = 0
-                        seg.transform.localPosition = new Vector3(0f, (i * segHeight) + (segHeight / 2f), 0f);
-                        seg.transform.localScale = new Vector3(currentWidth, segHeight, currentWidth);
-                        seg.GetComponent<Renderer>().sharedMaterial = stoneMat;
-                        seg.isStatic = false;
-                    }
-
-                    // Add the pyramidion cap if it isn't a broken obelisk
-                    if (!isBroken)
-                    {
-                        CreateProceduralPyramid(obRoot, new Vector3(0f, height, 0f), topWidth, topWidth * 1.5f, stoneMat, Color.clear, false);
-                    }
-
-                    // Add Compound Rigidbody so it drops to the uneven terrain and has massive weight
-                    var rb = obRoot.AddComponent<Rigidbody>();
-                    rb.mass = 10000000f; // 10,000 tonnes (extremely heavy)
-                    rb.useGravity = true;
-                    // Freeze horizontal translation and all rotation to make them completely immovable by player or mummies, only allowing vertical gravity drop
-                    rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
-                    rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-
-                    // Add NavMeshObstacle to carve the NavMesh around the obelisk
-                    var nmoObelisk = obRoot.AddComponent<UnityEngine.AI.NavMeshObstacle>();
-                    nmoObelisk.carving = true;
-                    nmoObelisk.size = new Vector3(3f, 16f, 3f);
-                    nmoObelisk.center = new Vector3(0f, 8f, 0f);
+                    var pieceRb = piece.AddComponent<Rigidbody>();
+                    pieceRb.mass = 500000f;
+                    pieceRb.useGravity = true;
+                    pieceRb.constraints = RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
                 }
+            }
+        }
 
         private void BuildAlchemistTomb(Transform parent, Vector3 pos, Material stoneMat)
                 {
@@ -581,6 +612,33 @@ namespace TheAlchemistsCrypt.Editor
                     nmoTomb.carving = true;
                     nmoTomb.size = new Vector3(20f, 25f, 20f);
                     nmoTomb.center = new Vector3(0f, 12.5f, 0f);
+                }
+
+                private void SpawnFallenColumn(Transform parent, Vector3 pos, GameObject columnPrefab)
+                {
+                    if (columnPrefab == null) return;
+                    
+                    Vector3 spawnPos = pos;
+                    spawnPos.y = GetTerrainHeight(spawnPos) + 0.8f;
+                    
+                    var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, parent);
+                    colObj.transform.position = spawnPos;
+                    colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
+                    colObj.transform.rotation = Quaternion.Euler(Random.Range(85f, 95f), Random.Range(0f, 360f), Random.Range(-5f, 5f));
+                    colObj.isStatic = true;
+                    
+                    var col = colObj.GetComponent<Collider>();
+                    if (col == null)
+                    {
+                        var box = colObj.AddComponent<BoxCollider>();
+                        box.size = new Vector3(2f, 10f, 2f);
+                        box.center = new Vector3(0f, 5f, 0f);
+                    }
+                    
+                    var nmo = colObj.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+                    nmo.carving = true;
+                    nmo.size = new Vector3(3f, 3f, 10f);
+                    nmo.center = new Vector3(0f, 0f, 5f);
                 }
 
     }

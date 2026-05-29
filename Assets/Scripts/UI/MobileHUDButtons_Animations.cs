@@ -159,6 +159,7 @@ namespace TheAlchemistsCrypt.UI
             partRect.sizeDelta = new Vector2(100, 100);
             
             var ps = particlesGo.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             var main = ps.main;
             main.duration = 1f;
             main.loop = false;
@@ -172,7 +173,7 @@ namespace TheAlchemistsCrypt.UI
             
             var emission = ps.emission;
             emission.rateOverTime = 0;
-            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 40) });
+            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 80) });
             
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Sphere;
@@ -485,21 +486,53 @@ namespace TheAlchemistsCrypt.UI
             Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
             float cx = w / 2f;
             float cy = h / 2f;
+            Color eyeColor = new Color(1.0f, 0.85f, 0.3f, 1f); // Warm gold
+            
             for (int y = 0; y < h; y++)
             {
                 for (int x = 0; x < w; x++)
                 {
-                    float dx = (x - cx) / cx;
-                    float dy = (y - cy) / cy;
-                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    float dx = (x - cx) / (w * 0.45f);
+                    float dy = (y - cy) / (h * 0.25f);
                     
-                    if (dist < 0.2f)
+                    // Outer almond shape: top curve and bottom curve
+                    float almondTop = 1f - (dx * dx);
+                    float almondBottom = -almondTop;
+                    
+                    bool insideAlmond = dy < almondTop && dy > almondBottom && Mathf.Abs(dx) < 1f;
+                    bool onAlmondBorder = Mathf.Abs(dy - almondTop) < 0.15f || Mathf.Abs(dy - almondBottom) < 0.15f;
+                    
+                    // Central pupil
+                    float pdx = (x - cx) / (w * 0.15f);
+                    float pdy = (y - cy) / (h * 0.15f);
+                    bool pupil = (pdx * pdx + pdy * pdy) < 1.0f;
+                    
+                    // Tear duct (left down tail)
+                    float tearX = -0.4f;
+                    bool tearDuct = false;
+                    if (dx > tearX - 0.1f && dx < tearX + 0.1f && dy < 0f && dy > -1.2f)
                     {
-                        tex.SetPixel(x, y, Color.white);
+                        float distToTearLine = Mathf.Abs(dx - tearX);
+                        if (distToTearLine < 0.08f * (1.2f + dy))
+                        {
+                            tearDuct = true;
+                        }
                     }
-                    else if (dist > 0.4f && dist < 0.5f && Mathf.Abs(dy) < 0.3f)
+                    
+                    // Spiral tail (right down curl)
+                    bool spiralTail = false;
+                    if (dx > 0f && dy < 0f)
                     {
-                        tex.SetPixel(x, y, Color.white);
+                        float targetDy = -0.4f - 0.3f * Mathf.Sin(dx * 5f);
+                        if (Mathf.Abs(dy - targetDy) < 0.12f && dx < 0.7f)
+                        {
+                            spiralTail = true;
+                        }
+                    }
+                    
+                    if (pupil || (onAlmondBorder && insideAlmond) || tearDuct || spiralTail)
+                    {
+                        tex.SetPixel(x, y, eyeColor);
                     }
                     else
                     {

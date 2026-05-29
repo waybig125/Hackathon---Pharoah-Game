@@ -315,10 +315,22 @@ namespace TheAlchemistsCrypt.UI
                             bool isBorder = (x < borderWidth) || (x >= w - borderWidth) || (y < borderWidth) || (y >= h - borderWidth);
                             if (isBorder)
                             {
-                                // Slight gold gradient/sheen
-                                float t = (float)y / h;
-                                Color finalBorderCol = Color.Lerp(borderColor * 0.8f, borderColor * 1.2f, t);
-                                tex.SetPixel(x, y, finalBorderCol);
+                                // Sandstone texture with noise
+                                float noise = (float)Mathf.PerlinNoise(x * 0.15f, y * 0.15f) * 0.2f - 0.1f;
+                                float grain = (float)Mathf.PerlinNoise(x * 0.8f, y * 0.8f) * 0.1f;
+                                float factor = 1.0f + noise + grain;
+                                
+                                // Beautiful warm sandstone mixed with the gold border color
+                                Color sandstoneBase = new Color(0.85f, 0.70f, 0.50f);
+                                Color borderPixel = Color.Lerp(sandstoneBase, borderColor, 0.5f) * factor;
+                                
+                                // Every 15 horizontal or 10 vertical pixels, add a tiny darker runic crack/hieroglyphic notch
+                                if ((x % 15 == 0 && y > 1 && y < h - 2) || (y % 10 == 0 && x > 1 && x < w - 2))
+                                {
+                                    borderPixel *= 0.65f; // Deep crack shadow
+                                }
+                                
+                                tex.SetPixel(x, y, borderPixel);
                             }
                             else
                             {

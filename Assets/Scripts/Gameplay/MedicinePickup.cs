@@ -63,6 +63,7 @@ namespace TheAlchemistsCrypt.Gameplay
             psGo.transform.localPosition = Vector3.zero;
             
             var ps = psGo.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             var psMain = ps.main;
             psMain.duration = 1f;
             psMain.loop = true;
@@ -73,7 +74,7 @@ namespace TheAlchemistsCrypt.Gameplay
             psMain.simulationSpace = ParticleSystemSimulationSpace.Local;
             
             var psEmission = ps.emission;
-            psEmission.rateOverTime = 8f;
+            psEmission.rateOverTime = 20f;
             
             var psShape = ps.shape;
             psShape.shapeType = ParticleSystemShapeType.Sphere;
@@ -121,7 +122,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 var emission = system.emission;
                 emission.rateOverTime = 0f;
                 emission.burstCount = 1;
-                emission.SetBurst(0, new ParticleSystem.Burst(0f, 25));
+                emission.SetBurst(0, new ParticleSystem.Burst(0f, 50));
 
                 var renderer = sparkGo.GetComponent<ParticleSystemRenderer>();
                 if (renderer != null)

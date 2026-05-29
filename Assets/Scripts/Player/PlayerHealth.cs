@@ -23,6 +23,11 @@ namespace TheAlchemistsCrypt.Player
             currentHealth = maxHealth;
         }
 
+        private float lastShakeTime = 0f;
+        private Coroutine shakeCoroutine = null;
+        private Vector3 originalCameraLocalPos;
+        private bool isShaking = false;
+
         private bool isLowHealthPlaying = false;
         private AudioSource lowHealthAudioSource;
         private AudioSource heartbeatAudioSource;
@@ -182,6 +187,9 @@ namespace TheAlchemistsCrypt.Player
 
         private void ShakeCamera()
         {
+            if (Time.time - lastShakeTime < 0.4f) return; // Cooldown to prevent overlapping shakes
+            lastShakeTime = Time.time;
+
             var source = GetComponent<Unity.Cinemachine.CinemachineImpulseSource>();
             if (source == null)
             {
@@ -189,28 +197,48 @@ namespace TheAlchemistsCrypt.Player
             }
             if (source != null)
             {
-                source.GenerateImpulse(0.4f);
+                source.GenerateImpulse(0.3f);
             }
-            StartCoroutine(ShakeTransformCoroutine());
+
+            if (shakeCoroutine != null)
+            {
+                StopCoroutine(shakeCoroutine);
+                Camera cam = Camera.main;
+                if (cam != null && isShaking)
+                {
+                    cam.transform.localPosition = originalCameraLocalPos;
+                }
+            }
+            shakeCoroutine = StartCoroutine(ShakeTransformCoroutine());
         }
 
         private IEnumerator ShakeTransformCoroutine()
         {
             Camera cam = Camera.main;
             if (cam == null) yield break;
-            Vector3 originalLocalPos = cam.transform.localPosition;
+
+            if (!isShaking)
+            {
+                originalCameraLocalPos = cam.transform.localPosition;
+                isShaking = true;
+            }
+
             float elapsed = 0f;
-            float duration = 0.2f;
-            float magnitude = 0.15f;
+            float duration = 0.15f;
+            float magnitude = 0.08f; // Reduced magnitude to look subtle/genuine rather than a glitchy warp
+
             while (elapsed < duration)
             {
                 float x = Random.Range(-1f, 1f) * magnitude;
                 float y = Random.Range(-1f, 1f) * magnitude;
-                cam.transform.localPosition = originalLocalPos + new Vector3(x, y, 0);
+                cam.transform.localPosition = originalCameraLocalPos + new Vector3(x, y, 0);
                 elapsed += Time.deltaTime;
                 yield return null;
             }
-            cam.transform.localPosition = originalLocalPos;
+
+            cam.transform.localPosition = originalCameraLocalPos;
+            isShaking = false;
+            shakeCoroutine = null;
         }
     }
 

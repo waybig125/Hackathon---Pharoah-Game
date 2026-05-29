@@ -138,7 +138,6 @@ namespace TheAlchemistsCrypt.Editor
                 "Assets/Resources/more_items_for_map/big_egypt_house.glb",
                 "Assets/Resources/more_items_for_map/egyptian_house.glb",
                 "Assets/Resources/more_items_for_map/lay_house.glb",
-                "Assets/Resources/more_items_for_map/light_house_-_egypt_game_ready_lowpoly.glb",
                 "Assets/Resources/more_items_for_map/medieval_stone_arab_house.glb"
             };
             foreach (var path in housePaths) {
@@ -158,10 +157,11 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             var sphinxPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/the_great_sphinx_of_giza_-_egypt.glb");
-            var mastabaPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/false_door_chamber_mastaba_of_qar_giza.glb");
+            var mastabaPrefab = (GameObject)null; // Disabled false_door_chamber_mastaba_of_qar_giza as requested
             var templeComplexPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/egyptian_temple_complex_game_asset.glb");
             var templesPackPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/egyptian_temples.glb");
             var obeliskNewPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/stylized_egypt_obelisk.glb");
+            var lighthousePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/light_house_-_egypt_game_ready_lowpoly.glb");
             var doorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/egyptian_door.glb");
             
             // Create warm golden sandstone gradient texture for houses
@@ -387,7 +387,7 @@ namespace TheAlchemistsCrypt.Editor
                 terrainComp.drawInstanced = true;
             }
 
-            float spacing = 42f; // Decreased spacing to bring houses closer together for a denser residential feel
+            float spacing = 30f; // Decreased spacing to bring houses closer together for a denser residential feel
             float halfSpan = (gridSize * spacing) / 2f;
             var enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Inspiration-Thirdperson-Controller-Update372022/Assets/Enemy-AI/Prefabs/TestZombie.prefab");
 
@@ -508,6 +508,42 @@ namespace TheAlchemistsCrypt.Editor
 
             SpawnDesertBrokenPillars(root, wallMat);
             SpawnPalmTreeOasis(root, trees);
+
+            // Spawn shoreline lighthouse specifically
+            var lighthousePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/light_house_-_egypt_game_ready_lowpoly.glb");
+            if (lighthousePrefab != null) {
+                Vector3 lighthousePos = new Vector3(140f, 0f, -55f);
+                lighthousePos.y = GetTerrainHeight(lighthousePos);
+                var lighthouse = PlaceIntegratedAsset(root.transform, lighthousePos, lighthousePrefab, 1.6f, true, false, 0f, 180f, false);
+                if (lighthouse != null) {
+                    lighthouse.name = "ShorelineLighthouse";
+                }
+                occupiedPositions.Add(lighthousePos);
+            }
+
+            // Spawn extra obelisks and columns in the city (some fallen/broken/shattered)
+            int extraObelisks = 10;
+            for (int i = 0; i < extraObelisks; i++) {
+                float rx = Random.Range(-220f, 220f);
+                float rz = Random.Range(-30f, 180f);
+                Vector3 pos = new Vector3(rx, 0f, rz);
+                pos.y = GetTerrainHeight(pos);
+                if (pos.y > 0.5f) {
+                    BuildProceduralObelisk(root.transform, pos, wallMat, Random.value < 0.5f, Random.value < 0.4f);
+                }
+            }
+
+            int extraFallenCols = 8;
+            for (int i = 0; i < extraFallenCols; i++) {
+                float rx = Random.Range(-200f, 200f);
+                float rz = Random.Range(-35f, 170f);
+                Vector3 pos = new Vector3(rx, 0f, rz);
+                pos.y = GetTerrainHeight(pos);
+                var colPrefab = GetRandomColumn();
+                if (pos.y > 0.5f && colPrefab != null) {
+                    SpawnFallenColumn(root.transform, pos, colPrefab);
+                }
+            }
 
             // --- CENTRAL PLAZA & DOOR MONUMENT ---
             Vector3 centerPlazaPos = new Vector3(0f, 0f, 30f);

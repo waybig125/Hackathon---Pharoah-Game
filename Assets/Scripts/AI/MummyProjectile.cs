@@ -154,7 +154,7 @@ namespace TheAlchemistsCrypt.AI
             var emission = system.emission;
             emission.rateOverTime = 0f;
             emission.burstCount = 1;
-            emission.SetBurst(0, new ParticleSystem.Burst(0f, 15));
+            emission.SetBurst(0, new ParticleSystem.Burst(0f, 40));
 
             var partRenderer = splashTemplate.GetComponent<ParticleSystemRenderer>();
             if (partRenderer != null)
