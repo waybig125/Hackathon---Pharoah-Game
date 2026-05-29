@@ -79,24 +79,27 @@ namespace TheAlchemistsCrypt.UI
                     root.offsetMin = root.offsetMax = Vector2.zero;
                     hudRootGo = root.gameObject;
 
-                    // Create Horror Overlay as first sibling
+                    // Create Horror Overlay as first sibling (blurry fog vignette, not solid)
                     var horrorGo = new GameObject("HorrorOverlay", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     horrorGo.SetParent(root, false);
                     horrorGo.SetAsFirstSibling();
                     horrorGo.anchorMin = Vector2.zero; horrorGo.anchorMax = Vector2.one;
                     horrorGo.offsetMin = horrorGo.offsetMax = Vector2.zero;
                     var horrorImg = horrorGo.GetComponent<Image>();
-                    // Load the requested smog texture as a sprite and tint it green for a thick fog look
+                    // Use smog texture as a very light fog-like vignette around the edges only
+                    // The gun is rendered by a separate camera layer and won't be obscured
                     var smogSprite = Resources.Load<Sprite>("Textures/Smog");
                     if (smogSprite != null)
                     {
                         horrorImg.sprite = smogSprite;
-                        horrorImg.color = new Color(0.05f, 0.3f, 0.1f, 0.65f); // fog/smog green tint
+                        // Very light translucent fog: alpha 0.28 keeps the horror vibe without blocking vision
+                        horrorImg.color = new Color(0.04f, 0.22f, 0.08f, 0.28f);
+                        horrorImg.type = Image.Type.Sliced;
                     }
                     else
                     {
-                        // Fallback: Strong dark horror green vignette
-                        horrorImg.sprite = CreateProceduralGradientSprite(256, 256, new Color(0f, 0.15f, 0.03f, 0f), new Color(0f, 0.25f, 0.04f, 0.85f));
+                        // Fallback: Soft radial vignette — dark green only at screen edges (fog effect)
+                        horrorImg.sprite = CreateProceduralGradientSprite(256, 256, new Color(0f, 0.12f, 0.03f, 0f), new Color(0f, 0.18f, 0.04f, 0.45f));
                         horrorImg.color = Color.white;
                     }
                     horrorImg.raycastTarget = false;
