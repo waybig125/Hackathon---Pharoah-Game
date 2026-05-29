@@ -204,9 +204,6 @@ namespace TheAlchemistsCrypt.Player
             }
             if (source != null)
             {
-                var definition = source.m_ImpulseDefinition;
-                definition.m_ImpulseDuration = 0.25f;
-                definition.m_ImpulseShape = Unity.Cinemachine.CinemachineImpulseDefinition.ImpulseShapes.Bump;
                 source.GenerateImpulse(0.65f); // Solid noticeable hit shake!
             }
 
