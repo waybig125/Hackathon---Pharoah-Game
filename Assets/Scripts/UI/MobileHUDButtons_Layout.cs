@@ -262,13 +262,11 @@ namespace TheAlchemistsCrypt.UI
                     // Inner fill (red→orange→gold gradient)
                     var hpFillGo = new GameObject("HpFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     hpFillGo.SetParent(hpBgBar, false);
-                    hpFillGo.anchorMin = Vector2.zero; hpFillGo.anchorMax = Vector2.one;
-                    hpFillGo.offsetMin = new Vector2(1, 1); hpFillGo.offsetMax = new Vector2(-1, -1);
+                    hpFillGo.anchorMin = new Vector2(0f, 0f); hpFillGo.anchorMax = new Vector2(1f, 1f);
+                    hpFillGo.offsetMin = new Vector2(0f, 0f); hpFillGo.offsetMax = new Vector2(0f, 0f);
                     healthBarFill = hpFillGo.GetComponent<Image>();
-                    healthBarFill.sprite = CreateHealthBarFillSprite(218, 22);
-                    healthBarFill.type = Image.Type.Filled;
-                    healthBarFill.fillMethod = Image.FillMethod.Horizontal;
-                    healthBarFill.fillAmount = 1.0f;
+                    healthBarFill.sprite = CreateRoundedRectSprite(24, 24, new Color(0.0f, 0.9f, 0.3f, 0.85f), 12);
+                    healthBarFill.type = Image.Type.Sliced;
 
                     // HP% value text — bold green, right of bar
                     var hpValGo = new GameObject("HpValueText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
@@ -358,12 +356,9 @@ namespace TheAlchemistsCrypt.UI
                     // Inner fill
                     var amFillGo = new GameObject("AmmoFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     amFillGo.SetParent(amBgBar, false);
-                    amFillGo.anchorMin = Vector2.zero; amFillGo.anchorMax = Vector2.one;
-                    amFillGo.offsetMin = new Vector2(1, 1); amFillGo.offsetMax = new Vector2(-1, -1);
+                    amFillGo.anchorMin = new Vector2(0f, 0f); amFillGo.anchorMax = new Vector2(1f, 1f);
+                    amFillGo.offsetMin = new Vector2(0f, 0f); amFillGo.offsetMax = new Vector2(0f, 0f);
                     ammoBarFill = amFillGo.GetComponent<Image>();
-                    ammoBarFill.sprite = sulfurBarSprite;
-                    ammoBarFill.type = Image.Type.Filled;
-                    ammoBarFill.fillMethod = Image.FillMethod.Horizontal;
                     ammoBarFill.fillAmount = 1.0f;
 
                     // Ammo Count text value on the right

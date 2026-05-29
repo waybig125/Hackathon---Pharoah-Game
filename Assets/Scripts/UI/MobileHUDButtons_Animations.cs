@@ -643,7 +643,7 @@ namespace TheAlchemistsCrypt.UI
             var bubbleSprite = CreateCircleSprite(16);
             while (parent != null)
             {
-                float fillTarget = (fillImage != null) ? fillImage.fillAmount : 0f;
+                float fillTarget = (fillImage != null) ? fillImage.rectTransform.anchorMax.x : 0f;
                 if (fillTarget > 0.02f)
                 {
                     var bubbleGo = new GameObject("Bubble", typeof(RectTransform), typeof(Image));

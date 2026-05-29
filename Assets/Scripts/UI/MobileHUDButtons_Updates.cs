@@ -15,20 +15,20 @@ namespace TheAlchemistsCrypt.UI
              if (healthText) healthText.text = "";
              float fillTarget = Mathf.Clamp01(h / 100f);
              
-             if (healthBarFill) healthBarFill.fillAmount = fillTarget;
+             if (healthBarFill) healthBarFill.rectTransform.anchorMax = new Vector2(fillTarget, 1f);
              if (healthValueText) healthValueText.text = Mathf.RoundToInt(Mathf.Clamp(h, 0f, 100f)) + "%";
              
              if (healthCatchUpFill != null)
              {
-                 if (fillTarget >= healthCatchUpFill.fillAmount)
+                 if (fillTarget >= healthCatchUpFill.rectTransform.anchorMax.x)
                  {
                      if (catchUpTween != null) catchUpTween.Kill();
-                     healthCatchUpFill.fillAmount = fillTarget;
+                     healthCatchUpFill.rectTransform.anchorMax = new Vector2(fillTarget, 1f);
                  }
                  else
                  {
                      if (catchUpTween != null) catchUpTween.Kill();
-                     catchUpTween = healthCatchUpFill.DOFillAmount(fillTarget, 1.5f).SetEase(Ease.OutQuad);
+                     catchUpTween = healthCatchUpFill.rectTransform.DOAnchorMax(new Vector2(fillTarget, 1f), 1.5f).SetEase(Ease.OutQuad);
                  }
              }
 
@@ -129,8 +129,8 @@ namespace TheAlchemistsCrypt.UI
 
              if (ammoBarFill != null)
              {
-                 ammoBarFill.fillAmount = Mathf.Clamp01((float)c / 30f);
-                 if (fillSprite != null) ammoBarFill.sprite = fillSprite;
+                 ammoBarFill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01((float)c / 30f), 1f);
+                 ammoBarFill.color = tickColor;
              }
 
              if (ammoValueText != null)

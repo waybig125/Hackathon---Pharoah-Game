@@ -277,7 +277,7 @@ namespace TheAlchemistsCrypt.Editor
 
             TerrainData terrainData = new TerrainData();
             terrainData.heightmapResolution = 513;
-            terrainData.size = new Vector3(1000f, 10f, 1000f);
+            terrainData.size = new Vector3(3000f, 10f, 3000f); // Massive extended desert
 
             int resolution = terrainData.heightmapResolution;
             float[,] heights = new float[resolution, resolution];
@@ -415,7 +415,7 @@ namespace TheAlchemistsCrypt.Editor
             var unityTerrainGo = Terrain.CreateTerrainGameObject(terrainData);
             unityTerrainGo.name = "TerrainFloor";
             unityTerrainGo.transform.SetParent(root.transform);
-            unityTerrainGo.transform.position = new Vector3(-500f, -0.15f, -500f);
+            unityTerrainGo.transform.position = new Vector3(-1500f, -0.15f, -1000f);
             unityTerrainGo.isStatic = true;
             var unityTerrainComp = unityTerrainGo.GetComponent<Terrain>();
             if (unityTerrainComp != null) {
@@ -546,6 +546,13 @@ namespace TheAlchemistsCrypt.Editor
             CreateProceduralPyramid(root, new Vector3(450f, 0f, 400f), 160f, 100f, wallMat, new Color(1f, 0.5f, 0.2f)); 
             CreateProceduralPyramid(root, new Vector3(450f, 0f, 120f), 140f, 85f, wallMat, new Color(1f, 0.82f, 0.45f));
             CreateProceduralPyramid(root, new Vector3(-450f, 0f, 120f), 170f, 110f, wallMat, new Color(1f, 0.7f, 0.3f)); 
+            
+            // Add obelisks in the empty space between the front and back pyramids
+            for (float x = -300f; x <= 300f; x += 150f) {
+                Vector3 obPos = new Vector3(x, 0f, 260f); // Middle area
+                obPos.y = GetTerrainHeight(obPos);
+                BuildProceduralObelisk(root.transform, obPos, wallMat, true, false);
+            } 
 
             SpawnDesertBrokenPillars(root, wallMat);
             SpawnPalmTreeOasis(root, trees);

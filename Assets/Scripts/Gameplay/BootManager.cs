@@ -86,7 +86,7 @@ namespace TheAlchemistsCrypt.Gameplay
             pbFillRect.anchorMax = new Vector2(0f, 1f); // Starts empty
             pbFillRect.offsetMin = pbFillRect.offsetMax = Vector2.zero;
             progressBar = pbFillGo.GetComponent<Image>();
-            progressBar.sprite = CreateRoundedRectSprite(730, 44, 22f); // Sliced sprite for rounded right edge
+            progressBar.sprite = CreateRoundedRectSprite(44, 44, 22f); // Sliced circle for perfect capsule stretch
             progressBar.type = Image.Type.Sliced;
             progressBar.color = new Color(0.0f, 0.9f, 0.3f, 0.85f); // Bright premium chemical green matching HUD
 
