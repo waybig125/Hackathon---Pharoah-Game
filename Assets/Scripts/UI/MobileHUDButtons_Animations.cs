@@ -38,11 +38,11 @@ namespace TheAlchemistsCrypt.UI
                 var catchUpRect = catchUpGo.GetComponent<RectTransform>();
                 catchUpRect.anchorMin = Vector2.zero;
                 catchUpRect.anchorMax = Vector2.one;
-                catchUpRect.offsetMin = new Vector2(3, 3);
-                catchUpRect.offsetMax = new Vector2(-3, -3);
+                catchUpRect.offsetMin = new Vector2(2, 2);
+                catchUpRect.offsetMax = new Vector2(-2, -2);
                 
                 healthCatchUpFill = catchUpGo.GetComponent<Image>();
-                healthCatchUpFill.sprite = CreateHealthBarFillSprite(289, 24);
+                healthCatchUpFill.sprite = CreateHealthBarFillSprite(204, 18);
                 healthCatchUpFill.type = Image.Type.Filled;
                 healthCatchUpFill.fillMethod = Image.FillMethod.Horizontal;
                 healthCatchUpFill.fillAmount = 1.0f;
@@ -51,7 +51,7 @@ namespace TheAlchemistsCrypt.UI
                 if (healthBarFill != null)
                 {
                     healthBarFill.transform.SetAsLastSibling();
-                    healthBarFill.color = new Color(0.95f, 0.8f, 0.15f, 1.0f); // Bright Egyptian Gold
+                    healthBarFill.color = Color.white; // Use the red->orange->gold gradient directly
                 }
             }
 

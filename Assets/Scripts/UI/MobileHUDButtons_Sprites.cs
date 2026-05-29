@@ -287,21 +287,30 @@ namespace TheAlchemistsCrypt.UI
                 private Sprite CreateHealthBarFillSprite(int w, int h)
                 {
                     Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                    Color crimson = new Color(0.72f, 0.05f, 0.05f, 0.95f);
+                    Color orange = new Color(0.95f, 0.38f, 0.05f, 0.95f);
+                    Color gold = new Color(0.98f, 0.78f, 0.12f, 0.95f);
                     for (int y = 0; y < h; y++) {
                         float vertRatio = (float)y / h;
                         for (int x = 0; x < w; x++) {
                             float t = (float)x / w;
-                            Color baseCol = Color.Lerp(new Color(0.5f, 0.02f, 0.02f, 0.95f), new Color(0.95f, 0.15f, 0.15f, 0.95f), t);
-                            // Add a horizontal highlight/sheen on the top half
-                            if (vertRatio > 0.6f)
+                            Color baseCol;
+                            if (t < 0.5f) {
+                                baseCol = Color.Lerp(crimson, orange, t * 2f);
+                            } else {
+                                baseCol = Color.Lerp(orange, gold, (t - 0.5f) * 2f);
+                            }
+                            // Add a horizontal highlight/sheen on the top 30%
+                            if (vertRatio > 0.7f)
                             {
-                                baseCol = Color.Lerp(baseCol, Color.white, (vertRatio - 0.6f) * 0.4f);
+                                baseCol = Color.Lerp(baseCol, Color.white, (vertRatio - 0.7f) * 0.45f);
                             }
                             tex.SetPixel(x, y, baseCol);
                         }
                     }
                     tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
                 }
+
 
 
 
@@ -912,5 +921,92 @@ namespace TheAlchemistsCrypt.UI
                     tex.Apply(); return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
                 }
 
+                private Sprite CreateGlassmorphismPanelSprite(int w, int h, Color interior, Color border, int borderWidth)
+                {
+                    Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                    for (int y = 0; y < h; y++)
+                    {
+                        for (int x = 0; x < w; x++)
+                        {
+                            bool isBorder = (x < borderWidth) || (x >= w - borderWidth) || (y < borderWidth) || (y >= h - borderWidth);
+                            if (isBorder)
+                            {
+                                tex.SetPixel(x, y, border);
+                            }
+                            else
+                            {
+                                tex.SetPixel(x, y, interior);
+                            }
+                        }
+                    }
+                    tex.Apply();
+                    return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+                }
+
+                private Sprite CreateRoundedRectSprite(int w, int h, Color fill, int cornerRadius)
+                {
+                    Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                    for (int y = 0; y < h; y++)
+                    {
+                        for (int x = 0; x < w; x++)
+                        {
+                            float dx = 0;
+                            float dy = 0;
+                            bool inCorner = false;
+                            
+                            if (x < cornerRadius) { dx = cornerRadius - x; inCorner = true; }
+                            else if (x >= w - cornerRadius) { dx = x - (w - cornerRadius); inCorner = true; }
+                            
+                            if (y < cornerRadius) { dy = cornerRadius - y; inCorner = true; }
+                            else if (y >= h - cornerRadius) { dy = y - (h - cornerRadius); inCorner = true; }
+                            
+                            if (inCorner)
+                            {
+                                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                                if (dist > cornerRadius)
+                                {
+                                    tex.SetPixel(x, y, Color.clear);
+                                }
+                                else
+                                {
+                                    tex.SetPixel(x, y, fill);
+                                }
+                            }
+                            else
+                            {
+                                tex.SetPixel(x, y, fill);
+                            }
+                        }
+                    }
+                    tex.Apply();
+                    return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+                }
+
+                private Sprite CreateDiamondTickSprite(int w, int h)
+                {
+                    Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                    float cx = w * 0.5f;
+                    float cy = h * 0.5f;
+                    for (int y = 0; y < h; y++)
+                    {
+                        for (int x = 0; x < w; x++)
+                        {
+                            float dx = Mathf.Abs(x - cx) / cx;
+                            float dy = Mathf.Abs(y - cy) / cy;
+                            if (dx + dy <= 1.0f)
+                            {
+                                tex.SetPixel(x, y, Color.white);
+                            }
+                            else
+                            {
+                                tex.SetPixel(x, y, Color.clear);
+                            }
+                        }
+                    }
+                    tex.Apply();
+                    return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+                }
+
     }
 }
+

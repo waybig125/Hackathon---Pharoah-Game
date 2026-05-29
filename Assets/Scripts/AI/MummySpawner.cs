@@ -8,8 +8,9 @@ namespace TheAlchemistsCrypt.AI
     {
         [Header("Spawn Settings")]
         [SerializeField] private int maxMummies = 25;
-        [SerializeField] private float spawnInterval = 20.0f;
-        [SerializeField] private int initialSpawnCount = 6;
+        [SerializeField] private float spawnInterval = 35.0f;  // Longer gap — gives player breathing room
+        [SerializeField] private int initialSpawnCount = 3;    // Start with just 3 — not an army
+        [SerializeField] private float initialSpawnDelay = 5f; // 5s before the first 3 even appear
 
         private ObjectPool<GameObject> mummyPool;
         private ObjectPool<GameObject> pharaohPool;
@@ -42,11 +43,8 @@ namespace TheAlchemistsCrypt.AI
 
         private void Start()
         {
-            // Spawn initial mummies at runtime
-            for (int i = 0; i < initialSpawnCount; i++)
-            {
-                SpawnSingleMummy(i + 1);
-            }
+            // Wait a few seconds before the first mummies appear — lets the player look around
+            StartCoroutine(DelayedInitialSpawn());
 
             // Auto-spawn HiveMindManager at runtime if not present
             if (GameObject.FindAnyObjectByType<HiveMindManager>() == null)
@@ -55,8 +53,18 @@ namespace TheAlchemistsCrypt.AI
                 hmGo.AddComponent<HiveMindManager>();
             }
 
-            // Start dynamic spawner loop
+            // Start dynamic spawner loop after the initial delay
             StartCoroutine(AutoSpawnRoutine());
+        }
+
+        private IEnumerator DelayedInitialSpawn()
+        {
+            yield return new WaitForSeconds(initialSpawnDelay);
+            for (int i = 0; i < initialSpawnCount; i++)
+            {
+                SpawnSingleMummy(i + 1);
+                yield return new WaitForSeconds(0.4f); // stagger so they don't all pop in the same frame
+            }
         }
 
         [SerializeField] private int pharaohSpawnInterval = 4; // every 4th wave
@@ -64,24 +72,23 @@ namespace TheAlchemistsCrypt.AI
 
         private IEnumerator AutoSpawnRoutine()
         {
+            // Wait for the initial spawn + a bit longer before the first auto-wave
+            yield return new WaitForSeconds(initialSpawnDelay + spawnInterval);
+
             while (true)
             {
-                yield return new WaitForSeconds(spawnInterval);
                 waveCounter++;
 
                 var activeZombies = GameObject.FindObjectsByType<ZombieAI>(FindObjectsInactive.Exclude);
                 int aliveCount = 0;
                 int maxExistingId = 0;
-                
+
                 foreach (var z in activeZombies)
                 {
                     if (z != null && !z.IsDead)
                     {
                         aliveCount++;
-                        if (z.mummyId > maxExistingId)
-                        {
-                            maxExistingId = z.mummyId;
-                        }
+                        if (z.mummyId > maxExistingId) maxExistingId = z.mummyId;
                     }
                 }
 
@@ -89,14 +96,13 @@ namespace TheAlchemistsCrypt.AI
                 {
                     if (waveCounter % pharaohSpawnInterval == 0)
                     {
-                        // Boss Wave! Spawn Pharaoh
+                        // Boss Wave — Pharaoh + a few guards
                         SpawnPharaoh(maxExistingId + 1);
-                        aliveCount++; // Increment for the Pharaoh
-                        
-                        // Spawn guards only if we have less than 15 mummies present at the same time
+                        aliveCount++;
+
                         if (aliveCount < 16)
                         {
-                            int guardsToSpawn = Mathf.Min(6, maxMummies - aliveCount);
+                            int guardsToSpawn = Mathf.Min(4, maxMummies - aliveCount);
                             for (int i = 0; i < guardsToSpawn; i++)
                             {
                                 SpawnSingleMummy(maxExistingId + 2 + i);
@@ -106,10 +112,17 @@ namespace TheAlchemistsCrypt.AI
                     }
                     else
                     {
-                        SpawnSingleMummy(maxExistingId + 1);
-                        aliveCount++;
+                        // Normal wave — ramp up slowly: early waves add only 1, later waves add 1-2
+                        int toSpawn = (waveCounter <= 4) ? 1 : Mathf.Min(2, maxMummies - aliveCount);
+                        for (int i = 0; i < toSpawn; i++)
+                        {
+                            SpawnSingleMummy(maxExistingId + 1 + i);
+                            aliveCount++;
+                        }
                     }
                 }
+
+                yield return new WaitForSeconds(spawnInterval);
             }
         }
 

@@ -119,44 +119,62 @@ namespace TheAlchemistsCrypt.Editor
 
         private void SetupEnvironment(GameObject root)
                 {
-                    // Warm amber desert fog — matches the sandy horizon
-                    Color amberFogColor = new Color(0.85f, 0.62f, 0.30f);
-
-                    // ── Remove any old NVJOB sky domes from previous generations ──
-                    foreach (var oldSky in new string[] { "Sky 2 (Red)", "Sky 2 (Day)", "NVJOBSky", "DynamicSky" }) {
-                        var old = GameObject.Find(oldSky);
+                    // ── Remove any stale sky domes from previous generations ──────────────────
+                    foreach (var oldName in new string[] { "Sky 2 (Red)", "Sky 2 (Day)", "NVJOBSky", "DynamicSky" }) {
+                        var old = GameObject.Find(oldName);
                         if (old != null) DestroyImmediate(old);
                     }
 
-                    // Use Sky 2 (Day) — renders warm amber/orange through URP without the pink shift
-                    // Sky 2 (Red) looks pink under URP post-processing because its horizon hue
-                    // sits in the magenta range before tonemapping is applied.
-                    string nvjobSkyPrefabPath = "Assets/#NVJOB Dynamic Sky/Examples Sky/Sky 2 (Day)/Sky 2 (Day).prefab";
-                    GameObject nvjobSkyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(nvjobSkyPrefabPath);
-                    if (nvjobSkyPrefab != null) {
-                        var skyDome = PrefabUtility.InstantiatePrefab(nvjobSkyPrefab, root.transform) as GameObject;
+                    // ── Scene skybox: URP-compatible gradient ─────────────────────────────────
+                    // NVJOB Dynamic Sky uses Legacy CGPROGRAM/surface shaders which fail to compile
+                    // under URP and Unity falls back to the solid magenta (pink) error colour.
+                    // Solution: create a Material using our custom HLSL shader at runtime.
+                    var skyShader = Shader.Find("Egyptian/GradientSkybox");
+                    Material skyMat = null;
+                    if (skyShader != null) {
+                        skyMat = new Material(skyShader);
+                        // Egyptian dusk palette
+                        skyMat.SetColor("_TopColor",    new Color(0.12f, 0.18f, 0.38f, 1f));  // Deep night-blue zenith
+                        skyMat.SetColor("_MidColor",    new Color(0.82f, 0.45f, 0.12f, 1f));  // Amber horizon glow
+                        skyMat.SetColor("_BottomColor", new Color(0.42f, 0.22f, 0.08f, 1f));  // Warm dark ground
+                        skyMat.SetFloat("_HorizonLine", 2.0f);
+
+                        // Save it as a re-usable asset
+                        if (!System.IO.Directory.Exists("Assets/Resources/Materials"))
+                            System.IO.Directory.CreateDirectory("Assets/Resources/Materials");
+                        string matPath = "Assets/Resources/Materials/EgyptianSkyGradient.mat";
+                        // Overwrite stale version if exists
+                        if (System.IO.File.Exists(matPath)) {
+                            System.IO.File.Delete(matPath);
+                            System.IO.File.Delete(matPath + ".meta");
+                            AssetDatabase.Refresh();
+                        }
+                        AssetDatabase.CreateAsset(skyMat, matPath);
+                        skyMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                    } else {
+                        Debug.LogWarning("[CityGen] Egyptian/GradientSkybox shader not found. Pink sky expected. Did you forget to save the shader file?");
+                    }
+
+                    if (skyMat != null) RenderSettings.skybox = skyMat;
+                    RenderSettings.ambientMode = AmbientMode.Color;
+                    RenderSettings.ambientLight = new Color(0.45f, 0.32f, 0.18f); // Warm indirect light to match dusk
+
+                    // ── NVJOB cloud dome (visual cloud mesh only — NOT the scene skybox) ─────
+                    string nvjobPrefabPath = "Assets/#NVJOB Dynamic Sky/Examples Sky/Sky 2 (Red)/Sky 2 (Red).prefab";
+                    GameObject nvjobPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(nvjobPrefabPath);
+                    if (nvjobPrefab != null) {
+                        var skyDome = PrefabUtility.InstantiatePrefab(nvjobPrefab, root.transform) as GameObject;
                         if (skyDome != null) {
                             skyDome.name = "NVJOBSky";
-                            var dynamicSkyComp = skyDome.GetComponent<DynamicSky>() ?? skyDome.AddComponent<DynamicSky>();
+                            var dsc = skyDome.GetComponent<DynamicSky>() ?? skyDome.AddComponent<DynamicSky>();
                             var playerGo = GameObject.FindWithTag("Player");
-                            if (playerGo != null) dynamicSkyComp.player = playerGo.transform;
-                            // Very slow cloud rotation for mobile performance
-                            dynamicSkyComp.ssgUvRotateSpeed = 0.15f;
-                            dynamicSkyComp.sky2d = true;
+                            if (playerGo != null) dsc.player = playerGo.transform;
+                            dsc.ssgUvRotateSpeed = 0.1f;  // Very slow — mobile friendly
+                            dsc.sky2d = true;
                         }
                     }
 
-                    // Point the scene skybox at the Day horizon material (warm orange, not pink)
-                    string horizonMatPath = "Assets/#NVJOB Dynamic Sky/Examples Sky/Sky 2 (Day)/Horizon.mat";
-                    Material skyMat = AssetDatabase.LoadAssetAtPath<Material>(horizonMatPath);
-                    if (skyMat == null) {
-                        // Fallback: procedural gradient skybox if NVJOB Day mat is missing
-                        skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Materials/SkyGradientBox.mat");
-                    }
-                    if (skyMat != null) RenderSettings.skybox = skyMat;
-                    RenderSettings.ambientMode = AmbientMode.Skybox;
-
-                    // Android texture compression for sky textures
+                    // ── Android texture compression ───────────────────────────────────────────
                     string[] skyTextures = {
                         "Assets/#NVJOB Dynamic Sky/Examples Sky/Textures/Tx1.png",
                         "Assets/#NVJOB Dynamic Sky/Examples Sky/Textures/Tx2.png",
@@ -176,19 +194,21 @@ namespace TheAlchemistsCrypt.Editor
                         }
                     }
 
+                    // ── Fog ──────────────────────────────────────────────────────────────────
                     RenderSettings.fog = true;
-                    RenderSettings.fogColor = amberFogColor;
+                    RenderSettings.fogColor = new Color(0.72f, 0.48f, 0.22f); // Warm amber desert haze
                     RenderSettings.fogMode = FogMode.Linear;
-                    RenderSettings.fogStartDistance = 60f;
-                    RenderSettings.fogEndDistance = 350f;
+                    RenderSettings.fogStartDistance = 70f;
+                    RenderSettings.fogEndDistance = 320f;
 
+                    // ── Sun ──────────────────────────────────────────────────────────────────
                     var sun = GameObject.Find("Directional Light")?.GetComponent<Light>();
                     if (sun != null) {
-                        sun.color = new Color(1.0f, 0.82f, 0.55f); // Warm golden sunlight, not orange-red
-                        sun.intensity = 1.8f;
+                        sun.color = new Color(1.0f, 0.82f, 0.50f); // Warm golden low-sun
+                        sun.intensity = 1.6f;
                         sun.shadows = LightShadows.Soft;
-                        sun.shadowStrength = 0.75f;
-                        sun.transform.rotation = Quaternion.Euler(30f, -60f, 0f); // Long shadows but not extreme
+                        sun.shadowStrength = 0.70f;
+                        sun.transform.rotation = Quaternion.Euler(28f, -55f, 0f);
                     }
 
                     SetupPostProcessing(root.transform);
@@ -196,7 +216,10 @@ namespace TheAlchemistsCrypt.Editor
                     AssetDatabase.SaveAssets();
                 }
 
+
+
         private void SetupPostProcessing(Transform parent)
+
                 {
                     // Remove any existing GlobalVolume to avoid stacking profiles
                     var existingVol = parent.Find("GlobalVolume");

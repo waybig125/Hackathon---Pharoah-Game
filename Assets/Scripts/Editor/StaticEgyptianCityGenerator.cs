@@ -692,6 +692,9 @@ namespace TheAlchemistsCrypt.Editor
             surface.useGeometry = UnityEngine.AI.NavMeshCollectGeometry.RenderMeshes;
             surface.BuildNavMesh();
 
+            // Apply sandstone tint to all building renderers to unify the texture appearance
+            ApplySandstoneTintToAllBuildings(root);
+
             // Combine all static meshes under the city root to minimize draw calls and maximize mobile FPS!
             StaticBatchingUtility.Combine(root);
 
@@ -924,6 +927,85 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             return obj;
+        }
+
+        private void ApplySandstoneTintToAllBuildings(GameObject rootObj)
+        {
+            Renderer[] renderers = rootObj.GetComponentsInChildren<Renderer>(true);
+            Color sandstoneTint = new Color(0.88f, 0.74f, 0.52f);
+            
+            foreach (var r in renderers)
+            {
+                if (r == null || r is ParticleSystemRenderer || r is TrailRenderer) continue;
+                
+                // Skip terrain, player, enemies, UI
+                string nameLower = r.gameObject.name.ToLower();
+                Transform curr = r.transform;
+                bool skip = false;
+                while (curr != null)
+                {
+                    string pName = curr.gameObject.name.ToLower();
+                    if (pName.Contains("player") || pName.Contains("enemy") || pName.Contains("zombie") || 
+                        pName.Contains("mummy") || pName.Contains("terrain") || pName.Contains("sea") || 
+                        pName.Contains("water") || pName.Contains("canvas") || pName.Contains("hud"))
+                    {
+                        skip = true;
+                        break;
+                    }
+                    curr = curr.parent;
+                }
+                if (skip) continue;
+                
+                Material[] mats = r.sharedMaterials;
+                Material[] newMats = new Material[mats.Length];
+                bool anyChanged = false;
+                
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    Material mat = mats[i];
+                    if (mat == null) continue;
+                    
+                    string matName = mat.name.ToLower();
+                    // Identify building/stone materials
+                    bool isStoneAsset =
+                        matName.Contains("house") || matName.Contains("building") ||
+                        matName.Contains("column") || matName.Contains("pillar") ||
+                        matName.Contains("temple") || matName.Contains("stone") ||
+                        matName.Contains("wall")   || matName.Contains("obelisk") ||
+                        matName.Contains("sphinx") || matName.Contains("door")   ||
+                        matName.Contains("mastaba")|| matName.Contains("egyptian")||
+                        matName.Contains("stall")  || matName.Contains("arabic") ||
+                        matName.Contains("medieval")|| matName.Contains("sand")  ||
+                        matName.Contains("brick") || matName.Contains("tomb")    ||
+                        matName.Contains("ruin")   || matName.Contains("fort");
+                        
+                    if (isStoneAsset)
+                    {
+                        Material instMat = new Material(mat);
+                        Color albedo = instMat.HasProperty("_BaseColor") ? instMat.GetColor("_BaseColor") : Color.white;
+                        Color tintedAlbedo = Color.Lerp(albedo, new Color(sandstoneTint.r, sandstoneTint.g, sandstoneTint.b, albedo.a), 0.35f);
+                        if (instMat.HasProperty("_BaseColor"))
+                        {
+                            instMat.SetColor("_BaseColor", tintedAlbedo);
+                        }
+                        else if (instMat.HasProperty("_Color"))
+                        {
+                            instMat.SetColor("_Color", tintedAlbedo);
+                        }
+                        newMats[i] = instMat;
+                        anyChanged = true;
+                    }
+                    else
+                    {
+                        newMats[i] = mat;
+                    }
+                }
+                
+                if (anyChanged)
+                {
+                    r.sharedMaterials = newMats;
+                }
+            }
         }
 
         /// <summary>

@@ -4,6 +4,8 @@ using UnityEngine.EventSystems;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using DG.Tweening;
+
 
 namespace TheAlchemistsCrypt.UI
 {
@@ -155,134 +157,198 @@ namespace TheAlchemistsCrypt.UI
 
                     HideDebugLabels();
 
-                    // --- REFINED HEALTH PANEL ---
+                    // ═══════════════════════════════════════════════════════
+                    // HEALTH PANEL — Premium redesign
+                    // Dark glassmorphism card | Glowing scarab-red heart icon
+                    // Red→Orange→Gold gradient fill | Green HP% value
+                    // ═══════════════════════════════════════════════════════
                     var healthPanel = new GameObject("CustomHealthPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     healthPanel.SetParent(root, false);
                     healthPanel.anchorMin = healthPanel.anchorMax = new Vector2(0, 1);
                     healthPanel.pivot = new Vector2(0f, 1f);
-                    healthPanel.anchoredPosition = new Vector2(50, -50);
-                    healthPanel.sizeDelta = new Vector2(550, 85);
+                    healthPanel.anchoredPosition = new Vector2(14, -44);
+                    healthPanel.sizeDelta = new Vector2(380, 54);
+
                     var hpPanelImg = healthPanel.GetComponent<Image>();
-                    hpPanelImg.sprite = CreateFramedBarSprite(550, 85, new Color(0.95f, 0.8f, 0.2f, 0.85f), new Color(0.04f, 0.04f, 0.04f, 0.75f), 3);
+                    // Deep translucent dark panel with warm amber border
+                    hpPanelImg.sprite = CreateGlassmorphismPanelSprite(380, 54, 
+                        new Color(0.06f, 0.04f, 0.02f, 0.82f),   // Dark warm interior
+                        new Color(0.92f, 0.62f, 0.15f, 0.85f),   // Amber border
+                        2);
                     hpPanelImg.type = Image.Type.Simple;
-                    
+
+                    // Icon — large glowing scarab-red heart
                     var hpIconGo = new GameObject("HealthIcon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     hpIconGo.SetParent(healthPanel, false);
                     hpIconGo.anchorMin = hpIconGo.anchorMax = new Vector2(0f, 0.5f);
                     hpIconGo.pivot = new Vector2(0f, 0.5f);
-                    hpIconGo.anchoredPosition = new Vector2(15, 0);
-                    hpIconGo.sizeDelta = new Vector2(70, 70);
+                    hpIconGo.anchoredPosition = new Vector2(8, 0);
+                    hpIconGo.sizeDelta = new Vector2(42, 42);
                     var hpIconImg = hpIconGo.GetComponent<Image>();
                     hpIconImg.sprite = healthIconSprite;
+                    hpIconImg.color = new Color(1.0f, 0.22f, 0.22f, 1f); // Scarab crimson
                     hpIconImg.preserveAspect = true;
 
+                    // "HP" label
+                    var hpLblGo = new GameObject("HpLabel", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+                    hpLblGo.SetParent(healthPanel, false);
+                    hpLblGo.anchorMin = hpLblGo.anchorMax = new Vector2(0f, 0.5f);
+                    hpLblGo.pivot = new Vector2(0f, 0.5f);
+                    hpLblGo.anchoredPosition = new Vector2(54, 0);
+                    hpLblGo.sizeDelta = new Vector2(30, 30);
+                    var hpLblTxt = hpLblGo.GetComponent<TextMeshProUGUI>();
+                    hpLblTxt.font = GetTitleFont();
+                    hpLblTxt.fontSize = 14;
+                    hpLblTxt.fontStyle = FontStyles.Bold;
+                    hpLblTxt.alignment = TextAlignmentOptions.Left;
+                    hpLblTxt.color = new Color(0.95f, 0.62f, 0.15f, 1f); // Amber label
+                    hpLblTxt.text = "HP";
+
+                    // Hidden healthText (kept for compatibility)
                     var healthTxtGo = new GameObject("HealthText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
                     healthTxtGo.SetParent(healthPanel, false);
                     healthTxtGo.sizeDelta = Vector2.zero;
                     healthText = healthTxtGo.GetComponent<TextMeshProUGUI>();
                     healthText.text = "";
 
+                    // Bar background — narrower to fit label+value on same row
                     var hpBgBar = new GameObject("HpBarBg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     hpBgBar.SetParent(healthPanel, false);
                     hpBgBar.anchorMin = hpBgBar.anchorMax = new Vector2(0f, 0.5f);
                     hpBgBar.pivot = new Vector2(0f, 0.5f);
-                    hpBgBar.anchoredPosition = new Vector2(100, 0);
-                    hpBgBar.sizeDelta = new Vector2(295, 30);
-                    hpBgBar.GetComponent<Image>().sprite = CreateFramedBarSprite(295, 30, new Color(0.95f, 0.8f, 0.2f, 0.9f), new Color(0.04f, 0.04f, 0.04f, 0.8f), 2);
+                    hpBgBar.anchoredPosition = new Vector2(90, 0);
+                    hpBgBar.sizeDelta = new Vector2(208, 22);
+                    var hpBgImg = hpBgBar.GetComponent<Image>();
+                    hpBgImg.sprite = CreateRoundedRectSprite(208, 22, new Color(0.08f, 0.05f, 0.02f, 0.9f), 4);
 
+                    // Inner fill (red→orange→gold gradient)
                     var hpFillGo = new GameObject("HpFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     hpFillGo.SetParent(hpBgBar, false);
                     hpFillGo.anchorMin = Vector2.zero; hpFillGo.anchorMax = Vector2.one;
-                    // Pad the fill by 3 pixels to fit inside the 2px gold border cleanly
-                    hpFillGo.offsetMin = new Vector2(3, 3); hpFillGo.offsetMax = new Vector2(-3, -3);
+                    hpFillGo.offsetMin = new Vector2(2, 2); hpFillGo.offsetMax = new Vector2(-2, -2);
                     healthBarFill = hpFillGo.GetComponent<Image>();
-                    healthBarFill.sprite = CreateHealthBarFillSprite(289, 24);
+                    healthBarFill.sprite = CreateHealthBarFillSprite(204, 18);
                     healthBarFill.type = Image.Type.Filled;
                     healthBarFill.fillMethod = Image.FillMethod.Horizontal;
                     healthBarFill.fillAmount = 1.0f;
 
-                    // Value text on the right side of the health bar
+                    // HP% value text — bold green, right of bar
                     var hpValGo = new GameObject("HpValueText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
                     hpValGo.SetParent(healthPanel, false);
                     hpValGo.anchorMin = hpValGo.anchorMax = new Vector2(0f, 0.5f);
                     hpValGo.pivot = new Vector2(0f, 0.5f);
-                    hpValGo.anchoredPosition = new Vector2(410, 0);
-                    hpValGo.sizeDelta = new Vector2(120, 35);
+                    hpValGo.anchoredPosition = new Vector2(308, 0);
+                    hpValGo.sizeDelta = new Vector2(65, 30);
                     healthValueText = hpValGo.GetComponent<TextMeshProUGUI>();
                     healthValueText.font = GetTitleFont();
-                    healthValueText.fontSize = 22;
+                    healthValueText.fontSize = 16;
                     healthValueText.fontStyle = FontStyles.Bold;
-                    healthValueText.alignment = TextAlignmentOptions.Left;
-                    healthValueText.color = new Color(0.1f, 0.9f, 0.3f, 0.95f); // Elegant vibrant green
+                    healthValueText.alignment = TextAlignmentOptions.Right;
+                    healthValueText.color = new Color(0.25f, 0.95f, 0.38f, 1f); // Vivid green
                     healthValueText.text = "100%";
 
-                    // --- REFINED AMMO PANEL ---
+                    // DOTween entrance slide-in
+                    var hpPanelRect = healthPanel.GetComponent<RectTransform>();
+                    hpPanelRect.anchoredPosition = new Vector2(-380, -44);
+                    hpPanelRect.DOAnchorPosX(14, 0.55f).SetEase(DG.Tweening.Ease.OutBack).SetDelay(0.1f);
+
+                    // ═══════════════════════════════════════════════════════
+                    // AMMO PANEL — Premium redesign
+                    // Matching dark card | Bullet icon | 2-row tick grid
+                    // ═══════════════════════════════════════════════════════
                     var ammoPanel = new GameObject("CustomAmmoPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     ammoPanel.SetParent(root, false);
                     ammoPanel.anchorMin = ammoPanel.anchorMax = new Vector2(0, 1);
                     ammoPanel.pivot = new Vector2(0f, 1f);
-                    ammoPanel.anchoredPosition = new Vector2(50, -135);
-                    ammoPanel.sizeDelta = new Vector2(550, 85);
+                    ammoPanel.anchoredPosition = new Vector2(14, -106);
+                    ammoPanel.sizeDelta = new Vector2(380, 54);
+
                     var amPanelImg = ammoPanel.GetComponent<Image>();
-                    amPanelImg.sprite = CreateFramedBarSprite(550, 85, new Color(0.95f, 0.8f, 0.2f, 0.85f), new Color(0.04f, 0.04f, 0.04f, 0.75f), 3);
+                    amPanelImg.sprite = CreateGlassmorphismPanelSprite(380, 54,
+                        new Color(0.04f, 0.04f, 0.06f, 0.82f),   // Slightly blue-tinted dark
+                        new Color(0.92f, 0.62f, 0.15f, 0.85f),   // Same amber border
+                        2);
                     amPanelImg.type = Image.Type.Simple;
-                    
+
+                    // Bullet/ammo icon
                     var amIconGo = new GameObject("AmmoIcon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     amIconGo.SetParent(ammoPanel, false);
                     amIconGo.anchorMin = amIconGo.anchorMax = new Vector2(0f, 0.5f);
                     amIconGo.pivot = new Vector2(0f, 0.5f);
-                    amIconGo.anchoredPosition = new Vector2(15, 0);
-                    amIconGo.sizeDelta = new Vector2(70, 70);
+                    amIconGo.anchoredPosition = new Vector2(8, 0);
+                    amIconGo.sizeDelta = new Vector2(42, 42);
                     ammoIconImage = amIconGo.GetComponent<Image>();
                     ammoIconImage.sprite = sulphurIconSprite;
+                    ammoIconImage.color = new Color(0.95f, 0.72f, 0.12f, 1f); // Gold tint
                     ammoIconImage.preserveAspect = true;
 
+                    // Mode label stub (hidden — value text replaces it)
                     var ammoTxtGo = new GameObject("AmmoText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
                     ammoTxtGo.SetParent(ammoPanel, false);
                     ammoTxtGo.sizeDelta = Vector2.zero;
                     ammoText = ammoTxtGo.GetComponent<TextMeshProUGUI>();
                     ammoText.text = "";
 
-                    var ammoGridGo = new GameObject("AmmoGrid", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-                    ammoGridGo.SetParent(ammoPanel, false);
-                    ammoGridGo.anchorMin = ammoGridGo.anchorMax = new Vector2(0f, 0.5f);
-                    ammoGridGo.pivot = new Vector2(0f, 0.5f);
-                    ammoGridGo.anchoredPosition = new Vector2(100, 0);
-                    ammoGridGo.sizeDelta = new Vector2(295, 30);
-                    ammoGridGo.GetComponent<Image>().sprite = CreateFramedBarSprite(295, 30, new Color(0.95f, 0.8f, 0.2f, 0.9f), new Color(0.04f, 0.04f, 0.04f, 0.8f), 2);
-
-                    ammoTicks.Clear();
-                    float tickWidth = 6f;
-                    float tickHeight = 22f; // Sized down to 22px to fit inside the 2px border cleanly with padding
-                    float spacing = 4f;
-                    for (int i = 0; i < 30; i++)
-                    {
-                        var tickGo = new GameObject("Tick_" + i, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
-                        tickGo.SetParent(ammoGridGo, false);
-                        tickGo.anchorMin = tickGo.anchorMax = new Vector2(0f, 0.5f);
-                        tickGo.pivot = new Vector2(0f, 0.5f);
-                        tickGo.anchoredPosition = new Vector2(i * (tickWidth + spacing) + tickWidth * 0.5f + 4f, 0); // Offset x starting pos to account for left border
-                        tickGo.sizeDelta = new Vector2(tickWidth, tickHeight);
-
-                        var img = tickGo.GetComponent<Image>();
-                        img.sprite = CreateSolidBarSprite((int)tickWidth, (int)tickHeight, new Color(1.0f, 0.82f, 0.12f, 0.95f)); // Gold ticks
-                        ammoTicks.Add(img);
-                    }
-
-                    // Value text on the right side of the ammo bar
+                    // Mode value text ("SULPHUR"/"MERCURY"/"SALT") — sits left of ticks
                     var ammoValGo = new GameObject("AmmoValueText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
                     ammoValGo.SetParent(ammoPanel, false);
                     ammoValGo.anchorMin = ammoValGo.anchorMax = new Vector2(0f, 0.5f);
                     ammoValGo.pivot = new Vector2(0f, 0.5f);
-                    ammoValGo.anchoredPosition = new Vector2(410, 0);
-                    ammoValGo.sizeDelta = new Vector2(120, 35);
+                    ammoValGo.anchoredPosition = new Vector2(54, 0);
+                    ammoValGo.sizeDelta = new Vector2(48, 30);
                     ammoValueText = ammoValGo.GetComponent<TextMeshProUGUI>();
                     ammoValueText.font = GetTitleFont();
-                    ammoValueText.fontSize = 22;
+                    ammoValueText.fontSize = 10;
                     ammoValueText.fontStyle = FontStyles.Bold;
-                    ammoValueText.alignment = TextAlignmentOptions.Left;
-                    ammoValueText.color = new Color(0.95f, 0.55f, 0.05f, 0.95f); // Matching gold sulphur initially
+                    ammoValueText.alignment = TextAlignmentOptions.Center;
+                    ammoValueText.color = new Color(0.95f, 0.72f, 0.12f, 1f);
                     ammoValueText.text = "SULPHUR";
+
+                    // ── Ammo tick grid (2 rows × 15 columns) ────────────────────────────
+                    // Container for the tick grid
+                    var ammoGridGo = new GameObject("AmmoGrid", typeof(RectTransform)).GetComponent<RectTransform>();
+                    ammoGridGo.SetParent(ammoPanel, false);
+                    ammoGridGo.anchorMin = ammoGridGo.anchorMax = new Vector2(0f, 0.5f);
+                    ammoGridGo.pivot = new Vector2(0f, 0.5f);
+                    ammoGridGo.anchoredPosition = new Vector2(106, 0);
+                    ammoGridGo.sizeDelta = new Vector2(262, 42);
+
+                    ammoTicks.Clear();
+                    // 2 rows × 15 = 30 ticks, each a small diamond/pill shape
+                    float tickW = 12f;   // wider tick
+                    float tickH = 16f;   // shorter tick
+                    float gapX = 5f;     // horizontal gap
+                    float gapY = 5f;     // vertical gap between rows
+                    float rowHeight = 42f;
+                    // Row offsets: 2 rows centered vertically
+                    float[] rowY = new float[] { rowHeight * 0.25f, rowHeight * 0.75f };
+
+                    for (int row = 0; row < 2; row++)
+                    {
+                        for (int col = 0; col < 15; col++)
+                        {
+                            int idx = row * 15 + col;
+                            var tickGo = new GameObject("Tick_" + idx, typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                            tickGo.SetParent(ammoGridGo, false);
+                            tickGo.anchorMin = tickGo.anchorMax = Vector2.zero;
+                            tickGo.pivot = new Vector2(0f, 0f);
+                            float xPos = col * (tickW + gapX);
+                            float yPos = row == 0 ? (rowHeight * 0.5f + gapY * 0.5f) : gapY;
+                            tickGo.anchoredPosition = new Vector2(xPos, yPos - tickH * 0.5f);
+                            tickGo.sizeDelta = new Vector2(tickW, tickH);
+
+                            var img = tickGo.GetComponent<Image>();
+                            img.sprite = CreateDiamondTickSprite((int)tickW, (int)tickH);
+                            img.color = new Color(1.0f, 0.82f, 0.12f, 0.95f); // Gold active
+                            ammoTicks.Add(img);
+                        }
+                    }
+
+                    // DOTween entrance slide-in (slight delay after HP bar)
+                    var amPanelRect = ammoPanel.GetComponent<RectTransform>();
+                    amPanelRect.anchoredPosition = new Vector2(-380, -106);
+                    amPanelRect.DOAnchorPosX(14, 0.55f).SetEase(DG.Tweening.Ease.OutBack).SetDelay(0.22f);
+
 
                     // --- SETTINGS BUTTON (Always uses the beautiful procedural medallion gear) ---
                     var settingsBtnGo = new GameObject("SettingsButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
