@@ -692,20 +692,17 @@ namespace TheAlchemistsCrypt.Editor
             surface.useGeometry = UnityEngine.AI.NavMeshCollectGeometry.RenderMeshes;
             surface.BuildNavMesh();
 
-            // Apply sandstone tint to all building renderers to unify the texture appearance
-            ApplySandstoneTintToAllBuildings(root);
-
             // Combine all static meshes under the city root to minimize draw calls and maximize mobile FPS!
             StaticBatchingUtility.Combine(root);
 
             // ── Post-generation performance setup ──────────────────────────────────────────
             // Marks all city children as OccluderStatic/OccludeeStatic/BatchingStatic so they
             // participate in static batching and are ready for occlusion culling baking.
-            // Also converts any remaining Standard-shader materials to URP Lit (fixes SRP Batcher).
+            // Also converts any remaining Standard-shader materials to URP Lit (fixes SRP Batcher)
+            // and applies the common sandstone albedo and normal map textures.
             // NOTE: Occlusion culling BAKE is intentionally NOT done here so city iteration
             // stays fast. Use Egyptian → 🔥 Bake Occlusion Culling when ready for final testing.
-            URPSRPBatcherFixer.SetCityObjectsStatic();
-            URPSRPBatcherFixer.FixAllSceneMaterials();
+            URPSRPBatcherFixer.FixMaterialsNoDialog();
             // ─────────────────────────────────────────────────────────────────────────────
 
             var activeScene = SceneManager.GetActiveScene();

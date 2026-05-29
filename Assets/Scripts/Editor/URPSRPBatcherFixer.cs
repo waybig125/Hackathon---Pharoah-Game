@@ -163,6 +163,9 @@ namespace TheAlchemistsCrypt.Editor
 
         public static void CopyGltfPropertiesToUrpLit(Material src, Material dst)
         {
+            Texture2D commonAlbedo = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Art/EgyptianAssets/HouseGradientTex.png");
+            Texture2D commonNormal = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/Textures/EgyptianNormalMap.png");
+
             // 1. Albedo Color & Map
             Color albedo = Color.white;
             if (src.HasProperty("baseColorFactor")) albedo = src.GetColor("baseColorFactor");
@@ -190,8 +193,7 @@ namespace TheAlchemistsCrypt.Editor
             if (isStoneAsset) {
                 // Sandstone: warm golden-tan, the colour of Egyptian limestone
                 Color sandstone = new Color(0.88f, 0.74f, 0.52f, albedo.a);
-                // Blend 35% toward sandstone — preserves original hue while unifying palette
-                albedo = Color.Lerp(albedo, sandstone, 0.35f);
+                albedo = sandstone; // Force exact sandstone color tint
             }
             // ──────────────────────────────────────────────────────────────────────────
 
@@ -204,12 +206,21 @@ namespace TheAlchemistsCrypt.Editor
             else if (src.HasProperty("_BaseMap")) mainTexProp = "_BaseMap";
             else if (src.HasProperty("_MainTex")) mainTexProp = "_MainTex";
             
-            if (mainTexProp != null) mainTex = src.GetTexture(mainTexProp);
-            if (mainTex != null)
+            if (isStoneAsset && commonAlbedo != null)
             {
-                dst.SetTexture("_BaseMap", mainTex);
-                dst.SetTextureScale("_BaseMap", src.GetTextureScale(mainTexProp));
-                dst.SetTextureOffset("_BaseMap", src.GetTextureOffset(mainTexProp));
+                dst.SetTexture("_BaseMap", commonAlbedo);
+                dst.SetTextureScale("_BaseMap", new Vector2(4, 4));
+                dst.SetTextureOffset("_BaseMap", Vector2.zero);
+            }
+            else if (mainTexProp != null)
+            {
+                mainTex = src.GetTexture(mainTexProp);
+                if (mainTex != null)
+                {
+                    dst.SetTexture("_BaseMap", mainTex);
+                    dst.SetTextureScale("_BaseMap", src.GetTextureScale(mainTexProp));
+                    dst.SetTextureOffset("_BaseMap", src.GetTextureOffset(mainTexProp));
+                }
             }
             
             // 2. Normal Map
@@ -219,18 +230,29 @@ namespace TheAlchemistsCrypt.Editor
             else if (src.HasProperty("_BumpMap")) normalTexProp = "_BumpMap";
             else if (src.HasProperty("_NormalMap")) normalTexProp = "_NormalMap";
             
-            if (normalTexProp != null) normalTex = src.GetTexture(normalTexProp);
-            if (normalTex != null)
+            if (isStoneAsset && commonNormal != null)
             {
-                dst.SetTexture("_BumpMap", normalTex);
+                dst.SetTexture("_BumpMap", commonNormal);
                 dst.EnableKeyword("_NORMALMAP");
-                dst.SetTextureScale("_BumpMap", src.GetTextureScale(normalTexProp));
-                dst.SetTextureOffset("_BumpMap", src.GetTextureOffset(normalTexProp));
-                
-                float normalScale = 1.0f;
-                if (src.HasProperty("normalTexture_scale")) normalScale = src.GetFloat("normalTexture_scale");
-                else if (src.HasProperty("_BumpScale")) normalScale = src.GetFloat("_BumpScale");
-                dst.SetFloat("_BumpScale", normalScale);
+                dst.SetTextureScale("_BumpMap", new Vector2(4, 4));
+                dst.SetTextureOffset("_BumpMap", Vector2.zero);
+                dst.SetFloat("_BumpScale", 1.5f);
+            }
+            else if (normalTexProp != null)
+            {
+                normalTex = src.GetTexture(normalTexProp);
+                if (normalTex != null)
+                {
+                    dst.SetTexture("_BumpMap", normalTex);
+                    dst.EnableKeyword("_NORMALMAP");
+                    dst.SetTextureScale("_BumpMap", src.GetTextureScale(normalTexProp));
+                    dst.SetTextureOffset("_BumpMap", src.GetTextureOffset(normalTexProp));
+                    
+                    float normalScale = 1.0f;
+                    if (src.HasProperty("normalTexture_scale")) normalScale = src.GetFloat("normalTexture_scale");
+                    else if (src.HasProperty("_BumpScale")) normalScale = src.GetFloat("_BumpScale");
+                    dst.SetFloat("_BumpScale", normalScale);
+                }
             }
             else
             {
