@@ -1,0 +1,401 @@
+using UnityEngine;
+using UnityEngine.UI;
+using System.Collections;
+using System.Collections.Generic;
+using TMPro;
+using DG.Tweening;
+using Coffee.UIExtensions;
+
+namespace TheAlchemistsCrypt.UI
+{
+    public partial class MobileHUDButtons : MonoBehaviour
+    {
+        private Image healthCatchUpFill;
+        private Image healthIconFill;
+        private Image healthIconBg;
+        private GameObject threatMeterGo;
+        private Image threatMeterFill;
+        private GameObject scrollUiGo;
+        private RectTransform scrollUiRect;
+        private Image scrollUiIcon;
+        private Coffee.UIExtensions.UIParticle scrollUiParticles;
+        private Image damageOverlayImg;
+        private int lastAmmoCount = -1;
+        private bool lastHasScroll = false;
+        private float lastThreatVal = 0f;
+        private Tween catchUpTween;
+
+        private void SetupAnimationsUI(RectTransform root)
+        {
+            // 1. Setup Visceral Catch-up Health Bar
+            var hpBgBarGo = GameObject.Find("MobileHUD_Root/CustomHealthPanel/HpBarBg");
+            if (hpBgBarGo != null)
+            {
+                var catchUpGo = new GameObject("HpCatchUpFill", typeof(RectTransform), typeof(Image));
+                catchUpGo.transform.SetParent(hpBgBarGo.transform, false);
+                var catchUpRect = catchUpGo.GetComponent<RectTransform>();
+                catchUpRect.anchorMin = Vector2.zero;
+                catchUpRect.anchorMax = Vector2.one;
+                catchUpRect.offsetMin = new Vector2(3, 3);
+                catchUpRect.offsetMax = new Vector2(-3, -3);
+                
+                healthCatchUpFill = catchUpGo.GetComponent<Image>();
+                healthCatchUpFill.sprite = CreateHealthBarFillSprite(289, 24);
+                healthCatchUpFill.type = Image.Type.Filled;
+                healthCatchUpFill.fillMethod = Image.FillMethod.Horizontal;
+                healthCatchUpFill.fillAmount = 1.0f;
+                healthCatchUpFill.color = new Color(0.8f, 0.1f, 0.15f, 0.85f); // Deep visceral crimson red
+                
+                if (healthBarFill != null)
+                {
+                    healthBarFill.transform.SetAsLastSibling();
+                    healthBarFill.color = new Color(0.95f, 0.8f, 0.15f, 1.0f); // Bright Egyptian Gold
+                }
+            }
+
+            // 2. Setup Threat Meter UI
+            threatMeterGo = new GameObject("ThreatMeter", typeof(RectTransform), typeof(Image));
+            threatMeterGo.transform.SetParent(root, false);
+            var tmRect = threatMeterGo.GetComponent<RectTransform>();
+            tmRect.anchorMin = tmRect.anchorMax = new Vector2(0, 1);
+            tmRect.pivot = new Vector2(0f, 1f);
+            tmRect.anchoredPosition = new Vector2(50, -225);
+            tmRect.sizeDelta = new Vector2(70, 70);
+            
+            var tmBg = threatMeterGo.GetComponent<Image>();
+            Sprite ringSprite = CreateRadialSprite(128, 128);
+            tmBg.sprite = ringSprite;
+            tmBg.color = new Color(0.15f, 0.05f, 0.05f, 0.6f);
+            
+            var fillGo = new GameObject("ThreatFill", typeof(RectTransform), typeof(Image));
+            fillGo.transform.SetParent(threatMeterGo.transform, false);
+            var fillRect = fillGo.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
+            
+            threatMeterFill = fillGo.GetComponent<Image>();
+            threatMeterFill.sprite = ringSprite;
+            threatMeterFill.type = Image.Type.Filled;
+            threatMeterFill.fillMethod = Image.FillMethod.Radial360;
+            threatMeterFill.fillOrigin = (int)Image.Origin360.Top;
+            threatMeterFill.fillClockwise = true;
+            threatMeterFill.color = new Color(0.9f, 0.1f, 0.1f, 0.95f);
+            threatMeterFill.fillAmount = 0f;
+            
+            var lblGo = new GameObject("ThreatLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
+            lblGo.transform.SetParent(threatMeterGo.transform, false);
+            var lblRect = lblGo.GetComponent<RectTransform>();
+            lblRect.anchorMin = new Vector2(0.5f, 0.5f);
+            lblRect.anchorMax = new Vector2(0.5f, 0.5f);
+            lblRect.anchoredPosition = new Vector2(0, 0);
+            lblRect.sizeDelta = new Vector2(60, 20);
+            
+            var lblTxt = lblGo.GetComponent<TextMeshProUGUI>();
+            lblTxt.text = "THREAT";
+            lblTxt.font = GetTitleFont();
+            lblTxt.fontSize = 10;
+            lblTxt.fontStyle = FontStyles.Bold;
+            lblTxt.alignment = TextAlignmentOptions.Center;
+            lblTxt.color = new Color(1.0f, 0.7f, 0.2f, 0.85f);
+
+            // 3. Setup Scroll of Thoth UI
+            scrollUiGo = new GameObject("ScrollOfThothUI", typeof(RectTransform), typeof(Image));
+            scrollUiGo.transform.SetParent(root, false);
+            scrollUiRect = scrollUiGo.GetComponent<RectTransform>();
+            scrollUiRect.anchorMin = scrollUiRect.anchorMax = new Vector2(0.5f, 0f);
+            scrollUiRect.pivot = new Vector2(0.5f, 0f);
+            scrollUiRect.anchoredPosition = new Vector2(0, 100f);
+            scrollUiRect.sizeDelta = new Vector2(90, 90);
+            
+            var scrollBg = scrollUiGo.GetComponent<Image>();
+            scrollBg.sprite = goldTrimmedButtonSprite != null ? goldTrimmedButtonSprite : obsidianSprite;
+            scrollBg.type = Image.Type.Simple;
+            
+            var sIconGo = new GameObject("ScrollIcon", typeof(RectTransform), typeof(Image));
+            sIconGo.transform.SetParent(scrollUiGo.transform, false);
+            var sIconRect = sIconGo.GetComponent<RectTransform>();
+            sIconRect.anchorMin = Vector2.zero;
+            sIconRect.anchorMax = Vector2.one;
+            sIconRect.offsetMin = sIconRect.offsetMax = new Vector2(15, 15);
+            
+            scrollUiIcon = sIconGo.GetComponent<Image>();
+            scrollUiIcon.sprite = CreateProceduralScrollSprite();
+            scrollUiIcon.preserveAspect = true;
+            scrollUiGo.SetActive(false); // Hidden until collected
+
+            // 4. Setup UI Particle System over Health Bar
+            var particlesGo = new GameObject("HealthParticles", typeof(RectTransform));
+            particlesGo.transform.SetParent(root, false);
+            var partRect = particlesGo.GetComponent<RectTransform>();
+            partRect.anchorMin = partRect.anchorMax = new Vector2(0, 1);
+            partRect.pivot = new Vector2(0.5f, 0.5f);
+            partRect.anchoredPosition = new Vector2(100, -90);
+            partRect.sizeDelta = new Vector2(100, 100);
+            
+            var ps = particlesGo.AddComponent<ParticleSystem>();
+            var main = ps.main;
+            main.duration = 1f;
+            main.loop = false;
+            main.startLifetime = 0.5f;
+            main.startSpeed = 150f;
+            main.startSize = 10f;
+            main.startColor = new Color(1f, 0.85f, 0.2f, 1f);
+            main.gravityModifier = 0.5f;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            main.playOnAwake = false;
+            
+            var emission = ps.emission;
+            emission.rateOverTime = 0;
+            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 40) });
+            
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 20f;
+            
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient grad = new Gradient();
+            grad.SetKeys(
+                new GradientColorKey[] { new GradientColorKey(new Color(1f, 0.85f, 0.2f), 0f), new GradientColorKey(new Color(1f, 0.4f, 0f), 1f) },
+                new GradientAlphaKey[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) }
+            );
+            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(grad);
+            
+            var psRend = particlesGo.GetComponent<ParticleSystemRenderer>();
+            if (psRend != null)
+            {
+                psRend.material = new Material(Shader.Find("Sprites/Default"));
+            }
+            
+            scrollUiParticles = particlesGo.AddComponent<Coffee.UIExtensions.UIParticle>();
+            scrollUiParticles.scale = 1f;
+
+            // 5. Setup Damage Screen Scratch Vignette Overlay
+            var damageOverlayGo = new GameObject("DamageOverlay", typeof(RectTransform), typeof(Image));
+            damageOverlayGo.transform.SetParent(root, false);
+            damageOverlayGo.transform.SetAsFirstSibling(); // Draw in background of layout buttons
+            
+            var overlayRect = damageOverlayGo.GetComponent<RectTransform>();
+            overlayRect.anchorMin = Vector2.zero;
+            overlayRect.anchorMax = Vector2.one;
+            overlayRect.offsetMin = overlayRect.offsetMax = Vector2.zero;
+            
+            damageOverlayImg = damageOverlayGo.GetComponent<Image>();
+            damageOverlayImg.sprite = CreateClawVignetteTexture(256, 256);
+            damageOverlayImg.color = new Color(1f, 1f, 1f, 0f);
+            damageOverlayImg.raycastTarget = false;
+        }
+
+        public void SplashHealthParticles()
+        {
+            if (scrollUiParticles != null)
+            {
+                scrollUiParticles.Play();
+            }
+        }
+
+        private void UpdateAnimations()
+        {
+            UpdateThreatMeter();
+            UpdateScrollSlide();
+            UpdateScrollHeartbeat();
+        }
+
+        private void UpdateThreatMeter()
+        {
+            if (threatMeterFill == null) return;
+            
+            float threat = 0f;
+            var hm = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.AI.HiveMindManager>();
+            if (hm != null)
+            {
+                threat = hm.AggressionScore;
+            }
+            
+            threatMeterFill.fillAmount = Mathf.Lerp(threatMeterFill.fillAmount, threat, Time.deltaTime * 5f);
+            
+            if (threat > 0.6f && Time.frameCount % 120 == 0)
+            {
+                threatMeterGo.transform.DOKill();
+                threatMeterGo.transform.localScale = Vector3.one;
+                threatMeterGo.transform.DOPunchScale(new Vector3(0.2f, 0.2f, 0f), 0.3f, 5, 1f);
+            }
+        }
+
+        private void UpdateScrollSlide()
+        {
+            if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance == null) return;
+            bool hasScroll = TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.hasKey;
+            if (hasScroll != lastHasScroll)
+            {
+                lastHasScroll = hasScroll;
+                if (hasScroll)
+                {
+                    scrollUiGo.SetActive(true);
+                    scrollUiRect.anchoredPosition = new Vector2(scrollUiRect.anchoredPosition.x, -150f);
+                    scrollUiRect.localScale = Vector3.zero;
+                    
+                    scrollUiRect.DOAnchorPosY(100f, 1f).SetEase(Ease.OutBack);
+                    scrollUiRect.DOScale(1f, 1f).SetEase(Ease.OutBack).OnComplete(() => {
+                        if (scrollUiParticles != null) scrollUiParticles.Play();
+                    });
+                }
+                else
+                {
+                    scrollUiGo.SetActive(false);
+                }
+            }
+        }
+
+        private void UpdateScrollHeartbeat()
+        {
+            if (scrollUiGo == null || !scrollUiGo.activeSelf) return;
+
+            float threat = 0f;
+            var hm = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.AI.HiveMindManager>();
+            if (hm != null)
+            {
+                threat = hm.AggressionScore;
+            }
+
+            float speed = Mathf.Lerp(1.2f, 0.25f, threat);
+            if (Mathf.Abs(threat - lastThreatVal) > 0.05f)
+            {
+                lastThreatVal = threat;
+                scrollUiIcon.transform.DOKill();
+                scrollUiIcon.transform.localScale = Vector3.one;
+                scrollUiIcon.transform.DOScale(1.25f, speed)
+                    .SetEase(Ease.InOutQuad)
+                    .SetLoops(-1, LoopType.Yoyo);
+            }
+        }
+
+        private Sprite CreateRadialSprite(int width, int height)
+        {
+            Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            float centerX = width / 2f;
+            float centerY = height / 2f;
+            float radius = Mathf.Min(width, height) / 2f;
+            float innerRadius = radius * 0.7f;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), new Vector2(centerX, centerY));
+                    if (dist <= radius && dist >= innerRadius)
+                    {
+                        tex.SetPixel(x, y, Color.white);
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateProceduralScrollSprite()
+        {
+            int w = 128;
+            int h = 128;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            
+            Color parchment = new Color(0.85f, 0.75f, 0.55f, 1f);
+            Color darkWood = new Color(0.35f, 0.2f, 0.1f, 1f);
+            Color goldNode = new Color(0.95f, 0.8f, 0.2f, 1f);
+            Color ink = new Color(0.2f, 0.15f, 0.1f, 0.9f);
+            Color transparent = new Color(0, 0, 0, 0);
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float px = x / (float)w;
+                    float py = y / (float)h;
+
+                    if (px < 0.15f || px > 0.85f || py < 0.2f || py > 0.8f)
+                    {
+                        if ((px >= 0.1f && px < 0.15f) || (px > 0.85f && px <= 0.9f))
+                        {
+                            if (py >= 0.15f && py <= 0.85f)
+                            {
+                                tex.SetPixel(x, y, darkWood);
+                            }
+                            else
+                            {
+                                tex.SetPixel(x, y, transparent);
+                            }
+                        }
+                        else if (((px >= 0.08f && px < 0.1f) || (px > 0.9f && px <= 0.92f)) && ((py >= 0.1f && py < 0.15f) || (py > 0.85f && py <= 0.9f)))
+                        {
+                            tex.SetPixel(x, y, goldNode);
+                        }
+                        else
+                        {
+                            tex.SetPixel(x, y, transparent);
+                        }
+                    }
+                    else
+                    {
+                        Color pixelColor = parchment;
+                        float grain = Mathf.PerlinNoise(px * 15f, py * 45f) * 0.12f;
+                        pixelColor = Color.Lerp(pixelColor, Color.black, grain);
+
+                        if (py > 0.3f && py < 0.7f && px > 0.2f && px < 0.8f)
+                        {
+                            float linePattern = Mathf.Sin(py * 35f);
+                            float dashPattern = Mathf.Sin(px * 40f + py * 10f);
+                            if (linePattern > 0.6f && dashPattern > -0.2f)
+                            {
+                                pixelColor = Color.Lerp(pixelColor, ink, 0.85f);
+                            }
+                        }
+                        tex.SetPixel(x, y, pixelColor);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+        }
+
+        private Sprite CreateClawVignetteTexture(int width, int height)
+        {
+            Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            Color transparent = new Color(0, 0, 0, 0);
+            Color darkRed = new Color(0.6f, 0.05f, 0.05f, 0.8f);
+            
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    float nx = (x - width / 2f) / (width / 2f);
+                    float ny = (y - height / 2f) / (height / 2f);
+                    float dist = Mathf.Sqrt(nx * nx + ny * ny);
+                    
+                    float vignette = Mathf.Clamp01((dist - 0.5f) / 0.5f);
+                    
+                    float angle = Mathf.Atan2(ny, nx);
+                    float scratchPattern = Mathf.Sin(angle * 24f) * Mathf.Cos(dist * 12f);
+                    float scratchFactor = (scratchPattern > 0.7f) ? 0.3f : 0.0f;
+                    
+                    float finalAlpha = Mathf.Clamp01(vignette * 0.8f + scratchFactor * vignette);
+                    
+                    if (finalAlpha > 0.01f)
+                    {
+                        Color c = Color.Lerp(transparent, darkRed, finalAlpha);
+                        tex.SetPixel(x, y, c);
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, transparent);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+        }
+    }
+}

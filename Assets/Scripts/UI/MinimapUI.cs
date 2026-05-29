@@ -289,8 +289,9 @@ private Sprite buildingSprite;
             legendRect.SetParent(minimapFrame, false);
             legendRect.anchorMin = new Vector2(0, 0);
             legendRect.anchorMax = new Vector2(0, 0);
-            legendRect.anchoredPosition = new Vector2(150, 120);
-            legendRect.sizeDelta = new Vector2(240, 200);
+            legendRect.pivot = new Vector2(0, 0);
+            legendRect.anchoredPosition = new Vector2(40, 40);
+            legendRect.sizeDelta = new Vector2(260, 210);
             
             var img = legendPanel.GetComponent<Image>();
             img.color = new Color(0, 0, 0, 0.85f); // Slightly darker for better readability
@@ -307,8 +308,8 @@ private Sprite buildingSprite;
                 itemRect.anchorMin = new Vector2(0, 1);
                 itemRect.anchorMax = new Vector2(0, 1);
                 itemRect.pivot = new Vector2(0, 1);
-                itemRect.anchoredPosition = new Vector2(20, -20 - (i * 22)); // Tighter spacing
-                itemRect.sizeDelta = new Vector2(200, 25);
+                itemRect.anchoredPosition = new Vector2(25, -20 - (i * 22)); // Tighter spacing with 25px offset from left
+                itemRect.sizeDelta = new Vector2(210, 25);
                 
                 var txt = item.GetComponent<Text>();
                 txt.text = "■ " + labels[i];

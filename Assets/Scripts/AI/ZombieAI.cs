@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
+using DG.Tweening;
 
 namespace TheAlchemistsCrypt.AI
 {
@@ -915,8 +916,48 @@ namespace TheAlchemistsCrypt.AI
                     {
                         // Use throttled global SFX to prevent "wall of noise" when many mummies attack at once
                         TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mummy_attack", false, 0.5f, 0.4f);
+                        FlashEyesRed();
                     }
                 }
+            }
+        }
+
+        private void FlashEyesRed()
+        {
+            if (cachedRenderers == null) cachedRenderers = GetComponentsInChildren<Renderer>(true);
+            if (cachedMPB == null) cachedMPB = new MaterialPropertyBlock();
+            
+            System.Collections.Generic.List<Renderer> targets = new System.Collections.Generic.List<Renderer>();
+            foreach (var r in cachedRenderers)
+            {
+                if (r == null) continue;
+                string lowerName = r.gameObject.name.ToLower();
+                if (lowerName.Contains("eye") || lowerName.Contains("head") || lowerName.Contains("face"))
+                {
+                    targets.Add(r);
+                }
+            }
+            if (targets.Count == 0)
+            {
+                targets.AddRange(cachedRenderers);
+            }
+
+            foreach (var r in targets)
+            {
+                if (r == null) continue;
+                float emissionVal = 0f;
+                DG.Tweening.Core.DOSetter<float> setter = val => {
+                    emissionVal = val;
+                    if (r == null) return;
+                    r.GetPropertyBlock(cachedMPB);
+                    cachedMPB.SetColor("_EmissionColor", new Color(1.0f, 0.0f, 0.0f) * val);
+                    r.SetPropertyBlock(cachedMPB);
+                };
+                DG.Tweening.DOTween.To(() => emissionVal, setter, 4.0f, 0.1f)
+                    .SetLoops(2, DG.Tweening.LoopType.Yoyo)
+                    .OnComplete(() => {
+                        if (r != null) r.SetPropertyBlock(null);
+                    });
             }
         }
     }

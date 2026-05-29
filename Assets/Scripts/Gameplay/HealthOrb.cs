@@ -74,6 +74,9 @@ namespace TheAlchemistsCrypt.Gameplay
             }
         }
 
+        private bool isMagnetized = false;
+        private float magnetSpeed = 0f;
+
         private void Update()
         {
             lifetime += Time.deltaTime;
@@ -81,14 +84,17 @@ namespace TheAlchemistsCrypt.Gameplay
             // Spin the orb elegantly
             transform.Rotate(Vector3.up, 140f * Time.deltaTime);
 
-            // Hover up and down beautifully
-            transform.position = startPos + Vector3.up * Mathf.Sin(Time.time * 2.8f) * 0.18f;
+            // Hover up and down beautifully (only if not magnetized)
+            if (!isMagnetized)
+            {
+                transform.position = startPos + Vector3.up * Mathf.Sin(Time.time * 2.8f) * 0.18f;
+            }
 
             // Find player if null
             if (player == null) FindPlayer();
 
             // Track proximity and tell the player about the orb
-            if (player != null && !hasShownTip)
+            if (player != null && !hasShownTip && !isMagnetized)
             {
                 float dist = Vector3.Distance(transform.position, player.position);
                 if (dist <= 5f)
@@ -102,8 +108,38 @@ namespace TheAlchemistsCrypt.Gameplay
                 }
             }
 
-            // Fade out logic from 5 to 10 seconds
-            if (lifetime >= fadeStartSecond)
+            // Trigger homing magnetism if player is within 6m
+            if (player != null && !isMagnetized)
+            {
+                float dist = Vector3.Distance(transform.position, player.position);
+                if (dist <= 6f)
+                {
+                    isMagnetized = true;
+                    if (TheAlchemistsCrypt.UI.MobileHUDButtons.Instance != null)
+                    {
+                        TheAlchemistsCrypt.UI.MobileHUDButtons.Instance.HideOrbTooltip();
+                    }
+                }
+            }
+
+            // Magnetism logic
+            if (isMagnetized)
+            {
+                Transform targetCam = (Camera.main != null) ? Camera.main.transform : player;
+                if (targetCam != null)
+                {
+                    magnetSpeed += 25f * Time.deltaTime; // Accelerate towards camera
+                    transform.position = Vector3.MoveTowards(transform.position, targetCam.position, magnetSpeed * Time.deltaTime);
+
+                    if (Vector3.Distance(transform.position, targetCam.position) < 0.4f)
+                    {
+                        CollectOrb();
+                    }
+                }
+            }
+
+            // Fade out logic from 5 to 10 seconds (only if not magnetized)
+            if (lifetime >= fadeStartSecond && !isMagnetized)
             {
                 float progress = (lifetime - fadeStartSecond) / (fadeEndSecond - fadeStartSecond);
                 float alpha = Mathf.Clamp01(1f - progress);
@@ -132,26 +168,34 @@ namespace TheAlchemistsCrypt.Gameplay
             }
         }
 
+        private void CollectOrb()
+        {
+            // Heal the player!
+            var health = GameObject.FindAnyObjectByType<PlayerHealth>();
+            if (health != null)
+            {
+                health.Heal(healAmount);
+            }
+
+            // Hide the tooltip on collect
+            if (TheAlchemistsCrypt.UI.MobileHUDButtons.Instance != null)
+            {
+                TheAlchemistsCrypt.UI.MobileHUDButtons.Instance.HideOrbTooltip();
+                TheAlchemistsCrypt.UI.MobileHUDButtons.Instance.SplashHealthParticles();
+            }
+
+            // Play collection SFX
+            TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_pickup", false, 0.8f);
+
+            Debug.Log("Essence Orb Collected! Restored 10 health.");
+            Destroy(gameObject);
+        }
+
         private void OnTriggerEnter(Collider other)
         {
             if (other.CompareTag("Player") || other.GetComponent<InfimaGames.LowPolyShooterPack.Character>() != null || other.GetComponentInParent<InfimaGames.LowPolyShooterPack.Character>() != null)
             {
-                // Heal the player!
-                var health = GameObject.FindAnyObjectByType<PlayerHealth>();
-                if (health != null)
-                {
-                    health.Heal(healAmount);
-                }
-
-                // Hide the tooltip on collect
-                if (TheAlchemistsCrypt.UI.MobileHUDButtons.Instance != null)
-                {
-                    TheAlchemistsCrypt.UI.MobileHUDButtons.Instance.HideOrbTooltip();
-                }
-
-                // Play a brief high-quality sound/particle effect if desired or just log and destroy
-                Debug.Log("Essence Orb Collected! Restored 10 health.");
-                Destroy(gameObject);
+                isMagnetized = true;
             }
         }
     }

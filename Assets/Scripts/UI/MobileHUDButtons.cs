@@ -170,24 +170,9 @@ namespace TheAlchemistsCrypt.UI
             }
 
             // ON desktop, escape should trigger settings toggling using modern Input System API.
-            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame) {
-                if (Time.unscaledTime - lastEscTime > 0.3f) {
-                    lastEscTime = Time.unscaledTime;
-                    if (settingsModalInstance != null) {
-                        var bg = settingsModalInstance;
-                        Destroy(bg);
-                        settingsModalInstance = null;
-                        Time.timeScale = 1f; // RESUME THE GAME!
-                        if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
-                        Cursor.lockState = CursorLockMode.Locked;
-                        Cursor.visible = false;
-                    } else {
-                        var canvas = GetComponent<Canvas>();
-                        if (canvas != null) {
-                            OpenSettingsModal(canvas.GetComponent<RectTransform>());
-                        }
-                    }
-                }
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard != null && (keyboard.escapeKey.wasPressedThisFrame || keyboard.escapeKey.wasReleasedThisFrame)) {
+                ToggleSettingsFromEscape();
             }
 
             // Optimize: Initialize cache periodically if not fully found, instead of every frame
@@ -249,6 +234,48 @@ namespace TheAlchemistsCrypt.UI
             UpdateAmmo(current, total);
             if (cachedHealth != null) UpdateHealth(cachedHealth.currentHealth);
             UpdateGuideArrow();
+            UpdateAnimations();
+        }
+
+        public void ToggleSettingsFromEscape()
+        {
+            if (!HasStartedGame || deathPanelInstance != null) return;
+            
+            if (Time.unscaledTime - lastEscTime > 0.3f) {
+                lastEscTime = Time.unscaledTime;
+                if (settingsModalInstance != null) {
+                    var bg = settingsModalInstance;
+                    Destroy(bg);
+                    settingsModalInstance = null;
+                    Time.timeScale = 1f; // RESUME THE GAME!
+                    if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
+                    
+                    if (cachedCharacter != null)
+                    {
+                        cachedCharacter.SetCursorLocked(true);
+                    }
+                    else
+                    {
+                        Cursor.lockState = CursorLockMode.Locked;
+                        Cursor.visible = false;
+                    }
+                } else {
+                    var canvas = GetComponent<Canvas>();
+                    if (canvas != null) {
+                        OpenSettingsModal(canvas.GetComponent<RectTransform>());
+                    }
+                    
+                    if (cachedCharacter != null)
+                    {
+                        cachedCharacter.SetCursorLocked(false);
+                    }
+                    else
+                    {
+                        Cursor.lockState = CursorLockMode.None;
+                        Cursor.visible = true;
+                    }
+                }
+            }
         }
 
         private Sprite CreateProceduralArrowSprite(int size)
@@ -329,14 +356,26 @@ namespace TheAlchemistsCrypt.UI
             }
 
             // Fallback if EscapeManager is not initialized or null
-            if (target == null && (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance == null || TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.papyrusSpawned))
+            if (target == null)
             {
-                target = GameObject.Find("AncientPapyrus");
-                isBoat = false;
-                if (target == null)
+                if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null)
                 {
-                    target = GameObject.Find("EscapeBoat");
-                    isBoat = true;
+                    if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.papyrusSpawned)
+                    {
+                        target = GameObject.Find("AncientPapyrus");
+                        isBoat = false;
+                        if (target == null)
+                        {
+                            target = GameObject.Find("EscapeBoat");
+                            isBoat = true;
+                        }
+                    }
+                }
+                else
+                {
+                    // If EscapeManager is null, only point to AncientPapyrus if it is explicitly found in the scene
+                    target = GameObject.Find("AncientPapyrus");
+                    isBoat = false;
                 }
             }
 
@@ -1370,7 +1409,14 @@ namespace TheAlchemistsCrypt.UI
                 Destroy(deathPanelInstance);
                 deathPanelInstance = null;
             }
-            if (hudRootGo != null) hudRootGo.SetActive(false);
+            if (hudRootGo != null)
+            {
+                var cg = hudRootGo.GetComponent<CanvasGroup>();
+                if (cg == null) cg = hudRootGo.AddComponent<CanvasGroup>();
+                cg.alpha = 0f;
+                cg.blocksRaycasts = false;
+                cg.interactable = false;
+            }
 
             Time.timeScale = 0f;
             Cursor.visible = true;

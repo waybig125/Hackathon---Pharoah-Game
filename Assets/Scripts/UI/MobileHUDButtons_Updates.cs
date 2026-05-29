@@ -4,26 +4,67 @@ using UnityEngine.EventSystems;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using DG.Tweening;
 
 namespace TheAlchemistsCrypt.UI
 {
     public partial class MobileHUDButtons
     {
          public void UpdateHealth(float h)
-                {
-                    if (healthText) healthText.text = "";
-                    if (healthBarFill) healthBarFill.fillAmount = Mathf.Clamp01(h / 100f);
-                    if (healthValueText) healthValueText.text = Mathf.RoundToInt(Mathf.Clamp(h, 0f, 100f)) + "%";
-                }
+         {
+             if (healthText) healthText.text = "";
+             float fillTarget = Mathf.Clamp01(h / 100f);
+             
+             if (healthBarFill) healthBarFill.fillAmount = fillTarget;
+             if (healthValueText) healthValueText.text = Mathf.RoundToInt(Mathf.Clamp(h, 0f, 100f)) + "%";
+             
+             if (healthCatchUpFill != null)
+             {
+                 if (fillTarget >= healthCatchUpFill.fillAmount)
+                 {
+                     if (catchUpTween != null) catchUpTween.Kill();
+                     healthCatchUpFill.fillAmount = fillTarget;
+                 }
+                 else
+                 {
+                     if (catchUpTween != null) catchUpTween.Kill();
+                     catchUpTween = healthCatchUpFill.DOFillAmount(fillTarget, 1.5f).SetEase(Ease.OutQuad);
+                 }
+             }
+         }
 
 
 
-                public void UpdateAmmo(int c, int t)
-                {
-                    if (ammoText) ammoText.text = "";
-                    
-                    string modeName = "SULPHUR";
-                    Color tickColor = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+                 public void UpdateAmmo(int c, int t)
+                 {
+                     if (ammoText) ammoText.text = "";
+                     
+                     if (c < lastAmmoCount)
+                     {
+                         if (ammoValueText != null)
+                         {
+                             ammoValueText.transform.DOKill();
+                             ammoValueText.transform.localScale = Vector3.one;
+                             ammoValueText.transform.DOPunchScale(new Vector3(0.3f, 0.3f, 0f), 0.15f, 10, 1f);
+                         }
+                     }
+                     else if (c > lastAmmoCount && lastAmmoCount != -1)
+                     {
+                         if (ammoValueText != null)
+                         {
+                             ammoValueText.transform.DOKill();
+                             ammoValueText.transform.localScale = Vector3.one;
+                             ammoValueText.transform.DOPunchScale(new Vector3(0.4f, 0.4f, 0f), 0.4f, 8, 1f);
+                             
+                             Color originalColor = ammoValueText.color;
+                             ammoValueText.color = Color.white;
+                             ammoValueText.DOColor(originalColor, 0.4f);
+                         }
+                     }
+                     lastAmmoCount = c;
+                     
+                     string modeName = "SULPHUR";
+                     Color tickColor = new Color(0.95f, 0.8f, 0.2f, 0.95f);
                     var focus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
                     if (focus != null)
                     {

@@ -1,5 +1,15 @@
 {
   "dependencies": {
+    "com.coffee.ui-particle": {
+      "version": "https://github.com/mob-sakai/ParticleEffectForUGUI.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.ugui": "1.0.0",
+        "com.unity.modules.particlesystem": "1.0.0"
+      },
+      "hash": "92fb173507ece2c135c38733deeca82a6d49cacd"
+    },
     "com.coplaydev.unity-mcp": {
       "version": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
       "depth": 0,
@@ -9,6 +19,13 @@
         "com.unity.test-framework": "1.1.31"
       },
       "hash": "b92c05a25820cfc9f59ce4094eb46aaec8632ea2"
+    },
+    "com.gameframex.unity.demigiant.dotween": {
+      "version": "https://github.com/GameFrameX/com.gameframex.unity.demigiant.dotween.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "106c141e97f55cec1aea0078965dffc670adf925"
     },
     "com.unity.2d.sprite": {
       "version": "1.0.0",

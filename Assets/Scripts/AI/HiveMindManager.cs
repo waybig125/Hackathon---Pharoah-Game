@@ -95,6 +95,36 @@ namespace TheAlchemistsCrypt.AI
         private readonly List<MummyState> mStates = new List<MummyState>(); // Reused list, avoids new List<> per tick
         private readonly Collider[] overlapBuffer = new Collider[64];       // Pre-alloc buffer for NonAlloc physics
 
+        public float AggressionScore
+        {
+            get
+            {
+                if (cachedPlayerObj == null) return 0f;
+                float score = 0f;
+                int activeCount = 0;
+                if (cachedZombieArray != null)
+                {
+                    foreach (var z in cachedZombieArray)
+                    {
+                        if (z == null || z.IsDead) continue;
+                        activeCount++;
+                        float dist = Vector3.Distance(z.transform.position, cachedPlayerObj.transform.position);
+                        if (dist < 15f)
+                        {
+                            score += (15f - dist) / 15f * 0.15f;
+                        }
+                    }
+                }
+                score += activeCount * 0.02f;
+                
+                var pharaoh = GameObject.Find("Pharaoh_Prefab(Clone)");
+                if (pharaoh == null) pharaoh = GameObject.Find("Pharaoh_Prefab");
+                if (pharaoh != null) score += 0.4f;
+                
+                return Mathf.Clamp01(score);
+            }
+        }
+
         private void Start()
         {
             StartCoroutine(HiveMindLoop());

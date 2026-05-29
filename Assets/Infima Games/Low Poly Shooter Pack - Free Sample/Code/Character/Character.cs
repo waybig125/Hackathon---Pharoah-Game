@@ -660,6 +660,15 @@ namespace InfimaGames.LowPolyShooterPack
 		}
 
 		/// <summary>
+		/// SetCursorLocked.
+		/// </summary>
+		public void SetCursorLocked(bool locked)
+		{
+			cursorLocked = locked;
+			UpdateCursorState();
+		}
+
+		/// <summary>
 		/// OnLockCursor.
 		/// </summary>
 		/// <param name="value">Value.</param>
@@ -669,6 +678,12 @@ namespace InfimaGames.LowPolyShooterPack
 			cursorLocked = !cursorLocked;
 			//Update the cursor's state.
 			UpdateCursorState();
+
+			// Hackathon Fix: Notify MobileHUDButtons to toggle settings!
+			if (TheAlchemistsCrypt.UI.MobileHUDButtons.Instance != null)
+			{
+				TheAlchemistsCrypt.UI.MobileHUDButtons.Instance.ToggleSettingsFromEscape();
+			}
 		}
 
 		#endregion

@@ -1,7 +1,8 @@
 {
   "dependencies": {
+    "com.coffee.ui-particle": "https://github.com/mob-sakai/ParticleEffectForUGUI.git",
     "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
-    "com.whinarn.unitymeshsimplifier": "https://github.com/Whinarn/UnityMeshSimplifier.git#v3.1.0",
+    "com.gameframex.unity.demigiant.dotween": "https://github.com/GameFrameX/com.gameframex.unity.demigiant.dotween.git",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.2d.tilemap": "1.0.0",
     "com.unity.ai.navigation": "2.0.12",
@@ -23,6 +24,7 @@
     "com.unity.ugui": "2.0.0",
     "com.unity.visualeffectgraph": "17.4.0",
     "com.unity.visualscripting": "1.9.11",
+    "com.whinarn.unitymeshsimplifier": "https://github.com/Whinarn/UnityMeshSimplifier.git#v3.1.0",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.adaptiveperformance": "1.0.0",
     "com.unity.modules.ai": "1.0.0",

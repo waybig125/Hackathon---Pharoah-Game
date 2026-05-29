@@ -51,7 +51,7 @@ namespace TheAlchemistsCrypt.Gameplay
             bgImg.color = Color.white;
             
             // Load the generated background sprite
-            var bgTex = Resources.Load<Texture2D>("egyptian_items/BootBackground");
+            var bgTex = Resources.Load<Texture2D>("egyptian_items/BootBackground_Graphite");
             if (bgTex != null)
             {
                 bgImg.sprite = Sprite.Create(bgTex, new Rect(0, 0, bgTex.width, bgTex.height), new Vector2(0.5f, 0.5f));
@@ -94,7 +94,23 @@ namespace TheAlchemistsCrypt.Gameplay
             progressBar = pbFillGo.GetComponent<Image>();
             progressBar.color = new Color(0.95f, 0.8f, 0.2f, 1f);
 
-            // Removed Loading Text to simplify the bootloader design
+            // Setup loading indicator icon using our GPU shader
+            var iconGo = new GameObject("LoadingIcon", typeof(RectTransform), typeof(Image));
+            iconGo.transform.SetParent(canvasGo.transform, false);
+            var iconRect = iconGo.GetComponent<RectTransform>();
+            iconRect.anchorMin = iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+            iconRect.anchoredPosition = new Vector2(0, -220);
+            iconRect.sizeDelta = new Vector2(160, 160);
+            var iconImg = iconGo.GetComponent<Image>();
+            var lShader = Shader.Find("Custom/LoadingScreenGPU");
+            if (lShader != null)
+            {
+                iconImg.material = new Material(lShader);
+            }
+            else
+            {
+                iconImg.color = new Color(0.95f, 0.8f, 0.2f, 0.8f);
+            }
         }
 
         private IEnumerator LoadMainGameAsync()

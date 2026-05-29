@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
 using System.Collections;
+using DG.Tweening;
 
 namespace TheAlchemistsCrypt.Player
 {
@@ -13,7 +14,6 @@ namespace TheAlchemistsCrypt.Player
         public float currentHealth;
 
         [Header("Effects")]
-        private float damageAlpha = 0f;
         private UnityEngine.UI.Image damageOverlay;
         private bool isDead = false;
 
@@ -58,9 +58,14 @@ namespace TheAlchemistsCrypt.Player
             
             TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_player_grunt");
             
-            // Trigger red flash on screen
-            damageAlpha = 0.6f; 
             if (damageOverlay == null) FindDamageOverlay();
+            if (damageOverlay != null)
+            {
+                damageOverlay.DOKill();
+                damageOverlay.color = new Color(1f, 1f, 1f, 0.65f);
+                damageOverlay.DOFade(0f, 0.5f).SetEase(Ease.OutQuad);
+            }
+            ShakeCamera();
 
             if (currentHealth <= 0)
             {
@@ -79,15 +84,6 @@ namespace TheAlchemistsCrypt.Player
         private void Update()
         {
             if (isDead) return;
-
-            // Handle red flash fade out
-            if (damageAlpha > 0)
-            {
-                damageAlpha -= Time.deltaTime * 1.5f;
-                if (damageAlpha < 0) damageAlpha = 0;
-                if (damageOverlay != null) 
-                    damageOverlay.color = new Color(0.8f, 0.1f, 0.1f, damageAlpha);
-            }
 
             // Low health audio logic
             float healthPct = currentHealth / maxHealth;
@@ -182,6 +178,39 @@ namespace TheAlchemistsCrypt.Player
                 if (fonts != null && fonts.Length > 0) f = fonts[0];
             }
             return f;
+        }
+
+        private void ShakeCamera()
+        {
+            var source = GetComponent<Unity.Cinemachine.CinemachineImpulseSource>();
+            if (source == null)
+            {
+                source = gameObject.AddComponent<Unity.Cinemachine.CinemachineImpulseSource>();
+            }
+            if (source != null)
+            {
+                source.GenerateImpulse(0.4f);
+            }
+            StartCoroutine(ShakeTransformCoroutine());
+        }
+
+        private IEnumerator ShakeTransformCoroutine()
+        {
+            Camera cam = Camera.main;
+            if (cam == null) yield break;
+            Vector3 originalLocalPos = cam.transform.localPosition;
+            float elapsed = 0f;
+            float duration = 0.2f;
+            float magnitude = 0.15f;
+            while (elapsed < duration)
+            {
+                float x = Random.Range(-1f, 1f) * magnitude;
+                float y = Random.Range(-1f, 1f) * magnitude;
+                cam.transform.localPosition = originalLocalPos + new Vector3(x, y, 0);
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            cam.transform.localPosition = originalLocalPos;
         }
     }
 

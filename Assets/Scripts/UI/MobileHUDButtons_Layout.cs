@@ -371,6 +371,9 @@ namespace TheAlchemistsCrypt.UI
                     guideArrowText.outlineColor = new Color(0, 0, 0, 0.5f);
                     guideArrowText.outlineWidth = 0.2f;
                     guideArrowText.raycastTarget = false;
+                    
+                    // Setup additional animation overlays and UI widgets
+                    SetupAnimationsUI(root);
                     }
 
 
