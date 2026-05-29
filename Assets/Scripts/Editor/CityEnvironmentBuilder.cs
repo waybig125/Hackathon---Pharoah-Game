@@ -174,6 +174,10 @@ namespace TheAlchemistsCrypt.Editor
                             var skyRenderers = skyDome.GetComponentsInChildren<Renderer>(true);
                             foreach (var r in skyRenderers) {
                                 if (r == null) continue;
+                                if (r.gameObject.name.ToLower().Contains("horizon")) {
+                                    r.gameObject.SetActive(false); // Disable to allow Procedural Skybox to render cleanly
+                                    continue;
+                                }
                                 Material[] mats = r.sharedMaterials;
                                 for (int i = 0; i < mats.Length; i++) {
                                     if (mats[i] == null) continue;
@@ -184,13 +188,8 @@ namespace TheAlchemistsCrypt.Editor
                                         if (instMat.shader != null) {
                                             Texture mainTex = mats[i].HasProperty("_MainTex") ? mats[i].GetTexture("_MainTex") : null;
                                             
-                                            // HOTFIX: Map Sky Red.png directly onto the Horizon dome
-                                            if (r.gameObject.name.ToLower().Contains("horizon")) {
-                                                mainTex = AssetDatabase.LoadAssetAtPath<Texture>("Assets/#NVJOB Dynamic Sky/Example Scenes/Environment/Standard Assets/Sky Red.png");
-                                                instMat.SetColor("_BaseColor", new Color(1f, 1f, 1f, 1f));
-                                            }
                                             // HOTFIX: Tint dynamic cloud mesh layers warm
-                                            else if (r.gameObject.name.ToLower().Contains("cloud")) {
+                                            if (r.gameObject.name.ToLower().Contains("cloud")) {
                                                 instMat.SetColor("_BaseColor", new Color(1.0f, 0.72f, 0.45f, 0.80f));
                                             }
                                             

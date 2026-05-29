@@ -136,7 +136,7 @@ namespace TheAlchemistsCrypt.Editor
                     isNew = true;
                 }
                 
-                CopyGltfPropertiesToUrpLit(subMat, extMat);
+                CopyGltfPropertiesToUrpLit(subMat, extMat, glbPath);
                 
                 if (isNew)
                 {
@@ -161,7 +161,7 @@ namespace TheAlchemistsCrypt.Editor
             return extractedCount;
         }
 
-        public static void CopyGltfPropertiesToUrpLit(Material src, Material dst)
+        public static void CopyGltfPropertiesToUrpLit(Material src, Material dst, string glbPath = "")
         {
             Texture2D commonAlbedo = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Art/EgyptianAssets/HouseGradientTex.png");
             Texture2D commonNormal = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/Textures/EgyptianNormalMap.png");
@@ -178,6 +178,7 @@ namespace TheAlchemistsCrypt.Editor
             // colour so that temples, obelisks, pillars, houses, and the sphinx all look
             // like they are carved from the same ancient Egyptian stone.
             string srcLower = src.name.ToLower();
+            string glbLower = string.IsNullOrEmpty(glbPath) ? "" : System.IO.Path.GetFileNameWithoutExtension(glbPath).ToLower();
             bool isStoneAsset =
                 srcLower.Contains("house") || srcLower.Contains("building") ||
                 srcLower.Contains("column") || srcLower.Contains("pillar") ||
@@ -188,7 +189,17 @@ namespace TheAlchemistsCrypt.Editor
                 srcLower.Contains("stall")  || srcLower.Contains("arabic") ||
                 srcLower.Contains("medieval")|| srcLower.Contains("sand")  ||
                 srcLower.Contains("brick") || srcLower.Contains("tomb")    ||
-                srcLower.Contains("ruin")   || srcLower.Contains("fort");
+                srcLower.Contains("ruin")   || srcLower.Contains("fort")   ||
+                glbLower.Contains("house") || glbLower.Contains("building") ||
+                glbLower.Contains("column") || glbLower.Contains("pillar") ||
+                glbLower.Contains("temple") || glbLower.Contains("stone") ||
+                glbLower.Contains("wall")   || glbLower.Contains("obelisk") ||
+                glbLower.Contains("sphinx") || glbLower.Contains("door")   ||
+                glbLower.Contains("mastaba")|| glbLower.Contains("egyptian")||
+                glbLower.Contains("stall")  || glbLower.Contains("arabic") ||
+                glbLower.Contains("medieval")|| glbLower.Contains("sand")  ||
+                glbLower.Contains("brick") || glbLower.Contains("tomb")    ||
+                glbLower.Contains("ruin")   || glbLower.Contains("fort");
 
             if (isStoneAsset) {
                 // Sandstone: warm golden-tan, the colour of Egyptian limestone
