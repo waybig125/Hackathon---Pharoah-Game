@@ -222,6 +222,12 @@ namespace TheAlchemistsCrypt.Editor
                         mainCam.tag = "MainCamera";
                         mainCam.targetDisplay = 0;
                         try { mainCam.farClipPlane = Mathf.Max(mainCam.farClipPlane, 4000f); } catch { }
+
+                        // Exclude the player character body layer (9) from the world camera
+                        // The weapon camera in LPSP renders arms/hands separately on layer 9
+                        // Rendering it on the main camera causes the skin-coloured body mesh to bleed
+                        // into the FPS view and cover the HUD buttons at the bottom of the screen
+                        mainCam.cullingMask &= ~(1 << 9);
                     }
                     else
                     {

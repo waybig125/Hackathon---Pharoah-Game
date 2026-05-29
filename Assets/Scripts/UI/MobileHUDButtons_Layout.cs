@@ -86,20 +86,29 @@ namespace TheAlchemistsCrypt.UI
                     horrorGo.anchorMin = Vector2.zero; horrorGo.anchorMax = Vector2.one;
                     horrorGo.offsetMin = horrorGo.offsetMax = Vector2.zero;
                     var horrorImg = horrorGo.GetComponent<Image>();
-                    // Use smog texture as a very light fog-like vignette around the edges only
-                    // The gun is rendered by a separate camera layer and won't be obscured
+                    // Load smog as sprite — if not yet reimported as Sprite type, create it from raw texture
                     var smogSprite = Resources.Load<Sprite>("Textures/Smog");
+                    if (smogSprite == null)
+                    {
+                        // Fallback: load as Texture2D and create sprite at runtime
+                        var smogTex = Resources.Load<Texture2D>("Textures/Smog");
+                        if (smogTex != null)
+                            smogSprite = Sprite.Create(smogTex,
+                                new Rect(0, 0, smogTex.width, smogTex.height),
+                                new Vector2(0.5f, 0.5f));
+                    }
                     if (smogSprite != null)
                     {
                         horrorImg.sprite = smogSprite;
-                        // Very light translucent fog: alpha 0.28 keeps the horror vibe without blocking vision
-                        horrorImg.color = new Color(0.04f, 0.22f, 0.08f, 0.28f);
-                        horrorImg.type = Image.Type.Sliced;
+                        // Green fog vignette — alpha 0.42 is clearly visible but not oppressive
+                        horrorImg.color = new Color(0.04f, 0.22f, 0.08f, 0.42f);
+                        horrorImg.type = Image.Type.Simple;
+                        horrorImg.preserveAspect = false;
                     }
                     else
                     {
                         // Fallback: Soft radial vignette — dark green only at screen edges (fog effect)
-                        horrorImg.sprite = CreateProceduralGradientSprite(256, 256, new Color(0f, 0.12f, 0.03f, 0f), new Color(0f, 0.18f, 0.04f, 0.45f));
+                        horrorImg.sprite = CreateProceduralGradientSprite(256, 256, new Color(0f, 0.12f, 0.03f, 0f), new Color(0f, 0.22f, 0.06f, 0.55f));
                         horrorImg.color = Color.white;
                     }
                     horrorImg.raycastTarget = false;

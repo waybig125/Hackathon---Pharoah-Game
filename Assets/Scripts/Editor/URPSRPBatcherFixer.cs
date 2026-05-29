@@ -57,9 +57,90 @@ namespace TheAlchemistsCrypt.Editor
             SetCityObjectsStatic();
             ExtractAndConvertAllGLBMaterials();
             FixAllSceneMaterials();
+            FixDarkExtractedMaterials();   // Strip spurious _METALLICSPECGLOSSMAP / _EMISSION keywords
             DisableGPUResidentDrawerAllAssets(silent: true);
             AssetDatabase.SaveAssets();
         }
+
+        /// <summary>
+        /// Strips the _METALLICSPECGLOSSMAP and _EMISSION keywords from any extracted .mat
+        /// where the corresponding texture slot is null but the keyword was left enabled
+        /// by the GLTF importer. A URP Lit material with _METALLICSPECGLOSSMAP ON but no
+        /// texture samples pure black from the slot, making the object appear jet-black in-scene.
+        /// Also clears spurious full-white emission that makes objects glow solid white.
+        /// </summary>
+        [MenuItem("Egyptian/Fix Dark Materials (Remove Broken Metallic Keywords)", false, 14)]
+        public static void FixDarkExtractedMaterials()
+        {
+            string extractedFolder = "Assets/Art/Materials/Extracted";
+            if (!AssetDatabase.IsValidFolder(extractedFolder)) return;
+
+            string[] matGuids = AssetDatabase.FindAssets("t:Material", new[] { extractedFolder });
+            int fixed_ = 0;
+
+            foreach (string guid in matGuids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (mat == null) continue;
+
+                bool dirty = false;
+
+                // ── Fix 1: _METALLICSPECGLOSSMAP ON but texture is null → produces black PBR ──
+                if (mat.IsKeywordEnabled("_METALLICSPECGLOSSMAP"))
+                {
+                    Texture metallicTex = mat.HasProperty("_MetallicGlossMap")
+                        ? mat.GetTexture("_MetallicGlossMap") : null;
+
+                    if (metallicTex == null)
+                    {
+                        mat.DisableKeyword("_METALLICSPECGLOSSMAP");
+                        if (mat.HasProperty("_MetallicGlossMap"))
+                            mat.SetTexture("_MetallicGlossMap", null);
+                        if (mat.HasProperty("_Metallic"))
+                            mat.SetFloat("_Metallic", 0f);
+                        if (mat.HasProperty("_Smoothness"))
+                            mat.SetFloat("_Smoothness", Mathf.Max(mat.GetFloat("_Smoothness"), 0.05f));
+                        dirty = true;
+                    }
+                }
+
+                // ── Fix 2: _EMISSION ON but emission map is null AND EmissionColor is white ──
+                // Full white emission with no texture = blazing bright / washed-out render
+                if (mat.IsKeywordEnabled("_EMISSION"))
+                {
+                    Texture emissionTex = mat.HasProperty("_EmissionMap")
+                        ? mat.GetTexture("_EmissionMap") : null;
+                    Color emissionColor = mat.HasProperty("_EmissionColor")
+                        ? mat.GetColor("_EmissionColor") : Color.black;
+
+                    bool isSpuriousEmission = emissionTex == null &&
+                        (emissionColor.r > 0.9f && emissionColor.g > 0.9f && emissionColor.b > 0.9f);
+
+                    if (isSpuriousEmission)
+                    {
+                        mat.DisableKeyword("_EMISSION");
+                        if (mat.HasProperty("_EmissionColor"))
+                            mat.SetColor("_EmissionColor", Color.black);
+                        dirty = true;
+                    }
+                }
+
+                if (dirty)
+                {
+                    EditorUtility.SetDirty(mat);
+                    fixed_++;
+                    Debug.Log($"[URPSRPBatcherFixer] Fixed dark material: {mat.name}");
+                }
+            }
+
+            if (fixed_ > 0)
+            {
+                AssetDatabase.SaveAssets();
+                Debug.Log($"[URPSRPBatcherFixer] FixDarkExtractedMaterials: fixed {fixed_} material(s).");
+            }
+        }
+
 
         public static int ExtractAndConvertAllGLBMaterials()
         {
