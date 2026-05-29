@@ -69,10 +69,10 @@ namespace TheAlchemistsCrypt.Gameplay
             
             // Align slightly better
             pbBgRect.anchoredPosition = new Vector2(0f, -65f);
-            pbBgRect.sizeDelta = new Vector2(800f, 56f);
+            pbBgRect.sizeDelta = new Vector2(730f, 44f);
             
             var pbBgImg = pbBgGo.GetComponent<Image>();
-            pbBgImg.sprite = CreateRoundedRectSprite(800, 56, 28f); // Fully rounded capsule
+            pbBgImg.sprite = CreateRoundedRectSprite(730, 44, 22f); // Fully rounded capsule
             pbBgImg.color = new Color(0.02f, 0.08f, 0.04f, 1f); // Solid dark green for better masking
 
             var mask = pbBgGo.GetComponent<Mask>();
@@ -89,7 +89,7 @@ namespace TheAlchemistsCrypt.Gameplay
             progressBar.color = new Color(0.0f, 0.9f, 0.3f, 0.85f); // Bright premium chemical green matching HUD
 
             // Start bubble animation
-            StartBubblesEffect(pbBgGo.transform, new Vector2(800f, 56f));
+            StartBubblesEffect(pbBgGo.transform, new Vector2(730f, 44f));
         }
 
         private Sprite CreateRoundedRectSprite(int width, int height, float cornerRadius)

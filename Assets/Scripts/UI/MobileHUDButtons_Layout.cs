@@ -255,7 +255,7 @@ namespace TheAlchemistsCrypt.UI
                     hpBgBar.anchoredPosition = new Vector2(90, 0);
                     hpBgBar.sizeDelta = new Vector2(220, 24);
                     var hpBgImg = hpBgBar.GetComponent<Image>();
-                    hpBgImg.sprite = CreateRoundedRectSprite(220, 24, new Color(0.12f, 0.12f, 0.15f, 0.85f), 12);
+                    hpBgImg.sprite = CreateRoundedRectSprite(220, 24, new Color(0.02f, 0.08f, 0.04f, 1f), 12); // Capsule
                     var hpMask = hpBgBar.GetComponent<Mask>();
                     hpMask.showMaskGraphic = true;
 
@@ -351,7 +351,7 @@ namespace TheAlchemistsCrypt.UI
                     amBgBar.anchoredPosition = new Vector2(80, 0);
                     amBgBar.sizeDelta = new Vector2(220, 24);
                     var amBgImg = amBgBar.GetComponent<Image>();
-                    amBgImg.sprite = CreateRoundedRectSprite(220, 24, new Color(0.12f, 0.12f, 0.15f, 0.85f), 12);
+                    amBgImg.sprite = CreateRoundedRectSprite(220, 24, new Color(0.02f, 0.08f, 0.04f, 1f), 12); // Capsule
                     var amMask = amBgBar.GetComponent<Mask>();
                     amMask.showMaskGraphic = true;
 

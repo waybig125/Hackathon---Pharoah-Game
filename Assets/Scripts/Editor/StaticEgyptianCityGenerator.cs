@@ -860,7 +860,7 @@ namespace TheAlchemistsCrypt.Editor
                     // PERFORMANCE: Add LOD group to cull high-poly palm trees at distance.
                     // Date palms are 33-38 MB GLBs with very high vertex counts.
                     // LOD0: full mesh up to 30m, LOD1: decimated mesh up to 60m, Cull beyond.
-                    AddLODGroupToPalmTree(obj);
+                    // AddLODGroupToPalmTree(obj); // DISABLED to fix trees hiding when close
                 }
             }
 
