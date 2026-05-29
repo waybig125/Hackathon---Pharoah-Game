@@ -345,7 +345,7 @@ namespace TheAlchemistsCrypt.UI
                     ammoLblTxt.fontStyle = FontStyles.Bold;
                     ammoLblTxt.alignment = TextAlignmentOptions.Left;
                     ammoLblTxt.color = new Color(1.0f, 0.75f, 0.15f, 1f); // Brighter Amber
-                    var amOut = ammoLblGo.gameObject.AddComponent<UnityEngine.UI.Outline>();
+                    var amOut = ammoValGo.gameObject.AddComponent<UnityEngine.UI.Outline>();
                     amOut.effectColor = new Color(0, 0, 0, 0.8f);
                     amOut.effectDistance = new Vector2(1, -1);
                     ammoLblTxt.text = "AM";
