@@ -246,6 +246,7 @@ namespace InfimaGames.LowPolyShooterPack
             light.range = 8f;
             light.intensity = 5f;
             Destroy(flash, 0.05f); // Super fast flash
+        }
 
         public override void FillAmmunition(int amount)
         {
