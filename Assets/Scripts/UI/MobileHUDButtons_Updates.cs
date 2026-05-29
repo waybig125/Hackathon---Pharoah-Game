@@ -31,98 +31,114 @@ namespace TheAlchemistsCrypt.UI
                      catchUpTween = healthCatchUpFill.DOFillAmount(fillTarget, 1.5f).SetEase(Ease.OutQuad);
                  }
              }
+
+             if (gameplayBloodVignette != null)
+             {
+                 if (fillTarget < 0.35f && fillTarget > 0f)
+                 {
+                     // Opacity pulse: pulse rate and max opacity increases as health decreases
+                     float dangerFactor = 1f - (fillTarget / 0.35f); // 0 at 35% health, 1 at 0% health
+                     float pulseSpeed = 3f + dangerFactor * 7f; // faster pulse at lower health
+                     float maxAlpha = 0.15f + dangerFactor * 0.65f; // deeper red at lower health
+                     float sine = Mathf.Sin(Time.time * pulseSpeed);
+                     float normalizedSine = (sine + 1f) * 0.5f; // 0 to 1
+                     float targetAlpha = maxAlpha * (0.3f + normalizedSine * 0.7f);
+                     
+                     var c = gameplayBloodVignette.color;
+                     gameplayBloodVignette.color = new Color(c.r, c.g, c.b, targetAlpha);
+                 }
+                 else
+                 {
+                     var c = gameplayBloodVignette.color;
+                     gameplayBloodVignette.color = new Color(c.r, c.g, c.b, 0f);
+                 }
+             }
          }
 
 
 
-                 public void UpdateAmmo(int c, int t)
+         public void UpdateAmmo(int c, int t)
+         {
+             if (ammoText) ammoText.text = "";
+             
+             if (c < lastAmmoCount)
+             {
+                 if (ammoValueText != null)
                  {
-                     if (ammoText) ammoText.text = "";
+                     ammoValueText.transform.DOKill();
+                     ammoValueText.transform.localScale = Vector3.one;
+                     ammoValueText.transform.DOPunchScale(new Vector3(0.3f, 0.3f, 0f), 0.15f, 10, 1f);
+                 }
+             }
+             else if (c > lastAmmoCount && lastAmmoCount != -1)
+             {
+                 if (ammoValueText != null)
+                 {
+                     ammoValueText.transform.DOKill();
+                     ammoValueText.transform.localScale = Vector3.one;
+                     ammoValueText.transform.DOPunchScale(new Vector3(0.4f, 0.4f, 0f), 0.4f, 8, 1f);
                      
-                     if (c < lastAmmoCount)
-                     {
-                         if (ammoValueText != null)
-                         {
-                             ammoValueText.transform.DOKill();
-                             ammoValueText.transform.localScale = Vector3.one;
-                             ammoValueText.transform.DOPunchScale(new Vector3(0.3f, 0.3f, 0f), 0.15f, 10, 1f);
-                         }
-                     }
-                     else if (c > lastAmmoCount && lastAmmoCount != -1)
-                     {
-                         if (ammoValueText != null)
-                         {
-                             ammoValueText.transform.DOKill();
-                             ammoValueText.transform.localScale = Vector3.one;
-                             ammoValueText.transform.DOPunchScale(new Vector3(0.4f, 0.4f, 0f), 0.4f, 8, 1f);
-                             
-                             Color originalColor = ammoValueText.color;
-                             ammoValueText.color = Color.white;
-                             ammoValueText.DOColor(originalColor, 0.4f);
-                         }
-                     }
-                     lastAmmoCount = c;
-                     
-                     string modeName = "SULPHUR";
-                     Color tickColor = new Color(0.95f, 0.8f, 0.2f, 0.95f);
-                    var focus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
-                    if (focus != null)
-                    {
-                        switch (focus.CurrentMode)
-                        {
-                            case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Sulfur:
-                                modeName = "SULPHUR";
-                                tickColor = new Color(0.95f, 0.55f, 0.05f, 0.95f);
-                                break;
-                            case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Mercury:
-                                modeName = "MERCURY";
-                                tickColor = new Color(0.1f, 0.75f, 0.95f, 0.95f);
-                                break;
-                            case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Salt:
-                                modeName = "SALT";
-                                tickColor = new Color(0.95f, 0.95f, 0.95f, 0.95f);
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
-                        if (character != null)
-                        {
-                            var weapon = character.GetEquippedWeapon();
-                            if (weapon != null)
-                            {
-                                string wName = weapon.name.ToLower();
-                                if (wName.Contains("sulfur")) { tickColor = new Color(0.95f, 0.55f, 0.05f, 0.95f); modeName = "SULPHUR"; }
-                                else if (wName.Contains("mercury")) { tickColor = new Color(0.1f, 0.75f, 0.95f, 0.95f); modeName = "MERCURY"; }
-                                else if (wName.Contains("salt")) { tickColor = new Color(0.95f, 0.95f, 0.95f, 0.95f); modeName = "SALT"; }
-                            }
-                        }
-                    }
+                     Color originalColor = ammoValueText.color;
+                     ammoValueText.color = Color.white;
+                     ammoValueText.DOColor(originalColor, 0.4f);
+                 }
+             }
+             lastAmmoCount = c;
+             
+             string modeName = "SULPHUR";
+             Color tickColor = new Color(0.95f, 0.8f, 0.2f, 0.95f);
+             Sprite fillSprite = sulfurBarSprite;
 
-                    for (int i = 0; i < 30; i++)
-                    {
-                        if (i < ammoTicks.Count && ammoTicks[i] != null)
-                        {
-                            if (i < c)
-                            {
-                                // Vibrant gold color for active ammo ticks
-                                ammoTicks[i].color = new Color(1.0f, 0.82f, 0.12f, 0.95f);
-                            }
-                            else
-                            {
-                                // Dark warm empty slot
-                                ammoTicks[i].color = new Color(0.15f, 0.1f, 0.05f, 0.5f);
-                            }
-                        }
-                    }
+             var focus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+             if (focus != null)
+             {
+                 switch (focus.CurrentMode)
+                 {
+                     case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Sulfur:
+                         modeName = "SULPHUR";
+                         tickColor = new Color(0.95f, 0.55f, 0.05f, 0.95f);
+                         fillSprite = sulfurBarSprite;
+                         break;
+                     case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Mercury:
+                         modeName = "MERCURY";
+                         tickColor = new Color(0.1f, 0.75f, 0.95f, 0.95f);
+                         fillSprite = mercuryBarSprite;
+                         break;
+                     case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Salt:
+                         modeName = "SALT";
+                         tickColor = new Color(0.95f, 0.95f, 0.95f, 0.95f);
+                         fillSprite = saltBarSprite;
+                         break;
+                 }
+             }
+             else
+             {
+                 var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                 if (character != null)
+                 {
+                     var weapon = character.GetEquippedWeapon();
+                     if (weapon != null)
+                     {
+                         string wName = weapon.name.ToLower();
+                         if (wName.Contains("sulfur")) { tickColor = new Color(0.95f, 0.55f, 0.05f, 0.95f); modeName = "SULPHUR"; fillSprite = sulfurBarSprite; }
+                         else if (wName.Contains("mercury")) { tickColor = new Color(0.1f, 0.75f, 0.95f, 0.95f); modeName = "MERCURY"; fillSprite = mercuryBarSprite; }
+                         else if (wName.Contains("salt")) { tickColor = new Color(0.95f, 0.95f, 0.95f, 0.95f); modeName = "SALT"; fillSprite = saltBarSprite; }
+                     }
+                 }
+             }
 
-                    if (ammoValueText)
-                    {
-                        ammoValueText.text = modeName;
-                        ammoValueText.color = tickColor;
-                    }
-                }
+             if (ammoBarFill != null)
+             {
+                 ammoBarFill.fillAmount = Mathf.Clamp01((float)c / 30f);
+                 if (fillSprite != null) ammoBarFill.sprite = fillSprite;
+             }
+
+             if (ammoValueText != null)
+             {
+                 ammoValueText.text = $"{c}/30";
+                 ammoValueText.color = tickColor;
+             }
+         }
 
     }
 }

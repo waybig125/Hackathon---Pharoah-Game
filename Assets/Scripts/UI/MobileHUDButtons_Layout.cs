@@ -68,6 +68,17 @@ namespace TheAlchemistsCrypt.UI
                     root.offsetMin = root.offsetMax = Vector2.zero;
                     hudRootGo = root.gameObject;
 
+                    // Create Horror Overlay as first sibling
+                    var horrorGo = new GameObject("HorrorOverlay", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                    horrorGo.SetParent(root, false);
+                    horrorGo.SetAsFirstSibling();
+                    horrorGo.anchorMin = Vector2.zero; horrorGo.anchorMax = Vector2.one;
+                    horrorGo.offsetMin = horrorGo.offsetMax = Vector2.zero;
+                    var horrorImg = horrorGo.GetComponent<Image>();
+                    horrorImg.sprite = CreateProceduralGradientSprite(256, 256, new Color(0.02f, 0.15f, 0.05f, 0.05f), new Color(0f, 0.04f, 0.01f, 0.35f));
+                    horrorImg.color = new Color(1f, 1f, 1f, 0.45f);
+                    horrorImg.raycastTarget = false;
+
                     var lookZone = new GameObject("LookZone", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     lookZone.SetParent(root, false);
                     lookZone.anchorMin = new Vector2(0.4f, 0f); lookZone.anchorMax = Vector2.one;
@@ -111,7 +122,7 @@ namespace TheAlchemistsCrypt.UI
                     knobGlow.sizeDelta = new Vector2(260, 260); // 1.3x scaling
                     knobGlow.transform.SetAsFirstSibling();
                     var glowImage = knobGlow.GetComponent<Image>();
-                    glowImage.color = new Color(1f, 0.6f, 0.1f, 0.5f); // translucent warm orange/gold glow
+                    glowImage.color = new Color(0.0f, 0.9f, 0.4f, 0.5f); // translucent green glow
                     glowImage.raycastTarget = false;
                     if (joystickKnobSprite != null) glowImage.sprite = joystickKnobSprite;
 
@@ -176,6 +187,7 @@ namespace TheAlchemistsCrypt.UI
                         new Color(0.92f, 0.62f, 0.15f, 0.85f),   // Amber border
                         2);
                     hpPanelImg.type = Image.Type.Simple;
+                    hpPanelImg.enabled = false; // Disable panel background so it's a floating bar
 
                     // Icon — large glowing scarab-red heart
                     var hpIconGo = new GameObject("HealthIcon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
@@ -269,6 +281,7 @@ namespace TheAlchemistsCrypt.UI
                         new Color(0.92f, 0.62f, 0.15f, 0.85f),   // Same amber border
                         2);
                     amPanelImg.type = Image.Type.Simple;
+                    amPanelImg.enabled = false; // Disable panel background so it's a floating bar
 
                     // Bullet/ammo icon
                     var amIconGo = new GameObject("AmmoIcon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
@@ -289,20 +302,56 @@ namespace TheAlchemistsCrypt.UI
                     ammoText = ammoTxtGo.GetComponent<TextMeshProUGUI>();
                     ammoText.text = "";
 
-                    // Mode value text ("SULPHUR"/"MERCURY"/"SALT") — sits left of ticks
+                    // Mode value text ("AM" to match "HP") — sits left of bar
                     var ammoValGo = new GameObject("AmmoValueText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
                     ammoValGo.SetParent(ammoPanel, false);
                     ammoValGo.anchorMin = ammoValGo.anchorMax = new Vector2(0f, 0.5f);
                     ammoValGo.pivot = new Vector2(0f, 0.5f);
                     ammoValGo.anchoredPosition = new Vector2(54, 0);
-                    ammoValGo.sizeDelta = new Vector2(48, 30);
-                    ammoValueText = ammoValGo.GetComponent<TextMeshProUGUI>();
+                    ammoValGo.sizeDelta = new Vector2(30, 30);
+                    var ammoLblTxt = ammoValGo.GetComponent<TextMeshProUGUI>();
+                    ammoLblTxt.font = GetTitleFont();
+                    ammoLblTxt.fontSize = 14;
+                    ammoLblTxt.fontStyle = FontStyles.Bold;
+                    ammoLblTxt.alignment = TextAlignmentOptions.Left;
+                    ammoLblTxt.color = new Color(0.95f, 0.62f, 0.15f, 1f);
+                    ammoLblTxt.text = "AM";
+
+                    // Bar background
+                    var amBgBar = new GameObject("AmBarBg", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                    amBgBar.SetParent(ammoPanel, false);
+                    amBgBar.anchorMin = amBgBar.anchorMax = new Vector2(0f, 0.5f);
+                    amBgBar.pivot = new Vector2(0f, 0.5f);
+                    amBgBar.anchoredPosition = new Vector2(90, 0);
+                    amBgBar.sizeDelta = new Vector2(208, 22);
+                    var amBgImg = amBgBar.GetComponent<Image>();
+                    amBgImg.sprite = CreateRoundedRectSprite(208, 22, new Color(0.04f, 0.04f, 0.06f, 0.9f), 4);
+
+                    // Inner fill
+                    var amFillGo = new GameObject("AmFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                    amFillGo.SetParent(amBgBar, false);
+                    amFillGo.anchorMin = Vector2.zero; amFillGo.anchorMax = Vector2.one;
+                    amFillGo.offsetMin = new Vector2(2, 2); amFillGo.offsetMax = new Vector2(-2, -2);
+                    ammoBarFill = amFillGo.GetComponent<Image>();
+                    ammoBarFill.sprite = sulfurBarSprite;
+                    ammoBarFill.type = Image.Type.Filled;
+                    ammoBarFill.fillMethod = Image.FillMethod.Horizontal;
+                    ammoBarFill.fillAmount = 1.0f;
+
+                    // Ammo Count text value on the right
+                    var ammoCountValGo = new GameObject("AmmoCountValueText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+                    ammoCountValGo.SetParent(ammoPanel, false);
+                    ammoCountValGo.anchorMin = ammoCountValGo.anchorMax = new Vector2(0f, 0.5f);
+                    ammoCountValGo.pivot = new Vector2(0f, 0.5f);
+                    ammoCountValGo.anchoredPosition = new Vector2(308, 0);
+                    ammoCountValGo.sizeDelta = new Vector2(65, 30);
+                    ammoValueText = ammoCountValGo.GetComponent<TextMeshProUGUI>();
                     ammoValueText.font = GetTitleFont();
-                    ammoValueText.fontSize = 10;
+                    ammoValueText.fontSize = 16;
                     ammoValueText.fontStyle = FontStyles.Bold;
-                    ammoValueText.alignment = TextAlignmentOptions.Center;
-                    ammoValueText.color = new Color(0.95f, 0.72f, 0.12f, 1f);
-                    ammoValueText.text = "SULPHUR";
+                    ammoValueText.alignment = TextAlignmentOptions.Right;
+                    ammoValueText.color = new Color(0.95f, 0.72f, 0.12f, 1f); // Gold/Amber matching element theme
+                    ammoValueText.text = "30/30";
 
                     // ── Ammo tick grid (2 rows × 15 columns) ────────────────────────────
                     // Container for the tick grid
@@ -438,6 +487,16 @@ namespace TheAlchemistsCrypt.UI
                     guideArrowText.outlineWidth = 0.2f;
                     guideArrowText.raycastTarget = false;
                     
+                    // Create GameplayBloodVignette at the bottom of the HUD hierarchy
+                    var bloodGo = new GameObject("GameplayBloodVignette", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                    bloodGo.SetParent(root, false);
+                    bloodGo.anchorMin = Vector2.zero; bloodGo.anchorMax = Vector2.one;
+                    bloodGo.offsetMin = bloodGo.offsetMax = Vector2.zero;
+                    gameplayBloodVignette = bloodGo.GetComponent<Image>();
+                    gameplayBloodVignette.sprite = CreateProceduralGradientSprite(256, 256, new Color(1f, 0f, 0f, 0f), new Color(1f, 0f, 0f, 0.7f));
+                    gameplayBloodVignette.color = new Color(1f, 1f, 1f, 0f);
+                    gameplayBloodVignette.raycastTarget = false;
+
                     // Setup additional animation overlays and UI widgets
                     SetupAnimationsUI(root);
                     }

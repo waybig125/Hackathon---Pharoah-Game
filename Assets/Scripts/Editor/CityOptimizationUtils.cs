@@ -284,17 +284,36 @@ namespace TheAlchemistsCrypt.Editor
 
         private float GetTerrainHeight(Vector3 pos) {
                     var terrain = Terrain.activeTerrain;
-                    return (terrain != null) ? terrain.SampleHeight(pos) : 0f;
+                    if (terrain != null) return terrain.SampleHeight(pos);
+
+                    // Downward raycast fallback against MeshColliders
+                    Ray ray = new Ray(new Vector3(pos.x, 250f, pos.z), Vector3.down);
+                    RaycastHit hit;
+                    if (Physics.Raycast(ray, out hit, 300f))
+                    {
+                        return hit.point.y;
+                    }
+                    return 0f;
                 }
 
         private Vector3 GetTerrainNormal(Vector3 worldPos) {
                     var terrain = Terrain.activeTerrain;
-                    if (terrain == null || terrain.terrainData == null) return Vector3.up;
-                    
-                    Vector3 terrainLocalPos = worldPos - terrain.transform.position;
-                    float normX = Mathf.Clamp01(terrainLocalPos.x / terrain.terrainData.size.x);
-                    float normZ = Mathf.Clamp01(terrainLocalPos.z / terrain.terrainData.size.z);
-                    return terrain.terrainData.GetInterpolatedNormal(normX, normZ);
+                    if (terrain != null && terrain.terrainData != null)
+                    {
+                        Vector3 terrainLocalPos = worldPos - terrain.transform.position;
+                        float normX = Mathf.Clamp01(terrainLocalPos.x / terrain.terrainData.size.x);
+                        float normZ = Mathf.Clamp01(terrainLocalPos.z / terrain.terrainData.size.z);
+                        return terrain.terrainData.GetInterpolatedNormal(normX, normZ);
+                    }
+
+                    // Downward raycast fallback
+                    Ray ray = new Ray(new Vector3(worldPos.x, 250f, worldPos.z), Vector3.down);
+                    RaycastHit hit;
+                    if (Physics.Raycast(ray, out hit, 300f))
+                    {
+                        return hit.normal;
+                    }
+                    return Vector3.up;
                 }
 
         private float GetMeshBottomWorldY(GameObject obj)

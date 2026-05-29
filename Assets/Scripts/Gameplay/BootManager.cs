@@ -51,7 +51,7 @@ namespace TheAlchemistsCrypt.Gameplay
             bgImg.color = Color.white;
             
             // Load the generated background sprite
-            var bgTex = Resources.Load<Texture2D>("egyptian_items/BootBackground_Graphite");
+            var bgTex = Resources.Load<Texture2D>("egyptian_items/BootBackground");
             if (bgTex != null)
             {
                 bgImg.sprite = Sprite.Create(bgTex, new Rect(0, 0, bgTex.width, bgTex.height), new Vector2(0.5f, 0.5f));
@@ -61,28 +61,14 @@ namespace TheAlchemistsCrypt.Gameplay
                 bgImg.color = new Color(0.05f, 0.05f, 0.05f, 1f);
             }
 
-            // Title
-            var titleGo = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
-            titleGo.transform.SetParent(canvasGo.transform, false);
-            var titleRect = titleGo.GetComponent<RectTransform>();
-            titleRect.anchorMin = titleRect.anchorMax = new Vector2(0.5f, 0.5f);
-            titleRect.anchoredPosition = new Vector2(0, 100);
-            titleRect.sizeDelta = new Vector2(800, 100);
-            var titleTxt = titleGo.GetComponent<TextMeshProUGUI>();
-            titleTxt.text = "THE ALCHEMIST CRYPT";
-            titleTxt.fontSize = 64;
-            titleTxt.fontStyle = FontStyles.Bold;
-            titleTxt.alignment = TextAlignmentOptions.Center;
-            titleTxt.color = new Color(0.95f, 0.8f, 0.2f, 1f);
-
             // Progress Bar Background
             var pbBgGo = new GameObject("ProgressBarBg", typeof(RectTransform), typeof(Image));
             pbBgGo.transform.SetParent(canvasGo.transform, false);
             var pbBgRect = pbBgGo.GetComponent<RectTransform>();
             pbBgRect.anchorMin = pbBgRect.anchorMax = new Vector2(0.5f, 0.5f);
-            pbBgRect.anchoredPosition = new Vector2(0, -100);
-            pbBgRect.sizeDelta = new Vector2(600, 20);
-            pbBgGo.GetComponent<Image>().color = new Color(0.2f, 0.2f, 0.2f, 1f);
+            pbBgRect.anchoredPosition = new Vector2(0f, -72f);
+            pbBgRect.sizeDelta = new Vector2(755f, 45f);
+            pbBgGo.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
 
             // Progress Bar Fill
             var pbFillGo = new GameObject("ProgressBarFill", typeof(RectTransform), typeof(Image));
@@ -92,25 +78,7 @@ namespace TheAlchemistsCrypt.Gameplay
             pbFillRect.anchorMax = new Vector2(0f, 1f); // Starts empty
             pbFillRect.offsetMin = pbFillRect.offsetMax = Vector2.zero;
             progressBar = pbFillGo.GetComponent<Image>();
-            progressBar.color = new Color(0.95f, 0.8f, 0.2f, 1f);
-
-            // Setup loading indicator icon using our GPU shader
-            var iconGo = new GameObject("LoadingIcon", typeof(RectTransform), typeof(Image));
-            iconGo.transform.SetParent(canvasGo.transform, false);
-            var iconRect = iconGo.GetComponent<RectTransform>();
-            iconRect.anchorMin = iconRect.anchorMax = new Vector2(0.5f, 0.5f);
-            iconRect.anchoredPosition = new Vector2(0, -220);
-            iconRect.sizeDelta = new Vector2(160, 160);
-            var iconImg = iconGo.GetComponent<Image>();
-            var lShader = Shader.Find("Custom/LoadingScreenGPU");
-            if (lShader != null)
-            {
-                iconImg.material = new Material(lShader);
-            }
-            else
-            {
-                iconImg.color = new Color(0.95f, 0.8f, 0.2f, 0.8f);
-            }
+            progressBar.color = new Color(0.0f, 0.85f, 0.35f, 0.55f);
         }
 
         private IEnumerator LoadMainGameAsync()

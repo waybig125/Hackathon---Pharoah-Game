@@ -409,21 +409,64 @@ namespace TheAlchemistsCrypt.Editor
             AssetDatabase.SaveAssets();
             terrainData.terrainLayers = new TerrainLayer[] { layer };
 
-            GameObject terrainGo = Terrain.CreateTerrainGameObject(terrainData);
-            terrainGo.name = "DesertTerrain";
-            terrainGo.transform.SetParent(root.transform);
-            terrainGo.transform.position = new Vector3(-500f, -0.05f, -500f);
-            terrainGo.isStatic = true;
+            GameObject terrainPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/LowPoly Environment Pack/Prefabs/Terrain_1.prefab");
+            GameObject terrainGo = null;
+            if (terrainPrefab != null) {
+                terrainGo = PrefabUtility.InstantiatePrefab(terrainPrefab, root.transform) as GameObject;
+                if (terrainGo != null) {
+                    terrainGo.name = "DesertTerrain";
+                    terrainGo.transform.position = new Vector3(0f, 0f, 0f);
+                    terrainGo.transform.localScale = new Vector3(5f, 1f, 5f);
+                    terrainGo.isStatic = true;
+                    
+                    var mc = terrainGo.GetComponent<MeshCollider>();
+                    if (mc == null) mc = terrainGo.AddComponent<MeshCollider>();
+                    mc.convex = false;
+                    
+                    var renderer = terrainGo.GetComponent<MeshRenderer>();
+                    if (renderer != null) {
+                        var mats = renderer.sharedMaterials;
+                        var urpShader = Shader.Find("Universal Render Pipeline/Lit");
+                        if (urpShader != null) {
+                            for (int i = 0; i < mats.Length; i++) {
+                                if (mats[i] != null) {
+                                    Material uMat = new Material(urpShader);
+                                    uMat.name = mats[i].name + "_URP";
+                                    Color originalColor = mats[i].HasProperty("_Color") ? mats[i].color : 
+                                                         (mats[i].HasProperty("_BaseColor") ? mats[i].GetColor("_BaseColor") : new Color(0.85f, 0.72f, 0.55f));
+                                    uMat.SetColor("_BaseColor", originalColor);
+                                    if (mats[i].HasProperty("_MainTex") && mats[i].mainTexture != null) {
+                                        uMat.SetTexture("_BaseMap", mats[i].mainTexture);
+                                    }
+                                    else if (mats[i].HasProperty("_BaseMap") && mats[i].GetTexture("_BaseMap") != null) {
+                                        uMat.SetTexture("_BaseMap", mats[i].GetTexture("_BaseMap"));
+                                    }
+                                    uMat.SetFloat("_Smoothness", 0.05f);
+                                    mats[i] = uMat;
+                                }
+                            }
+                            renderer.sharedMaterials = mats;
+                        }
+                    }
+                }
+            }
+            else {
+                terrainGo = Terrain.CreateTerrainGameObject(terrainData);
+                terrainGo.name = "DesertTerrain";
+                terrainGo.transform.SetParent(root.transform);
+                terrainGo.transform.position = new Vector3(-500f, -0.05f, -500f);
+                terrainGo.isStatic = true;
 
-            var terrainComp = terrainGo.GetComponent<Terrain>();
-            if (terrainComp != null) {
-                terrainComp.basemapDistance = 2000f;
-                terrainComp.drawInstanced = true;
+                var terrainComp = terrainGo.GetComponent<Terrain>();
+                if (terrainComp != null) {
+                    terrainComp.basemapDistance = 2000f;
+                    terrainComp.drawInstanced = true;
+                }
             }
 
             float spacing = 20f; // Decreased spacing to bring houses closer together for a denser residential feel
             float halfSpan = (gridSize * spacing) / 2f;
-            var enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Inspiration-Thirdperson-Controller-Update372022/Assets/Enemy-AI/Prefabs/TestZombie.prefab");
+            var enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Enemy-AI/Prefabs/TestZombie.prefab");
 
             for (int x = 0; x < gridSize; x++) {
                 for (int z = 0; z < gridSize; z++) {
@@ -542,6 +585,7 @@ namespace TheAlchemistsCrypt.Editor
 
             SpawnDesertBrokenPillars(root, wallMat);
             SpawnPalmTreeOasis(root, trees);
+            SpawnLowPolyEnvironmentObjects(root);
 
             // Spawn shoreline lighthouse specifically
             if (lighthousePrefab != null) {

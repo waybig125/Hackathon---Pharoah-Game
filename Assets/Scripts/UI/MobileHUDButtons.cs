@@ -27,6 +27,7 @@ namespace TheAlchemistsCrypt.UI
         private Image healthBarFill;
         private Image ammoBarFill;
         private System.Collections.Generic.List<Image> ammoTicks = new System.Collections.Generic.List<Image>();
+        private Image gameplayBloodVignette;
         private Sprite sulfurBarSprite;
         private Sprite mercuryBarSprite;
         private Sprite saltBarSprite;

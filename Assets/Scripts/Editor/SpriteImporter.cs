@@ -20,12 +20,7 @@ public class SpriteImporter
             "Assets/Resources/egypt_themed_icons/swap_weapon.png",
             "Assets/Resources/egypt_themed_icons/sprint.png",
             "Assets/Resources/egypt_themed_icons/jump.png",
-            "Assets/Resources/egypt_themed_icons/focus_icon.png",
-            "Assets/Resources/egypt_themed_icons_generated/joystick_ring.png",
-            "Assets/Resources/egypt_themed_icons_generated/joystick_knob.png",
-            "Assets/Resources/egypt_themed_icons_generated/obsidian_texture.png",
-            "Assets/Resources/egypt_themed_icons_generated/gold_trim_button.png",
-            "Assets/Resources/egypt_themed_icons_generated/sandstone_frame.png"
+            "Assets/Resources/egypt_themed_icons/focus_icon.png"
         };
 
         foreach (var path in paths)

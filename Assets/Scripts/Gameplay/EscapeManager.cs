@@ -357,9 +357,21 @@ namespace TheAlchemistsCrypt.Gameplay
                     if (mats[i] == null) continue;
                     var newMat = new Material(urpShader);
                     newMat.name = mats[i].name + "_URP";
-                    newMat.SetColor("_BaseColor", new Color(0.22f, 0.15f, 0.09f)); // Dark Wood
-                    newMat.SetFloat("_Smoothness", 0.1f);
-                    newMat.SetFloat("_Metallic", 0.0f);
+                    
+                    Color originalColor = mats[i].HasProperty("_Color") ? mats[i].color : 
+                                         (mats[i].HasProperty("_BaseColor") ? mats[i].GetColor("_BaseColor") : Color.white);
+                    newMat.SetColor("_BaseColor", originalColor);
+                    
+                    Texture mainTex = mats[i].HasProperty("_MainTex") ? mats[i].mainTexture : 
+                                      (mats[i].HasProperty("_BaseMap") ? mats[i].GetTexture("_BaseMap") : null);
+                    if (mainTex != null)
+                    {
+                        newMat.SetTexture("_BaseMap", mainTex);
+                    }
+                    
+                    newMat.SetFloat("_Smoothness", mats[i].HasProperty("_Glossiness") ? mats[i].GetFloat("_Glossiness") : 
+                                                 (mats[i].HasProperty("_Smoothness") ? mats[i].GetFloat("_Smoothness") : 0.1f));
+                    newMat.SetFloat("_Metallic", mats[i].HasProperty("_Metallic") ? mats[i].GetFloat("_Metallic") : 0.0f);
                     mats[i] = newMat;
                 }
                 r.materials = mats;
@@ -370,7 +382,7 @@ namespace TheAlchemistsCrypt.Gameplay
         {
             float groundY = 0f;
             RaycastHit hit;
-            if (Physics.Raycast(new Vector3(0f, 50f, -74f), Vector3.down, out hit, 100f))
+            if (Physics.Raycast(new Vector3(0f, 250f, -74f), Vector3.down, out hit, 300f))
             {
                 groundY = hit.point.y;
             }
@@ -380,15 +392,15 @@ namespace TheAlchemistsCrypt.Gameplay
                 if (terrain != null) groundY = terrain.SampleHeight(new Vector3(0f, 0f, -74f));
             }
             
-            // To sit on the sand where the lowest point is at groundY, the boat's Y coordinate should be groundY + 4.08f.
-            Vector3 spawnPos = new Vector3(0f, groundY + 4.08f, -74f); // Sits on beach sand
+            // To sit on the sand where the lowest point is at groundY, the boat's Y coordinate should be groundY + 0.5f.
+            Vector3 spawnPos = new Vector3(0f, groundY + 0.5f, -74f); // Sits on beach sand
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
             {
                 // Set the boat rotation so it is upright, and height so it floats neatly
-                boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(-90f, 180f, 0f));
-                boatObj.transform.localScale = Vector3.one * 0.18f; 
+                boatObj = Instantiate(prefab, spawnPos, Quaternion.Euler(0f, 180f, 0f));
+                boatObj.transform.localScale = Vector3.one * 1.5f; 
                 ConvertBoatMaterials(boatObj);
             }
             else

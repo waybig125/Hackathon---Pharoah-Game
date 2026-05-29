@@ -88,8 +88,7 @@ namespace TheAlchemistsCrypt.UI
 
                 private void GenerateProceduralSprites()
                 {
-                    obsidianSprite = LoadSpriteFromResources("egypt_themed_icons_generated/obsidian_texture");
-                    if (obsidianSprite == null) obsidianSprite = CreateObsidianSprite();
+                    obsidianSprite = CreateObsidianSprite();
 
                     charcoalSprite = CreateCharcoalSprite(260, 180);
                     goldGradientSprite = CreateGoldenGradientSprite();
@@ -100,11 +99,8 @@ namespace TheAlchemistsCrypt.UI
                     if (joystickKnobSprite == null) joystickKnobSprite = LoadSpriteFromResources("egypt_themed_icons/joystick_knob");
                     if (joystickKnobSprite == null) joystickKnobSprite = CreateKnobSprite();
 
-                    sandstoneFrameSprite = LoadSlicedSpriteFromResources("egypt_themed_icons_generated/sandstone_frame", new Vector4(40, 40, 40, 40));
-                    if (sandstoneFrameSprite == null) sandstoneFrameSprite = CreateSlicedSandstoneFrameSprite();
-
-                    goldTrimmedButtonSprite = LoadSlicedSpriteFromResources("egypt_themed_icons_generated/btn_gold_trim", new Vector4(12, 12, 12, 12));
-                    if (goldTrimmedButtonSprite == null) goldTrimmedButtonSprite = CreateSlicedGoldTrimmedButtonSprite();
+                    sandstoneFrameSprite = CreateSlicedSandstoneFrameSprite();
+                    goldTrimmedButtonSprite = CreateSlicedGoldTrimmedButtonSprite();
 
                     orangeGlowSprite = CreateSlicedEnergyGlowSprite(new Color(1.0f, 0.55f, 0.05f));
                     cyanGlowSprite = CreateSlicedEnergyGlowSprite(new Color(0.0f, 0.9f, 1.0f));
