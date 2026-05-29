@@ -125,25 +125,23 @@ namespace TheAlchemistsCrypt.Editor
                         if (old != null) DestroyImmediate(old);
                     }
 
-                    // ── Scene skybox: URP-compatible gradient ─────────────────────────────────
+                    // ── Scene skybox: URP-compatible Procedural Skybox ──────────────────────
                     // NVJOB Dynamic Sky uses Legacy CGPROGRAM/surface shaders which fail to compile
-                    // under URP and Unity falls back to the solid magenta (pink) error colour.
-                    // Solution: create a Material using our custom HLSL shader at runtime.
-                    var skyShader = Shader.Find("Egyptian/GradientSkybox");
+                    // under URP and Unity falls back to the solid magenta error color.
+                    // Solution: use Unity's built-in Procedural Skybox which works natively in URP/Unity 6.
+                    var skyShader = Shader.Find("Skybox/Procedural");
                     Material skyMat = null;
                     if (skyShader != null) {
                         skyMat = new Material(skyShader);
-                        // Egyptian dusk palette
-                        skyMat.SetColor("_TopColor",    new Color(0.12f, 0.18f, 0.38f, 1f));  // Deep night-blue zenith
-                        skyMat.SetColor("_MidColor",    new Color(0.82f, 0.45f, 0.12f, 1f));  // Amber horizon glow
-                        skyMat.SetColor("_BottomColor", new Color(0.42f, 0.22f, 0.08f, 1f));  // Warm dark ground
-                        skyMat.SetFloat("_HorizonLine", 2.0f);
+                        skyMat.SetColor("_SkyTint", new Color(0.82f, 0.45f, 0.12f, 1f));     // Amber sunset tint
+                        skyMat.SetColor("_GroundColor", new Color(0.42f, 0.22f, 0.08f, 1f)); // Warm dark ground
+                        skyMat.SetFloat("_AtmosphereThickness", 1.8f);                      // Thick sandy haze
+                        skyMat.SetFloat("_Exposure", 1.1f);
+                        skyMat.SetFloat("_SunSize", 0.02f);
 
-                        // Save it as a re-usable asset
                         if (!System.IO.Directory.Exists("Assets/Resources/Materials"))
                             System.IO.Directory.CreateDirectory("Assets/Resources/Materials");
                         string matPath = "Assets/Resources/Materials/EgyptianSkyGradient.mat";
-                        // Overwrite stale version if exists
                         if (System.IO.File.Exists(matPath)) {
                             System.IO.File.Delete(matPath);
                             System.IO.File.Delete(matPath + ".meta");
@@ -152,7 +150,7 @@ namespace TheAlchemistsCrypt.Editor
                         AssetDatabase.CreateAsset(skyMat, matPath);
                         skyMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
                     } else {
-                        Debug.LogWarning("[CityGen] Egyptian/GradientSkybox shader not found. Pink sky expected. Did you forget to save the shader file?");
+                        Debug.LogWarning("[CityGen] Skybox/Procedural shader not found.");
                     }
 
                     if (skyMat != null) RenderSettings.skybox = skyMat;
@@ -185,6 +183,17 @@ namespace TheAlchemistsCrypt.Editor
                                         instMat.shader = Shader.Find("Universal Render Pipeline/Unlit");
                                         if (instMat.shader != null) {
                                             Texture mainTex = mats[i].HasProperty("_MainTex") ? mats[i].GetTexture("_MainTex") : null;
+                                            
+                                            // HOTFIX: Map Sky Red.png directly onto the Horizon dome
+                                            if (r.gameObject.name.ToLower().Contains("horizon")) {
+                                                mainTex = AssetDatabase.LoadAssetAtPath<Texture>("Assets/#NVJOB Dynamic Sky/Example Scenes/Environment/Standard Assets/Sky Red.png");
+                                                instMat.SetColor("_BaseColor", new Color(1f, 1f, 1f, 1f));
+                                            }
+                                            // HOTFIX: Tint dynamic cloud mesh layers warm
+                                            else if (r.gameObject.name.ToLower().Contains("cloud")) {
+                                                instMat.SetColor("_BaseColor", new Color(1.0f, 0.72f, 0.45f, 0.80f));
+                                            }
+                                            
                                             if (mainTex != null) {
                                                 instMat.SetTexture("_BaseMap", mainTex);
                                             }
@@ -202,8 +211,39 @@ namespace TheAlchemistsCrypt.Editor
                                 }
                                 r.sharedMaterials = mats;
                             }
+
+                            // Clone clouds layer to create a dusty rotating Smog Layer using Smog.png
+                            Transform cloudsChild = null;
+                            foreach (Transform child in skyDome.transform) {
+                                if (child.name.ToLower().Contains("cloud")) {
+                                    cloudsChild = child;
+                                    break;
+                                }
+                            }
+                            if (cloudsChild != null) {
+                                GameObject smogGo = Object.Instantiate(cloudsChild.gameObject, skyDome.transform);
+                                smogGo.name = "SmogLayer";
+                                var smogRenderer = smogGo.GetComponent<Renderer>();
+                                if (smogRenderer != null) {
+                                    var smogMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                                    var smogTex = AssetDatabase.LoadAssetAtPath<Texture>("Assets/#NVJOB Dynamic Sky/Example Scenes/Environment/Spaceship/Materials/Smog.png");
+                                    if (smogTex != null) {
+                                        smogMat.SetTexture("_BaseMap", smogTex);
+                                    }
+                                    smogMat.SetColor("_BaseColor", new Color(0.88f, 0.52f, 0.22f, 0.35f)); // Dense warm amber smog/fog
+                                    smogMat.SetFloat("_Surface", 1.0f); // Transparent
+                                    smogMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                                    smogMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                                    smogMat.SetInt("_ZWrite", 0);
+                                    smogMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                                    smogMat.renderQueue = 3001; // Render slightly in front of standard clouds
+                                    smogRenderer.sharedMaterial = smogMat;
+                                }
+                                smogGo.transform.localScale = Vector3.one * 1.02f; // prevent z-fighting
+                            }
                         }
                     }
+
 
                     // ── Android texture compression ───────────────────────────────────────────
                     string[] skyTextures = {
