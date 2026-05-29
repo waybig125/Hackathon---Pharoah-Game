@@ -162,6 +162,7 @@ namespace TheAlchemistsCrypt.Editor
             var obeliskNewPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/stylized_egypt_obelisk.glb");
             var lighthousePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/light_house_-_egypt_game_ready_lowpoly.glb");
             var bigHousePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/big_egypt_house.glb");
+            var layHousePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/lay_house.glb");
             var doorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/egyptian_door.glb");
             
             // Create warm golden sandstone gradient texture for houses
@@ -217,20 +218,20 @@ namespace TheAlchemistsCrypt.Editor
                 }
             }
 
-            Material wallMat = GetOrCreateMaterial("M_City_Wall", new Color(0.96f, 0.85f, 0.75f), 0.0f, 0.0f, Color.clear, false);
+            Material wallMat = GetOrCreateMaterial("M_City_Wall", new Color(1.0f, 0.88f, 0.72f), 0.05f, 0.0f, Color.clear, false); // Sun-bleached warm sandstone
             if (houseTex != null)
             {
                 wallMat.SetTexture("_BaseMap", houseTex);
-                wallMat.SetTextureScale("_BaseMap", new Vector2(10, 10));
+                wallMat.SetTextureScale("_BaseMap", new Vector2(12, 12));
             }
 
             Texture2D normalMapTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalMapPath);
             if (normalMapTex != null)
             {
                 wallMat.SetTexture("_BumpMap", normalMapTex);
-                wallMat.SetTextureScale("_BumpMap", new Vector2(10, 10));
+                wallMat.SetTextureScale("_BumpMap", new Vector2(12, 12));
                 wallMat.EnableKeyword("_NORMALMAP");
-                wallMat.SetFloat("_BumpScale", 3.0f);
+                wallMat.SetFloat("_BumpScale", 2.0f);
             }
             wallMat.enableInstancing = true;
             EditorUtility.SetDirty(wallMat);
@@ -349,15 +350,19 @@ namespace TheAlchemistsCrypt.Editor
             if (sandTex == null) {
                 int texSize = 1024;
                 sandTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
-                sandTex.wrapMode = TextureWrapMode.Clamp;
+                sandTex.wrapMode = TextureWrapMode.Repeat;
                 sandTex.filterMode = FilterMode.Trilinear;
-                Color topColor = new Color(0.86f, 0.72f, 0.58f);    // Desaturated sand top
-                Color bottomColor = new Color(0.76f, 0.62f, 0.50f); // Desaturated sand bottom
+                Color topColor = new Color(0.95f, 0.76f, 0.52f);    // Beautiful stylized warm sand
+                Color bottomColor = new Color(0.85f, 0.64f, 0.40f); // Warm desert sand
                 Color[] pixels = new Color[texSize * texSize];
                 for (int y = 0; y < texSize; y++) {
                     float t = (float)y / (texSize - 1);
                     Color rowColor = Color.Lerp(bottomColor, topColor, t);
-                    for (int x = 0; x < texSize; x++) pixels[y * texSize + x] = rowColor;
+                    for (int x = 0; x < texSize; x++) {
+                        // Add dynamic subtle cartoony grain pattern
+                        float noise = Mathf.PerlinNoise(x * 0.1f, y * 0.1f) * 0.05f;
+                        pixels[y * texSize + x] = rowColor + new Color(noise, noise * 0.8f, 0f);
+                    }
                 }
                 sandTex.SetPixels(pixels);
                 sandTex.Apply(true);
@@ -368,7 +373,7 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             layer.diffuseTexture = sandTex;
-            layer.tileSize = new Vector2(1000f, 1000f); // Stretch across entire terrain to prevent repeating grid
+            layer.tileSize = new Vector2(20f, 20f); // Tiling size set to 20m for sand texture dunes pattern
             layer.specular = new Color(0.03f, 0.03f, 0.02f, 0f);
             layer.smoothness = 0.05f;
             EditorUtility.SetDirty(layer);
@@ -520,19 +525,19 @@ namespace TheAlchemistsCrypt.Editor
                 occupiedPositions.Add(lighthousePos);
             }
 
-            // Spawn player house (big_egypt_house.glb) explicitly so player starts inside it
-            if (bigHousePrefab != null) {
+            // Spawn player house (lay_house.glb) explicitly so player starts inside it
+            if (layHousePrefab != null) {
                 Vector3 spawnHousePos = new Vector3(0f, 0f, 60f); // Near central plaza
                 spawnHousePos.y = GetTerrainHeight(spawnHousePos);
-                var spawnHouse = PlaceIntegratedAsset(root.transform, spawnHousePos, bigHousePrefab, 1.0f, true, true, 0f, 180f, false);
+                var spawnHouse = PlaceIntegratedAsset(root.transform, spawnHousePos, layHousePrefab, 1.0f, true, true, 0f, 180f, false);
                 if (spawnHouse != null) {
-                    spawnHouse.name = "BigEgyptHouse_Spawn";
+                    spawnHouse.name = "LayHouse_Spawn";
                 }
                 occupiedPositions.Add(spawnHousePos);
             }
 
             // Spawn extra obelisks and columns in the city (some fallen/broken/shattered) to fill empty spaces
-            int extraObelisks = 25;
+            int extraObelisks = 55;
             for (int i = 0; i < extraObelisks; i++) {
                 float rx = Random.Range(-240f, 240f);
                 float rz = Random.Range(-40f, 240f);
@@ -540,7 +545,7 @@ namespace TheAlchemistsCrypt.Editor
                 
                 bool tooClose = false;
                 foreach (var occ in occupiedPositions) {
-                    if (Vector3.Distance(pos, occ) < 18f) {
+                    if (Vector3.Distance(pos, occ) < 15f) {
                         tooClose = true;
                         break;
                     }
@@ -554,7 +559,7 @@ namespace TheAlchemistsCrypt.Editor
                 }
             }
 
-            int extraFallenCols = 20;
+            int extraFallenCols = 45;
             for (int i = 0; i < extraFallenCols; i++) {
                 float rx = Random.Range(-220f, 220f);
                 float rz = Random.Range(-45f, 220f);
@@ -562,7 +567,7 @@ namespace TheAlchemistsCrypt.Editor
                 
                 bool tooClose = false;
                 foreach (var occ in occupiedPositions) {
-                    if (Vector3.Distance(pos, occ) < 15f) {
+                    if (Vector3.Distance(pos, occ) < 12f) {
                         tooClose = true;
                         break;
                     }

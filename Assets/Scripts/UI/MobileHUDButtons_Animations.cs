@@ -76,7 +76,8 @@ namespace TheAlchemistsCrypt.UI
             var tcRect = threatCompassGo.GetComponent<RectTransform>();
             tcRect.anchorMin = Vector2.zero;
             tcRect.anchorMax = Vector2.one;
-            tcRect.offsetMin = tcRect.offsetMax = new Vector2(-10, -10);
+            tcRect.offsetMin = new Vector2(-10, -10);
+            tcRect.offsetMax = new Vector2(10, 10);
             var tcImg = threatCompassGo.GetComponent<Image>();
             tcImg.sprite = CreateAlchemicalCompassBezel(144, 144);
             tcImg.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);

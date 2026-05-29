@@ -189,8 +189,8 @@ namespace TheAlchemistsCrypt.Editor
 
                     p.tag = "Player";
                     
-                    // Phase 2: Spawn player inside the BigEgyptHouse_Spawn if it exists
-                    var spawnHouse = GameObject.Find("BigEgyptHouse_Spawn");
+                    // Phase 2: Spawn player inside the LayHouse_Spawn if it exists
+                    var spawnHouse = GameObject.Find("LayHouse_Spawn");
                     if (spawnHouse != null) {
                         var renderers = spawnHouse.GetComponentsInChildren<Renderer>(true);
                         if (renderers.Length > 0) {
@@ -200,6 +200,7 @@ namespace TheAlchemistsCrypt.Editor
                         } else {
                             p.transform.position = spawnHouse.transform.position + new Vector3(0f, 1.5f, 0f);
                         }
+                        p.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
                         
                         var door = GameObject.Find("MastabaDoor");
                         if (door != null) {
@@ -207,7 +208,7 @@ namespace TheAlchemistsCrypt.Editor
                                 col.isTrigger = true;
                             }
                         }
-                        Debug.Log("[CityGen] Player spawned inside big_egypt_house.glb.");
+                        Debug.Log("[CityGen] Player spawned inside lay_house.glb.");
                     } else {
                         p.transform.position = new Vector3(16f, GetTerrainHeight(new Vector3(16f, 0f, 48f)) + 1.2f, 48f);
                     }

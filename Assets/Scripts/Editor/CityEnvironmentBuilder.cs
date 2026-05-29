@@ -119,42 +119,75 @@ namespace TheAlchemistsCrypt.Editor
 
         private void SetupEnvironment(GameObject root)
                 {
-                    Color peachColor = new Color(0.98f, 0.62f, 0.42f);     // Warm sunset/orangey peach
-                    Color sunsetRose = new Color(0.85f, 0.44f, 0.60f);     // Sunset pink/rose
-                    Color twilightBlue = new Color(0.24f, 0.44f, 0.74f);   // Twilight blue
-                    Color deepBlueColor = new Color(0.06f, 0.12f, 0.35f);  // Deep twilight/space blue
+                    Color orangeyFogColor = new Color(0.98f, 0.58f, 0.28f); // Warm orangey foggy color
 
-                    Material skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Materials/SkyGradientBox.mat");
-                    if (skyMat == null) {
-                        skyMat = new Material(Shader.Find("Custom/SkyboxGradient"));
-                        if (!System.IO.Directory.Exists("Assets/Resources")) System.IO.Directory.CreateDirectory("Assets/Resources");
-                        if (!System.IO.Directory.Exists("Assets/Resources/Materials")) System.IO.Directory.CreateDirectory("Assets/Resources/Materials");
-                        AssetDatabase.CreateAsset(skyMat, "Assets/Resources/Materials/SkyGradientBox.mat");
+                    // Try to load the #NVJOB Dynamic Sky 2 (Red) material or prefab
+                    string nvjobSkyPrefabPath = "Assets/#NVJOB Dynamic Sky/Examples Sky/Sky 2 (Red)/Sky 2 (Red).prefab";
+                    GameObject nvjobSkyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(nvjobSkyPrefabPath);
+                    if (nvjobSkyPrefab != null) {
+                        // Find or instantiate NVJOB Sky dome in the scene
+                        GameObject existingSky = GameObject.Find("Sky 2 (Red)");
+                        if (existingSky == null) {
+                            existingSky = GameObject.Find("Sky 2 (Red)(Clone)");
+                        }
+                        if (existingSky == null) {
+                            existingSky = PrefabUtility.InstantiatePrefab(nvjobSkyPrefab, root.transform) as GameObject;
+                        }
+                        if (existingSky != null) {
+                            existingSky.name = "Sky 2 (Red)";
+                            // Attach dynamic sky script and hook player reference if missing
+                            var dynamicSkyComp = existingSky.GetComponent<DynamicSky>();
+                            if (dynamicSkyComp == null) {
+                                dynamicSkyComp = existingSky.AddComponent<DynamicSky>();
+                            }
+                            var playerGo = GameObject.FindWithTag("Player");
+                            if (playerGo != null) {
+                                dynamicSkyComp.player = playerGo.transform;
+                            }
+                            dynamicSkyComp.ssgUvRotateSpeed = 0.2f; // Slow down update rotate speed for performance
+                            dynamicSkyComp.sky2d = true; // Use simplified 2D clouds calculation for mobile speed
+                        }
                     }
-                    else
-                    {
-                        skyMat.shader = Shader.Find("Custom/SkyboxGradient");
+
+                    // Apply the Horizon material from NVJOB Sky 2 (Red) to the scene Skybox settings
+                    string horizonMatPath = "Assets/#NVJOB Dynamic Sky/Examples Sky/Sky 2 (Red)/Horizon.mat";
+                    Material skyMat = AssetDatabase.LoadAssetAtPath<Material>(horizonMatPath);
+                    if (skyMat != null) {
+                        RenderSettings.skybox = skyMat;
                     }
-                    skyMat.SetColor("_ColorBottom", peachColor);
-                    skyMat.SetColor("_ColorMiddle1", sunsetRose);
-                    skyMat.SetColor("_ColorMiddle2", twilightBlue);
-                    skyMat.SetColor("_ColorTop", deepBlueColor);
-                    EditorUtility.SetDirty(skyMat);
-                    
-                    RenderSettings.skybox = skyMat;
                     RenderSettings.ambientMode = AmbientMode.Skybox; 
 
+                    // Optimize the texture files for Android build platform to maximize FPS
+                    string[] skyTextures = {
+                        "Assets/#NVJOB Dynamic Sky/Examples Sky/Textures/Tx1.png",
+                        "Assets/#NVJOB Dynamic Sky/Examples Sky/Textures/Tx2.png",
+                        "Assets/#NVJOB Dynamic Sky/Examples Sky/Textures/Tx3.png"
+                    };
+                    foreach (var txPath in skyTextures) {
+                        var importer = AssetImporter.GetAtPath(txPath) as TextureImporter;
+                        if (importer != null) {
+                            TextureImporterPlatformSettings androidSettings = importer.GetPlatformTextureSettings("Android");
+                            if (!androidSettings.overridden || androidSettings.maxTextureSize > 512) {
+                                androidSettings.overridden = true;
+                                androidSettings.maxTextureSize = 512;
+                                androidSettings.format = TextureImporterFormat.ASTC_6x6;
+                                importer.SetPlatformTextureSettings(androidSettings);
+                                importer.SaveAndReimport();
+                            }
+                        }
+                    }
+
                     RenderSettings.fog = true;
-                    RenderSettings.fogColor = peachColor; // Warm sunset peach fog matching horizon
-                    RenderSettings.fogStartDistance = 150f;
-                    RenderSettings.fogEndDistance  = 1000f;   
+                    RenderSettings.fogColor = orangeyFogColor;
+                    RenderSettings.fogStartDistance = 45f;
+                    RenderSettings.fogEndDistance  = 400f; // Lower distance for thicker warm foggy desert look  
                     
                     var sun = GameObject.Find("Directional Light")?.GetComponent<Light>();
                     if (sun != null) {
-                        sun.color = new Color(1.0f, 0.90f, 0.80f); // Warm sunset sunlight
-                        sun.intensity = 2.0f;
+                        sun.color = new Color(1.0f, 0.70f, 0.40f); // Warm orange/peach sunlight
+                        sun.intensity = 2.5f;
                         sun.shadows = LightShadows.Soft; // Soft shadows!
-                        sun.transform.rotation = Quaternion.Euler(25f, -60f, 0f); // Lower angle to cast nice shadows
+                        sun.transform.rotation = Quaternion.Euler(18f, -75f, 0f); // Lower angle (18 degrees) to cast very long dramatic shadows
                     }
                     SetupPostProcessing(root.transform);
                     DynamicGI.UpdateEnvironment(); // Update lighting reflections
