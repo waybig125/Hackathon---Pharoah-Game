@@ -510,7 +510,6 @@ namespace TheAlchemistsCrypt.Editor
             SpawnPalmTreeOasis(root, trees);
 
             // Spawn shoreline lighthouse specifically
-            var lighthousePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/more_items_for_map/light_house_-_egypt_game_ready_lowpoly.glb");
             if (lighthousePrefab != null) {
                 Vector3 lighthousePos = new Vector3(140f, 0f, -55f);
                 lighthousePos.y = GetTerrainHeight(lighthousePos);
