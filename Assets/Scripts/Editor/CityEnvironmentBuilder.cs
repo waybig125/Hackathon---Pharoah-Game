@@ -119,45 +119,44 @@ namespace TheAlchemistsCrypt.Editor
 
         private void SetupEnvironment(GameObject root)
                 {
-                    Color orangeyFogColor = new Color(0.98f, 0.58f, 0.28f); // Warm orangey foggy color
+                    // Warm amber desert fog — matches the sandy horizon
+                    Color amberFogColor = new Color(0.85f, 0.62f, 0.30f);
 
-                    // Try to load the #NVJOB Dynamic Sky 2 (Red) material or prefab
-                    string nvjobSkyPrefabPath = "Assets/#NVJOB Dynamic Sky/Examples Sky/Sky 2 (Red)/Sky 2 (Red).prefab";
+                    // ── Remove any old NVJOB sky domes from previous generations ──
+                    foreach (var oldSky in new string[] { "Sky 2 (Red)", "Sky 2 (Day)", "NVJOBSky", "DynamicSky" }) {
+                        var old = GameObject.Find(oldSky);
+                        if (old != null) DestroyImmediate(old);
+                    }
+
+                    // Use Sky 2 (Day) — renders warm amber/orange through URP without the pink shift
+                    // Sky 2 (Red) looks pink under URP post-processing because its horizon hue
+                    // sits in the magenta range before tonemapping is applied.
+                    string nvjobSkyPrefabPath = "Assets/#NVJOB Dynamic Sky/Examples Sky/Sky 2 (Day)/Sky 2 (Day).prefab";
                     GameObject nvjobSkyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(nvjobSkyPrefabPath);
                     if (nvjobSkyPrefab != null) {
-                        // Find or instantiate NVJOB Sky dome in the scene
-                        GameObject existingSky = GameObject.Find("Sky 2 (Red)");
-                        if (existingSky == null) {
-                            existingSky = GameObject.Find("Sky 2 (Red)(Clone)");
-                        }
-                        if (existingSky == null) {
-                            existingSky = PrefabUtility.InstantiatePrefab(nvjobSkyPrefab, root.transform) as GameObject;
-                        }
-                        if (existingSky != null) {
-                            existingSky.name = "Sky 2 (Red)";
-                            // Attach dynamic sky script and hook player reference if missing
-                            var dynamicSkyComp = existingSky.GetComponent<DynamicSky>();
-                            if (dynamicSkyComp == null) {
-                                dynamicSkyComp = existingSky.AddComponent<DynamicSky>();
-                            }
+                        var skyDome = PrefabUtility.InstantiatePrefab(nvjobSkyPrefab, root.transform) as GameObject;
+                        if (skyDome != null) {
+                            skyDome.name = "NVJOBSky";
+                            var dynamicSkyComp = skyDome.GetComponent<DynamicSky>() ?? skyDome.AddComponent<DynamicSky>();
                             var playerGo = GameObject.FindWithTag("Player");
-                            if (playerGo != null) {
-                                dynamicSkyComp.player = playerGo.transform;
-                            }
-                            dynamicSkyComp.ssgUvRotateSpeed = 0.2f; // Slow down update rotate speed for performance
-                            dynamicSkyComp.sky2d = true; // Use simplified 2D clouds calculation for mobile speed
+                            if (playerGo != null) dynamicSkyComp.player = playerGo.transform;
+                            // Very slow cloud rotation for mobile performance
+                            dynamicSkyComp.ssgUvRotateSpeed = 0.15f;
+                            dynamicSkyComp.sky2d = true;
                         }
                     }
 
-                    // Apply the Horizon material from NVJOB Sky 2 (Red) to the scene Skybox settings
-                    string horizonMatPath = "Assets/#NVJOB Dynamic Sky/Examples Sky/Sky 2 (Red)/Horizon.mat";
+                    // Point the scene skybox at the Day horizon material (warm orange, not pink)
+                    string horizonMatPath = "Assets/#NVJOB Dynamic Sky/Examples Sky/Sky 2 (Day)/Horizon.mat";
                     Material skyMat = AssetDatabase.LoadAssetAtPath<Material>(horizonMatPath);
-                    if (skyMat != null) {
-                        RenderSettings.skybox = skyMat;
+                    if (skyMat == null) {
+                        // Fallback: procedural gradient skybox if NVJOB Day mat is missing
+                        skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/Materials/SkyGradientBox.mat");
                     }
-                    RenderSettings.ambientMode = AmbientMode.Skybox; 
+                    if (skyMat != null) RenderSettings.skybox = skyMat;
+                    RenderSettings.ambientMode = AmbientMode.Skybox;
 
-                    // Optimize the texture files for Android build platform to maximize FPS
+                    // Android texture compression for sky textures
                     string[] skyTextures = {
                         "Assets/#NVJOB Dynamic Sky/Examples Sky/Textures/Tx1.png",
                         "Assets/#NVJOB Dynamic Sky/Examples Sky/Textures/Tx2.png",
@@ -178,62 +177,77 @@ namespace TheAlchemistsCrypt.Editor
                     }
 
                     RenderSettings.fog = true;
-                    RenderSettings.fogColor = orangeyFogColor;
-                    RenderSettings.fogStartDistance = 45f;
-                    RenderSettings.fogEndDistance  = 400f; // Lower distance for thicker warm foggy desert look  
-                    
+                    RenderSettings.fogColor = amberFogColor;
+                    RenderSettings.fogMode = FogMode.Linear;
+                    RenderSettings.fogStartDistance = 60f;
+                    RenderSettings.fogEndDistance = 350f;
+
                     var sun = GameObject.Find("Directional Light")?.GetComponent<Light>();
                     if (sun != null) {
-                        sun.color = new Color(1.0f, 0.70f, 0.40f); // Warm orange/peach sunlight
-                        sun.intensity = 2.5f;
-                        sun.shadows = LightShadows.Soft; // Soft shadows!
-                        sun.transform.rotation = Quaternion.Euler(18f, -75f, 0f); // Lower angle (18 degrees) to cast very long dramatic shadows
+                        sun.color = new Color(1.0f, 0.82f, 0.55f); // Warm golden sunlight, not orange-red
+                        sun.intensity = 1.8f;
+                        sun.shadows = LightShadows.Soft;
+                        sun.shadowStrength = 0.75f;
+                        sun.transform.rotation = Quaternion.Euler(30f, -60f, 0f); // Long shadows but not extreme
                     }
+
                     SetupPostProcessing(root.transform);
-                    DynamicGI.UpdateEnvironment(); // Update lighting reflections
+                    DynamicGI.UpdateEnvironment();
                     AssetDatabase.SaveAssets();
                 }
 
         private void SetupPostProcessing(Transform parent)
                 {
+                    // Remove any existing GlobalVolume to avoid stacking profiles
+                    var existingVol = parent.Find("GlobalVolume");
+                    if (existingVol != null) DestroyImmediate(existingVol.gameObject);
+
                     var volGo = new GameObject("GlobalVolume");
                     volGo.transform.SetParent(parent);
                     var vol = volGo.AddComponent<Volume>();
                     vol.isGlobal = true; vol.priority = 10;
-                    
-                    VolumeProfile profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>("Assets/Settings/VisualOverhaulProfile.asset");
-                    if (profile == null) {
-                        profile = ScriptableObject.CreateInstance<VolumeProfile>();
-                        profile.name = "VisualOverhaulProfile";
-                        if (!System.IO.Directory.Exists("Assets/Settings")) System.IO.Directory.CreateDirectory("Assets/Settings");
-                        AssetDatabase.CreateAsset(profile, "Assets/Settings/VisualOverhaulProfile.asset");
+
+                    // Always recreate profile fresh to avoid stale pink-tinted overrides
+                    string profilePath = "Assets/Settings/VisualOverhaulProfile.asset";
+                    if (System.IO.File.Exists(profilePath)) {
+                        System.IO.File.Delete(profilePath);
+                        System.IO.File.Delete(profilePath + ".meta");
+                        AssetDatabase.Refresh();
                     }
-                    
-                    if (!profile.TryGet<Bloom>(out var bloom)) bloom = profile.Add<Bloom>();
-                    bloom.intensity.Override(0.5f);
-                    bloom.threshold.Override(0.85f);
-                    bloom.scatter.Override(0.6f);
+                    var profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                    profile.name = "VisualOverhaulProfile";
+                    if (!System.IO.Directory.Exists("Assets/Settings")) System.IO.Directory.CreateDirectory("Assets/Settings");
+                    AssetDatabase.CreateAsset(profile, profilePath);
 
-                    if (!profile.TryGet<ColorAdjustments>(out var colorAdj)) colorAdj = profile.Add<ColorAdjustments>();
-                    colorAdj.contrast.Override(25f);
-                    colorAdj.saturation.Override(20f);
-                    colorAdj.postExposure.Override(0.1f);
-                    colorAdj.colorFilter.Override(new Color(1f, 0.95f, 0.9f)); 
+                    // Bloom — subtle, not too aggressive
+                    var bloom = profile.Add<Bloom>();
+                    bloom.intensity.Override(0.35f);
+                    bloom.threshold.Override(0.9f);
+                    bloom.scatter.Override(0.5f);
 
-                    if (!profile.TryGet<Tonemapping>(out var tone)) tone = profile.Add<Tonemapping>();
+                    // Color adjustments — warm, punchy but NOT pink
+                    var colorAdj = profile.Add<ColorAdjustments>();
+                    colorAdj.contrast.Override(18f);
+                    colorAdj.saturation.Override(15f);
+                    colorAdj.postExposure.Override(0f);
+                    colorAdj.colorFilter.Override(new Color(1f, 0.97f, 0.88f)); // Warm golden-white, not pink
+
+                    // Tonemapping — ACES gives the cinematic look
+                    var tone = profile.Add<Tonemapping>();
                     tone.mode.Override(TonemappingMode.ACES);
-                    
-                    if (!profile.TryGet<Vignette>(out var vignette)) vignette = profile.Add<Vignette>();
-                    vignette.intensity.Override(0.25f);
-                    vignette.color.Override(new Color(0.15f, 0.12f, 0.2f)); 
 
-                    if (!profile.TryGet<LiftGammaGain>(out var lgg)) lgg = profile.Add<LiftGammaGain>();
-                    lgg.lift.Override(new Vector4(0.05f, 0.05f, 0.20f, 0f)); // Pushes shadows toward deep blue
-                    lgg.gamma.Override(new Vector4(1.0f, 1.0f, 1.0f, 0f));   // Keep midtones neutral/bright
-                    lgg.gain.Override(new Vector4(1.05f, 1.0f, 0.95f, 0f));  // Slight warm pop on highlights
+                    // Vignette — dark edges, slightly warm, not blue
+                    var vignette = profile.Add<Vignette>();
+                    vignette.intensity.Override(0.22f);
+                    vignette.color.Override(new Color(0.12f, 0.09f, 0.06f)); // Dark warm brown, not purple
+
+                    // Lift/Gamma/Gain — warm highlights, NEUTRAL shadows (no blue push)
+                    var lgg = profile.Add<LiftGammaGain>();
+                    lgg.lift.Override(new Vector4(0f, 0f, 0f, 0f));          // Neutral shadows — no blue tint
+                    lgg.gamma.Override(new Vector4(1.0f, 0.98f, 0.95f, 0f)); // Very subtle warm midtones
+                    lgg.gain.Override(new Vector4(1.05f, 1.02f, 0.92f, 0f)); // Warm golden highlights
 
                     EditorUtility.SetDirty(profile);
-                    
                     vol.sharedProfile = profile;
                 }
 

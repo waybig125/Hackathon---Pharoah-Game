@@ -169,6 +169,32 @@ namespace TheAlchemistsCrypt.Editor
             else if (src.HasProperty("diffuseFactor")) albedo = src.GetColor("diffuseFactor");
             else if (src.HasProperty("_BaseColor")) albedo = src.GetColor("_BaseColor");
             else if (src.HasProperty("_Color")) albedo = src.GetColor("_Color");
+
+            // ── GLOBAL SANDSTONE TINT ──────────────────────────────────────────────────
+            // Blend all environment stone/earth materials toward a common warm sandstone
+            // colour so that temples, obelisks, pillars, houses, and the sphinx all look
+            // like they are carved from the same ancient Egyptian stone.
+            string srcLower = src.name.ToLower();
+            bool isStoneAsset =
+                srcLower.Contains("house") || srcLower.Contains("building") ||
+                srcLower.Contains("column") || srcLower.Contains("pillar") ||
+                srcLower.Contains("temple") || srcLower.Contains("stone") ||
+                srcLower.Contains("wall")   || srcLower.Contains("obelisk") ||
+                srcLower.Contains("sphinx") || srcLower.Contains("door")   ||
+                srcLower.Contains("mastaba")|| srcLower.Contains("egyptian")||
+                srcLower.Contains("stall")  || srcLower.Contains("arabic") ||
+                srcLower.Contains("medieval")|| srcLower.Contains("sand")  ||
+                srcLower.Contains("brick") || srcLower.Contains("tomb")    ||
+                srcLower.Contains("ruin")   || srcLower.Contains("fort");
+
+            if (isStoneAsset) {
+                // Sandstone: warm golden-tan, the colour of Egyptian limestone
+                Color sandstone = new Color(0.88f, 0.74f, 0.52f, albedo.a);
+                // Blend 35% toward sandstone — preserves original hue while unifying palette
+                albedo = Color.Lerp(albedo, sandstone, 0.35f);
+            }
+            // ──────────────────────────────────────────────────────────────────────────
+
             dst.SetColor("_BaseColor", albedo);
             
             Texture mainTex = null;
@@ -216,19 +242,15 @@ namespace TheAlchemistsCrypt.Editor
             if (src.HasProperty("metallicFactor")) metallic = src.GetFloat("metallicFactor");
             else if (src.HasProperty("_Metallic")) metallic = src.GetFloat("_Metallic");
             
-            // Safety: Force non-metallic for dielectric environment assets (stone, wood, plaster)
+            // Force non-metallic for all dielectric environment assets (stone, wood, plaster)
             string lowerName = src.name.ToLower();
             string lowerPath = dst.name.ToLower();
-            if (lowerName.Contains("house") || lowerName.Contains("building") || lowerName.Contains("city") ||
-                lowerName.Contains("stall") || lowerName.Contains("market") || lowerName.Contains("column") ||
-                lowerName.Contains("pillar") || lowerName.Contains("temple") || lowerName.Contains("stone") ||
-                lowerName.Contains("wood") || lowerName.Contains("sand") || lowerName.Contains("obelisk") ||
-                lowerName.Contains("sphinx") || lowerName.Contains("door") || lowerName.Contains("mastaba") ||
+            if (isStoneAsset ||
                 lowerPath.Contains("house") || lowerPath.Contains("building") || lowerPath.Contains("city") ||
                 lowerPath.Contains("stall") || lowerPath.Contains("market") || lowerPath.Contains("column") ||
                 lowerPath.Contains("pillar") || lowerPath.Contains("temple") || lowerPath.Contains("stone") ||
                 lowerPath.Contains("wood") || lowerPath.Contains("sand") || lowerPath.Contains("obelisk") ||
-                lowerPath.Contains("sphinx") || lowerPath.Contains("door") || lowerPath.Contains("mastaba") || lowerPath.Contains("stall") || lowerPath.Contains("egyptian"))
+                lowerPath.Contains("sphinx") || lowerPath.Contains("door") || lowerPath.Contains("mastaba") || lowerPath.Contains("egyptian"))
             {
                 metallic = 0.0f;
             }
@@ -240,6 +262,8 @@ namespace TheAlchemistsCrypt.Editor
             else if (src.HasProperty("_Roughness")) roughness = src.GetFloat("_Roughness");
             else if (src.HasProperty("_Glossiness")) roughness = 1.0f - src.GetFloat("_Glossiness");
             else if (src.HasProperty("_Smoothness")) roughness = 1.0f - src.GetFloat("_Smoothness");
+            // Stone assets: slightly rough (aged limestone texture feel)
+            if (isStoneAsset) roughness = Mathf.Max(roughness, 0.75f);
             dst.SetFloat("_Smoothness", 1.0f - roughness);
             
             Texture metallicGlossMap = null;

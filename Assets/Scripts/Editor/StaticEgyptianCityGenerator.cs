@@ -339,7 +339,7 @@ namespace TheAlchemistsCrypt.Editor
                 AssetDatabase.CreateAsset(layer, layerPath);
             }
 
-            // Always recreate the sand gradient texture with new golden yellow sandstone color
+            // Always recreate the desert sand texture with rich multi-freq noise for a realistic look
             string sandTexPath = "Assets/Art/EgyptianAssets/SandTexGradient_1024.png";
             if (System.IO.File.Exists(sandTexPath)) {
                 System.IO.File.Delete(sandTexPath);
@@ -347,21 +347,50 @@ namespace TheAlchemistsCrypt.Editor
                 AssetDatabase.Refresh();
             }
             Texture2D sandTex = null;
-            if (sandTex == null) {
+            {
                 int texSize = 1024;
                 sandTex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, true);
                 sandTex.wrapMode = TextureWrapMode.Repeat;
                 sandTex.filterMode = FilterMode.Trilinear;
-                Color topColor = new Color(0.95f, 0.76f, 0.52f);    // Beautiful stylized warm sand
-                Color bottomColor = new Color(0.85f, 0.64f, 0.40f); // Warm desert sand
+
+                // Egyptian desert floor palette
+                Color duneCrest   = new Color(0.96f, 0.82f, 0.58f); // Bright dune crown
+                Color sandBase    = new Color(0.82f, 0.66f, 0.42f); // Main sand colour
+                Color shadowTrough= new Color(0.65f, 0.51f, 0.32f); // Inter-dune shadow
+                Color stoneDark   = new Color(0.48f, 0.38f, 0.27f); // Dark rocky fleck
+
                 Color[] pixels = new Color[texSize * texSize];
                 for (int y = 0; y < texSize; y++) {
-                    float t = (float)y / (texSize - 1);
-                    Color rowColor = Color.Lerp(bottomColor, topColor, t);
+                    float fy = (float)y / (texSize - 1);
                     for (int x = 0; x < texSize; x++) {
-                        // Add dynamic subtle cartoony grain pattern
-                        float noise = Mathf.PerlinNoise(x * 0.1f, y * 0.1f) * 0.05f;
-                        pixels[y * texSize + x] = rowColor + new Color(noise, noise * 0.8f, 0f);
+                        float fx = (float)x / (texSize - 1);
+
+                        // Large-scale dune shape (low freq)
+                        float dune = Mathf.PerlinNoise(fx * 2.5f + 0.3f, fy * 2.5f + 0.7f);
+
+                        // Medium ripple (wind-driven sand lines)
+                        float ripple = Mathf.PerlinNoise(fx * 9f + 5.1f, fy * 9f + 3.3f) * 0.35f;
+
+                        // Fine grain / high-frequency noise
+                        float grain = Mathf.PerlinNoise(fx * 28f + 11f, fy * 28f + 17f) * 0.12f;
+
+                        // Rare dark stone fleck (large-period sparse)
+                        float fleck = Mathf.PerlinNoise(fx * 55f + 22f, fy * 55f + 44f);
+                        bool isFleck = (fleck < 0.06f); // ~6% coverage
+
+                        float combined = Mathf.Clamp01(dune * 0.55f + ripple + grain);
+
+                        Color col;
+                        if (isFleck) {
+                            col = Color.Lerp(stoneDark, shadowTrough, combined);
+                        } else {
+                            // Blend from shadow trough through base to dune crest
+                            if (combined < 0.45f)
+                                col = Color.Lerp(shadowTrough, sandBase, combined / 0.45f);
+                            else
+                                col = Color.Lerp(sandBase, duneCrest, (combined - 0.45f) / 0.55f);
+                        }
+                        pixels[y * texSize + x] = col;
                     }
                 }
                 sandTex.SetPixels(pixels);
@@ -373,9 +402,9 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             layer.diffuseTexture = sandTex;
-            layer.tileSize = new Vector2(20f, 20f); // Tiling size set to 20m for sand texture dunes pattern
-            layer.specular = new Color(0.03f, 0.03f, 0.02f, 0f);
-            layer.smoothness = 0.05f;
+            layer.tileSize = new Vector2(12f, 12f); // 12m tiling: sand detail visible from ground level
+            layer.specular = new Color(0.02f, 0.015f, 0.01f, 0f);
+            layer.smoothness = 0.04f;
             EditorUtility.SetDirty(layer);
             AssetDatabase.SaveAssets();
             terrainData.terrainLayers = new TerrainLayer[] { layer };

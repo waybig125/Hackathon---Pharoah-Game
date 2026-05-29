@@ -189,28 +189,18 @@ namespace TheAlchemistsCrypt.Editor
 
                     p.tag = "Player";
                     
-                    // Phase 2: Spawn player inside the LayHouse_Spawn if it exists
+                    // Spawn player OUTSIDE the LayHouse_Spawn, in front of its doorway
+                    // The house is at Z=60 facing south (180° yaw) — doorway opens toward Z<60
                     var spawnHouse = GameObject.Find("LayHouse_Spawn");
                     if (spawnHouse != null) {
-                        var renderers = spawnHouse.GetComponentsInChildren<Renderer>(true);
-                        if (renderers.Length > 0) {
-                            Bounds b = renderers[0].bounds;
-                            foreach (var r in renderers) b.Encapsulate(r.bounds);
-                            p.transform.position = new Vector3(b.center.x, b.min.y + 1.5f, b.center.z);
-                        } else {
-                            p.transform.position = spawnHouse.transform.position + new Vector3(0f, 1.5f, 0f);
-                        }
-                        p.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
-                        
-                        var door = GameObject.Find("MastabaDoor");
-                        if (door != null) {
-                            foreach (var col in door.GetComponentsInChildren<Collider>(true)) {
-                                col.isTrigger = true;
-                            }
-                        }
-                        Debug.Log("[CityGen] Player spawned inside lay_house.glb.");
+                        // Place player just outside the front door opening, facing the house
+                        float groundY = GetTerrainHeight(new Vector3(0f, 0f, 47f)) + 1.3f;
+                        p.transform.position = new Vector3(0f, groundY, 47f);
+                        p.transform.rotation = Quaternion.Euler(0f, 0f, 0f); // Face north (toward house door)
+                        Debug.Log("[CityGen] Player spawned outside lay_house.glb doorway.");
                     } else {
-                        p.transform.position = new Vector3(16f, GetTerrainHeight(new Vector3(16f, 0f, 48f)) + 1.2f, 48f);
+                        p.transform.position = new Vector3(0f, GetTerrainHeight(new Vector3(0f, 0f, 47f)) + 1.3f, 47f);
+                        p.transform.rotation = Quaternion.identity;
                     }
 
                     // Ensure AlchemicalFocus is attached to the player GameObject
