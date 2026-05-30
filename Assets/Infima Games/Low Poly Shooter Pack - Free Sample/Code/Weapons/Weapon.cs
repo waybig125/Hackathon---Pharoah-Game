@@ -14,15 +14,11 @@ namespace InfimaGames.LowPolyShooterPack
         [Header("Firing")]
 
         [Tooltip("Is this weapon automatic? If yes, then holding down the firing button will continuously fire.")]
-        [SerializeField] 
-        private bool automatic;
-        
-        [Tooltip("How fast the projectiles are.")]
         [SerializeField]
-        private float projectileImpulse = 400.0f;
+        private bool automatic;
 
         [Tooltip("Amount of shots this weapon can shoot in a minute. It determines how fast the weapon shoots.")]
-        [SerializeField] 
+        [SerializeField]
         private int roundsPerMinutes = 200;
 
         [Tooltip("Mask of things recognized when firing.")]
@@ -224,18 +220,75 @@ namespace InfimaGames.LowPolyShooterPack
             //Play all muzzle effects.
             muzzleBehaviour.Effect();
             
-            //Determine the rotation that we want to shoot our projectile in.
-            Quaternion rotation = Quaternion.LookRotation(playerCamera.forward * 1000.0f - muzzleSocket.position);
+            // --- HACKATHON: HITSCAN FIRE LOGIC (No Fake Projectiles) ---
+            Vector3 hitPoint = playerCamera.position + playerCamera.forward * maximumDistance;
             
-            //If there's something blocking, then we can aim directly at that thing, which will result in more accurate shooting.
-            if (Physics.Raycast(new Ray(playerCamera.position, playerCamera.forward),
-                out RaycastHit hit, maximumDistance, mask))
-                rotation = Quaternion.LookRotation(hit.point - muzzleSocket.position);
+            if (Physics.Raycast(playerCamera.position, playerCamera.forward, out RaycastHit hit, maximumDistance, mask))
+            {
+                hitPoint = hit.point;
+
+                // Check for enemy hit
+                var zombie = hit.collider.GetComponentInParent<TheAlchemistsCrypt.AI.ZombieAI>();
+                if (zombie != null)
+                {
+                    float relativeY = hitPoint.y - zombie.transform.position.y;
+                    bool isHeadshot = (hit.collider.name.ToLower().Contains("head") || hit.collider.name.ToLower().Contains("skull") || relativeY >= 1.4f);
+                    float damage = isHeadshot ? 15f : 5f;
+                    zombie.TakeDamage(damage);
+                }
+            }
                 
-            //Spawn projectile from the muzzle socket (classic position — no offset clipping issues)
-            GameObject projectile = Instantiate(prefabProjectile, muzzleSocket.position, rotation);
-            //Add velocity to the projectile.
-            projectile.GetComponent<Rigidbody>().linearVelocity = projectile.transform.forward * projectileImpulse;
+            // Draw a high-speed procedural Tracer line
+            DrawTracerLine(muzzleSocket.position, hitPoint);
+
+            // Trigger Camera Recoil
+            var camLook = playerCamera.GetComponentInParent<CameraLook>();
+            if (camLook != null)
+            {
+                camLook.ApplyRecoilKick(-4f, Random.Range(-1.5f, 1.5f));
+            }
+        }
+
+        private void DrawTracerLine(Vector3 start, Vector3 end)
+        {
+            GameObject tracerObj = new GameObject("HitscanTracer");
+            tracerObj.transform.position = start;
+            var lr = tracerObj.AddComponent<LineRenderer>();
+            
+            // Fast, tapered glowing line
+            lr.startWidth = 0.03f;
+            lr.endWidth = 0.01f;
+            lr.positionCount = 2;
+            lr.SetPosition(0, start);
+            lr.SetPosition(1, end);
+            
+            Material tracerMat = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
+            tracerMat.EnableKeyword("_EMISSION");
+            tracerMat.SetColor("_BaseColor", new Color(1f, 0.8f, 0.2f));
+            tracerMat.SetColor("_EmissionColor", new Color(1f, 0.8f, 0.2f) * 3f);
+            lr.material = tracerMat;
+
+            // Animate it fading out extremely quickly
+            StartCoroutine(FadeTracer(lr));
+        }
+
+        private System.Collections.IEnumerator FadeTracer(LineRenderer lr)
+        {
+            float duration = 0.06f; // Extremely snappy
+            float elapsed = 0f;
+            Color initialColor = lr.material.GetColor("_BaseColor");
+
+            while (elapsed < duration)
+            {
+                if (lr == null) break;
+                elapsed += Time.deltaTime;
+                float alpha = Mathf.Lerp(1f, 0f, elapsed / duration);
+                lr.startColor = new Color(1f, 1f, 1f, alpha);
+                lr.endColor = new Color(1f, 1f, 1f, alpha);
+                lr.material.SetColor("_BaseColor", new Color(initialColor.r, initialColor.g, initialColor.b, alpha));
+                yield return null;
+            }
+            if (lr != null) Destroy(lr.gameObject);
         }
 
         public override void FillAmmunition(int amount)
