@@ -57,7 +57,7 @@ namespace TheAlchemistsCrypt.Weapons
         private void Update()
         {
             ResolveFirePoint();
-            HandleShooting();
+            // HandleShooting(); // --- HACKATHON: Disabled to let Weapon.cs handle unified shooting ---
             HandleModeSwitch();
 
             if (currentMode != lastMode)

@@ -223,18 +223,51 @@ namespace InfimaGames.LowPolyShooterPack
             //Play all muzzle effects.
             muzzleBehaviour.Effect();
             
-            //Determine the rotation that we want to shoot our projectile in.
-            Quaternion rotation = Quaternion.LookRotation(playerCamera.forward * 1000.0f - muzzleSocket.position);
-            
-            //If there's something blocking, then we can aim directly at that thing, which will result in more accurate shooting.
-            if (Physics.Raycast(new Ray(playerCamera.position, playerCamera.forward),
-                out RaycastHit hit, maximumDistance, mask))
-                rotation = Quaternion.LookRotation(hit.point - muzzleSocket.position);
+            // --- HACKATHON: UNIFIED ELEMENTAL SHOOTING ---
+            var focus = GetComponentInParent<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+            if (focus == null) {
+                var player = GameObject.FindWithTag("Player");
+                if (player != null) focus = player.GetComponentInChildren<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
+            }
+
+            if (focus != null && TheAlchemistsCrypt.Core.ObjectPooler.Instance != null)
+            {
+                string tag = "SulfurProjectile";
+                switch (focus.CurrentMode)
+                {
+                    case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Mercury: tag = "MercuryProjectile"; break;
+                    case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Salt: tag = "SaltProjectile"; break;
+                }
+
+                // Play alchemical SFX
+                switch (focus.CurrentMode)
+                {
+                    case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Sulfur: TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_sulfur_shot"); break;
+                    case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Mercury: TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mercury_shot"); break;
+                    case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Salt: TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_salt_shot"); break;
+                }
+
+                Quaternion rotation = Quaternion.LookRotation(playerCamera.forward * 1000.0f - muzzleSocket.position);
+                if (Physics.Raycast(new Ray(playerCamera.position, playerCamera.forward), out RaycastHit hit, maximumDistance, mask))
+                    rotation = Quaternion.LookRotation(hit.point - muzzleSocket.position);
+
+                GameObject spawned = TheAlchemistsCrypt.Core.ObjectPooler.Instance.SpawnFromPool(tag, muzzleSocket.position, rotation);
+                if (spawned != null)
+                {
+                    var proj = spawned.GetComponent<TheAlchemistsCrypt.Weapons.Projectile>();
+                    if (proj != null) proj.element = (TheAlchemistsCrypt.Weapons.Projectile.ElementType)focus.CurrentMode;
+                }
+            }
+            else
+            {
+                // Fallback to classic projectile if focus is missing
+                Quaternion rotation = Quaternion.LookRotation(playerCamera.forward * 1000.0f - muzzleSocket.position);
+                if (Physics.Raycast(new Ray(playerCamera.position, playerCamera.forward), out RaycastHit hit, maximumDistance, mask))
+                    rotation = Quaternion.LookRotation(hit.point - muzzleSocket.position);
                 
-            //Spawn projectile from the projectile spawn point.
-            GameObject projectile = Instantiate(prefabProjectile, muzzleSocket.position, rotation);
-            //Add velocity to the projectile.
-            projectile.GetComponent<Rigidbody>().linearVelocity = projectile.transform.forward * projectileImpulse;   
+                GameObject projectile = Instantiate(prefabProjectile, muzzleSocket.position, rotation);
+                projectile.GetComponent<Rigidbody>().linearVelocity = projectile.transform.forward * projectileImpulse;
+            }
         }
 
         public override void FillAmmunition(int amount)
