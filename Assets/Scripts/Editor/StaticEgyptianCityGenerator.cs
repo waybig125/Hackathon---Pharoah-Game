@@ -436,7 +436,7 @@ namespace TheAlchemistsCrypt.Editor
                 for (int z = 0; z < gridSize; z++) {
                     float posX = -halfSpan + (x * spacing) + (spacing / 2f);
                     float posZ = -halfSpan + (z * spacing) + (spacing / 2f);
-                    if (posZ < -60f) continue; // Sea area
+                    if (posZ < -25f) continue; // Sea / Coast area
 
                     Vector3 pos = new Vector3(posX, 0f, posZ);
                     pos.y = GetTerrainHeight(pos);
@@ -488,8 +488,10 @@ namespace TheAlchemistsCrypt.Editor
                                 var houseObj = PlaceIntegratedAsset(root.transform, pos, housePrefab, 1.0f, true, false, 0f, targetAngleY, false);
                                 occupiedPositions.Add(pos);
 
-                                // Add ladder to roof occasionally (e.g. 50% chance)
-                                if (Random.value < 0.50f && houseObj != null) {
+                                // Add ladder to roof occasionally (e.g. 50% chance) for specific flat-roof buildings
+                                string houseName = housePrefab != null ? housePrefab.name.ToLower() : "";
+                                bool isFlatRoofHouse = houseName.Contains("arabic_house_4") || houseName.Contains("egyptian_house");
+                                if (isFlatRoofHouse && Random.value < 0.50f && houseObj != null) {
                                     float houseHeight = 12f;
                                     var mf = houseObj.GetComponentInChildren<MeshFilter>(true);
                                     if (mf != null && mf.sharedMesh != null) {
@@ -537,10 +539,10 @@ namespace TheAlchemistsCrypt.Editor
             // Add dynamic distance-based culling for mobile optimization
             // root.AddComponent<TheAlchemistsCrypt.Utils.DistanceCuller>(); //disabled due to weird results: do not delete comment
 
-            CreateProceduralPyramid(root, new Vector3(-450f, 0f, 400f), 150f, 95f, wallMat, new Color(1f, 0.85f, 0.4f));
-            CreateProceduralPyramid(root, new Vector3(450f, 0f, 400f), 160f, 100f, wallMat, new Color(1f, 0.5f, 0.2f)); 
-            CreateProceduralPyramid(root, new Vector3(450f, 0f, 120f), 140f, 85f, wallMat, new Color(1f, 0.82f, 0.45f));
-            CreateProceduralPyramid(root, new Vector3(-450f, 0f, 120f), 170f, 110f, wallMat, new Color(1f, 0.7f, 0.3f)); 
+            CreateProceduralPyramid(root, new Vector3(-270f, 0f, 320f), 150f, 95f, wallMat, new Color(1f, 0.85f, 0.4f));
+            CreateProceduralPyramid(root, new Vector3(270f, 0f, 320f), 160f, 100f, wallMat, new Color(1f, 0.5f, 0.2f)); 
+            CreateProceduralPyramid(root, new Vector3(270f, 0f, 110f), 140f, 85f, wallMat, new Color(1f, 0.82f, 0.45f));
+            CreateProceduralPyramid(root, new Vector3(-270f, 0f, 110f), 170f, 110f, wallMat, new Color(1f, 0.7f, 0.3f)); 
             
             // Add obelisks in the empty space between the front and back pyramids
             for (float x = -300f; x <= 300f; x += 150f) {
