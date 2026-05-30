@@ -241,7 +241,7 @@ namespace TheAlchemistsCrypt.UI
                     hpLblTxt.alignment = TextAlignmentOptions.Center;
                     hpLblTxt.color = new Color(1.0f, 0.8f, 0.2f, 1f); // Bright amber
                     hpLblTxt.overflowMode = TextOverflowModes.Overflow;
-                    hpLblTxt.enableWordWrapping = false; // No line breaks
+                    hpLblTxt.textWrappingMode = TextWrappingModes.NoWrap; // No line breaks
                     // Glow outline for maximum readability
                     hpLblTxt.outlineColor = new Color32(0, 0, 0, 230);
                     hpLblTxt.outlineWidth = 0.25f;
@@ -290,7 +290,7 @@ namespace TheAlchemistsCrypt.UI
                     healthValueText.alignment = TextAlignmentOptions.Right;
                     healthValueText.color = new Color(0.5f, 1.0f, 0.5f, 1f); // Vivid bright green
                     healthValueText.overflowMode = TextOverflowModes.Overflow;
-                    healthValueText.enableWordWrapping = false; // Always single-line
+                    healthValueText.textWrappingMode = TextWrappingModes.NoWrap; // Always single-line
                     healthValueText.outlineColor = new Color32(0, 0, 0, 220);
                     healthValueText.outlineWidth = 0.22f;
                     healthValueText.text = "100%";
@@ -352,7 +352,7 @@ namespace TheAlchemistsCrypt.UI
                     ammoLblTxt.alignment = TextAlignmentOptions.Center;
                     ammoLblTxt.color = new Color(1.0f, 0.8f, 0.2f, 1f); // Bright amber
                     ammoLblTxt.overflowMode = TextOverflowModes.Overflow;
-                    ammoLblTxt.enableWordWrapping = false;
+                    ammoLblTxt.textWrappingMode = TextWrappingModes.NoWrap;
                     ammoLblTxt.outlineColor = new Color32(0, 0, 0, 230);
                     ammoLblTxt.outlineWidth = 0.25f;
                     ammoLblTxt.text = "AM";
@@ -392,7 +392,7 @@ namespace TheAlchemistsCrypt.UI
                     ammoValueText.alignment = TextAlignmentOptions.Right;
                     ammoValueText.color = new Color(1.0f, 0.85f, 0.3f, 1f); // Bright yellow
                     ammoValueText.overflowMode = TextOverflowModes.Overflow;
-                    ammoValueText.enableWordWrapping = false; // Single-line always
+                    ammoValueText.textWrappingMode = TextWrappingModes.NoWrap; // Single-line always
                     ammoValueText.outlineColor = new Color32(0, 0, 0, 220);
                     ammoValueText.outlineWidth = 0.22f;
                     ammoValueText.text = "30/30";
@@ -430,7 +430,7 @@ namespace TheAlchemistsCrypt.UI
                     killsText.alignment = TextAlignmentOptions.Left;
                     killsText.color = new Color(1.0f, 0.85f, 0.25f, 1f);
                     killsText.overflowMode = TextOverflowModes.Overflow;
-                    killsText.enableWordWrapping = false; // Single-line
+                    killsText.textWrappingMode = TextWrappingModes.NoWrap; // Single-line
                     killsText.outlineColor = new Color32(0, 0, 0, 220);
                     killsText.outlineWidth = 0.22f;
 

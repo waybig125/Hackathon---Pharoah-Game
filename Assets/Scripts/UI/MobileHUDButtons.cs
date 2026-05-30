@@ -1369,8 +1369,8 @@ namespace TheAlchemistsCrypt.UI
         {
             Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
             float half = size * 0.5f;
-            Color gold = new Color(0.95f, 0.8f, 0.2f, 0.9f);
-            Color ruby = new Color(0.85f, 0.1f, 0.1f, 0.95f);
+            Color cyan = new Color(0.0f, 1.0f, 1.0f, 0.95f);
+            Color neon = new Color(0.4f, 1.0f, 1.0f, 1.0f);
 
             for (int y = 0; y < size; y++)
             {
@@ -1380,26 +1380,27 @@ namespace TheAlchemistsCrypt.UI
                     float dy = (y - half) / half;
                     float dist = Mathf.Sqrt(dx * dx + dy * dy);
 
-                    // Concentric outer ring
-                    if (dist >= 0.78f && dist <= 0.82f)
+                    // Crosshair lines (outer)
+                    bool isCross = (Mathf.Abs(dx) < 0.02f && Mathf.Abs(dy) > 0.4f && Mathf.Abs(dy) < 0.8f) ||
+                                   (Mathf.Abs(dy) < 0.02f && Mathf.Abs(dx) > 0.4f && Mathf.Abs(dx) < 0.8f);
+
+                    // Inner focus dots
+                    bool isInner = (dist > 0.15f && dist < 0.22f) && 
+                                   (Mathf.Abs(dx) < 0.04f || Mathf.Abs(dy) < 0.04f);
+
+                    if (isCross)
                     {
-                        tex.SetPixel(x, y, gold);
+                        tex.SetPixel(x, y, cyan);
                     }
-                    // Inner ring
-                    else if (dist >= 0.38f && dist <= 0.42f)
+                    else if (isInner)
                     {
-                        tex.SetPixel(x, y, gold);
+                        tex.SetPixel(x, y, neon);
                     }
-                    // Concentric tick marks
-                    else if (dist >= 0.45f && dist <= 0.75f && (Mathf.Abs(dx) < 0.03f || Mathf.Abs(dy) < 0.03f))
+                    // Precise center dot with glow
+                    else if (dist <= 0.06f)
                     {
-                        tex.SetPixel(x, y, gold);
-                    }
-                    // Glowing Ruby Center Point
-                    else if (dist <= 0.08f)
-                    {
-                        float alpha = Mathf.Clamp01((1f - dist / 0.08f) * 2f);
-                        tex.SetPixel(x, y, new Color(ruby.r, ruby.g, ruby.b, ruby.a * alpha));
+                        float alpha = Mathf.Clamp01((1f - dist / 0.06f) * 2f);
+                        tex.SetPixel(x, y, new Color(neon.r, neon.g, neon.b, neon.a * alpha));
                     }
                     else
                     {
