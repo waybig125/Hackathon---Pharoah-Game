@@ -309,17 +309,8 @@ namespace TheAlchemistsCrypt.UI
                     ammoPanel.anchorMin = ammoPanel.anchorMax = new Vector2(0, 1);
                     ammoPanel.pivot = new Vector2(0f, 1f);
                     ammoPanel.anchoredPosition = new Vector2(14, -106);
-                    ammoPanel.sizeDelta = new Vector2(380, 54);
-
-                    var amPanelImg = ammoPanel.GetComponent<Image>();
-                    amPanelImg.sprite = CreateGlassmorphismPanelSprite(380, 54,
-                        new Color(0.04f, 0.04f, 0.06f, 0.82f),   // Slightly blue-tinted dark
-                        new Color(0.92f, 0.62f, 0.15f, 0.85f),   // Same amber border
-                        2);
-                    amPanelImg.type = Image.Type.Simple;
-                    amPanelImg.enabled = false; // Disable panel background so it's a floating bar
-
-                    // Bullet/ammo icon
+                    ammoPanel.sizeDelta = new Vector2(440, 54);
+                    // ... (icon logic)
                     var amIconGo = new GameObject("AmmoIcon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     amIconGo.SetParent(ammoPanel, false);
                     amIconGo.anchorMin = amIconGo.anchorMax = new Vector2(0f, 0.5f);
@@ -362,7 +353,7 @@ namespace TheAlchemistsCrypt.UI
                     amBgBar.SetParent(ammoPanel, false);
                     amBgBar.anchorMin = amBgBar.anchorMax = new Vector2(0f, 0.5f);
                     amBgBar.pivot = new Vector2(0f, 0.5f);
-                    amBgBar.anchoredPosition = new Vector2(80, 0);
+                    amBgBar.anchoredPosition = new Vector2(105, 0);
                     amBgBar.sizeDelta = new Vector2(220, 24);
                     var amBgImg = amBgBar.GetComponent<Image>();
                     amBgImg.sprite = CreateRoundedRectSprite(220, 24, new Color(0.02f, 0.08f, 0.04f, 1f), 12); // Capsule
@@ -383,7 +374,7 @@ namespace TheAlchemistsCrypt.UI
                     ammoCountValGo.SetParent(ammoPanel, false);
                     ammoCountValGo.anchorMin = ammoCountValGo.anchorMax = new Vector2(0f, 0.5f);
                     ammoCountValGo.pivot = new Vector2(0f, 0.5f);
-                    ammoCountValGo.anchoredPosition = new Vector2(305, 0);
+                    ammoCountValGo.anchoredPosition = new Vector2(345, 0);
                     ammoCountValGo.sizeDelta = new Vector2(75, 34);
                     ammoValueText = ammoCountValGo.GetComponent<TextMeshProUGUI>();
                     ammoValueText.font = GetTitleFont();

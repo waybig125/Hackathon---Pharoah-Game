@@ -134,24 +134,7 @@ namespace InfimaGames.LowPolyShooterPack
             }
             
             //Set.
-            transform.localRotation = localRotation * Quaternion.Euler(currentRecoilRot);
-        }
-
-        // --- PROCEDURAL CAMERA RECOIL ---
-        private Vector3 targetRecoilRot;
-        private Vector3 currentRecoilRot;
-        
-        public void ApplyRecoilKick(float pitchKick, float yawKick)
-        {
-            targetRecoilRot += new Vector3(pitchKick, yawKick, 0f);
-        }
-
-        private void Update()
-        {
-            // Recover target back to zero smoothly
-            targetRecoilRot = Vector3.Lerp(targetRecoilRot, Vector3.zero, Time.deltaTime * 10f);
-            // Snap current to target
-            currentRecoilRot = Vector3.Slerp(currentRecoilRot, targetRecoilRot, Time.deltaTime * 20f);
+            transform.localRotation = localRotation;
         }
 
         #endregion
