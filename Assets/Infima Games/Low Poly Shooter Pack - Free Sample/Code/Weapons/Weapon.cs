@@ -214,10 +214,9 @@ namespace InfimaGames.LowPolyShooterPack
             //Get Muzzle Socket. This is the point we fire from.
             Transform muzzleSocket = muzzleBehaviour.GetSocket();
             
-            //Play the firing animation instantly (classic snappy feel)
+            //Play the firing animation.
             const string stateName = "Fire";
             animator.Play(stateName, 0, 0.0f);
-            
             //Reduce ammunition! We just shot, so we need to get rid of one!
             ammunitionCurrent = Mathf.Clamp(ammunitionCurrent - 1, 0, magazineBehaviour.GetAmmunitionTotal());
 
@@ -232,24 +231,10 @@ namespace InfimaGames.LowPolyShooterPack
                 out RaycastHit hit, maximumDistance, mask))
                 rotation = Quaternion.LookRotation(hit.point - muzzleSocket.position);
                 
-            //Spawn projectile from the muzzle socket (classic position — no offset clipping issues)
+            //Spawn projectile from the projectile spawn point.
             GameObject projectile = Instantiate(prefabProjectile, muzzleSocket.position, rotation);
             //Add velocity to the projectile.
-            projectile.GetComponent<Rigidbody>().linearVelocity = projectile.transform.forward * projectileImpulse;
-
-            // --- HACKATHON: Trigger safe Rotational Camera Kick ---
-            var camLook = playerCamera.GetComponentInParent<CameraLook>();
-            if (camLook != null) camLook.ApplyRecoilKick(-3.5f, Random.Range(-1f, 1f));
-
-            // --- HACKATHON: Dynamic Muzzle Flash Light ---
-            GameObject flash = new GameObject("MuzzleFlashLight");
-            flash.transform.position = muzzleSocket.position;
-            var light = flash.AddComponent<Light>();
-            light.type = LightType.Point;
-            light.color = new Color(1f, 0.8f, 0.3f);
-            light.range = 8f;
-            light.intensity = 5f;
-            Destroy(flash, 0.05f); 
+            projectile.GetComponent<Rigidbody>().linearVelocity = projectile.transform.forward * projectileImpulse;   
         }
 
         public override void FillAmmunition(int amount)
