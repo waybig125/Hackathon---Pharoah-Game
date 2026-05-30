@@ -6,7 +6,7 @@
                android:hardwareAccelerated="true"
                android:appCategory="game"
                android:isGame="true">
-    <activity android:name="com.unity3d.player.UnityPlayerActivity"
+    <activity android:name="com.unity3d.player.UnityPlayerGameActivity"
               android:theme="@style/UnityThemeSelector"
               android:screenOrientation="fullSensor"
               android:launchMode="singleTask"
@@ -19,6 +19,7 @@
         <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
       <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
+      <meta-data android:name="android.app.lib_name" android:value="unity" />
       <meta-data android:name="android.notch_support" android:value="true" />
     </activity>
     <meta-data android:name="unity.splash-mode" android:value="0" />
