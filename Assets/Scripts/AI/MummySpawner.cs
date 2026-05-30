@@ -7,7 +7,7 @@ namespace TheAlchemistsCrypt.AI
     public class MummySpawner : MonoBehaviour
     {
         [Header("Spawn Settings")]
-        [SerializeField] private int maxMummies = 25;
+        [SerializeField] private int maxMummies = 10;
         [SerializeField] private float spawnInterval = 35.0f;  // Longer gap — gives player breathing room
         [SerializeField] private int initialSpawnCount = 3;    // Start with just 3 — not an army
         [SerializeField] private float initialSpawnDelay = 5f; // 5s before the first 3 even appear
