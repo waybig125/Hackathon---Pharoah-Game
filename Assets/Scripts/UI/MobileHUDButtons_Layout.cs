@@ -176,19 +176,21 @@ namespace TheAlchemistsCrypt.UI
                         btnContainer.anchoredPosition = new Vector2(-50, 50);
                     }
 
-                    Vector2 firePos = GetButtonPosition("FIRE", isLefty ? new Vector2(220, 220) : new Vector2(-220, 220));
-                    Vector2 reloadPos = GetButtonPosition("RELOAD", isLefty ? new Vector2(520, 150) : new Vector2(-520, 150));
-                    Vector2 swapPos = GetButtonPosition("SWAP", isLefty ? new Vector2(360, 620) : new Vector2(-360, 620));
-                    Vector2 sprintPos = GetButtonPosition("SPRINT", isLefty ? new Vector2(650, 300) : new Vector2(-650, 300));
-                    Vector2 focusPos = GetButtonPosition("FOCUS", isLefty ? new Vector2(450, 420) : new Vector2(-450, 420));
-                    Vector2 jumpPos = GetButtonPosition("JUMP", isLefty ? new Vector2(150, 520) : new Vector2(-150, 520));
+                    // Positions scaled 0.75x to maintain relative cluster layout at reduced size
+                    Vector2 firePos = GetButtonPosition("FIRE", isLefty ? new Vector2(165, 165) : new Vector2(-165, 165));
+                    Vector2 reloadPos = GetButtonPosition("RELOAD", isLefty ? new Vector2(390, 112) : new Vector2(-390, 112));
+                    Vector2 swapPos = GetButtonPosition("SWAP", isLefty ? new Vector2(270, 465) : new Vector2(-270, 465));
+                    Vector2 sprintPos = GetButtonPosition("SPRINT", isLefty ? new Vector2(487, 225) : new Vector2(-487, 225));
+                    Vector2 focusPos = GetButtonPosition("FOCUS", isLefty ? new Vector2(337, 315) : new Vector2(-337, 315));
+                    Vector2 jumpPos = GetButtonPosition("JUMP", isLefty ? new Vector2(112, 390) : new Vector2(-112, 390));
 
-                    CreateButton(btnContainer, "FIRE", firePos, 380, fireIcon, () => SetFire(true), () => SetFire(false));
-                    CreateButton(btnContainer, "RELOAD", reloadPos, 200, reloadIcon, () => Reload());
-                    CreateButton(btnContainer, "SWAP", swapPos, 200, swapIcon, () => Swap());
-                    CreateSprintButton(btnContainer, sprintPos, 200);
-                    CreateButton(btnContainer, "FOCUS", focusPos, 200, focusIcon, () => SetAiming(true), () => SetAiming(false));
-                    CreateButton(btnContainer, "JUMP", jumpPos, 220, jumpIcon, () => SetJump(true), () => SetJump(false));
+                    // Button diameters reduced 25%: FIRE 380->285, RELOAD/SWAP/SPRINT/FOCUS 200->150, JUMP 220->165
+                    CreateButton(btnContainer, "FIRE", firePos, 285, fireIcon, () => SetFire(true), () => SetFire(false));
+                    CreateButton(btnContainer, "RELOAD", reloadPos, 150, reloadIcon, () => Reload());
+                    CreateButton(btnContainer, "SWAP", swapPos, 150, swapIcon, () => Swap());
+                    CreateSprintButton(btnContainer, sprintPos, 150);
+                    CreateButton(btnContainer, "FOCUS", focusPos, 150, focusIcon, () => SetAiming(true), () => SetAiming(false));
+                    CreateButton(btnContainer, "JUMP", jumpPos, 165, jumpIcon, () => SetJump(true), () => SetJump(false));
 
                     HideDebugLabels();
 
@@ -683,15 +685,20 @@ namespace TheAlchemistsCrypt.UI
 
                     var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     iconGo.SetParent(go, false); iconGo.anchorMin = Vector2.zero; iconGo.anchorMax = Vector2.one; iconGo.offsetMin = iconGo.offsetMax = Vector2.zero;
-                    var iImg = iconGo.GetComponent<Image>(); iImg.sprite = iconSprite; iImg.color = Color.white; iImg.raycastTarget = false;
+                    var iImg = iconGo.GetComponent<Image>();
+                    iImg.sprite = iconSprite;
+                    // 80% opacity when idle, 100% when active/pressed
+                    iImg.color = new Color(1f, 1f, 1f, 0.8f);
+                    iImg.raycastTarget = false;
                     iImg.preserveAspect = true; 
 
                     var helper = go.gameObject.AddComponent<ButtonInputHelper>();
                     helper.isDraggable = true;
                     helper.glowObject = shadowGo.gameObject;
-                    helper.onDown = () => { go.localScale = new Vector3(0.9f, 0.9f, 1f); iImg.color = new Color(0.8f, 0.8f, 0.8f, 1f); onDown?.Invoke(); };
-                    helper.onUp = () => { go.localScale = new Vector3(1f, 1f, 1f); iImg.color = Color.white; onUp?.Invoke(); };
+                    helper.onDown = () => { go.localScale = new Vector3(0.9f, 0.9f, 1f); iImg.color = new Color(1f, 1f, 1f, 1f); onDown?.Invoke(); };
+                    helper.onUp = () => { go.localScale = new Vector3(1f, 1f, 1f); iImg.color = new Color(1f, 1f, 1f, 0.8f); onUp?.Invoke(); };
                 }
+
 
 
 
@@ -709,6 +716,7 @@ namespace TheAlchemistsCrypt.UI
                     var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     iconGo.SetParent(go, false); iconGo.anchorMin = Vector2.zero; iconGo.anchorMax = Vector2.one; iconGo.offsetMin = iconGo.offsetMax = Vector2.zero;
                     sprintIconImage = iconGo.GetComponent<Image>(); sprintIconImage.sprite = sprintIcon; sprintIconImage.raycastTarget = false;
+                    sprintIconImage.color = new Color(1f, 1f, 1f, 0.8f); // 80% idle opacity
                     sprintIconImage.preserveAspect = true;
 
                     var helper = go.gameObject.AddComponent<ButtonInputHelper>();

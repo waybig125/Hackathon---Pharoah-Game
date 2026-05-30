@@ -381,8 +381,8 @@ namespace TheAlchemistsCrypt.Gameplay
                 if (terrain != null) groundY = terrain.SampleHeight(new Vector3(0f, 0f, -74f));
             }
             
-            // To sit on the sand where the lowest point is at groundY, the boat's Y coordinate should be groundY + 0.5f.
-            Vector3 spawnPos = new Vector3(0f, groundY + 0.5f, -74f); // Sits on beach sand
+            // Raised by +1.6f so the hull sits on top of the sand instead of being buried in it.
+            Vector3 spawnPos = new Vector3(0f, groundY + 1.6f, -74f); // Sits on beach sand
             
             GameObject prefab = Resources.Load<GameObject>("boat");
             if (prefab != null)
@@ -435,7 +435,8 @@ namespace TheAlchemistsCrypt.Gameplay
 
             var boxCol = boatObj.GetComponent<BoxCollider>();
             if (boxCol == null) boxCol = boatObj.AddComponent<BoxCollider>();
-            boxCol.isTrigger = true;
+            // isTrigger = false so the boat is solid and the player can't walk through it
+            boxCol.isTrigger = false;
             if (hasBounds)
             {
                 boxCol.center = boatObj.transform.InverseTransformPoint(worldBounds.center);
@@ -451,10 +452,10 @@ namespace TheAlchemistsCrypt.Gameplay
                 boxCol.size = new Vector3(20f, 10f, 40f);
             }
 
-            // Ensure any existing colliders in children are also triggers and have trigger scripts
+            // Ensure any existing colliders in children are also solid (not triggers)
             foreach (var c in boatObj.GetComponentsInChildren<Collider>(true))
             {
-                c.isTrigger = true;
+                c.isTrigger = false;
             }
         }
 

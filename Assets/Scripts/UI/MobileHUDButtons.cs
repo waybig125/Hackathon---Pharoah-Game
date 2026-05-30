@@ -488,30 +488,31 @@ namespace TheAlchemistsCrypt.UI
             
             if (presetName == "DEFAULT")
             {
-                SaveButtonPos("FIRE", new Vector2(-220, 220));
-                SaveButtonPos("RELOAD", new Vector2(-520, 150));
-                SaveButtonPos("SWAP", new Vector2(-360, 620));
-                SaveButtonPos("SPRINT", new Vector2(-650, 300));
-                SaveButtonPos("FOCUS", new Vector2(-450, 420));
-                SaveButtonPos("JUMP", new Vector2(-150, 520));
+                // Positions scaled 0.75x from original
+                SaveButtonPos("FIRE", new Vector2(-165, 165));
+                SaveButtonPos("RELOAD", new Vector2(-390, 112));
+                SaveButtonPos("SWAP", new Vector2(-270, 465));
+                SaveButtonPos("SPRINT", new Vector2(-487, 225));
+                SaveButtonPos("FOCUS", new Vector2(-337, 315));
+                SaveButtonPos("JUMP", new Vector2(-112, 390));
             }
             else if (presetName == "COMPACT")
             {
-                SaveButtonPos("FIRE", new Vector2(-180, 180));
-                SaveButtonPos("RELOAD", new Vector2(-420, 120));
-                SaveButtonPos("SWAP", new Vector2(-290, 500));
-                SaveButtonPos("SPRINT", new Vector2(-520, 240));
-                SaveButtonPos("FOCUS", new Vector2(-360, 340));
-                SaveButtonPos("JUMP", new Vector2(-120, 420));
+                SaveButtonPos("FIRE", new Vector2(-135, 135));
+                SaveButtonPos("RELOAD", new Vector2(-315, 90));
+                SaveButtonPos("SWAP", new Vector2(-217, 375));
+                SaveButtonPos("SPRINT", new Vector2(-390, 180));
+                SaveButtonPos("FOCUS", new Vector2(-270, 255));
+                SaveButtonPos("JUMP", new Vector2(-90, 315));
             }
             else if (presetName == "LEFTY")
             {
-                SaveButtonPos("FIRE", new Vector2(220, 220));
-                SaveButtonPos("RELOAD", new Vector2(520, 150));
-                SaveButtonPos("SWAP", new Vector2(360, 620));
-                SaveButtonPos("SPRINT", new Vector2(650, 300));
-                SaveButtonPos("FOCUS", new Vector2(450, 420));
-                SaveButtonPos("JUMP", new Vector2(150, 520));
+                SaveButtonPos("FIRE", new Vector2(165, 165));
+                SaveButtonPos("RELOAD", new Vector2(390, 112));
+                SaveButtonPos("SWAP", new Vector2(270, 465));
+                SaveButtonPos("SPRINT", new Vector2(487, 225));
+                SaveButtonPos("FOCUS", new Vector2(337, 315));
+                SaveButtonPos("JUMP", new Vector2(112, 390));
             }
             PlayerPrefs.Save();
 
@@ -684,12 +685,13 @@ namespace TheAlchemistsCrypt.UI
                 foreach (Transform btn in btnContainer)
                 {
                     Vector2 defaultPos = Vector2.zero;
-                    if (btn.name == "FIRE") defaultPos = isLefty ? new Vector2(220, 220) : new Vector2(-220, 220);
-                    else if (btn.name == "RELOAD") defaultPos = isLefty ? new Vector2(520, 150) : new Vector2(-520, 150);
-                    else if (btn.name == "SWAP") defaultPos = isLefty ? new Vector2(360, 620) : new Vector2(-360, 620);
-                    else if (btn.name == "SPRINT") defaultPos = isLefty ? new Vector2(650, 300) : new Vector2(-650, 300);
-                    else if (btn.name == "FOCUS") defaultPos = isLefty ? new Vector2(450, 420) : new Vector2(-450, 420);
-                    else if (btn.name == "JUMP") defaultPos = isLefty ? new Vector2(150, 520) : new Vector2(-150, 520);
+                    // Positions scaled 0.75x from original
+                    if (btn.name == "FIRE") defaultPos = isLefty ? new Vector2(165, 165) : new Vector2(-165, 165);
+                    else if (btn.name == "RELOAD") defaultPos = isLefty ? new Vector2(390, 112) : new Vector2(-390, 112);
+                    else if (btn.name == "SWAP") defaultPos = isLefty ? new Vector2(270, 465) : new Vector2(-270, 465);
+                    else if (btn.name == "SPRINT") defaultPos = isLefty ? new Vector2(487, 225) : new Vector2(-487, 225);
+                    else if (btn.name == "FOCUS") defaultPos = isLefty ? new Vector2(337, 315) : new Vector2(-337, 315);
+                    else if (btn.name == "JUMP") defaultPos = isLefty ? new Vector2(112, 390) : new Vector2(-112, 390);
 
                     Vector2 savedPos = GetButtonPosition(btn.name, defaultPos);
                     var rect = btn.GetComponent<RectTransform>();
@@ -1596,22 +1598,101 @@ namespace TheAlchemistsCrypt.UI
             }
         }
 
+        // ── Procedural lightning bolt texture generator ───────────────────────
+        private Sprite CreateProceduralLightningSprite(int width, int height)
+        {
+            Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            Color[] pixels = new Color[width * height];
+            for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.clear;
+
+            Vector2 start = new Vector2(width * 0.5f, height - 1);
+            DrawBoltSegment(pixels, width, height, start, 0, height, 8, true);
+
+            tex.SetPixels(pixels);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+        }
+
+        private void DrawBoltSegment(Color[] pixels, int width, int height, Vector2 pos, float angle, float remaining, int thickness, bool canBranch)
+        {
+            if (remaining < 5f) return;
+            float segLen = Random.Range(18f, 40f);
+            float newAngle = angle + Random.Range(-35f, 35f);
+            float rad = newAngle * Mathf.Deg2Rad;
+            Vector2 end = pos + new Vector2(Mathf.Sin(rad) * segLen, -Mathf.Cos(rad) * segLen);
+            end.x = Mathf.Clamp(end.x, 0, width - 1);
+            end.y = Mathf.Clamp(end.y, 0, height - 1);
+
+            int steps = Mathf.Max(1, Mathf.RoundToInt(segLen));
+            for (int s = 0; s <= steps; s++)
+            {
+                float t = (float)s / steps;
+                int px = Mathf.RoundToInt(Mathf.Lerp(pos.x, end.x, t));
+                int py = Mathf.RoundToInt(Mathf.Lerp(pos.y, end.y, t));
+                float bright = Mathf.Lerp(1f, 0.6f, t);
+                Color c = new Color(0.9f, 0.95f, 1f, bright);
+                for (int dy = -thickness; dy <= thickness; dy++)
+                    for (int dx = -thickness; dx <= thickness; dx++)
+                    {
+                        float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                        if (dist > thickness) continue;
+                        int nx = Mathf.Clamp(px + dx, 0, width - 1);
+                        int ny = Mathf.Clamp(py + dy, 0, height - 1);
+                        float falloff = 1f - (dist / (thickness + 0.01f));
+                        Color existing = pixels[ny * width + nx];
+                        pixels[ny * width + nx] = new Color(c.r, c.g, c.b, Mathf.Max(existing.a, c.a * falloff));
+                    }
+            }
+
+            DrawBoltSegment(pixels, width, height, end, newAngle, remaining - segLen, Mathf.Max(1, thickness - 1), canBranch);
+            if (canBranch && remaining > 30f && Random.value < 0.45f)
+            {
+                float branchAngle = newAngle + Random.Range(20f, 55f) * (Random.value > 0.5f ? 1 : -1);
+                DrawBoltSegment(pixels, width, height, end, branchAngle, remaining * Random.Range(0.3f, 0.5f), Mathf.Max(1, thickness - 2), false);
+            }
+        }
+
         private IEnumerator LightningFlashesRoutine(Image img)
         {
+            // Create a bolt Image sibling to the flash overlay
+            var boltGo = new GameObject("LightningBolt", typeof(RectTransform), typeof(Image));
+            boltGo.transform.SetParent(img.transform.parent, false);
+            var boltRect = boltGo.GetComponent<RectTransform>();
+            boltRect.anchorMin = boltRect.anchorMax = new Vector2(0.5f, 0.5f);
+            boltRect.sizeDelta = new Vector2(200, 500);
+            var boltImg = boltGo.GetComponent<Image>();
+            boltImg.raycastTarget = false;
+            boltImg.color = new Color(1f, 1f, 1f, 0f);
+
             while (img != null)
             {
                 yield return new WaitForSecondsRealtime(Random.Range(2.5f, 6.5f));
                 if (img == null) break;
 
+                // Spawn fresh bolt at random screen position
+                if (boltImg != null)
+                {
+                    boltImg.sprite = CreateProceduralLightningSprite(200, 500);
+                    float rx = Random.Range(-0.4f, 0.4f) * 1920f;
+                    float ry = Random.Range(0.0f, 0.3f) * 1080f;
+                    boltRect.anchoredPosition = new Vector2(rx, ry);
+                    boltRect.localRotation = Quaternion.Euler(0, 0, Random.Range(-15f, 15f));
+                    float boltScale = Random.Range(1.5f, 3f);
+                    boltRect.localScale = new Vector3(boltScale, boltScale, 1f);
+                }
+
                 float flashIntensity = Random.Range(0.4f, 0.75f);
                 img.color = new Color(1f, 0.95f, 0.85f, flashIntensity);
+                if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, flashIntensity * 1.2f);
 
                 float elapsed = 0f;
                 float duration = Random.Range(0.08f, 0.15f);
                 while (elapsed < duration && img != null)
                 {
                     elapsed += Time.unscaledDeltaTime;
-                    img.color = new Color(1f, 0.95f, 0.85f, Mathf.Lerp(flashIntensity, 0f, elapsed / duration));
+                    float ft = elapsed / duration;
+                    img.color = new Color(1f, 0.95f, 0.85f, Mathf.Lerp(flashIntensity, 0f, ft));
+                    if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, Mathf.Lerp(flashIntensity * 1.2f, 0f, ft));
                     yield return null;
                 }
 
@@ -1622,18 +1703,22 @@ namespace TheAlchemistsCrypt.UI
 
                     flashIntensity = Random.Range(0.2f, 0.45f);
                     img.color = new Color(1f, 0.95f, 0.85f, flashIntensity);
+                    if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, flashIntensity);
 
                     elapsed = 0f;
                     duration = Random.Range(0.12f, 0.25f);
                     while (elapsed < duration && img != null)
                     {
                         elapsed += Time.unscaledDeltaTime;
-                        img.color = new Color(1f, 0.95f, 0.85f, Mathf.Lerp(flashIntensity, 0f, elapsed / duration));
+                        float ft = elapsed / duration;
+                        img.color = new Color(1f, 0.95f, 0.85f, Mathf.Lerp(flashIntensity, 0f, ft));
+                        if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, Mathf.Lerp(flashIntensity, 0f, ft));
                         yield return null;
                     }
                 }
 
                 if (img != null) img.color = new Color(1f, 1f, 1f, 0f);
+                if (boltImg != null) boltImg.color = new Color(1f, 1f, 1f, 0f);
             }
         }
     }

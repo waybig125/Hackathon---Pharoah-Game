@@ -214,9 +214,9 @@ namespace InfimaGames.LowPolyShooterPack
             //Get Muzzle Socket. This is the point we fire from.
             Transform muzzleSocket = muzzleBehaviour.GetSocket();
             
-            //Play the firing animation with a smooth blend to prevent violent snapping (stutter bug)
+            //Play the firing animation instantly (classic snappy feel)
             const string stateName = "Fire";
-            animator.CrossFade(stateName, 0.02f, 0, 0.0f);
+            animator.Play(stateName, 0, 0.0f);
             //Reduce ammunition! We just shot, so we need to get rid of one!
             ammunitionCurrent = Mathf.Clamp(ammunitionCurrent - 1, 0, magazineBehaviour.GetAmmunitionTotal());
 

@@ -14,7 +14,8 @@ namespace TheAlchemistsCrypt.UI
                 private void UpdateSprintVisuals() {
                     if (sprintShadowImage && sprintIconImage) {
                         sprintShadowImage.gameObject.SetActive(sprintToggleState);
-                        sprintIconImage.color = sprintToggleState ? Color.white : new Color(0.8f, 0.8f, 0.8f, 1f);
+                        // Full opacity when active, 80% opacity when idle
+                        sprintIconImage.color = sprintToggleState ? new Color(1f, 1f, 1f, 1f) : new Color(1f, 1f, 1f, 0.8f);
                     }
                 }
 
