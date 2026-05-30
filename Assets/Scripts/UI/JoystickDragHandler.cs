@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace TheAlchemistsCrypt.UI
 {
@@ -10,11 +11,39 @@ namespace TheAlchemistsCrypt.UI
         public float movementRange = 180f;
         private int trackedPointerId = -1;
 
+        // ── Opacity: 80% idle, 100% when being used ──────────────────────────
+        private Image ringImage;
+        private Image knobImage;
+        private const float IdleAlpha   = 0.8f;
+        private const float ActiveAlpha = 1.0f;
+
+        private void Start()
+        {
+            // Cache Image components
+            if (backgroundRing != null) ringImage = backgroundRing.GetComponent<Image>();
+            if (knobVisual     != null) knobImage  = knobVisual.GetComponent<Image>();
+            // Set idle (80%) opacity immediately
+            SetJoystickAlpha(IdleAlpha);
+        }
+
+        private void SetJoystickAlpha(float alpha)
+        {
+            if (ringImage != null)
+            {
+                var c = ringImage.color; c.a = alpha; ringImage.color = c;
+            }
+            if (knobImage != null)
+            {
+                var c = knobImage.color; c.a = alpha; knobImage.color = c;
+            }
+        }
+
         public void OnPointerDown(PointerEventData eventData)
         {
             if (trackedPointerId == -1)
             {
                 trackedPointerId = eventData.pointerId;
+                SetJoystickAlpha(ActiveAlpha); // Full opacity while touching
                 OnDrag(eventData);
             }
         }
@@ -46,6 +75,7 @@ namespace TheAlchemistsCrypt.UI
             {
                 trackedPointerId = -1;
                 knobVisual.anchoredPosition = Vector2.zero;
+                SetJoystickAlpha(IdleAlpha); // Back to 80% opacity
                 if (TheAlchemistsCrypt.Input.MobileInputManager.Instance != null)
                 {
                     TheAlchemistsCrypt.Input.MobileInputManager.Instance.VirtualJoystickInput = Vector2.zero;

@@ -67,12 +67,38 @@ namespace TheAlchemistsCrypt.Editor
                     beach.transform.localScale = new Vector3(3000f, 40f, 1f);
 
                     var beachMat = new Material(GetLitShader());
-                    beachMat.SetColor("_BaseColor", new Color(0.85f, 0.75f, 0.6f, 1f)); 
-                    beachMat.SetFloat("_Smoothness", 0.1f);
+                    // ─── Try to match the main Terrain's first splat (sand) layer ───
+                    // This makes the beach floor look identical to the surrounding desert ground.
+                    Terrain mainTerrain = Terrain.activeTerrain;
+                    bool matchedTerrain = false;
+                    if (mainTerrain != null && mainTerrain.terrainData != null)
+                    {
+                        var layers = mainTerrain.terrainData.terrainLayers;
+                        if (layers != null && layers.Length > 0 && layers[0] != null)
+                        {
+                            Texture2D diffuse = layers[0].diffuseTexture;
+                            if (diffuse != null)
+                            {
+                                beachMat.SetTexture("_BaseMap", diffuse);
+                                beachMat.SetTextureScale("_BaseMap", new Vector2(40f, 40f));
+                                beachMat.SetColor("_BaseColor", Color.white);
+                                matchedTerrain = true;
+                                Debug.Log("[CityGen] BeachZone: Matched terrain first splat layer texture.");
+                            }
+                        }
+                    }
+                    if (!matchedTerrain)
+                    {
+                        // Fallback: warm desert sand tint
+                        beachMat.SetColor("_BaseColor", new Color(0.85f, 0.75f, 0.6f, 1f));
+                        Debug.LogWarning("[CityGen] BeachZone: No terrain found — using flat sand colour.");
+                    }
+                    beachMat.SetFloat("_Smoothness", 0.08f);
                     beachMat.enableInstancing = true;
                     beach.GetComponent<Renderer>().sharedMaterial = beachMat;
                     beach.isStatic = true;
                     DestroyImmediate(beach.GetComponent<Collider>());
+
 
                     // Split the coastline barrier into a left section and a right section to leave a gap at X = 0
                     GameObject barrierLeft = new GameObject("CoastlineBarrierLeft");

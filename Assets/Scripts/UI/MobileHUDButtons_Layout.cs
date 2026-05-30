@@ -233,16 +233,19 @@ namespace TheAlchemistsCrypt.UI
                     hpLblGo.anchorMin = hpLblGo.anchorMax = new Vector2(0f, 0.5f);
                     hpLblGo.pivot = new Vector2(0f, 0.5f);
                     hpLblGo.anchoredPosition = new Vector2(54, 0);
-                    hpLblGo.sizeDelta = new Vector2(30, 30);
+                    hpLblGo.sizeDelta = new Vector2(36, 34);
                     var hpLblTxt = hpLblGo.GetComponent<TextMeshProUGUI>();
                     hpLblTxt.font = GetTitleFont();
-                    hpLblTxt.fontSize = 14;
+                    hpLblTxt.fontSize = 15;
                     hpLblTxt.fontStyle = FontStyles.Bold;
-                    hpLblTxt.alignment = TextAlignmentOptions.Left;
-                    hpLblTxt.color = new Color(1.0f, 0.75f, 0.15f, 1f); // Brighter Amber
-                    var hpOut = hpLblGo.gameObject.AddComponent<UnityEngine.UI.Outline>();
-                    hpOut.effectColor = new Color(0, 0, 0, 0.8f);
-                    hpOut.effectDistance = new Vector2(1, -1);
+                    hpLblTxt.alignment = TextAlignmentOptions.Center;
+                    hpLblTxt.color = new Color(1.0f, 0.8f, 0.2f, 1f); // Bright amber
+                    hpLblTxt.overflowMode = TextOverflowModes.Overflow;
+                    hpLblTxt.enableWordWrapping = false; // No line breaks
+                    // Glow outline for maximum readability
+                    hpLblTxt.outlineColor = new Color32(0, 0, 0, 230);
+                    hpLblTxt.outlineWidth = 0.25f;
+                    hpLblTxt.fontSharedMaterial?.EnableKeyword("OUTLINE_ON");
                     hpLblTxt.text = "HP";
 
                     // Hidden healthText (kept for compatibility)
@@ -279,16 +282,17 @@ namespace TheAlchemistsCrypt.UI
                     hpValGo.anchorMin = hpValGo.anchorMax = new Vector2(0f, 0.5f);
                     hpValGo.pivot = new Vector2(0f, 0.5f);
                     hpValGo.anchoredPosition = new Vector2(308, 0);
-                    hpValGo.sizeDelta = new Vector2(65, 30);
+                    hpValGo.sizeDelta = new Vector2(75, 34);
                     healthValueText = hpValGo.GetComponent<TextMeshProUGUI>();
                     healthValueText.font = GetTitleFont();
-                    healthValueText.fontSize = 16;
+                    healthValueText.fontSize = 15;
                     healthValueText.fontStyle = FontStyles.Bold;
                     healthValueText.alignment = TextAlignmentOptions.Right;
-                    healthValueText.color = new Color(0.4f, 1.0f, 0.5f, 1f); // Vivid bright green
-                    var hpValOut = hpValGo.gameObject.AddComponent<UnityEngine.UI.Outline>();
-                    hpValOut.effectColor = new Color(0, 0, 0, 0.8f);
-                    hpValOut.effectDistance = new Vector2(1, -1);
+                    healthValueText.color = new Color(0.5f, 1.0f, 0.5f, 1f); // Vivid bright green
+                    healthValueText.overflowMode = TextOverflowModes.Overflow;
+                    healthValueText.enableWordWrapping = false; // Always single-line
+                    healthValueText.outlineColor = new Color32(0, 0, 0, 220);
+                    healthValueText.outlineWidth = 0.22f;
                     healthValueText.text = "100%";
 
                     // DOTween entrance slide-in
@@ -340,16 +344,17 @@ namespace TheAlchemistsCrypt.UI
                     ammoValGo.anchorMin = ammoValGo.anchorMax = new Vector2(0f, 0.5f);
                     ammoValGo.pivot = new Vector2(0f, 0.5f);
                     ammoValGo.anchoredPosition = new Vector2(54, 0);
-                    ammoValGo.sizeDelta = new Vector2(30, 30);
+                    ammoValGo.sizeDelta = new Vector2(36, 34);
                     var ammoLblTxt = ammoValGo.GetComponent<TextMeshProUGUI>();
                     ammoLblTxt.font = GetTitleFont();
-                    ammoLblTxt.fontSize = 14;
+                    ammoLblTxt.fontSize = 15;
                     ammoLblTxt.fontStyle = FontStyles.Bold;
-                    ammoLblTxt.alignment = TextAlignmentOptions.Left;
-                    ammoLblTxt.color = new Color(1.0f, 0.75f, 0.15f, 1f); // Brighter Amber
-                    var amOut = ammoValGo.gameObject.AddComponent<UnityEngine.UI.Outline>();
-                    amOut.effectColor = new Color(0, 0, 0, 0.8f);
-                    amOut.effectDistance = new Vector2(1, -1);
+                    ammoLblTxt.alignment = TextAlignmentOptions.Center;
+                    ammoLblTxt.color = new Color(1.0f, 0.8f, 0.2f, 1f); // Bright amber
+                    ammoLblTxt.overflowMode = TextOverflowModes.Overflow;
+                    ammoLblTxt.enableWordWrapping = false;
+                    ammoLblTxt.outlineColor = new Color32(0, 0, 0, 230);
+                    ammoLblTxt.outlineWidth = 0.25f;
                     ammoLblTxt.text = "AM";
 
                     // Bar background
@@ -378,17 +383,18 @@ namespace TheAlchemistsCrypt.UI
                     ammoCountValGo.SetParent(ammoPanel, false);
                     ammoCountValGo.anchorMin = ammoCountValGo.anchorMax = new Vector2(0f, 0.5f);
                     ammoCountValGo.pivot = new Vector2(0f, 0.5f);
-                    ammoCountValGo.anchoredPosition = new Vector2(308, 0);
-                    ammoCountValGo.sizeDelta = new Vector2(65, 30);
+                    ammoCountValGo.anchoredPosition = new Vector2(305, 0);
+                    ammoCountValGo.sizeDelta = new Vector2(75, 34);
                     ammoValueText = ammoCountValGo.GetComponent<TextMeshProUGUI>();
                     ammoValueText.font = GetTitleFont();
-                    ammoValueText.fontSize = 16;
+                    ammoValueText.fontSize = 15;
                     ammoValueText.fontStyle = FontStyles.Bold;
                     ammoValueText.alignment = TextAlignmentOptions.Right;
                     ammoValueText.color = new Color(1.0f, 0.85f, 0.3f, 1f); // Bright yellow
-                    var amValOut = ammoCountValGo.gameObject.AddComponent<UnityEngine.UI.Outline>();
-                    amValOut.effectColor = new Color(0, 0, 0, 0.8f);
-                    amValOut.effectDistance = new Vector2(1, -1);
+                    ammoValueText.overflowMode = TextOverflowModes.Overflow;
+                    ammoValueText.enableWordWrapping = false; // Single-line always
+                    ammoValueText.outlineColor = new Color32(0, 0, 0, 220);
+                    ammoValueText.outlineWidth = 0.22f;
                     ammoValueText.text = "30/30";
 
                     // ═══════════════════════════════════════════════════════
@@ -422,11 +428,15 @@ namespace TheAlchemistsCrypt.UI
                     killsText.fontSize = 13;
                     killsText.fontStyle = FontStyles.Bold;
                     killsText.alignment = TextAlignmentOptions.Left;
-                    killsText.color = new Color(1.0f, 0.8f, 0.2f, 1f);
+                    killsText.color = new Color(1.0f, 0.85f, 0.25f, 1f);
+                    killsText.overflowMode = TextOverflowModes.Overflow;
+                    killsText.enableWordWrapping = false; // Single-line
+                    killsText.outlineColor = new Color32(0, 0, 0, 220);
+                    killsText.outlineWidth = 0.22f;
 
                     var killsOut = killsTxtGo.gameObject.AddComponent<UnityEngine.UI.Outline>();
                     killsOut.effectColor = new Color(0, 0, 0, 0.8f);
-                    killsOut.effectDistance = new Vector2(1, -1);
+                    killsOut.effectDistance = new Vector2(2, -2); // Bigger shadow for glow
                     killsText.text = "KILLS: 0/20";
 
                     // DOTween entrance slide-in (slight delay after HP bar)

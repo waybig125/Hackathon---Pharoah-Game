@@ -231,9 +231,8 @@ namespace InfimaGames.LowPolyShooterPack
                 out RaycastHit hit, maximumDistance, mask))
                 rotation = Quaternion.LookRotation(hit.point - muzzleSocket.position);
                 
-            //Spawn projectile slightly forward to prevent clipping with the player/gun colliders
-            Vector3 spawnOffset = rotation * Vector3.forward * 0.25f;
-            GameObject projectile = Instantiate(prefabProjectile, muzzleSocket.position + spawnOffset, rotation);
+            //Spawn projectile from the muzzle socket (classic position — no offset clipping issues)
+            GameObject projectile = Instantiate(prefabProjectile, muzzleSocket.position, rotation);
             //Add velocity to the projectile.
             projectile.GetComponent<Rigidbody>().linearVelocity = projectile.transform.forward * projectileImpulse;
 

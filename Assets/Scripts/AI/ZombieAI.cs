@@ -430,8 +430,52 @@ namespace TheAlchemistsCrypt.AI
             if (gameObject.activeInHierarchy)
             {
                 StartCoroutine(SnapToNavMeshDelayed());
+                // ── Fade in over 3 seconds so mummies materialize instead of popping ──
+                StartCoroutine(FadeInOnSpawn(3.0f));
             }
         }
+
+        /// <summary>Fades all renderers from fully transparent to fully opaque over <paramref name="duration"/> seconds.</summary>
+        private System.Collections.IEnumerator FadeInOnSpawn(float duration)
+        {
+            // Cache renderers if needed
+            if (cachedRenderers == null) cachedRenderers = GetComponentsInChildren<Renderer>(true);
+            if (cachedMPB == null)       cachedMPB = new MaterialPropertyBlock();
+
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                float alpha = Mathf.Clamp01(elapsed / duration);
+                foreach (var r in cachedRenderers)
+                {
+                    if (r == null) continue;
+                    r.GetPropertyBlock(cachedMPB);
+                    // Set both legacy _Color and URP _BaseColor — handles both shader types
+                    Color col = cachedMPB.GetColor("_BaseColor");
+                    if (col == Color.clear) col = Color.white;
+                    col.a = alpha;
+                    cachedMPB.SetColor("_BaseColor", col);
+                    cachedMPB.SetColor("_Color",     col);
+                    r.SetPropertyBlock(cachedMPB);
+                }
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            // Ensure fully opaque at the end and clear the property block override
+            foreach (var r in cachedRenderers)
+            {
+                if (r == null) continue;
+                r.GetPropertyBlock(cachedMPB);
+                Color col = cachedMPB.GetColor("_BaseColor");
+                if (col == Color.clear) col = Color.white;
+                col.a = 1f;
+                cachedMPB.SetColor("_BaseColor", col);
+                cachedMPB.SetColor("_Color",     col);
+                r.SetPropertyBlock(cachedMPB);
+            }
+        }
+
 
         private System.Collections.IEnumerator SnapToNavMeshDelayed()
         {
