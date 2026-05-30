@@ -128,6 +128,18 @@ namespace InfimaGames.LowPolyShooterPack
         /// </summary>
         private Transform playerCamera;
         
+        // --- PROCEDURAL RECOIL ---
+        private Vector3 targetRecoilPos;
+        private Vector3 targetRecoilRot;
+        private Vector3 currentRecoilPos;
+        private Vector3 currentRecoilRot;
+        private Vector3 baseLocalPos;
+        private Quaternion baseLocalRot;
+
+        [Header("Recoil Settings")]
+        [SerializeField] private float recoilSnappiness = 30f;
+        [SerializeField] private float recoilReturnSpeed = 15f;
+        
         #endregion
 
         #region UNITY
@@ -145,6 +157,9 @@ namespace InfimaGames.LowPolyShooterPack
             characterBehaviour = gameModeService.GetPlayerCharacter();
             //Cache the world camera. We use this in line traces.
             playerCamera = characterBehaviour.GetCameraWorld().transform;
+            
+            baseLocalPos = transform.localPosition;
+            baseLocalRot = transform.localRotation;
         }
         protected override void Start()
         {
@@ -159,6 +174,25 @@ namespace InfimaGames.LowPolyShooterPack
 
             //Max Out Ammo.
             ammunitionCurrent = magazineBehaviour.GetAmmunitionTotal();
+        }
+
+        protected override void LateUpdate()
+        {
+            base.LateUpdate();
+
+            // 1. Pull target back to zero (the spring tension)
+            targetRecoilPos = Vector3.Lerp(targetRecoilPos, Vector3.zero, recoilReturnSpeed * Time.deltaTime);
+            targetRecoilRot = Vector3.Lerp(targetRecoilRot, Vector3.zero, recoilReturnSpeed * Time.deltaTime);
+
+            // 2. Snap current values towards target (the movement)
+            currentRecoilPos = Vector3.Slerp(currentRecoilPos, targetRecoilPos, recoilSnappiness * Time.fixedDeltaTime);
+            currentRecoilRot = Vector3.Slerp(currentRecoilRot, targetRecoilRot, recoilSnappiness * Time.fixedDeltaTime);
+
+            // 3. Apply the recoil offset ADDITIVELY to the current transform.
+            // Using baseLocalPos as an absolute fallback to prevent the gun from "walking away" if animations stop early.
+            // But we don't completely override the animator. We blend it.
+            transform.localPosition += currentRecoilPos;
+            transform.localRotation *= Quaternion.Euler(currentRecoilRot);
         }
 
         #endregion
@@ -214,9 +248,13 @@ namespace InfimaGames.LowPolyShooterPack
             //Get Muzzle Socket. This is the point we fire from.
             Transform muzzleSocket = muzzleBehaviour.GetSocket();
             
-            //Play the firing animation instantly (classic snappy feel)
+            //Play the firing animation by crossfading to prevent hard snapping
             const string stateName = "Fire";
-            animator.Play(stateName, 0, 0.0f);
+            animator.CrossFade(stateName, 0.05f, 0, 0.0f);
+            
+            // --- HACKATHON: Procedural Rotational Kick ---
+            targetRecoilRot += new Vector3(-3f, Random.Range(-1.5f, 1.5f), Random.Range(-1f, 1f)); // Kick up + random horizontal
+
             //Reduce ammunition! We just shot, so we need to get rid of one!
             ammunitionCurrent = Mathf.Clamp(ammunitionCurrent - 1, 0, magazineBehaviour.GetAmmunitionTotal());
 
@@ -235,16 +273,6 @@ namespace InfimaGames.LowPolyShooterPack
             GameObject projectile = Instantiate(prefabProjectile, muzzleSocket.position, rotation);
             //Add velocity to the projectile.
             projectile.GetComponent<Rigidbody>().linearVelocity = projectile.transform.forward * projectileImpulse;
-
-            // --- HACKATHON: Dynamic Muzzle Flash Light ---
-            GameObject flash = new GameObject("MuzzleFlashLight");
-            flash.transform.position = muzzleSocket.position;
-            var light = flash.AddComponent<Light>();
-            light.type = LightType.Point;
-            light.color = new Color(1f, 0.8f, 0.3f);
-            light.range = 8f;
-            light.intensity = 5f;
-            Destroy(flash, 0.05f); // Super fast flash
         }
 
         public override void FillAmmunition(int amount)
