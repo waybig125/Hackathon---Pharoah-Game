@@ -104,12 +104,14 @@ float3 normal : NORMAL;
 float2 texcoord : TEXCOORD0;
 float4 texcoord1 : TEXCOORD1;
 float4 color : COLOR;
+UNITY_VERTEX_INPUT_INSTANCE_ID
 };
 
 //----------------------------------------------
 
 void vert(inout appdata v, out Input o) {
 UNITY_INITIALIZE_OUTPUT(Input, o);
+UNITY_SETUP_INSTANCE_ID(v);
 #if defined(DSKY_CLOUD_1) || defined(DSKY_CLOUD_2)
 o.posTex = float4(v.texcoord * 1.0 - 1.0, 0.0, 1.0);
 #endif

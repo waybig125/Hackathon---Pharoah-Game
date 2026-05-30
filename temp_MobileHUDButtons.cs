@@ -24,7 +24,6 @@ namespace TheAlchemistsCrypt.UI
         private TextMeshProUGUI healthValueText;
         private TextMeshProUGUI ammoValueText;
         private TextMeshProUGUI killsText;
-        private TextMeshProUGUI elementText;
 
         private Image healthBarFill;
         private Image ammoBarFill;
@@ -1156,6 +1155,17 @@ namespace TheAlchemistsCrypt.UI
             if (!HasStartedGame)
             {
                 CreateStartScreen();
+
+                // Prolong the built-in splash screen until it naturally finishes,
+                // drawing it manually to ensure seamless transition straight to the start Voyage UI.
+                #if !UNITY_EDITOR
+                UnityEngine.Rendering.SplashScreen.Begin();
+                while (!UnityEngine.Rendering.SplashScreen.isFinished)
+                {
+                    UnityEngine.Rendering.SplashScreen.Draw();
+                    yield return null;
+                }
+                #endif
             }
             yield return null;
         }

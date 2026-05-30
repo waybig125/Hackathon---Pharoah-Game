@@ -135,8 +135,14 @@ namespace TheAlchemistsCrypt.UI
 
              if (ammoValueText != null)
              {
-                 ammoValueText.text = $"{modeName}  {c}/30";
+                 ammoValueText.text = $"{c}/30";
                  ammoValueText.color = tickColor;
+             }
+
+             if (elementText != null)
+             {
+                 elementText.text = modeName;
+                 elementText.color = tickColor;
              }
          }
 
