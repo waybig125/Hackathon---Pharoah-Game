@@ -8,76 +8,29 @@ namespace TheAlchemistsCrypt.Weapons
         
         [Header("Projectile Settings")]
         public ElementType element;
-        [SerializeField] private float speed = 250f; // Snappy tracer speed
-        [SerializeField] private float lifetime = 1.5f;
+        [SerializeField] private float speed = 20f;
+        [SerializeField] private float lifetime = 5f;
+        // [SerializeField] private float damage = 10f; // Unused warning fix
 
         private Rigidbody rb;
-        private TrailRenderer trail;
-        private MeshRenderer meshRenderer;
 
         private void Awake()
         {
             rb = GetComponent<Rigidbody>();
-            meshRenderer = GetComponent<MeshRenderer>();
-            
             if (rb != null)
             {
                 rb.freezeRotation = true;
                 rb.useGravity = false;
-                rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
             }
-            
-            // Setup the 'Tracer' visual
-            trail = GetComponentInChildren<TrailRenderer>();
-            if (trail != null)
+            var col = GetComponent<Collider>();
+            if (col != null)
             {
-                // High-quality tracer configuration
-                trail.widthCurve = new AnimationCurve(new Keyframe(0f, 0.08f), new Keyframe(1f, 0.01f));
-                trail.time = 0.08f; // Extremely short trail for high speed
-                trail.minVertexDistance = 0.05f;
-                trail.emitting = true;
-                trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                trail.receiveShadows = false;
-                
-                // Set color based on element
-                Gradient gradient = new Gradient();
-                Color col = GetElementColor();
-                gradient.SetKeys(
-                    new GradientColorKey[] { new GradientColorKey(col * 2.5f, 0.0f), new GradientColorKey(col * 0.8f, 1.0f) },
-                    new GradientAlphaKey[] { new GradientAlphaKey(1.0f, 0.0f), new GradientAlphaKey(0.0f, 1.0f) }
-                );
-                trail.colorGradient = gradient;
-
-                // Ensure the material is additive/unlit for a 'glow' look
-                if (trail.sharedMaterial != null)
-                {
-                    trail.sharedMaterial.EnableKeyword("_EMISSION");
-                    trail.sharedMaterial.SetColor("_EmissionColor", col * 3.0f);
-                }
-            }
-
-            // Hide the physical bullet mesh (tracers don't need a visible lead object)
-            if (meshRenderer != null) meshRenderer.enabled = false;
-
-            var colCom = GetComponent<Collider>();
-            if (colCom != null) colCom.isTrigger = true;
-        }
-
-        private Color GetElementColor()
-        {
-            switch (element)
-            {
-                case ElementType.Sulfur: return new Color(1f, 0.5f, 0.05f); // Fiery orange
-                case ElementType.Mercury: return new Color(0.1f, 0.9f, 1f); // Electric cyan
-                case ElementType.Salt: return new Color(0.9f, 0.9f, 1.0f); // Bright white-blue
-                default: return Color.white;
+                col.isTrigger = true;
             }
         }
 
         private void OnEnable()
         {
-            // Clear trail history to prevent 'jumping' lines when pooled
-            if (trail != null) trail.Clear();
             Invoke(nameof(Deactivate), lifetime);
         }
 
@@ -93,8 +46,7 @@ namespace TheAlchemistsCrypt.Weapons
 
         private void FixedUpdate()
         {
-            if (rb != null)
-                rb.linearVelocity = transform.forward * speed;
+            rb.linearVelocity = transform.forward * speed;
         }
 
         private void OnTriggerEnter(Collider other)

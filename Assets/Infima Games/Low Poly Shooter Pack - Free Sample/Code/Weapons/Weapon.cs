@@ -127,20 +127,6 @@ namespace InfimaGames.LowPolyShooterPack
         /// The player character's camera.
         /// </summary>
         private Transform playerCamera;
-
-        // --- HACKATHON: Professional Spring Recoil ---
-        private Vector3 targetRecoilPos;
-        private Vector3 targetRecoilRot;
-        private Vector3 currentRecoilPos;
-        private Vector3 currentRecoilRot;
-
-        [Header("Recoil Settings")]
-        [SerializeField] private float recoilSnappiness = 20f;
-        [SerializeField] private float recoilReturnSpeed = 10f;
-        
-        // The stable "Home" position to prevent drift
-        private Vector3 originalLocalPos;
-        private Quaternion originalLocalRot;
         
         #endregion
 
@@ -159,10 +145,6 @@ namespace InfimaGames.LowPolyShooterPack
             characterBehaviour = gameModeService.GetPlayerCharacter();
             //Cache the world camera. We use this in line traces.
             playerCamera = characterBehaviour.GetCameraWorld().transform;
-
-            // Capture the stable home state
-            originalLocalPos = transform.localPosition;
-            originalLocalRot = transform.localRotation;
         }
         protected override void Start()
         {
@@ -177,31 +159,6 @@ namespace InfimaGames.LowPolyShooterPack
 
             //Max Out Ammo.
             ammunitionCurrent = magazineBehaviour.GetAmmunitionTotal();
-        }
-
-        protected override void LateUpdate()
-        {
-            base.LateUpdate();
-
-            // --- Perlin Noise Sway/Recovery ---
-            float swayAmount = 0.5f;
-            float swaySpeed = 1.5f;
-            float perlinX = (Mathf.PerlinNoise(Time.time * swaySpeed, 0f) - 0.5f) * swayAmount;
-            float perlinY = (Mathf.PerlinNoise(0f, Time.time * swaySpeed) - 0.5f) * swayAmount;
-            Vector3 noiseRot = new Vector3(perlinX, perlinY, 0f);
-
-            // 1. Pull target back to zero (the spring tension)
-            targetRecoilPos = Vector3.Lerp(targetRecoilPos, Vector3.zero, recoilReturnSpeed * Time.deltaTime);
-            targetRecoilRot = Vector3.Lerp(targetRecoilRot, Vector3.zero, recoilReturnSpeed * Time.deltaTime);
-
-            // 2. Snap current values towards target (the movement)
-            currentRecoilPos = Vector3.Slerp(currentRecoilPos, targetRecoilPos, recoilSnappiness * Time.fixedDeltaTime);
-            currentRecoilRot = Vector3.Slerp(currentRecoilRot, targetRecoilRot, recoilSnappiness * Time.fixedDeltaTime);
-
-            // 3. Apply the recoil offset ADDITIVELY to the current transform
-            // This allows the animator to do its job, and we just add the kick on top.
-            transform.localPosition += currentRecoilPos;
-            transform.localRotation *= Quaternion.Euler(currentRecoilRot + noiseRot);
         }
 
         #endregion
@@ -258,40 +215,26 @@ namespace InfimaGames.LowPolyShooterPack
             Transform muzzleSocket = muzzleBehaviour.GetSocket();
             
             //Play the firing animation instantly (classic snappy feel)
-            // But we play it softly to avoid the "jumping everywhere" glitch
             const string stateName = "Fire";
             animator.Play(stateName, 0, 0.0f);
-            
-            // --- HACKATHON: Professional Spring Kick ---
-            targetRecoilPos -= new Vector3(0, 0, 0.12f); // Sharp kick back
-            targetRecoilRot += new Vector3(-4f, Random.Range(-1f, 1f), Random.Range(-0.5f, 0.5f)); // Kick up + random horizontal
-
             //Reduce ammunition! We just shot, so we need to get rid of one!
             ammunitionCurrent = Mathf.Clamp(ammunitionCurrent - 1, 0, magazineBehaviour.GetAmmunitionTotal());
 
             //Play all muzzle effects.
             muzzleBehaviour.Effect();
             
-            // Determine hit point via screen-center raycast (Perfect Aim)
-            Vector3 targetPoint = playerCamera.position + playerCamera.forward * maximumDistance;
-            if (Physics.Raycast(playerCamera.position, playerCamera.forward, out RaycastHit hit, maximumDistance, mask))
-            {
-                targetPoint = hit.point;
-            }
-
-            // Calculate rotation from muzzle to actual hit point
-            Quaternion rotation = Quaternion.LookRotation(targetPoint - muzzleSocket.position);
+            //Determine the rotation that we want to shoot our projectile in.
+            Quaternion rotation = Quaternion.LookRotation(playerCamera.forward * 1000.0f - muzzleSocket.position);
+            
+            //If there's something blocking, then we can aim directly at that thing, which will result in more accurate shooting.
+            if (Physics.Raycast(new Ray(playerCamera.position, playerCamera.forward),
+                out RaycastHit hit, maximumDistance, mask))
+                rotation = Quaternion.LookRotation(hit.point - muzzleSocket.position);
                 
             //Spawn projectile from the muzzle socket (classic position — no offset clipping issues)
             GameObject projectile = Instantiate(prefabProjectile, muzzleSocket.position, rotation);
-            
-            // Add velocity to the projectile. We use a high impulse for a "tracer" feel.
-            var rb = projectile.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.linearVelocity = projectile.transform.forward * projectileImpulse;
-                rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-            }
+            //Add velocity to the projectile.
+            projectile.GetComponent<Rigidbody>().linearVelocity = projectile.transform.forward * projectileImpulse;
 
             // --- HACKATHON: Dynamic Muzzle Flash Light ---
             GameObject flash = new GameObject("MuzzleFlashLight");
