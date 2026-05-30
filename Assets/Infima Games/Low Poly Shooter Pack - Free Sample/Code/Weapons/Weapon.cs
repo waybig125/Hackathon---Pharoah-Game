@@ -214,9 +214,10 @@ namespace InfimaGames.LowPolyShooterPack
             //Get Muzzle Socket. This is the point we fire from.
             Transform muzzleSocket = muzzleBehaviour.GetSocket();
             
-            //Play the firing animation.
+            //Play the firing animation instantly (classic snappy feel)
             const string stateName = "Fire";
             animator.Play(stateName, 0, 0.0f);
+            
             //Reduce ammunition! We just shot, so we need to get rid of one!
             ammunitionCurrent = Mathf.Clamp(ammunitionCurrent - 1, 0, magazineBehaviour.GetAmmunitionTotal());
 
@@ -231,13 +232,14 @@ namespace InfimaGames.LowPolyShooterPack
                 out RaycastHit hit, maximumDistance, mask))
                 rotation = Quaternion.LookRotation(hit.point - muzzleSocket.position);
                 
-            //Spawn projectile from the projectile spawn point.
+            //Spawn projectile from the muzzle socket (classic position — no offset clipping issues)
             GameObject projectile = Instantiate(prefabProjectile, muzzleSocket.position, rotation);
             //Add velocity to the projectile.
-            projectile.GetComponent<Rigidbody>().linearVelocity = projectile.transform.forward * projectileImpulse;   
-            
-            // --- HACKATHON: Subtle Camera Shake (No Rotation Drift) ---
-            StartCoroutine(ShakeCamera(0.08f, 0.04f));
+            projectile.GetComponent<Rigidbody>().linearVelocity = projectile.transform.forward * projectileImpulse;
+
+            // --- HACKATHON: Trigger safe Rotational Camera Kick ---
+            var camLook = playerCamera.GetComponentInParent<CameraLook>();
+            if (camLook != null) camLook.ApplyRecoilKick(-3.5f, Random.Range(-1f, 1f));
 
             // --- HACKATHON: Dynamic Muzzle Flash Light ---
             GameObject flash = new GameObject("MuzzleFlashLight");
@@ -248,21 +250,6 @@ namespace InfimaGames.LowPolyShooterPack
             light.range = 8f;
             light.intensity = 5f;
             Destroy(flash, 0.05f); 
-        }
-
-        private System.Collections.IEnumerator ShakeCamera(float duration, float magnitude)
-        {
-            Vector3 originalPos = playerCamera.localPosition;
-            float elapsed = 0.0f;
-            while (elapsed < duration)
-            {
-                float x = Random.Range(-1f, 1f) * magnitude;
-                float y = Random.Range(-1f, 1f) * magnitude;
-                playerCamera.localPosition = originalPos + new Vector3(x, y, 0);
-                elapsed += Time.deltaTime;
-                yield return null;
-            }
-            playerCamera.localPosition = originalPos;
         }
 
         public override void FillAmmunition(int amount)
