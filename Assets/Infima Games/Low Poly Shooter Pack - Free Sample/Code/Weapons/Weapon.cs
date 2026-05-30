@@ -256,10 +256,6 @@ namespace InfimaGames.LowPolyShooterPack
                 }
             }
 
-            // --- HACKATHON: Trigger safe Rotational Camera Kick ---
-            var camLook = playerCamera.GetComponentInParent<CameraLook>();
-            if (camLook != null) camLook.ApplyRecoilKick(-3.5f, Random.Range(-1f, 1f));
-
             // --- HACKATHON: Dynamic Muzzle Flash Light ---
             GameObject flash = new GameObject("MuzzleFlashLight");
             flash.transform.position = muzzleSocket.position;
