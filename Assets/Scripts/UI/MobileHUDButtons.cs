@@ -1600,7 +1600,7 @@ namespace TheAlchemistsCrypt.UI
         {
             while (img != null)
             {
-                yield return new WaitForSeconds(Random.Range(2.5f, 6.5f));
+                yield return new WaitForSecondsRealtime(Random.Range(2.5f, 6.5f));
                 if (img == null) break;
 
                 float flashIntensity = Random.Range(0.4f, 0.75f);
@@ -1610,14 +1610,14 @@ namespace TheAlchemistsCrypt.UI
                 float duration = Random.Range(0.08f, 0.15f);
                 while (elapsed < duration && img != null)
                 {
-                    elapsed += Time.deltaTime;
+                    elapsed += Time.unscaledDeltaTime;
                     img.color = new Color(1f, 0.95f, 0.85f, Mathf.Lerp(flashIntensity, 0f, elapsed / duration));
                     yield return null;
                 }
 
                 if (img != null && Random.value < 0.6f)
                 {
-                    yield return new WaitForSeconds(Random.Range(0.05f, 0.12f));
+                    yield return new WaitForSecondsRealtime(Random.Range(0.05f, 0.12f));
                     if (img == null) break;
 
                     flashIntensity = Random.Range(0.2f, 0.45f);
@@ -1627,7 +1627,7 @@ namespace TheAlchemistsCrypt.UI
                     duration = Random.Range(0.12f, 0.25f);
                     while (elapsed < duration && img != null)
                     {
-                        elapsed += Time.deltaTime;
+                        elapsed += Time.unscaledDeltaTime;
                         img.color = new Color(1f, 0.95f, 0.85f, Mathf.Lerp(flashIntensity, 0f, elapsed / duration));
                         yield return null;
                     }
