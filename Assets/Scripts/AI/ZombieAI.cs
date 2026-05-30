@@ -15,6 +15,7 @@ namespace TheAlchemistsCrypt.AI
 
         private Animator animator;
         private string currentAnimState = "";
+        private static float lastGlobalShoutTime = -1f;
         
         private AudioSource audioSource;
 
@@ -1018,7 +1019,11 @@ namespace TheAlchemistsCrypt.AI
                     if (stateName == "Attack")
                     {
                         // Use throttled global SFX to prevent "wall of noise" when many mummies attack at once
-                        TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mummy_attack", false, 0.5f, 0.4f);
+                        if (Time.time - lastGlobalShoutTime >= 0.8f)
+                        {
+                            lastGlobalShoutTime = Time.time;
+                            TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mummy_attack", false, 0.5f, 0.4f);
+                        }
                         FlashEyesRed();
                     }
                 }

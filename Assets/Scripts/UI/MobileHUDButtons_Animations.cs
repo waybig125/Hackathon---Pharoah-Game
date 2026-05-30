@@ -660,7 +660,11 @@ namespace TheAlchemistsCrypt.UI
                     
                     var img = bubbleGo.GetComponent<Image>();
                     img.sprite = bubbleSprite;
-                    img.color = bubbleColor;
+                    if (fillImage != null) {
+                        img.color = new Color(fillImage.color.r, fillImage.color.g, fillImage.color.b, 0.65f);
+                    } else {
+                        img.color = bubbleColor;
+                    }
                     
                     StartCoroutine(AnimateHUDBubble(rect, img, barSize.y));
                 }

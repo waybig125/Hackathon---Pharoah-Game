@@ -183,6 +183,13 @@ namespace InfimaGames.LowPolyShooterPack
         {
             base.LateUpdate();
 
+            // --- Perlin Noise Sway/Recovery ---
+            float swayAmount = 0.5f;
+            float swaySpeed = 1.5f;
+            float perlinX = (Mathf.PerlinNoise(Time.time * swaySpeed, 0f) - 0.5f) * swayAmount;
+            float perlinY = (Mathf.PerlinNoise(0f, Time.time * swaySpeed) - 0.5f) * swayAmount;
+            Vector3 noiseRot = new Vector3(perlinX, perlinY, 0f);
+
             // 1. Pull target back to zero (the spring tension)
             targetRecoilPos = Vector3.Lerp(targetRecoilPos, Vector3.zero, recoilReturnSpeed * Time.deltaTime);
             targetRecoilRot = Vector3.Lerp(targetRecoilRot, Vector3.zero, recoilReturnSpeed * Time.deltaTime);
@@ -194,7 +201,7 @@ namespace InfimaGames.LowPolyShooterPack
             // 3. Apply ONLY the recoil offset to the ORIGINAL home position/rotation
             // This ensures the gun NEVER drifts away from its starting point
             transform.localPosition = originalLocalPos + currentRecoilPos;
-            transform.localRotation = originalLocalRot * Quaternion.Euler(currentRecoilRot);
+            transform.localRotation = originalLocalRot * Quaternion.Euler(currentRecoilRot + noiseRot);
         }
 
         #endregion

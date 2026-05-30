@@ -355,7 +355,7 @@ namespace TheAlchemistsCrypt.UI
                     ammoLblTxt.textWrappingMode = TextWrappingModes.NoWrap;
                     ammoLblTxt.outlineColor = new Color32(0, 0, 0, 230);
                     ammoLblTxt.outlineWidth = 0.25f;
-                    ammoLblTxt.text = "AM";
+                    ammoLblTxt.text = " AM";
 
                     // Bar background
                     var amBgBar = new GameObject("AmmoBarBg", typeof(RectTransform), typeof(Image), typeof(Mask)).GetComponent<RectTransform>();

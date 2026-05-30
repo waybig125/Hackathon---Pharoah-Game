@@ -15,7 +15,11 @@ namespace TheAlchemistsCrypt.UI
              if (healthText) healthText.text = "";
              float fillTarget = Mathf.Clamp01(h / 100f);
              
-             if (healthBarFill) healthBarFill.rectTransform.anchorMax = new Vector2(fillTarget, 1f);
+             if (healthBarFill) {
+                 healthBarFill.rectTransform.anchorMax = new Vector2(fillTarget, 1f);
+                 // Red to Green transition
+                 healthBarFill.color = Color.Lerp(new Color(1f, 0.2f, 0.2f, 0.85f), new Color(0.2f, 1f, 0.4f, 0.85f), fillTarget);
+             }
              if (healthValueText) healthValueText.text = Mathf.RoundToInt(Mathf.Clamp(h, 0f, 100f)) + "%";
              
              if (healthCatchUpFill != null)
@@ -121,8 +125,8 @@ namespace TheAlchemistsCrypt.UI
                      {
                          string wName = weapon.name.ToLower();
                          if (wName.Contains("sulfur")) { tickColor = new Color(0.95f, 0.55f, 0.05f, 0.95f); modeName = "SULPHUR"; fillSprite = sulfurBarSprite; }
-                         else if (wName.Contains("mercury")) { tickColor = new Color(0.1f, 0.75f, 0.95f, 0.95f); modeName = "MERCURY"; fillSprite = mercuryBarSprite; }
-                         else if (wName.Contains("salt")) { tickColor = new Color(0.95f, 0.95f, 0.95f, 0.95f); modeName = "SALT"; fillSprite = saltBarSprite; }
+                         else if (wName.Contains("mercury")) { tickColor = new Color(0.2f, 0.4f, 1.0f, 0.95f); modeName = "MERCURY"; fillSprite = mercuryBarSprite; }
+                         else if (wName.Contains("salt")) { tickColor = new Color(0.6f, 0.2f, 0.9f, 0.95f); modeName = "SALT"; fillSprite = saltBarSprite; }
                      }
                  }
              }
@@ -141,7 +145,7 @@ namespace TheAlchemistsCrypt.UI
 
              if (elementText != null)
              {
-                 elementText.text = modeName;
+                 elementText.text = "ACTIVE ELEMENT: " + modeName;
                  elementText.color = tickColor;
              }
          }
