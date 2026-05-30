@@ -198,10 +198,10 @@ namespace InfimaGames.LowPolyShooterPack
             currentRecoilPos = Vector3.Slerp(currentRecoilPos, targetRecoilPos, recoilSnappiness * Time.fixedDeltaTime);
             currentRecoilRot = Vector3.Slerp(currentRecoilRot, targetRecoilRot, recoilSnappiness * Time.fixedDeltaTime);
 
-            // 3. Apply ONLY the recoil offset to the ORIGINAL home position/rotation
-            // This ensures the gun NEVER drifts away from its starting point
-            transform.localPosition = originalLocalPos + currentRecoilPos;
-            transform.localRotation = originalLocalRot * Quaternion.Euler(currentRecoilRot + noiseRot);
+            // 3. Apply the recoil offset ADDITIVELY to the current transform
+            // This allows the animator to do its job, and we just add the kick on top.
+            transform.localPosition += currentRecoilPos;
+            transform.localRotation *= Quaternion.Euler(currentRecoilRot + noiseRot);
         }
 
         #endregion

@@ -355,7 +355,7 @@ namespace TheAlchemistsCrypt.UI
                     ammoLblTxt.textWrappingMode = TextWrappingModes.NoWrap;
                     ammoLblTxt.outlineColor = new Color32(0, 0, 0, 230);
                     ammoLblTxt.outlineWidth = 0.25f;
-                    ammoLblTxt.text = " AM";
+                    ammoLblTxt.text = " AM ";
 
                     // Bar background
                     var amBgBar = new GameObject("AmmoBarBg", typeof(RectTransform), typeof(Image), typeof(Mask)).GetComponent<RectTransform>();
@@ -421,7 +421,7 @@ namespace TheAlchemistsCrypt.UI
                     killsPanel.SetParent(root, false);
                     killsPanel.anchorMin = killsPanel.anchorMax = new Vector2(0, 1);
                     killsPanel.pivot = new Vector2(0f, 1f);
-                    killsPanel.anchoredPosition = new Vector2(14, -168);
+                    killsPanel.anchoredPosition = new Vector2(14, -188);
                     killsPanel.sizeDelta = new Vector2(200, 36);
 
                     // Kills Text
