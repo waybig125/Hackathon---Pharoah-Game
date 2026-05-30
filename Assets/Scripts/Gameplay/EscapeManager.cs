@@ -456,8 +456,6 @@ namespace TheAlchemistsCrypt.Gameplay
             {
                 c.isTrigger = true;
             }
-
-            }
         }
 
         public void StartEscapeSequence(GameObject player)
@@ -739,7 +737,5 @@ namespace TheAlchemistsCrypt.Gameplay
             transform.position = new Vector3(transform.position.x, startY + Mathf.Sin(Time.time * 2f) * 0.5f, transform.position.z);
             transform.Rotate(0, 45f * Time.deltaTime, 0);
         }
-    }
-
     }
 }
