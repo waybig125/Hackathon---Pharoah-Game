@@ -389,10 +389,52 @@ namespace TheAlchemistsCrypt.UI
                     amValOut.effectDistance = new Vector2(1, -1);
                     ammoValueText.text = "30/30";
 
+                    // ═══════════════════════════════════════════════════════
+                    // KILLS PANEL — Premium design under Ammo Panel
+                    // ═══════════════════════════════════════════════════════
+                    var killsPanel = new GameObject("CustomKillsPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                    killsPanel.SetParent(root, false);
+                    killsPanel.anchorMin = killsPanel.anchorMax = new Vector2(0, 1);
+                    killsPanel.pivot = new Vector2(0f, 1f);
+                    killsPanel.anchoredPosition = new Vector2(14, -168);
+                    killsPanel.sizeDelta = new Vector2(200, 36);
+
+                    var killsPanelImg = killsPanel.GetComponent<Image>();
+                    killsPanelImg.sprite = CreateGlassmorphismPanelSprite(200, 36,
+                        new Color(0.04f, 0.04f, 0.06f, 0.82f),   // Same dark tint
+                        new Color(0.92f, 0.62f, 0.15f, 0.85f),   // Amber border
+                        2);
+                    killsPanelImg.type = Image.Type.Simple;
+
+                    // Kills Text
+                    var killsTxtGo = new GameObject("KillsValueText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+                    killsTxtGo.SetParent(killsPanel, false);
+                    killsTxtGo.anchorMin = Vector2.zero;
+                    killsTxtGo.anchorMax = Vector2.one;
+                    killsTxtGo.offsetMin = new Vector2(12, 0);
+                    killsTxtGo.offsetMax = new Vector2(-12, 0);
+                    killsTxtGo.pivot = new Vector2(0.5f, 0.5f);
+
+                    killsText = killsTxtGo.GetComponent<TextMeshProUGUI>();
+                    killsText.font = GetTitleFont();
+                    killsText.fontSize = 13;
+                    killsText.fontStyle = FontStyles.Bold;
+                    killsText.alignment = TextAlignmentOptions.Left;
+                    killsText.color = new Color(1.0f, 0.8f, 0.2f, 1f);
+
+                    var killsOut = killsTxtGo.gameObject.AddComponent<UnityEngine.UI.Outline>();
+                    killsOut.effectColor = new Color(0, 0, 0, 0.8f);
+                    killsOut.effectDistance = new Vector2(1, -1);
+                    killsText.text = "KILLS: 0/20";
+
                     // DOTween entrance slide-in (slight delay after HP bar)
                     var amPanelRect = ammoPanel.GetComponent<RectTransform>();
                     amPanelRect.anchoredPosition = new Vector2(-380, -106);
                     amPanelRect.DOAnchorPosX(14, 0.55f).SetEase(DG.Tweening.Ease.OutBack).SetDelay(0.22f);
+
+                    var killsPanelRect = killsPanel.GetComponent<RectTransform>();
+                    killsPanelRect.anchoredPosition = new Vector2(-200, -168);
+                    killsPanelRect.DOAnchorPosX(14, 0.55f).SetEase(DG.Tweening.Ease.OutBack).SetDelay(0.3f);
 
 
                     // --- SETTINGS BUTTON (Always uses the beautiful procedural medallion gear) ---

@@ -684,9 +684,32 @@ namespace TheAlchemistsCrypt.AI
             {
                 if (distanceToPlayer >= shootMinRange && distanceToPlayer <= shootMaxRange && (Time.time - lastShootTime) >= shootCooldown)
                 {
-                    ShootPlayer();
-                    shootAnimTimer = 0.8f;
-                    currentSpeed = 0f;
+                    // Check line of sight to avoid shooting through walls
+                    Vector3 startPos = transform.position + Vector3.up * 1.5f;
+                    Vector3 targetPos = player.position + Vector3.up * 1.0f;
+                    Vector3 rayDir = targetPos - startPos;
+                    float rayDist = rayDir.magnitude;
+                    bool hasLineOfSight = true;
+
+                    RaycastHit hitInfo;
+                    if (Physics.Raycast(startPos, rayDir, out hitInfo, rayDist))
+                    {
+                        var hitObj = hitInfo.collider.gameObject;
+                        bool hitPlayer = hitObj.CompareTag("Player") || hitObj.GetComponentInParent<TheAlchemistsCrypt.Player.PlayerHealth>() != null;
+                        bool hitEnemy = hitObj.GetComponent<ZombieAI>() != null || hitObj.GetComponentInParent<ZombieAI>() != null;
+
+                        if (!hitPlayer && !hitEnemy && !hitInfo.collider.isTrigger)
+                        {
+                            hasLineOfSight = false;
+                        }
+                    }
+
+                    if (hasLineOfSight)
+                    {
+                        ShootPlayer();
+                        shootAnimTimer = 0.8f;
+                        currentSpeed = 0f;
+                    }
                 }
             }
 

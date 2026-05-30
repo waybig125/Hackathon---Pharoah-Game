@@ -31,6 +31,7 @@ namespace TheAlchemistsCrypt.Player
         private bool isLowHealthPlaying = false;
         private AudioSource lowHealthAudioSource;
         private AudioSource heartbeatAudioSource;
+        private float lastReflectSoundTime = 0f;
 
         private void Start()
         {
@@ -54,23 +55,38 @@ namespace TheAlchemistsCrypt.Player
             if (overlay != null) damageOverlay = overlay.GetComponent<UnityEngine.UI.Image>();
         }
 
-        public void TakeDamage(float amount)
+        public void TakeDamage(float amount, bool isReflected = false)
         {
             if (isDead) return;
 
             currentHealth -= amount;
             if (currentHealth < 0) currentHealth = 0;
             
-            TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_player_grunt");
+            if (!isReflected)
+            {
+                TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_player_grunt");
+            }
+            else
+            {
+                if (Time.time - lastReflectSoundTime > 0.4f)
+                {
+                    lastReflectSoundTime = Time.time;
+                    TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_player_grunt", false, 0.4f);
+                }
+            }
             
             if (damageOverlay == null) FindDamageOverlay();
             if (damageOverlay != null)
             {
                 damageOverlay.DOKill();
-                damageOverlay.color = new Color(1f, 1f, 1f, 0.65f);
+                damageOverlay.color = isReflected ? new Color(1f, 0.2f, 0.2f, 0.35f) : new Color(1f, 1f, 1f, 0.65f);
                 damageOverlay.DOFade(0f, 0.5f).SetEase(Ease.OutQuad);
             }
-            ShakeCamera();
+            
+            if (!isReflected)
+            {
+                ShakeCamera();
+            }
 
             if (currentHealth <= 0)
             {

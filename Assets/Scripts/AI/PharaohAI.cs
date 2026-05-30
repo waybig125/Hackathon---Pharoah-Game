@@ -211,7 +211,7 @@ namespace TheAlchemistsCrypt.AI
                     var playerHealth = player.GetComponent<TheAlchemistsCrypt.Player.PlayerHealth>();
                     if (playerHealth != null)
                     {
-                        playerHealth.TakeDamage(damage * phase1DamageReflection);
+                        playerHealth.TakeDamage(damage * phase1DamageReflection, true);
                     }
                 }
             }

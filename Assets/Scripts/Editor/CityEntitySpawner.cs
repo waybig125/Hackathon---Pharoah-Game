@@ -448,5 +448,35 @@ namespace TheAlchemistsCrypt.Editor
                     Debug.Log($"[CityGen] Spawned {spawnedCount} city palm trees after {attempts} attempts.");
                 }
 
+        private void SpawnDesertMedicinePickups(GameObject root)
+        {
+            var folder = new GameObject("DesertMedicinePickups");
+            folder.transform.SetParent(root.transform);
+
+            int spawnedCount = 0;
+            int attempts = 0;
+            while (spawnedCount < 60 && attempts < 800)
+            {
+                attempts++;
+                float rx = Random.Range(-480f, 480f);
+                float rz = Random.Range(-480f, 480f);
+                Vector3 pos = new Vector3(rx, 0f, rz);
+
+                if (pos.magnitude > 150f && rz >= -75f)
+                {
+                    pos.y = GetTerrainHeight(pos) + 0.5f;
+                    if (pos.y < 0.5f) continue;
+
+                    var medGo = new GameObject("DesertMedicinePickup");
+                    medGo.transform.SetParent(folder.transform);
+                    medGo.transform.position = pos;
+                    var pickup = medGo.AddComponent<TheAlchemistsCrypt.Gameplay.MedicinePickup>();
+                    pickup.healAmount = 25f;
+
+                    spawnedCount++;
+                }
+            }
+            Debug.Log($"[CityGen] Spawned {spawnedCount} desert medicine/health pickups after {attempts} attempts.");
+        }
     }
 }

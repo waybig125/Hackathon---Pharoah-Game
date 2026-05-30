@@ -78,10 +78,11 @@ namespace TheAlchemistsCrypt.Editor
             // 4. Scatter low-poly vegetation in city spaces and borders
             if (plantPrefabs.Count > 0)
             {
-                int vegCount = 80;
+                Physics.SyncTransforms(); // Sync physics transforms so OverlapSphere works reliably in Editor
+                int vegCount = 650;
                 int attempts = 0;
                 int spawned = 0;
-                while (spawned < vegCount && attempts < 500)
+                while (spawned < vegCount && attempts < 4000)
                 {
                     attempts++;
                     float rx = Random.Range(-350f, 350f);
@@ -94,6 +95,25 @@ namespace TheAlchemistsCrypt.Editor
 
                     // Ensure it is not too close to the player spawn point (0f, 0f, 60f)
                     if (Vector3.Distance(pos, new Vector3(0f, pos.y, 60f)) < 12f) continue;
+
+                    // Prevent spawning grass under/inside houses, temples, mastabas, columns, obelisks, etc.
+                    bool overlapsStructure = false;
+                    Collider[] colliders = Physics.OverlapSphere(pos, 3.5f);
+                    foreach (var c in colliders)
+                    {
+                        if (c == null || c.gameObject == null) continue;
+                        string nameLower = c.gameObject.name.ToLower();
+                        if (nameLower.Contains("house") || nameLower.Contains("temple") || 
+                            nameLower.Contains("mastaba") || nameLower.Contains("obelisk") || 
+                            nameLower.Contains("column") || nameLower.Contains("pyramid") || 
+                            nameLower.Contains("stall") || nameLower.Contains("wall") || 
+                            nameLower.Contains("ladder") || nameLower.Contains("building"))
+                        {
+                            overlapsStructure = true;
+                            break;
+                        }
+                    }
+                    if (overlapsStructure) continue;
 
                     var prefab = plantPrefabs[Random.Range(0, plantPrefabs.Count)];
                     float scale = Random.Range(0.8f, 2.2f);

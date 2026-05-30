@@ -552,6 +552,7 @@ namespace TheAlchemistsCrypt.Editor
             SpawnDesertBrokenPillars(root, wallMat);
             SpawnPalmTreeOasis(root, trees);
             SpawnLowPolyEnvironmentObjects(root);
+            SpawnDesertMedicinePickups(root);
 
             // Spawn shoreline lighthouse specifically
             if (lighthousePrefab != null) {
@@ -859,7 +860,11 @@ namespace TheAlchemistsCrypt.Editor
             // Step 4: Precise ground alignment and horizontal centering using local math
             if (hasBounds) {
                 float terrainY = GetTerrainHeight(pos);
-                float targetBottomY = terrainY + yOffset;
+                float adjustedYOffset = yOffset;
+                if (prefab.name.ToLower().Contains("house")) {
+                    adjustedYOffset -= 1.4f;
+                }
+                float targetBottomY = terrainY + adjustedYOffset;
                 
                 // Find world bottom Y after scaling and rotation using simulated TRS
                 float worldMinY = float.MaxValue;

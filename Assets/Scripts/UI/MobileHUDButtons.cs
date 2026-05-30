@@ -23,6 +23,7 @@ namespace TheAlchemistsCrypt.UI
         private TextMeshProUGUI weaponText;
         private TextMeshProUGUI healthValueText;
         private TextMeshProUGUI ammoValueText;
+        private TextMeshProUGUI killsText;
 
         private Image healthBarFill;
         private Image ammoBarFill;
@@ -236,6 +237,23 @@ namespace TheAlchemistsCrypt.UI
 
             UpdateAmmo(current, total);
             if (cachedHealth != null) UpdateHealth(cachedHealth.currentHealth);
+            
+            if (killsText != null && TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null)
+            {
+                int currentKills = TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.currentKills;
+                int reqKills = TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.requiredKills;
+                if (currentKills >= reqKills)
+                {
+                    killsText.text = $"KILLS: {currentKills}/{reqKills} (ESCAPE READY)";
+                    killsText.color = new Color(0.2f, 1.0f, 0.4f, 1f);
+                }
+                else
+                {
+                    killsText.text = $"KILLS: {currentKills}/{reqKills}";
+                    killsText.color = new Color(1.0f, 0.8f, 0.2f, 1f);
+                }
+            }
+
             UpdateGuideArrow();
             UpdateAnimations();
         }
@@ -1191,6 +1209,18 @@ namespace TheAlchemistsCrypt.UI
             else bgImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.08f, 0.04f, 0f, 1f), new Color(0.02f, 0.01f, 0f, 1f));
             bgImg.color = Color.white;
 
+            // Lightning overlay
+            var lightningGo = new GameObject("LightningOverlay", typeof(RectTransform), typeof(Image));
+            lightningGo.transform.SetParent(startCanvasGo.transform, false);
+            var lRect = lightningGo.GetComponent<RectTransform>();
+            lRect.anchorMin = Vector2.zero; lRect.anchorMax = Vector2.one;
+            lRect.offsetMin = lRect.offsetMax = Vector2.zero;
+            var lImg = lightningGo.GetComponent<Image>();
+            lImg.color = new Color(1f, 1f, 1f, 0f);
+            lImg.raycastTarget = false;
+
+            StartCoroutine(LightningFlashesRoutine(lImg));
+
             var bottomActionGo = new GameObject("BottomActionPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             bottomActionGo.SetParent(startCanvasGo.transform, false);
             bottomActionGo.anchorMin = bottomActionGo.anchorMax = new Vector2(0.5f, 0f);
@@ -1563,6 +1593,47 @@ namespace TheAlchemistsCrypt.UI
             if (hudRootGo != null)
             {
                 hudRootGo.SetActive(visible);
+            }
+        }
+
+        private IEnumerator LightningFlashesRoutine(Image img)
+        {
+            while (img != null)
+            {
+                yield return new WaitForSeconds(Random.Range(2.5f, 6.5f));
+                if (img == null) break;
+
+                float flashIntensity = Random.Range(0.4f, 0.75f);
+                img.color = new Color(1f, 0.95f, 0.85f, flashIntensity);
+
+                float elapsed = 0f;
+                float duration = Random.Range(0.08f, 0.15f);
+                while (elapsed < duration && img != null)
+                {
+                    elapsed += Time.deltaTime;
+                    img.color = new Color(1f, 0.95f, 0.85f, Mathf.Lerp(flashIntensity, 0f, elapsed / duration));
+                    yield return null;
+                }
+
+                if (img != null && Random.value < 0.6f)
+                {
+                    yield return new WaitForSeconds(Random.Range(0.05f, 0.12f));
+                    if (img == null) break;
+
+                    flashIntensity = Random.Range(0.2f, 0.45f);
+                    img.color = new Color(1f, 0.95f, 0.85f, flashIntensity);
+
+                    elapsed = 0f;
+                    duration = Random.Range(0.12f, 0.25f);
+                    while (elapsed < duration && img != null)
+                    {
+                        elapsed += Time.deltaTime;
+                        img.color = new Color(1f, 0.95f, 0.85f, Mathf.Lerp(flashIntensity, 0f, elapsed / duration));
+                        yield return null;
+                    }
+                }
+
+                if (img != null) img.color = new Color(1f, 1f, 1f, 0f);
             }
         }
     }
