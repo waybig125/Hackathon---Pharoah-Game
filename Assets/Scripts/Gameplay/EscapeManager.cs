@@ -329,17 +329,6 @@ namespace TheAlchemistsCrypt.Gameplay
             if (col is MeshCollider mc) mc.convex = true;
             col.isTrigger = true;
             keyObj.AddComponent<Floater>();
-
-            // Add Event-Driven Triggers instead of polling
-            var promptTrigger = keyObj.AddComponent<SphereCollider>();
-            promptTrigger.isTrigger = true;
-            promptTrigger.radius = 15f / 0.4f; // 15m radius (scale is 0.4)
-            
-            var pickupTrigger = keyObj.AddComponent<SphereCollider>();
-            pickupTrigger.isTrigger = true;
-            pickupTrigger.radius = 3.5f / 0.4f; // 3.5m radius
-            
-            keyObj.AddComponent<KeyTrigger>();
         }
 
         private void ConvertBoatMaterials(GameObject boat)
@@ -468,16 +457,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 c.isTrigger = true;
             }
 
-            // Add Event-Driven Triggers instead of polling
-            var promptTrigger = boatObj.AddComponent<SphereCollider>();
-            promptTrigger.isTrigger = true;
-            promptTrigger.radius = 30f / 0.18f; // 30m radius (scale is 0.18)
-            
-            var escapeTrigger = boatObj.AddComponent<SphereCollider>();
-            escapeTrigger.isTrigger = true;
-            escapeTrigger.radius = 18f / 0.18f; // 18m radius
-            
-            boatObj.AddComponent<BoatTrigger>();
+            }
         }
 
         public void StartEscapeSequence(GameObject player)
@@ -625,6 +605,31 @@ namespace TheAlchemistsCrypt.Gameplay
             }
             if (playerObj == null) return;
 
+            // Proximity/Pickup detection via direct distance calculations
+            if (keyObj != null)
+            {
+                float distToKey = Vector3.Distance(playerObj.transform.position, keyObj.transform.position);
+                nearKey = (distToKey <= 15f);
+                canPickupKey = (distToKey <= 3.5f);
+            }
+            else
+            {
+                nearKey = false;
+                canPickupKey = false;
+            }
+
+            if (boatObj != null)
+            {
+                float distToBoat = Vector3.Distance(playerObj.transform.position, boatObj.transform.position);
+                nearBoat = (distToBoat <= 30f);
+                canEscape = (distToBoat <= 18f);
+            }
+            else
+            {
+                nearBoat = false;
+                canEscape = false;
+            }
+
             if (nearKey && !hasKey)
             {
                 if (promptUiGo != null)
@@ -736,45 +741,5 @@ namespace TheAlchemistsCrypt.Gameplay
         }
     }
 
-    public class BoatTrigger : MonoBehaviour {
-        private void OnTriggerEnter(Collider other) {
-            if (other.CompareTag("Player") && EscapeManager.Instance != null) {
-                if (other.GetType() == typeof(CharacterController)) {
-                    SphereCollider sc = GetComponent<SphereCollider>();
-                    if (sc != null && sc.radius < 150f) EscapeManager.Instance.canEscape = true;
-                    else EscapeManager.Instance.nearBoat = true;
-                }
-            }
-        }
-        private void OnTriggerExit(Collider other) {
-            if (other.CompareTag("Player") && EscapeManager.Instance != null) {
-                if (other.GetType() == typeof(CharacterController)) {
-                    SphereCollider sc = GetComponent<SphereCollider>();
-                    if (sc != null && sc.radius < 150f) EscapeManager.Instance.canEscape = false;
-                    else EscapeManager.Instance.nearBoat = false;
-                }
-            }
-        }
-    }
-
-    public class KeyTrigger : MonoBehaviour {
-        private void OnTriggerEnter(Collider other) {
-            if (other.CompareTag("Player") && EscapeManager.Instance != null) {
-                if (other.GetType() == typeof(CharacterController)) {
-                    SphereCollider sc = GetComponent<SphereCollider>();
-                    if (sc != null && sc.radius < 15f) EscapeManager.Instance.canPickupKey = true;
-                    else EscapeManager.Instance.nearKey = true;
-                }
-            }
-        }
-        private void OnTriggerExit(Collider other) {
-            if (other.CompareTag("Player") && EscapeManager.Instance != null) {
-                if (other.GetType() == typeof(CharacterController)) {
-                    SphereCollider sc = GetComponent<SphereCollider>();
-                    if (sc != null && sc.radius < 15f) EscapeManager.Instance.canPickupKey = false;
-                    else EscapeManager.Instance.nearKey = false;
-                }
-            }
-        }
     }
 }
