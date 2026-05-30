@@ -12,7 +12,7 @@ namespace TheAlchemistsCrypt.Editor
 {
     public partial class StaticEgyptianCityGenerator
     {
-        private void BuildHouse(Transform parent, Vector3 pos, Material wall, Material wood, Material litWindowMat, Material darkWindowMat, GameObject crate, GameObject barrel, Material floorMat = null, float angleY = 0f)
+        private void BuildHouse(Transform parent, Vector3 pos, Material wall, Material wood, Material litWindowMat, Material darkWindowMat, GameObject crate, GameObject barrel, Material floorMat = null, float angleY = 0f, bool addLadder = false)
                 {
                     var h = new GameObject("House"); h.transform.SetParent(parent); h.transform.position = pos; h.transform.rotation = Quaternion.Euler(0f, angleY, 0f); h.isStatic = true;
                     
@@ -221,18 +221,21 @@ namespace TheAlchemistsCrypt.Editor
                         win.isStatic = true;
                     }
 
-                    // 6. Rooftop Access Ladder (Angles at 35 degrees from the back, acting as a clean ramp)
-                    float ladderLength = (hallHeight + 2f) / Mathf.Sin(35f * Mathf.Deg2Rad);
-                    var ladderRamp = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    ladderRamp.name = "LadderRamp";
-                    ladderRamp.transform.SetParent(h.transform);
-                    ladderRamp.transform.localScale = new Vector3(3f, 0.3f, ladderLength);
-                    
-                    float zOffset = (hallDepth / 2f) + (ladderLength * Mathf.Cos(35f * Mathf.Deg2Rad) / 2f);
-                    ladderRamp.transform.localPosition = new Vector3(0f, hallHeight / 2f, zOffset);
-                    ladderRamp.transform.localRotation = Quaternion.Euler(35f, 0f, 0f);
-                    ladderRamp.GetComponent<Renderer>().sharedMaterial = wood;
-                    ladderRamp.isStatic = true;
+                    if (addLadder)
+                    {
+                        // 6. Rooftop Access Ladder (Angles at 35 degrees from the back, acting as a clean ramp)
+                        float ladderLength = (hallHeight + 2f) / Mathf.Sin(35f * Mathf.Deg2Rad);
+                        var ladderRamp = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                        ladderRamp.name = "LadderRamp";
+                        ladderRamp.transform.SetParent(h.transform);
+                        ladderRamp.transform.localScale = new Vector3(3f, 0.3f, ladderLength);
+                        
+                        float zOffset = (hallDepth / 2f) + (ladderLength * Mathf.Cos(35f * Mathf.Deg2Rad) / 2f);
+                        ladderRamp.transform.localPosition = new Vector3(0f, hallHeight / 2f, zOffset);
+                        ladderRamp.transform.localRotation = Quaternion.Euler(35f, 0f, 0f);
+                        ladderRamp.GetComponent<Renderer>().sharedMaterial = wood;
+                        ladderRamp.isStatic = true;
+                    }
 
                     // Add NavMeshObstacle to the house root to carve the NavMesh
                     var nmoHouse = h.AddComponent<UnityEngine.AI.NavMeshObstacle>();
