@@ -17,6 +17,25 @@ namespace TheAlchemistsCrypt.Weapons
         private void Awake()
         {
             rb = GetComponent<Rigidbody>();
+            
+            // --- HACKATHON: DYNAMIC ELEMENT TINTING ---
+            var renderer = GetComponentInChildren<Renderer>();
+            if (renderer != null)
+            {
+                Color tint = Color.white;
+                switch(element)
+                {
+                    case ElementType.Sulfur: tint = new Color(1f, 0.6f, 0.1f); break; // Orange
+                    case ElementType.Mercury: tint = new Color(0.1f, 0.8f, 1f); break; // Cyan
+                    case ElementType.Salt: tint = new Color(0.8f, 0.3f, 0.9f); break; // Purple
+                }
+                
+                // Set the material properties for URP compatibility
+                MaterialPropertyBlock mpb = new MaterialPropertyBlock();
+                mpb.SetColor("_BaseColor", tint);
+                mpb.SetColor("_EmissionColor", tint * 2.0f);
+                renderer.SetPropertyBlock(mpb);
+            }
         }
 
         private void OnEnable()
