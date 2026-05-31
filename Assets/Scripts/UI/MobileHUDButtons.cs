@@ -1732,13 +1732,13 @@ namespace TheAlchemistsCrypt.UI
             boltRect.sizeDelta = new Vector2(200, 500);
             var boltImg = boltGo.GetComponent<Image>();
             boltImg.raycastTarget = false;
-            boltImg.color = new Color(1f, 1f, 1f, 0f);
-
+            
             while (img != null)
             {
-                yield return new WaitForSecondsRealtime(Random.Range(2.5f, 6.5f));
+                // Wait for the next flash sequence in realtime
+                yield return new WaitForSecondsRealtime(Random.Range(3.5f, 7.5f));
                 if (img == null) break;
-
+ 
                 // Spawn fresh bolt at random screen position
                 if (boltImg != null)
                 {
@@ -1750,13 +1750,14 @@ namespace TheAlchemistsCrypt.UI
                     float boltScale = Random.Range(1.5f, 3f);
                     boltRect.localScale = new Vector3(boltScale, boltScale, 1f);
                 }
-
-                float flashIntensity = Random.Range(0.15f, 0.45f);
+ 
+                // First flash: Very bright and extremely rapid (snappy) decay
+                float flashIntensity = Random.Range(0.6f, 0.9f);
                 img.color = new Color(1f, 0.95f, 0.85f, flashIntensity);
                 if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, flashIntensity * 1.2f);
-
+ 
                 float elapsed = 0f;
-                float duration = Random.Range(0.08f, 0.15f);
+                float duration = Random.Range(0.05f, 0.09f); // Snappy decay phase (50-90ms)
                 while (elapsed < duration && img != null)
                 {
                     elapsed += Time.unscaledDeltaTime;
@@ -1765,18 +1766,19 @@ namespace TheAlchemistsCrypt.UI
                     if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, Mathf.Lerp(flashIntensity * 1.2f, 0f, ft));
                     yield return null;
                 }
-
+ 
+                // Double strike (secondary echo flash) 60% of the time
                 if (img != null && Random.value < 0.6f)
                 {
-                    yield return new WaitForSecondsRealtime(Random.Range(0.05f, 0.12f));
+                    yield return new WaitForSecondsRealtime(Random.Range(0.04f, 0.08f)); // Brief gap
                     if (img == null) break;
-
-                    flashIntensity = Random.Range(0.08f, 0.25f);
+ 
+                    flashIntensity = Random.Range(0.3f, 0.5f);
                     img.color = new Color(1f, 0.95f, 0.85f, flashIntensity);
                     if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, flashIntensity);
-
+ 
                     elapsed = 0f;
-                    duration = Random.Range(0.12f, 0.25f);
+                    duration = Random.Range(0.08f, 0.15f); // Short secondary decay (80-150ms)
                     while (elapsed < duration && img != null)
                     {
                         elapsed += Time.unscaledDeltaTime;
@@ -1786,7 +1788,8 @@ namespace TheAlchemistsCrypt.UI
                         yield return null;
                     }
                 }
-
+ 
+                // Ensure complete transparent reset
                 if (img != null) img.color = new Color(1f, 1f, 1f, 0f);
                 if (boltImg != null) boltImg.color = new Color(1f, 1f, 1f, 0f);
             }

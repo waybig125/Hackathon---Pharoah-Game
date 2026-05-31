@@ -897,7 +897,15 @@ namespace TheAlchemistsCrypt.Editor
 
             // Step 5: Optimization and Collision
             // Keep 80% decimation for trees (date palm), disable for all other models as requested to preserve quality and prevent offsets.
-            bool isNewPalmTree = pName.Contains("dark_palm_tree") || (pName.Contains("palm_tree") && !pName.Contains("realistic_hd_date_palm"));
+            string origName = prefab.name.ToLower();
+            bool isNewPalmTree = origName.Contains("dark_palm_tree") || origName.Contains("palm_tree") || 
+                                 pName.Contains("dark_palm_tree") || pName.Contains("palm_tree");
+            
+            // Exclude the old realistic HD date palms from the "new palm tree" bypass just in case
+            if (origName.Contains("realistic_hd") || pName.Contains("realistic_hd")) {
+                isNewPalmTree = false;
+            }
+
             if (decimate && !isNewPalmTree) {
                 if (pName.Contains("palm") || pName.Contains("tree")) {
                     DecimateRecursively(obj, 0.8f);
