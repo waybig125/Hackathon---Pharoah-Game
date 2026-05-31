@@ -951,6 +951,18 @@ namespace TheAlchemistsCrypt.Editor
                 bc.center = new Vector3(0f, 5f, 0f);
                 bc.size = new Vector3(0.7f, 10f, 0.7f);
 
+                // RECALCULATE MESH BOUNDS to fix 'disappearing leaves' when close/looking up
+                // GLB imports often have tight or incorrect bounds that cause premature frustum culling.
+                foreach (var mf in obj.GetComponentsInChildren<MeshFilter>(true)) {
+                    if (mf.sharedMesh != null) {
+                        mf.sharedMesh.RecalculateBounds();
+                        // Expand bounds slightly as a safety buffer
+                        Bounds b = mf.sharedMesh.bounds;
+                        b.Expand(1.2f); 
+                        mf.sharedMesh.bounds = b;
+                    }
+                }
+
                 // Handle dark_palm_tree optimizations
                 if (pName.Contains("dark_palm_tree")) {
                     // Sinking handled via yOffset parameter in calls
