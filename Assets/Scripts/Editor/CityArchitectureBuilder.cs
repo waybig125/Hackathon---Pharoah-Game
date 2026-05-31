@@ -449,8 +449,8 @@ namespace TheAlchemistsCrypt.Editor
                     if (baseSize > 20f)
                     {
                         pMat.SetColor("_BaseColor", new Color(1f, 0.95f, 0.85f)); 
-                        var albedoTex = Resources.Load<Texture2D>("Textures/Pyramid_Albedo");
-                        var normalTex = Resources.Load<Texture2D>("Textures/Pyramid_Normal");
+                        var albedoTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Art/EgyptianAssets/egyptian_wall_albedo.png");
+                        var normalTex = Resources.Load<Texture2D>("Textures/EgyptianNormalMap");
                         if (albedoTex != null)
                         {
                             pMat.SetTexture("_BaseMap", albedoTex);

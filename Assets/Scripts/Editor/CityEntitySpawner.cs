@@ -380,7 +380,7 @@ namespace TheAlchemistsCrypt.Editor
                     int attempts = 0;
                     List<Vector3> oasisTreePositions = new List<Vector3>();
 
-                    while (spawnedCount < 40 && attempts < 800) // Restored to 40 (100%)
+                    while (spawnedCount < 110 && attempts < 1500) // INCREASED: Most trees now in empty space
                     {
                         attempts++;
                         float rx = Random.Range(-450f, 450f);
@@ -388,7 +388,7 @@ namespace TheAlchemistsCrypt.Editor
                         Vector3 pos = new Vector3(rx, 0f, rz);
                         pos.y = GetTerrainHeight(pos);
 
-                        // Relaxed height check: allow spawning on higher sand banks
+                        // Make sure it doesn't spawn in water, shoreline shallows, or extremely high up
                         if (pos.z < -70f || pos.y < 1.1f || pos.y > 15.0f) continue;
 
                         // Ensure no two trees are too close (Min 3.5m distance)
@@ -436,7 +436,7 @@ namespace TheAlchemistsCrypt.Editor
                     Vector3 playerSpawn = new Vector3(16f, 0f, 48f);
                     List<Vector3> cityTreePositions = new List<Vector3>();
 
-                    while (spawnedCount < 100 && attempts < 2000) // Restored to 100 (100%) and increased attempts
+                    while (spawnedCount < 40 && attempts < 1000) // REDUCED: Keep only a few trees inside the city
                     {
                         attempts++;
                         float rx = Random.Range(-240f, 240f);
