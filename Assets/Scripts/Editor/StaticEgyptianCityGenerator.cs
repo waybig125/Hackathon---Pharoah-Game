@@ -950,10 +950,18 @@ namespace TheAlchemistsCrypt.Editor
             bool isTree = origName.Contains("tree") || origName.Contains("palm") || 
                           pName.Contains("tree") || pName.Contains("palm");
             
+            bool isStructure = origName.Contains("house") || origName.Contains("building") || 
+                               origName.Contains("pyramid") || origName.Contains("temple") || 
+                               origName.Contains("mastaba") || origName.Contains("sphinx") ||
+                               origName.Contains("obelisk") || origName.Contains("pillar") ||
+                               origName.Contains("column") || origName.Contains("tomb");
+
             // Special handling for the new GLB palm trees
             bool isNewPalmTree = isTree && (pName.Contains("dark_palm_tree") || pName.Contains("palm_tree"));
 
-            if (decimate && !isTree) {
+            // ONLY decimate non-tree, non-structure assets (like crates, barrels, small props)
+            // Structures are kept at 100% quality to prevent "hollow" walls where trees could spawn inside.
+            if (decimate && !isTree && !isStructure) {
                 DecimateRecursively(obj, 0.8f);
             }
 
