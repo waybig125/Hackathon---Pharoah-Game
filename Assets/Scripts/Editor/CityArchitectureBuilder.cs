@@ -519,18 +519,15 @@ namespace TheAlchemistsCrypt.Editor
                 CreateProceduralPyramid(obRoot, new Vector3(0f, height, 0f), topWidth, topWidth * 1.5f, stoneMat, Color.clear, false);
             }
 
-            var rb = obRoot.AddComponent<Rigidbody>();
-            rb.mass = 10000000f;
-            rb.useGravity = true;
+            // REMOVED: Massive Rigidbody that caused dancing/jitter. 
+            // Obelisks are now rock-solid static structures.
+            obRoot.isStatic = true;
 
             if (isFallen)
             {
                 obRoot.transform.rotation = Quaternion.Euler(Random.Range(85f, 95f), Random.Range(0f, 360f), Random.Range(-5f, 5f));
             }
             
-            rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
-            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-
             var nmoObelisk = obRoot.AddComponent<UnityEngine.AI.NavMeshObstacle>();
             nmoObelisk.carving = true;
             if (isFallen)
@@ -559,11 +556,7 @@ namespace TheAlchemistsCrypt.Editor
                     piece.transform.localScale = new Vector3(Random.Range(1.2f, 1.8f), Random.Range(1.0f, 2.0f), Random.Range(1.2f, 1.8f));
                     piece.transform.rotation = Quaternion.Euler(Random.Range(0f, 360f), Random.Range(0f, 360f), Random.Range(0f, 360f));
                     piece.GetComponent<Renderer>().sharedMaterial = stoneMat;
-                    
-                    var pieceRb = piece.AddComponent<Rigidbody>();
-                    pieceRb.mass = 500000f;
-                    pieceRb.useGravity = true;
-                    pieceRb.constraints = RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
+                    piece.isStatic = true;
                 }
             }
         }

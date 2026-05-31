@@ -350,6 +350,16 @@ namespace TheAlchemistsCrypt.AI
             if (animator != null)
             {
                 animator.applyRootMotion = false; // Fix 'dragged' look by disabling root motion
+
+                // FORCE VISIBILITY: Ensure rigged models are never culled by mistake and all parts show up
+                foreach (var smr in GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
+                    smr.enabled = true;
+                    smr.updateWhenOffscreen = true; // Prevents "invisible mummy" when pivot is off-screen
+                }
+                foreach (var mr in GetComponentsInChildren<MeshRenderer>(true)) {
+                    mr.enabled = true;
+                }
+                
                 // PERFORMANCE: Stop GPU bone skinning and CPU blend-tree updates when off-screen.
                 // With 20 mummies all animating every frame regardless of visibility,
                 // SkinnedMeshRenderer was updating bone transforms even for mummies behind the player.
