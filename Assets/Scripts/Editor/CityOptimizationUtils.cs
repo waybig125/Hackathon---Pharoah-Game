@@ -726,6 +726,82 @@ namespace TheAlchemistsCrypt.Editor
             AssetDatabase.SaveAssets();
         }
 
+        [MenuItem("Tools/Egyptian City/Optimize ALL Game Textures")]
+        public static void OptimizeAllGameTextures()
+        {
+            string[] allTextureGuids = AssetDatabase.FindAssets("t:Texture");
+            int texturesCompressed = 0;
+            int totalProcessed = 0;
+
+            foreach (var guid in allTextureGuids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                string lowerPath = path.ToLower();
+
+                // Skip non-gameplay/unneeded asset paths
+                if (lowerPath.Contains("textmesh pro") || 
+                    lowerPath.Contains("screenshots") || 
+                    lowerPath.Contains("tutorialinfo"))
+                {
+                    continue;
+                }
+
+                TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                if (importer != null)
+                {
+                    totalProcessed++;
+                    bool changed = false;
+                    
+                    // Determine target resolution:
+                    // Skybox, Dynamic Sky, environment backdrops, large characters get 1024px limit
+                    // UI, weapon icons, particles, bullet casing, normal details get 512px limit
+                    int targetResolution = 512;
+                    if (lowerPath.Contains("sky") || 
+                        lowerPath.Contains("flare") || 
+                        lowerPath.Contains("character") || 
+                        lowerPath.Contains("mummy") || 
+                        lowerPath.Contains("zombie"))
+                    {
+                        targetResolution = 1024;
+                    }
+
+                    if (importer.maxTextureSize > targetResolution)
+                    {
+                        importer.maxTextureSize = targetResolution;
+                        changed = true;
+                    }
+
+                    if (importer.textureCompression != TextureImporterCompression.CompressedHQ)
+                    {
+                        importer.textureCompression = TextureImporterCompression.CompressedHQ;
+                        changed = true;
+                    }
+
+                    if (!importer.crunchedCompression)
+                    {
+                        importer.crunchedCompression = true;
+                        importer.compressionQuality = 50;
+                        changed = true;
+                    }
+
+                    if (!importer.mipmapEnabled)
+                    {
+                        importer.mipmapEnabled = true;
+                        changed = true;
+                    }
+
+                    if (changed)
+                    {
+                        importer.SaveAndReimport();
+                        texturesCompressed++;
+                    }
+                }
+            }
+
+            Debug.Log($"Successfully optimized and compressed {texturesCompressed} of {totalProcessed} total textures across the project!");
+            AssetDatabase.SaveAssets();
+        }
+
         private static Material GetOrCreateMaterial(string name, Color baseColor, float smoothness, float metallic, Color emissionColor, bool useEmission)
                 {
                     string path = "Assets/Art/Materials/" + name + ".mat";

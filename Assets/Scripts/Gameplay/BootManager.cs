@@ -397,21 +397,21 @@ namespace TheAlchemistsCrypt.Gameplay
                         );
                     }
 
-                // Draw sharp pure white core with soft radial falloff
-                float coreRad = thickness * 0.12f;
-                int iCoreRad = Mathf.Max(1, Mathf.RoundToInt(coreRad));
-                for (int dy = -iCoreRad; dy <= iCoreRad; dy++)
-                    for (int dx = -iCoreRad; dx <= iCoreRad; dx++)
+                // Draw visible white-hot core (solid centre, soft edge falloff)
+                int coreRad = Mathf.Max(1, Mathf.RoundToInt(thickness * 0.5f));
+                for (int dy = -coreRad; dy <= coreRad; dy++)
+                    for (int dx = -coreRad; dx <= coreRad; dx++)
                     {
-                        float distSq = dx * dx + dy * dy;
-                        float dist = Mathf.Sqrt(distSq);
+                        float dist = Mathf.Sqrt(dx * dx + dy * dy);
                         if (dist > coreRad) continue;
                         int nx = Mathf.Clamp(px + dx, 0, width - 1);
                         int ny = Mathf.Clamp(py + dy, 0, height - 1);
-                        float ratio = coreRad > 0f ? Mathf.Clamp01(dist / coreRad) : 0f;
-                        float coreAlpha = 1f - Mathf.Pow(ratio, 0.5f);
-                        Color existing = pixels[ny * width + nx];
-                        pixels[ny * width + nx] = Color.Lerp(existing, new Color(1f, 1f, 1f, Mathf.Max(existing.a, coreAlpha)), coreAlpha);
+                        // Pure white at centre, slight cyan tint at edge — bright but not all-white
+                        float ratio = dist / coreRad;
+                        float alpha = 1f - ratio * 0.3f;   // 1.0 at centre → 0.7 at edge
+                        Color core = Color.Lerp(new Color(1f, 1f, 1f, 1f), new Color(0.6f, 0.9f, 1f, 0.85f), ratio);
+                        core.a = alpha;
+                        pixels[ny * width + nx] = Color.Lerp(pixels[ny * width + nx], core, alpha);
                     }
             }
 
