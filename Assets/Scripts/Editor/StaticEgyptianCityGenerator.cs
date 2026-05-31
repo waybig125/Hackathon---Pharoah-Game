@@ -753,12 +753,10 @@ namespace TheAlchemistsCrypt.Editor
             FixPlayerAndWeapons();
             SetupMummyAnimations();
 
-            // Re-enable all renderers that might have been hidden by LODs
+            // Re-enable ALL renderers that might have been hidden by LODs or decimation bugs
             var allRenderers = root.GetComponentsInChildren<Renderer>(true);
             foreach (var r in allRenderers) {
-                if (r.gameObject.name.ToLower().Contains("tree") || r.gameObject.name.ToLower().Contains("palm")) {
-                    r.enabled = true;
-                }
+                r.enabled = true;
             }
 
             // Final scene-wide cleanup to ensure requested visual standards (Remove all LODGroups)
@@ -965,18 +963,18 @@ namespace TheAlchemistsCrypt.Editor
                 DecimateRecursively(obj, 0.8f);
             }
 
-            if (isTree) {
-                // Remove any existing LODGroup to prevent "detail loss when close" (inverted LOD behavior)
-                var existingLOD = obj.GetComponent<LODGroup>();
-                if (existingLOD != null) {
-                    UnityEngine.Object.DestroyImmediate(existingLOD);
-                }
-                
-                // Ensure all child renderers are enabled and not hidden by some previous LOD setting
-                foreach (var r in obj.GetComponentsInChildren<Renderer>(true)) {
-                    r.enabled = true;
-                }
+            // Remove any existing LODGroup from ALL assets to prevent "detail loss when close" (inverted LOD behavior)
+            var existingLODs = obj.GetComponentsInChildren<LODGroup>(true);
+            foreach (var lod in existingLODs) {
+                UnityEngine.Object.DestroyImmediate(lod);
+            }
+            
+            // Ensure all child renderers are enabled and not hidden by some previous LOD setting
+            foreach (var r in obj.GetComponentsInChildren<Renderer>(true)) {
+                r.enabled = true;
+            }
 
+            if (isTree) {
                 // Remove all child mesh colliders from the imported GLB/FBX to avoid multi-mesh collider overhead
                 var childColliders = obj.GetComponentsInChildren<Collider>(true);
                 foreach (var c in childColliders) {
