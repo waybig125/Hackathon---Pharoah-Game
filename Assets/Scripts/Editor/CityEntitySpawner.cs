@@ -376,6 +376,9 @@ namespace TheAlchemistsCrypt.Editor
                     var folder = new GameObject("PalmTreeOasis");
                     folder.transform.SetParent(root.transform);
 
+                    // Sync physics transforms so newly placed buildings have active colliders
+                    Physics.SyncTransforms();
+
                     int spawnedCount = 0;
                     int attempts = 0;
                     List<Vector3> oasisTreePositions = new List<Vector3>();
@@ -401,6 +404,10 @@ namespace TheAlchemistsCrypt.Editor
                         }
                         if (tooCloseToTree) continue;
 
+                        // PREVENT SPAWNING INSIDE OBJECTS
+                        // Check a 3m radius sphere at trunk height (to avoid ground hits but catch buildings/walls)
+                        if (Physics.CheckSphere(pos + Vector3.up * 2f, 3f)) continue;
+
                         // 70% palm_tree (index 1), 30% dark_palm_tree (index 0)
                         int treeIndex = Random.value < 0.7f ? 1 : 0;
                         var prefab = treePrefabs[treeIndex];
@@ -420,6 +427,9 @@ namespace TheAlchemistsCrypt.Editor
 
                     var folder = new GameObject("City_Vegetation_Safe"); // Renamed to bypass 'tree' removal
                     folder.transform.SetParent(root.transform);
+
+                    // Sync physics transforms so newly placed buildings have active colliders
+                    Physics.SyncTransforms();
 
                     int spawnedCount = 0;
                     int attempts = 0;
@@ -462,6 +472,10 @@ namespace TheAlchemistsCrypt.Editor
                             }
                         }
                         if (tooCloseToTree) continue;
+
+                        // PREVENT SPAWNING INSIDE OBJECTS
+                        // Check a 3m radius sphere at trunk height (to avoid ground hits but catch buildings/walls/pyramids)
+                        if (Physics.CheckSphere(pos + Vector3.up * 2f, 3f)) continue;
 
                         // 70% palm_tree (index 1), 30% dark_palm_tree (index 0)
                         int treeIndex = Random.value < 0.7f ? 1 : 0;

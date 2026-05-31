@@ -1746,7 +1746,7 @@ namespace TheAlchemistsCrypt.UI
                 }
  
                 float flashIntensity = Random.Range(0.4f, 0.75f);
-                img.color = new Color(1f, 0.95f, 0.85f, flashIntensity);
+                // img.color = new Color(1f, 0.95f, 0.85f, flashIntensity); // Removed background flash
                 if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, flashIntensity * 1.2f);
  
                 float elapsed = 0f;
@@ -1755,7 +1755,7 @@ namespace TheAlchemistsCrypt.UI
                 {
                     elapsed += Time.unscaledDeltaTime;
                     float ft = elapsed / duration;
-                    img.color = new Color(1f, 0.95f, 0.85f, Mathf.Lerp(flashIntensity, 0f, ft));
+                    // img.color = new Color(1f, 0.95f, 0.85f, Mathf.Lerp(flashIntensity, 0f, ft));
                     if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, Mathf.Lerp(flashIntensity * 1.2f, 0f, ft));
                     yield return null;
                 }
@@ -1766,7 +1766,7 @@ namespace TheAlchemistsCrypt.UI
                     if (img == null) break;
  
                     flashIntensity = Random.Range(0.2f, 0.45f);
-                    img.color = new Color(1f, 0.95f, 0.85f, flashIntensity);
+                    // img.color = new Color(1f, 0.95f, 0.85f, flashIntensity);
                     if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, flashIntensity);
  
                     elapsed = 0f;
@@ -1775,7 +1775,7 @@ namespace TheAlchemistsCrypt.UI
                     {
                         elapsed += Time.unscaledDeltaTime;
                         float ft = elapsed / duration;
-                        img.color = new Color(1f, 0.95f, 0.85f, Mathf.Lerp(flashIntensity, 0f, ft));
+                        // img.color = new Color(1f, 0.95f, 0.85f, Mathf.Lerp(flashIntensity, 0f, ft));
                         if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, Mathf.Lerp(flashIntensity, 0f, ft));
                         yield return null;
                     }
