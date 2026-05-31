@@ -1246,6 +1246,12 @@ namespace TheAlchemistsCrypt.Editor
                     if (nameLower.Contains(kw)) { isDynamic = true; break; }
                 }
 
+                // EXCLUDE TREES from static batching to fix detail loss at close range
+                // Trees are high-poly and should be individual objects for better culling and to avoid LOD-batching conflicts.
+                if (nameLower.Contains("tree") || nameLower.Contains("palm")) {
+                    isDynamic = true;
+                }
+
                 if (isDynamic) { skipped++; continue; }
 
                 GameObjectUtility.SetStaticEditorFlags(t.gameObject, staticFlags);

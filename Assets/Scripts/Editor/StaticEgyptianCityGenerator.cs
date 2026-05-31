@@ -908,6 +908,17 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             if (isTree) {
+                // Remove any existing LODGroup to prevent "detail loss when close" (inverted LOD behavior)
+                var existingLOD = obj.GetComponent<LODGroup>();
+                if (existingLOD != null) {
+                    UnityEngine.Object.DestroyImmediate(existingLOD);
+                }
+                
+                // Ensure all child renderers are enabled and not hidden by some previous LOD setting
+                foreach (var r in obj.GetComponentsInChildren<Renderer>(true)) {
+                    r.enabled = true;
+                }
+
                 // Remove all child mesh colliders from the imported GLB/FBX to avoid multi-mesh collider overhead
                 var childColliders = obj.GetComponentsInChildren<Collider>(true);
                 foreach (var c in childColliders) {
