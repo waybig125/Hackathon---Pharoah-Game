@@ -806,6 +806,10 @@ namespace TheAlchemistsCrypt.Editor
             var meshFilters = obj.GetComponentsInChildren<MeshFilter>(true);
             foreach (var mf in meshFilters) {
                 if (mf.sharedMesh == null) continue;
+                
+                // ALWAYS reset to true geometry before placement math to fix flying trees
+                mf.sharedMesh.RecalculateBounds(); 
+                
                 Bounds meshBounds = mf.sharedMesh.bounds;
                 
                 // Pure local matrix hierarchy computation to root object space
@@ -951,13 +955,15 @@ namespace TheAlchemistsCrypt.Editor
                 bc.center = new Vector3(0f, 5f, 0f);
                 bc.size = new Vector3(0.7f, 10f, 0.7f);
 
-                // RECALCULATE MESH BOUNDS to fix 'disappearing leaves' when close/looking up
-                // GLB imports often have tight or incorrect bounds that cause premature frustum culling.
-                // We MUST ONLY use RecalculateBounds. Do NOT artificially expand sharedMesh.bounds,
-                // as that corrupts the localBounds calculation used to place the tree on the ground!
+                // EXPAND MESH BOUNDS to fix 'disappearing leaves' when close/looking up
+                // We reset bounds in Step 1 for accurate placement, so it's now safe to expand them here 
+                // to prevent Unity's frustum culling from hiding the tree when the trunk center is off-screen.
                 foreach (var mf in obj.GetComponentsInChildren<MeshFilter>(true)) {
                     if (mf.sharedMesh != null) {
-                        mf.sharedMesh.RecalculateBounds();
+                        Bounds b = mf.sharedMesh.bounds;
+                        // Expand by 2 units in local space (which is ~18 meters in world space for the palm trees)
+                        b.Expand(2.0f); 
+                        mf.sharedMesh.bounds = b;
                     }
                 }
 
