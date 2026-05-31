@@ -953,13 +953,11 @@ namespace TheAlchemistsCrypt.Editor
 
                 // RECALCULATE MESH BOUNDS to fix 'disappearing leaves' when close/looking up
                 // GLB imports often have tight or incorrect bounds that cause premature frustum culling.
+                // We MUST ONLY use RecalculateBounds. Do NOT artificially expand sharedMesh.bounds,
+                // as that corrupts the localBounds calculation used to place the tree on the ground!
                 foreach (var mf in obj.GetComponentsInChildren<MeshFilter>(true)) {
                     if (mf.sharedMesh != null) {
                         mf.sharedMesh.RecalculateBounds();
-                        // Expand bounds slightly as a safety buffer
-                        Bounds b = mf.sharedMesh.bounds;
-                        b.Expand(1.2f); 
-                        mf.sharedMesh.bounds = b;
                     }
                 }
 
