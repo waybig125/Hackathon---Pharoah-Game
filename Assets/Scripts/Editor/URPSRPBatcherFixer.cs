@@ -493,6 +493,22 @@ namespace TheAlchemistsCrypt.Editor
             
             // 5. GPU Instancing
             dst.enableInstancing = true;
+
+            // 6. FOLIAGE FIX (Disappearing leaves / backface culling)
+            // Palm leaves are often modeled as single-sided planes.
+            // If Cull is set to Back (2), walking up to a tree and looking up makes the leaves disappear!
+            // We must force Cull Off (0) to make them double-sided. We also enable AlphaTest for proper cutouts.
+            if (lowerName.Contains("leaf") || lowerName.Contains("lambert7") || glbLower.Contains("tree") || glbLower.Contains("palm"))
+            {
+                dst.SetFloat("_Cull", 0f); // 0 = Off (Double Sided)
+                
+                // Only force Alpha Clip if it has a texture (to prevent turning solid objects invisible)
+                if (mainTex != null || dst.GetTexture("_BaseMap") != null) {
+                    dst.SetFloat("_AlphaClip", 1f);
+                    dst.SetFloat("_Cutoff", 0.5f);
+                    dst.EnableKeyword("_ALPHATEST_ON");
+                }
+            }
         }
 
         // [MenuItem("Egyptian/🗑 Clear Occlusion Data", false, 11)]
