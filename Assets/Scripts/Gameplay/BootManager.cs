@@ -397,21 +397,15 @@ namespace TheAlchemistsCrypt.Gameplay
                         );
                     }
 
-                // Draw visible white-hot core (solid centre, soft edge falloff)
-                int coreRad = Mathf.Max(1, Mathf.RoundToInt(thickness * 0.5f));
+                // Draw sharp pure white core
+                int coreRad = Mathf.Max(1, Mathf.RoundToInt(thickness * 0.3f));
                 for (int dy = -coreRad; dy <= coreRad; dy++)
                     for (int dx = -coreRad; dx <= coreRad; dx++)
                     {
-                        float dist = Mathf.Sqrt(dx * dx + dy * dy);
-                        if (dist > coreRad) continue;
+                        if (dx * dx + dy * dy > coreRad * coreRad) continue;
                         int nx = Mathf.Clamp(px + dx, 0, width - 1);
                         int ny = Mathf.Clamp(py + dy, 0, height - 1);
-                        // Pure white at centre, slight cyan tint at edge — bright but not all-white
-                        float ratio = dist / coreRad;
-                        float alpha = 1f - ratio * 0.3f;   // 1.0 at centre → 0.7 at edge
-                        Color core = Color.Lerp(new Color(1f, 1f, 1f, 1f), new Color(0.6f, 0.9f, 1f, 0.85f), ratio);
-                        core.a = alpha;
-                        pixels[ny * width + nx] = Color.Lerp(pixels[ny * width + nx], core, alpha);
+                        pixels[ny * width + nx] = new Color(1f, 1f, 1f, 1f);
                     }
             }
 
@@ -438,7 +432,7 @@ namespace TheAlchemistsCrypt.Gameplay
             while (img != null)
             {
                 // Wait for the next flash sequence in realtime
-                yield return new WaitForSecondsRealtime(Random.Range(3.5f, 7.5f));
+                yield return new WaitForSecondsRealtime(Random.Range(2.5f, 6.5f));
                 if (img == null) break;
 
                 // Generate a fresh procedural bolt
@@ -454,13 +448,12 @@ namespace TheAlchemistsCrypt.Gameplay
                     boltRect.localScale = new Vector3(boltScale, boltScale, 1f);
                 }
 
-                // First flash: Very bright and extremely rapid (snappy) decay
-                float flashIntensity = Random.Range(0.6f, 0.9f);
+                float flashIntensity = Random.Range(0.4f, 0.75f);
                 img.color = new Color(1f, 0.95f, 0.85f, flashIntensity);
                 if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, flashIntensity * 1.2f);
 
                 float elapsed = 0f;
-                float duration = Random.Range(0.05f, 0.09f); // Snappy decay phase (50-90ms)
+                float duration = Random.Range(0.08f, 0.15f);
                 while (elapsed < duration && img != null)
                 {
                     elapsed += Time.unscaledDeltaTime;
@@ -470,18 +463,17 @@ namespace TheAlchemistsCrypt.Gameplay
                     yield return null;
                 }
 
-                // Double strike (secondary echo flash) 60% of the time
                 if (img != null && Random.value < 0.6f)
                 {
-                    yield return new WaitForSecondsRealtime(Random.Range(0.04f, 0.08f)); // Brief gap
+                    yield return new WaitForSecondsRealtime(Random.Range(0.05f, 0.12f));
                     if (img == null) break;
 
-                    flashIntensity = Random.Range(0.3f, 0.5f);
+                    flashIntensity = Random.Range(0.2f, 0.45f);
                     img.color = new Color(1f, 0.95f, 0.85f, flashIntensity);
                     if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, flashIntensity);
 
                     elapsed = 0f;
-                    duration = Random.Range(0.08f, 0.15f); // Short secondary decay (80-150ms)
+                    duration = Random.Range(0.12f, 0.25f);
                     while (elapsed < duration && img != null)
                     {
                         elapsed += Time.unscaledDeltaTime;
@@ -492,7 +484,6 @@ namespace TheAlchemistsCrypt.Gameplay
                     }
                 }
 
-                // Ensure complete transparent reset
                 if (img != null) img.color = new Color(1f, 1f, 1f, 0f);
                 if (boltImg != null) boltImg.color = new Color(1f, 1f, 1f, 0f);
             }
