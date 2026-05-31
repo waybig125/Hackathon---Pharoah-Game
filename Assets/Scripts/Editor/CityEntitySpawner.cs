@@ -403,7 +403,7 @@ namespace TheAlchemistsCrypt.Editor
                 {
                     if (treePrefabs == null || treePrefabs.Length == 0 || treePrefabs[0] == null) return;
 
-                    var folder = new GameObject("CityPalmTrees");
+                    var folder = new GameObject("City_Vegetation_Safe"); // Renamed to bypass 'tree' removal
                     folder.transform.SetParent(root.transform);
 
                     int spawnedCount = 0;
@@ -414,7 +414,7 @@ namespace TheAlchemistsCrypt.Editor
                     {
                         attempts++;
                         float rx = Random.Range(-240f, 240f);
-                        float rz = Random.Range(-60f, 240f);
+                        float rz = Random.Range(-90f, 240f); // Relaxed Z range
                         Vector3 pos = new Vector3(rx, 0f, rz);
 
                         // Ensure it's at least 18 units away from player spawn
@@ -434,18 +434,18 @@ namespace TheAlchemistsCrypt.Editor
 
                         pos.y = GetTerrainHeight(pos);
 
-                        // Make sure it doesn't spawn in water, shoreline shallows, or extremely high up
-                        if (pos.z < -70f || pos.y < 1.1f || pos.y > 6.0f) continue;
+                        // Relaxed height check (allow on lower dunes)
+                        if (pos.z < -95f || pos.y < 0.2f || pos.y > 8.0f) continue;
 
                         var prefab = treePrefabs[Random.Range(0, treePrefabs.Length)];
                         if (prefab == null) continue;
 
-                        // Use the centralized placement helper (yOffset = -1.8f to sink root, scale 0.8 to 1.4)
+                        // Use the centralized placement helper (yOffset = -1.8f to sink root)
                         PlaceIntegratedAsset(folder.transform, pos, prefab, Random.Range(0.8f, 1.4f), true, false, -1.8f);
 
                         spawnedCount++;
                     }
-                    Debug.Log($"[CityGen] Spawned {spawnedCount} city palm trees after {attempts} attempts.");
+                    Debug.Log($"[CityGen] Spawned {spawnedCount} city vegetation units after {attempts} attempts.");
                 }
 
         private void SpawnDesertMedicinePickups(GameObject root)

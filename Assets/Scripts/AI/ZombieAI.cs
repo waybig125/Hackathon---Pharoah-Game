@@ -916,7 +916,14 @@ namespace TheAlchemistsCrypt.AI
         private void Die()
         {
             isDead = true;
-            if (healthBarObj != null) Destroy(healthBarObj);
+            
+            // Force health bar to 0% and red color on death for clear feedback
+            if (healthBarFillSr != null)
+            {
+                healthBarFillSr.gameObject.transform.localScale = new Vector3(0f, 0.10f, 1f);
+                healthBarFillSr.color = Color.red;
+            }
+            if (healthBarObj != null) Destroy(healthBarObj, 0.5f);
             
             if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null) {
                 TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.AddKill();

@@ -211,15 +211,21 @@ namespace InfimaGames.LowPolyShooterPack
             if (playerCamera == null)
                 return;
 
+            // --- HACKATHON: Restore Casing Ejection (Triggered first for physical presence) ---
+            EjectCasing();
+
             //Get Muzzle Socket. This is the point we fire from.
             Transform muzzleSocket = muzzleBehaviour.GetSocket();
             
-            //Play the firing animation.
+            //Play the firing animation instantly (classic snappy feel)
             const string stateName = "Fire";
             animator.Play(stateName, 0, 0.0f);
             //Reduce ammunition! We just shot, so we need to get rid of one!
             ammunitionCurrent = Mathf.Clamp(ammunitionCurrent - 1, 0, magazineBehaviour.GetAmmunitionTotal());
 
+            //Play all muzzle effects.
+            muzzleBehaviour.Effect();
+            
             // --- HACKATHON: UNIFIED ELEMENTAL SHOOTING (Authentic Prefabs) ---
             var focus = GetComponentInParent<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
             if (focus == null) {
@@ -227,9 +233,10 @@ namespace InfimaGames.LowPolyShooterPack
                 if (player != null) focus = player.GetComponentInChildren<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
             }
 
-            // Determine rotation
+            // Determine rotation (Offset raycast origin by 0.5m forward to prevent collision blocks by nearby enemies)
+            Vector3 rayOrigin = playerCamera.position + playerCamera.forward * 0.5f;
             Quaternion rotation = Quaternion.LookRotation(playerCamera.forward * 1000.0f - muzzleSocket.position);
-            if (Physics.Raycast(new Ray(playerCamera.position, playerCamera.forward), out RaycastHit hit, maximumDistance, mask))
+            if (Physics.Raycast(new Ray(rayOrigin, playerCamera.forward), out RaycastHit hit, maximumDistance, mask))
                 rotation = Quaternion.LookRotation(hit.point - muzzleSocket.position);
 
             // Spawn the HIGH QUALITY Infima prefab
@@ -265,9 +272,6 @@ namespace InfimaGames.LowPolyShooterPack
             light.range = 8f;
             light.intensity = 5f;
             Destroy(flash, 0.05f); 
-
-            // --- HACKATHON: Restore Casing Ejection (Dropped Bullets) ---
-            EjectCasing();
         }
 
         public override void FillAmmunition(int amount)
