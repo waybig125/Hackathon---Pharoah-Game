@@ -118,7 +118,7 @@ namespace TheAlchemistsCrypt.Editor
             List<Vector3> occupiedPositions = new List<Vector3>();
 
             var root = new GameObject(rootName);
-            root.isStatic = true;
+            // root.isStatic = true; // REMOVED: Managed selectively to prevent tree merging artifacts
 
             var trees = new GameObject[] {
                 AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/palm_trees/dark_palm_tree.glb"),
@@ -759,7 +759,7 @@ namespace TheAlchemistsCrypt.Editor
 
             // Combine all static meshes under the city root to minimize draw calls and maximize mobile FPS!
             // This is called AFTER FixMaterialsNoDialog to ensure trees (marked as dynamic in fixer) are NOT combined.
-            StaticBatchingUtility.Combine(root);
+            // StaticBatchingUtility.Combine(root); // DISABLED: Causing detail loss and 'decimated' look on trees when close
 
             var activeScene = SceneManager.GetActiveScene();
             EditorSceneManager.MarkSceneDirty(activeScene);
@@ -790,6 +790,11 @@ namespace TheAlchemistsCrypt.Editor
 
             var obj = PrefabUtility.InstantiatePrefab(prefab, parent) as GameObject;
             // obj.isStatic = true; // REMOVED: Managed selectively by URPSRPBatcherFixer to exclude trees
+            
+            if (pName.Contains("palm") || pName.Contains("tree")) {
+                GameObjectUtility.SetStaticEditorFlags(obj, 0); // Force non-static for trees
+            }
+
             if (pName.Contains("temple") || pName.Contains("mastaba"))
             {
                 RemoveFloorsFromLandmarks(obj);

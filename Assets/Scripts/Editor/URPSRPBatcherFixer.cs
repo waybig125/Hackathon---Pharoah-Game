@@ -1247,9 +1247,23 @@ namespace TheAlchemistsCrypt.Editor
                 }
 
                 // EXCLUDE TREES from static batching to fix detail loss at close range
-                // Trees are high-poly and should be individual objects for better culling and to avoid LOD-batching conflicts.
-                if (nameLower.Contains("tree") || nameLower.Contains("palm")) {
-                    isDynamic = true;
+                // Check the object itself and all its parents up to the city root.
+                bool isPartOfTree = false;
+                Transform checkT = t;
+                while (checkT != null && checkT != cityRoot.transform) {
+                    string checkName = checkT.gameObject.name.ToLower();
+                    if (checkName.Contains("tree") || checkName.Contains("palm")) {
+                        isPartOfTree = true;
+                        break;
+                    }
+                    checkT = checkT.parent;
+                }
+
+                if (isPartOfTree) {
+                    // Force-clear any existing static flags if this object is part of a tree
+                    GameObjectUtility.SetStaticEditorFlags(t.gameObject, 0);
+                    skipped++; 
+                    continue; 
                 }
 
                 if (isDynamic) { skipped++; continue; }
