@@ -221,7 +221,8 @@ namespace TheAlchemistsCrypt.Editor
                         win.isStatic = true;
                     }
 
-                    if (addLadder)
+                    float distanceToPlayer = Vector3.Distance(pos, new Vector3(16f, pos.y, 48f));
+                    if (addLadder && distanceToPlayer > 35f)
                     {
                         // 6. Rooftop Access Ladder (Angles at 35 degrees from the back, acting as a clean ramp)
                         float ladderLength = (hallHeight + 2f) / Mathf.Sin(35f * Mathf.Deg2Rad);

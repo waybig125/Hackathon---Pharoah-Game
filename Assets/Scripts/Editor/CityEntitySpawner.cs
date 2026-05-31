@@ -424,7 +424,7 @@ namespace TheAlchemistsCrypt.Editor
                         bool tooClose = false;
                         foreach (var occupied in occupiedPositions)
                         {
-                            if (Vector3.Distance(new Vector3(rx, 0f, rz), new Vector3(occupied.x, 0f, occupied.z)) < 18f)
+                            if (Vector3.Distance(new Vector3(rx, 0f, rz), new Vector3(occupied.x, 0f, occupied.z)) < 20f)
                             {
                                 tooClose = true;
                                 break;
