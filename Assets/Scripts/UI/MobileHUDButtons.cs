@@ -1208,6 +1208,17 @@ namespace TheAlchemistsCrypt.UI
 
             // Lightning overlay
             var lightningGo = new GameObject("LightningOverlay", typeof(RectTransform), typeof(Image));
+            lightningGo.transform.SetParent(startCanvasGo.transform, false);
+            var lRect = lightningGo.GetComponent<RectTransform>();
+            lRect.anchorMin = Vector2.zero; lRect.anchorMax = Vector2.one;
+            lRect.offsetMin = lRect.offsetMax = Vector2.zero;
+            var lImg = lightningGo.GetComponent<Image>();
+            lImg.color = new Color(1f, 1f, 1f, 0f);
+            lImg.raycastTarget = false;
+
+            StartCoroutine(LightningFlashesRoutine(lImg));
+
+            var bottomActionGo = new GameObject("BottomActionPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             bottomActionGo.SetParent(startCanvasGo.transform, false);
             bottomActionGo.anchorMin = bottomActionGo.anchorMax = new Vector2(0.5f, 0f);
             bottomActionGo.pivot = new Vector2(0.5f, 0f);
