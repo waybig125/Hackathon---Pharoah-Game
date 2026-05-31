@@ -645,7 +645,6 @@ namespace TheAlchemistsCrypt.Editor
                     // REMOVED: Heavy Rigidbody that caused "dancing" physics issues.
                     // Converting to a rock-solid static structure.
                     root.isStatic = true;
-                    }
 
                     // Add NavMeshObstacle to carve the NavMesh around the tomb
                     var nmoTomb = root.AddComponent<UnityEngine.AI.NavMeshObstacle>();
