@@ -747,9 +747,6 @@ namespace TheAlchemistsCrypt.Editor
             surface.useGeometry = UnityEngine.AI.NavMeshCollectGeometry.RenderMeshes;
             surface.BuildNavMesh();
 
-            // Combine all static meshes under the city root to minimize draw calls and maximize mobile FPS!
-            StaticBatchingUtility.Combine(root);
-
             // ── Post-generation performance setup ──────────────────────────────────────────
             // Marks all city children as OccluderStatic/OccludeeStatic/BatchingStatic so they
             // participate in static batching and are ready for occlusion culling baking.
@@ -759,6 +756,10 @@ namespace TheAlchemistsCrypt.Editor
             // stays fast. Use Egyptian → 🔥 Bake Occlusion Culling when ready for final testing.
             URPSRPBatcherFixer.FixMaterialsNoDialog();
             // ─────────────────────────────────────────────────────────────────────────────
+
+            // Combine all static meshes under the city root to minimize draw calls and maximize mobile FPS!
+            // This is called AFTER FixMaterialsNoDialog to ensure trees (marked as dynamic in fixer) are NOT combined.
+            StaticBatchingUtility.Combine(root);
 
             var activeScene = SceneManager.GetActiveScene();
             EditorSceneManager.MarkSceneDirty(activeScene);
@@ -788,7 +789,7 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             var obj = PrefabUtility.InstantiatePrefab(prefab, parent) as GameObject;
-            obj.isStatic = true;
+            // obj.isStatic = true; // REMOVED: Managed selectively by URPSRPBatcherFixer to exclude trees
             if (pName.Contains("temple") || pName.Contains("mastaba"))
             {
                 RemoveFloorsFromLandmarks(obj);
