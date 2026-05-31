@@ -380,7 +380,7 @@ namespace TheAlchemistsCrypt.Editor
                     int attempts = 0;
                     List<Vector3> oasisTreePositions = new List<Vector3>();
 
-                    while (spawnedCount < 28 && attempts < 400) // Reduced from 40 to 28 (70%)
+                    while (spawnedCount < 40 && attempts < 800) // Restored to 40 (100%)
                     {
                         attempts++;
                         float rx = Random.Range(-450f, 450f);
@@ -388,10 +388,10 @@ namespace TheAlchemistsCrypt.Editor
                         Vector3 pos = new Vector3(rx, 0f, rz);
                         pos.y = GetTerrainHeight(pos);
 
-                        // Make sure it doesn't spawn in water, shoreline shallows, or extremely high up
-                        if (pos.z < -70f || pos.y < 1.1f || pos.y > 6.0f) continue;
+                        // Relaxed height check: allow spawning on higher sand banks
+                        if (pos.z < -70f || pos.y < 1.1f || pos.y > 15.0f) continue;
 
-                        // Ensure no two trees are too close (Min 3.5m distance to allow small clumps but prevent exact overlap)
+                        // Ensure no two trees are too close (Min 3.5m distance)
                         bool tooCloseToTree = false;
                         foreach (var otherPos in oasisTreePositions) {
                             if (Vector3.Distance(pos, otherPos) < 3.5f) {
@@ -436,7 +436,7 @@ namespace TheAlchemistsCrypt.Editor
                     Vector3 playerSpawn = new Vector3(16f, 0f, 48f);
                     List<Vector3> cityTreePositions = new List<Vector3>();
 
-                    while (spawnedCount < 70 && attempts < 1000) // Reduced from 100 to 70 (70%)
+                    while (spawnedCount < 100 && attempts < 2000) // Restored to 100 (100%) and increased attempts
                     {
                         attempts++;
                         float rx = Random.Range(-240f, 240f);
@@ -448,8 +448,8 @@ namespace TheAlchemistsCrypt.Editor
 
                         pos.y = GetTerrainHeight(pos);
 
-                        // Relaxed height check (allow on lower dunes)
-                        if (pos.z < -95f || pos.y < -0.2f || pos.y > 8.0f) continue;
+                        // Relaxed height check (allow on much higher dunes and slopes)
+                        if (pos.z < -95f || pos.y < -0.2f || pos.y > 18.0f) continue;
 
                         // Ensure no two trees are too close (Min 3.5m distance to allow natural clustering)
                         bool tooCloseToTree = false;

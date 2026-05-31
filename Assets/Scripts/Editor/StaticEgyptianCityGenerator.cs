@@ -554,17 +554,30 @@ namespace TheAlchemistsCrypt.Editor
 
             SpawnDesertBrokenPillars(root, wallMat);
 
-            // GATHER ALL BUILDING/LANDMARK BOUNDS TO PREVENT TREES SPAWNING INSIDE THEM
+            // GATHER ALL PHYSICAL OBSTACLE BOUNDS (Houses, Pyramids, etc.)
+            // We use both Renderers and Colliders for maximum coverage and safety.
             List<Bounds> obstacleBounds = new List<Bounds>();
-            var allMeshRenderers = root.GetComponentsInChildren<MeshRenderer>(true);
-            foreach (var r in allMeshRenderers) {
+            
+            // First, sync everything so bounds are accurate in world space
+            Physics.SyncTransforms();
+
+            foreach (var r in root.GetComponentsInChildren<Renderer>(true)) {
                 string rName = r.gameObject.name.ToLower();
-                // Ignore terrain, sea, bounds, and other non-buildings
-                if (rName.Contains("terrain") || rName.Contains("sea") || rName.Contains("bounds") || rName.Contains("door")) continue;
+                if (rName.Contains("terrain") || rName.Contains("sea") || rName.Contains("bounds") || rName.Contains("palm") || rName.Contains("tree")) continue;
                 
-                // Expand bounds slightly to ensure a safe perimeter around the building
                 Bounds b = r.bounds;
-                b.Expand(1f);
+                // Add a 1.5m safety margin around every building to prevent clipping
+                b.Expand(new Vector3(1.5f, 0f, 1.5f)); 
+                obstacleBounds.Add(b);
+            }
+            
+            foreach (var c in root.GetComponentsInChildren<Collider>(true)) {
+                if (c is TerrainCollider) continue;
+                string cName = c.gameObject.name.ToLower();
+                if (cName.Contains("palm") || cName.Contains("tree")) continue;
+                
+                Bounds b = c.bounds;
+                b.Expand(new Vector3(1.0f, 0f, 1.0f));
                 obstacleBounds.Add(b);
             }
 
@@ -964,9 +977,9 @@ namespace TheAlchemistsCrypt.Editor
 
                 // Add a single rigid BoxCollider on the root to define correct physical boundary
                 var bc = obj.AddComponent<BoxCollider>();
-                // Match the tree's vertical geometry approximately - REDUCED to fix invisible blockers
-                bc.center = new Vector3(0f, 5f, 0f);
-                bc.size = new Vector3(0.7f, 10f, 0.7f);
+                // Increase width from 0.7 to 1.2 to make trees feel truly solid and hard to cross
+                bc.center = new Vector3(0f, 6f, 0f);
+                bc.size = new Vector3(1.2f, 12f, 1.2f);
 
                 // EXPAND MESH BOUNDS to fix 'disappearing leaves' when close/looking up
                 // We reset bounds in Step 1 for accurate placement, so it's now safe to expand them here 
