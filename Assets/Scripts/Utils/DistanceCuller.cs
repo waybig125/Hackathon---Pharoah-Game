@@ -88,7 +88,8 @@ namespace TheAlchemistsCrypt.Utils
                     nameLower.Contains("mastaba")   || nameLower.Contains("obelisk") ||
                     nameLower.Contains("tree")      || nameLower.Contains("palm")    ||
                     nameLower.Contains("dynamic")   || nameLower.Contains("tomb")    ||
-                    nameLower.Contains("alchemist") || nameLower.Contains("vegetation"))
+                    nameLower.Contains("alchemist") || nameLower.Contains("vegetation") ||
+                    nameLower.Contains("house")     || nameLower.Contains("building"))
                     continue;
 
                 Transform groupRoot = r.transform;
@@ -103,7 +104,8 @@ namespace TheAlchemistsCrypt.Utils
                     rootLower.Contains("obelisk")  || rootLower.Contains("tree")    ||
                     rootLower.Contains("palm")     || rootLower.Contains("dynamic") ||
                     rootLower.Contains("tomb")     || rootLower.Contains("alchemist") ||
-                    rootLower.Contains("vegetation"))
+                    rootLower.Contains("vegetation") || rootLower.Contains("house")   ||
+                    rootLower.Contains("building"))
                     continue;
 
                 if (!groupedRenderers.ContainsKey(groupRoot))
