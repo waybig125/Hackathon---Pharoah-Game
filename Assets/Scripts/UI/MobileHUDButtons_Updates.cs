@@ -90,8 +90,8 @@ namespace TheAlchemistsCrypt.UI
              lastAmmoCount = c;
              
              string modeName = "SULPHUR";
-             Color tickColor = new Color(0.95f, 0.8f, 0.2f, 0.95f);
-             Sprite fillSprite = sulfurBarSprite;
+             Color tickColor = new Color(1.0f, 0.55f, 0.05f, 1f); // Consistent bright Sulfur
+             Sprite elementIcon = sulphurIconSprite;
 
              var focus = GameObject.FindAnyObjectByType<TheAlchemistsCrypt.Weapons.AlchemicalFocus>();
              if (focus != null)
@@ -100,18 +100,18 @@ namespace TheAlchemistsCrypt.UI
                  {
                      case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Sulfur:
                          modeName = "SULPHUR";
-                         tickColor = new Color(0.95f, 0.55f, 0.05f, 0.95f);
-                         fillSprite = sulfurBarSprite;
+                         tickColor = new Color(1.0f, 0.55f, 0.05f, 1f);
+                         elementIcon = sulphurIconSprite;
                          break;
                      case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Mercury:
                          modeName = "MERCURY";
-                         tickColor = new Color(0.1f, 0.75f, 0.95f, 0.95f);
-                         fillSprite = mercuryBarSprite;
+                         tickColor = new Color(0.0f, 0.9f, 1.0f, 1f); // Consistent Cyan
+                         elementIcon = mercuryIconSprite;
                          break;
                      case TheAlchemistsCrypt.Weapons.AlchemicalFocus.FireMode.Salt:
                          modeName = "SALT";
-                         tickColor = new Color(0.95f, 0.95f, 0.95f, 0.95f);
-                         fillSprite = saltBarSprite;
+                         tickColor = new Color(0.8f, 0.2f, 1.0f, 1f); // Consistent Violet
+                         elementIcon = saltIconSprite;
                          break;
                  }
              }
@@ -124,22 +124,29 @@ namespace TheAlchemistsCrypt.UI
                      if (weapon != null)
                      {
                          string wName = weapon.name.ToLower();
-                         if (wName.Contains("sulfur")) { tickColor = new Color(0.95f, 0.55f, 0.05f, 0.95f); modeName = "SULPHUR"; fillSprite = sulfurBarSprite; }
-                         else if (wName.Contains("mercury")) { tickColor = new Color(0.2f, 0.4f, 1.0f, 0.95f); modeName = "MERCURY"; fillSprite = mercuryBarSprite; }
-                         else if (wName.Contains("salt")) { tickColor = new Color(0.6f, 0.2f, 0.9f, 0.95f); modeName = "SALT"; fillSprite = saltBarSprite; }
+                         if (wName.Contains("sulfur")) { tickColor = new Color(1.0f, 0.55f, 0.05f, 1f); modeName = "SULPHUR"; elementIcon = sulphurIconSprite; }
+                         else if (wName.Contains("mercury")) { tickColor = new Color(0.0f, 0.9f, 1.0f, 1f); modeName = "MERCURY"; elementIcon = mercuryIconSprite; }
+                         else if (wName.Contains("salt")) { tickColor = new Color(0.8f, 0.2f, 1.0f, 1f); modeName = "SALT"; elementIcon = saltIconSprite; }
                      }
                  }
              }
 
+             if (ammoIconImage != null && elementIcon != null)
+             {
+                 ammoIconImage.sprite = elementIcon;
+             }
+
              if (ammoBarFill != null)
              {
-                 ammoBarFill.fillAmount = Mathf.Clamp01((float)c / 30f);
+                 // Fix: fillAmount update from current ammo (c) vs max ammo (t)
+                 float max = (t > 0) ? t : 30f;
+                 ammoBarFill.fillAmount = Mathf.Clamp01((float)c / max);
                  ammoBarFill.color = tickColor;
              }
 
              if (ammoValueText != null)
              {
-                 ammoValueText.text = $"{c}/30";
+                 ammoValueText.text = $"{c}/{t}";
                  ammoValueText.color = tickColor;
              }
 

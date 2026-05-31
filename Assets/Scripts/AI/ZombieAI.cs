@@ -96,22 +96,31 @@ namespace TheAlchemistsCrypt.AI
             healthBarObj.transform.localPosition = new Vector3(0f, 2.4f, 0f); // Slightly higher to be fully visible above head
             healthBarObj.transform.localRotation = Quaternion.identity;
 
-            // Background
+            // Background - Now just a dark frame
             GameObject bgObj = new GameObject("BG");
             bgObj.transform.SetParent(healthBarObj.transform, false);
             var bgSr = bgObj.AddComponent<SpriteRenderer>();
             bgSr.sprite = healthBarSprite;
-            bgSr.color = new Color(0.15f, 0.0f, 0.0f, 0.8f); // Dark red BG
+            bgSr.color = new Color(0f, 0f, 0f, 0.7f); // Deep black-ish for better contrast
             bgSr.sortingOrder = 99; // Base layer
-            bgObj.transform.localScale = new Vector3(0.9f, 0.12f, 1f); // Thin elegant bar
+            bgObj.transform.localScale = new Vector3(0.92f, 0.14f, 1f); // Slightly larger than fill
 
-            // Fill
+            // Under-fill (The Red part that shows when health is missing)
+            GameObject redObj = new GameObject("Red");
+            redObj.transform.SetParent(healthBarObj.transform, false);
+            var redSr = redObj.AddComponent<SpriteRenderer>();
+            redSr.sprite = healthBarSprite;
+            redSr.color = new Color(0.8f, 0.1f, 0.1f, 1.0f); // Solid Red
+            redSr.sortingOrder = 100;
+            redObj.transform.localScale = new Vector3(0.88f, 0.10f, 1f);
+
+            // Fill (The Green part)
             GameObject fillObj = new GameObject("Fill");
             fillObj.transform.SetParent(healthBarObj.transform, false);
             healthBarFillSr = fillObj.AddComponent<SpriteRenderer>();
             healthBarFillSr.sprite = healthBarSprite;
             healthBarFillSr.color = Color.green;
-            healthBarFillSr.sortingOrder = 100; // Draw on top of BG
+            healthBarFillSr.sortingOrder = 101; // Draw on top of red
             
             // Set pivot to left for easy scaling
             fillObj.transform.localPosition = new Vector3(-0.44f, 0f, 0f);
@@ -122,6 +131,7 @@ namespace TheAlchemistsCrypt.AI
         {
             if (isDead)
             {
+                if (healthBarObj != null && healthBarObj.activeSelf) healthBarObj.SetActive(false);
                 return;
             }
 
@@ -141,12 +151,11 @@ namespace TheAlchemistsCrypt.AI
             healthBarFillSr.gameObject.transform.localScale = new Vector3(fillPct * maxScaleX, 0.10f, 1f);
             
             // Adjust local position so it stays left-aligned. 
-            // The fill starts at -0.44 (left edge of a 0.88 wide bar)
-            float leftEdge = -0.44f;
             float currentWidth = fillPct * maxScaleX;
-            healthBarFillSr.gameObject.transform.localPosition = new Vector3(leftEdge + (currentWidth * 0.5f), 0f, 0f);
+            healthBarFillSr.gameObject.transform.localPosition = new Vector3(-0.44f + (currentWidth * 0.5f), 0f, 0f);
             
-            healthBarFillSr.color = Color.Lerp(Color.red, Color.green, fillPct);
+            // Just use a solid color transition based on health percentage
+            healthBarFillSr.color = Color.Lerp(new Color(1f, 0.2f, 0f), Color.green, fillPct);
         }
 
         private void BackupOriginalColors()
