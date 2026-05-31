@@ -766,7 +766,7 @@ namespace TheAlchemistsCrypt.Editor
             string pName = prefab.name.ToLower();
             if (pName.Contains("palm") || pName.Contains("tree"))
             {
-                if (pos.z < -70f || GetTerrainHeight(pos) < 1.1f)
+                if (pos.z < -90f || GetTerrainHeight(pos) < 0.5f)
                 {
                     return null; // Prevent spawning trees in/near the water
                 }
@@ -836,7 +836,10 @@ namespace TheAlchemistsCrypt.Editor
                     targetSize = 2.4f; // Restore fallback to standard size
                     scaleByHeight = true;
                 }
-                else if (name.Contains("palm")) targetSize = 18f;
+                else if (name.Contains("palm")) {
+                    targetSize = 18f;
+                    Debug.Log($"[CityGen] Instantiating Palm: {prefab.name}, TargetSize: {targetSize}");
+                }
                 else if (name.Contains("farmer")) targetSize = 25f; // Reclassified as house
                 else if (name.Contains("door")) targetSize = 4.5f;
 
@@ -844,6 +847,7 @@ namespace TheAlchemistsCrypt.Editor
                     float dimensionToScale = scaleByHeight ? localBounds.size.y : Mathf.Max(localBounds.size.x, localBounds.size.y, localBounds.size.z);
                     if (dimensionToScale > 0) {
                         finalScale = (targetSize / dimensionToScale) * scaleMultiplier;
+                        if (name.Contains("palm")) Debug.Log($"[CityGen] Palm Scale: {finalScale} (Dimension: {dimensionToScale})");
                     }
                     if (name.Contains("stall")) {
                         Debug.Log($"[StallScale] Name: {prefab.name}, TargetSize: {targetSize}, DimensionToScale(Y): {dimensionToScale}, FinalScale: {finalScale}, scaleMultiplier: {scaleMultiplier}");
@@ -1069,6 +1073,14 @@ namespace TheAlchemistsCrypt.Editor
         /// LOD1 (30 – 60m): Same rendered meshes but rendered at reduced screen-space coverage
         ///                   (Unity automatically reduces overdraw at distance)
         /// Cull (60m+):     Renderer disabled entirely — palm trees beyond 60m are invisible at
+        ///                   typical mobile resolution and camera FOV anyway.
+        ///
+        /// Expected FPS gain: 5–12 FPS depending on how many palms are visible at once.
+        /// </summary>
+        
+    }
+}
+s beyond 60m are invisible at
         ///                   typical mobile resolution and camera FOV anyway.
         ///
         /// Expected FPS gain: 5–12 FPS depending on how many palms are visible at once.

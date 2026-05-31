@@ -255,7 +255,7 @@ namespace TheAlchemistsCrypt.UI
             
             if (threatCompassGo != null)
             {
-                float rotSpeed = Mathf.Lerp(15f, 120f, threat);
+                float rotSpeed = Mathf.Lerp(10f, 60f, threat);
                 threatCompassGo.transform.Rotate(0, 0, rotSpeed * Time.deltaTime);
             }
             
@@ -266,15 +266,15 @@ namespace TheAlchemistsCrypt.UI
             
             if (threatEyeGlyphImg != null)
             {
-                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * Mathf.Lerp(3f, 15f, threat));
+                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * Mathf.Lerp(2f, 8f, threat));
                 threatEyeGlyphImg.color = Color.Lerp(new Color(0.95f, 0.6f, 0.1f, 0.6f), new Color(0.95f, 0.05f, 0.05f, 1.0f), threat) * (0.5f + 0.5f * pulse);
             }
             
-            if (threat > 0.6f && Time.frameCount % 120 == 0)
+            if (threat > 0.6f && Time.frameCount % 180 == 0)
             {
                 threatMeterGo.transform.DOKill();
                 threatMeterGo.transform.localScale = Vector3.one;
-                threatMeterGo.transform.DOPunchScale(new Vector3(0.2f, 0.2f, 0f), 0.3f, 5, 1f);
+                threatMeterGo.transform.DOPunchScale(new Vector3(0.1f, 0.1f, 0f), 0.4f, 4, 0.8f);
             }
         }
 

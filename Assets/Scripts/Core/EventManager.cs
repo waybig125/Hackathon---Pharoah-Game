@@ -7,6 +7,12 @@ namespace TheAlchemistsCrypt.Core
     {
         private static readonly Dictionary<Type, List<Delegate>> eventListeners = new Dictionary<Type, List<Delegate>>();
 
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void Init()
+        {
+            eventListeners.Clear();
+        }
+
         public static void Subscribe<T>(Action<T> listener)
         {
             Type eventType = typeof(T);

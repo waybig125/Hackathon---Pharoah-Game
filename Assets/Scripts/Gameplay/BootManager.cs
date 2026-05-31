@@ -69,10 +69,10 @@ namespace TheAlchemistsCrypt.Gameplay
             
             // Align slightly better
             pbBgRect.anchoredPosition = new Vector2(0f, -65f);
-            pbBgRect.sizeDelta = new Vector2(730f, 44f);
+            pbBgRect.sizeDelta = new Vector2(780f, 44f);
             
             var pbBgImg = pbBgGo.GetComponent<Image>();
-            pbBgImg.sprite = CreateRoundedRectSprite(730, 44, 22f); // Fully rounded capsule
+            pbBgImg.sprite = CreateRoundedRectSprite(780, 44, 22f); // Fully rounded capsule
             pbBgImg.color = new Color(0.02f, 0.08f, 0.04f, 1f); // Solid dark green for better masking
 
             var mask = pbBgGo.GetComponent<Mask>();
@@ -102,8 +102,59 @@ namespace TheAlchemistsCrypt.Gameplay
 
             StartCoroutine(LightningFlashesRoutine(lImg));
 
+            // --- HACKATHON: Mystic Dust Particles ---
+            StartCoroutine(MysticDustRoutine(canvasGo.transform));
+
             // Start bubble animation
             StartBubblesEffect(pbBgGo.transform, new Vector2(730f, 44f));
+        }
+
+        private IEnumerator MysticDustRoutine(Transform parent)
+        {
+            var dustContainer = new GameObject("MysticDustContainer", typeof(RectTransform)).GetComponent<RectTransform>();
+            dustContainer.SetParent(parent, false);
+            // Move behind UI elements but in front of background
+            dustContainer.SetSiblingIndex(1);
+            dustContainer.anchorMin = Vector2.zero; dustContainer.anchorMax = Vector2.one;
+            dustContainer.offsetMin = dustContainer.offsetMax = Vector2.zero;
+
+            while (parent != null)
+            {
+                var dustGo = new GameObject("Dust", typeof(RectTransform), typeof(Image));
+                dustGo.transform.SetParent(dustContainer, false);
+                var rt = dustGo.GetComponent<RectTransform>();
+                
+                float size = Random.Range(4f, 12f);
+                rt.sizeDelta = new Vector2(size, size);
+                rt.anchoredPosition = new Vector2(Random.Range(-960f, 960f), -600f);
+                
+                var img = dustGo.GetComponent<Image>();
+                img.color = new Color(0.85f, 1.0f, 1.0f, 0.7f);
+                
+                StartCoroutine(AnimateDust(rt, img));
+                yield return new WaitForSeconds(Random.Range(0.1f, 0.4f));
+            }
+        }
+
+        private IEnumerator AnimateDust(RectTransform rt, Image img)
+        {
+            float speed = Random.Range(100f, 250f);
+            float drift = Random.Range(-40f, 40f);
+            float lifetime = Random.Range(4f, 8f);
+            float elapsed = 0f;
+
+            while (elapsed < lifetime && rt != null)
+            {
+                elapsed += Time.deltaTime;
+                rt.anchoredPosition += new Vector2(drift * Time.deltaTime, speed * Time.deltaTime);
+                
+                // Fade in and out
+                float alpha = Mathf.PingPong(elapsed * 2f / lifetime, 0.5f);
+                if (img != null) img.color = new Color(img.color.r, img.color.g, img.color.b, alpha * 0.4f);
+                
+                yield return null;
+            }
+            if (rt != null) Destroy(rt.gameObject);
         }
 
         private Sprite CreateRoundedRectSprite(int width, int height, float cornerRadius)
@@ -421,6 +472,12 @@ namespace TheAlchemistsCrypt.Gameplay
                 if (img != null) img.color = new Color(1f, 1f, 1f, 0f);
                 if (boltImg != null) boltImg.color = new Color(1f, 1f, 1f, 0f);
             }
+        }
+
+        private void OnDestroy()
+        {
+            // PERFORMANCE: Explicitly kill all tweens to prevent GC handle leaks on domain reload/scene switch
+            DG.Tweening.DOTween.KillAll(true);
         }
     }
 }

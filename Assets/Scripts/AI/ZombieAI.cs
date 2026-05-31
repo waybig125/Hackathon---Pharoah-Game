@@ -104,6 +104,7 @@ namespace TheAlchemistsCrypt.AI
             var bgSr = bgObj.AddComponent<SpriteRenderer>();
             bgSr.sprite = healthBarSprite;
             bgSr.color = new Color(0.15f, 0.0f, 0.0f, 0.8f); // Dark red BG
+            bgSr.sortingOrder = 99; // Base layer
             bgObj.transform.localScale = new Vector3(0.9f, 0.12f, 1f); // Thin elegant bar
 
             // Fill
@@ -112,7 +113,10 @@ namespace TheAlchemistsCrypt.AI
             healthBarFillSr = fillObj.AddComponent<SpriteRenderer>();
             healthBarFillSr.sprite = healthBarSprite;
             healthBarFillSr.color = Color.green;
-            healthBarFillSr.sortingOrder = 1; // Draw on top of BG
+            healthBarFillSr.sortingOrder = 100; // Draw on top of BG
+            
+            // Set pivot to left for easy scaling
+            fillObj.transform.localPosition = new Vector3(-0.44f, 0f, 0f);
             fillObj.transform.localScale = new Vector3(0.88f, 0.10f, 1f);
         }
 
@@ -120,32 +124,26 @@ namespace TheAlchemistsCrypt.AI
         {
             if (isDead)
             {
-                if (healthBarObj != null) Destroy(healthBarObj);
+                if (healthBarObj != null) healthBarObj.SetActive(false);
                 return;
             }
 
             if (healthBarObj == null || healthBarFillSr == null) return;
 
-            // Billboard rotation runs every frame (cheap — just a matrix op)
+            // Ensure billboard is always correct
             if (mainCameraTransform == null && Camera.main != null) mainCameraTransform = Camera.main.transform;
             if (mainCameraTransform != null)
             {
-                healthBarObj.transform.LookAt(healthBarObj.transform.position + mainCameraTransform.forward);
+                healthBarObj.transform.rotation = Quaternion.LookRotation(healthBarObj.transform.position - mainCameraTransform.position);
             }
 
-            // PERFORMANCE: Only rebuild fill visuals when HP has actually changed.
-            // This avoids per-frame localPosition + localScale + Color.Lerp overhead
-            // for every mummy every frame (20 mummies × 60 fps = 1200 wasted calls/s).
-            if (Mathf.Approximately(currentHealth, lastHealthForBar)) return;
-            lastHealthForBar = currentHealth;
-
-            float fillPct    = Mathf.Clamp01(currentHealth / maxHealth);
-            float maxScaleX  = 0.88f;
-            float targetScaleX = maxScaleX * fillPct;
-            float posX       = -0.5f * maxScaleX * (1f - fillPct);
-
-            healthBarFillSr.gameObject.transform.localPosition = new Vector3(posX, 0f, 0f);
-            healthBarFillSr.gameObject.transform.localScale    = new Vector3(targetScaleX, 0.10f, 1f);
+            float fillPct = Mathf.Clamp01(currentHealth / maxHealth);
+            
+            // Scaling from left pivot
+            healthBarFillSr.gameObject.transform.localScale = new Vector3(fillPct * 0.88f, 0.10f, 1f);
+            // Move position to keep left edge fixed
+            healthBarFillSr.gameObject.transform.localPosition = new Vector3(-0.44f + (fillPct * 0.44f), 0f, 0f);
+            
             healthBarFillSr.color = Color.Lerp(Color.red, Color.green, fillPct);
         }
 

@@ -350,12 +350,14 @@ namespace TheAlchemistsCrypt.UI
                     // Inner fill
                     var amFillGo = new GameObject("AmmoFill", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     amFillGo.SetParent(amBgBar, false);
-                    amFillGo.anchorMin = new Vector2(0f, 0f); amFillGo.anchorMax = new Vector2(1f, 1f);
-                    amFillGo.offsetMin = new Vector2(0f, 0f); amFillGo.offsetMax = new Vector2(0f, 0f);
+                    amFillGo.anchorMin = Vector2.zero; amFillGo.anchorMax = Vector2.one;
+                    amFillGo.offsetMin = amFillGo.offsetMax = Vector2.zero;
                     ammoBarFill = amFillGo.GetComponent<Image>();
                     ammoBarFill.sprite = CreateRoundedRectSprite(24, 24, Color.white, 12);
+                    ammoBarFill.type = Image.Type.Filled;
+                    ammoBarFill.fillMethod = Image.FillMethod.Horizontal;
+                    ammoBarFill.fillOrigin = (int)Image.OriginHorizontal.Left;
                     ammoBarFill.color = new Color(0.95f, 0.55f, 0.05f, 0.85f);
-                    ammoBarFill.type = Image.Type.Sliced;
 
                     // Ammo Count text value on the right
                     var ammoCountValGo = new GameObject("AmmoCountValueText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
@@ -509,9 +511,9 @@ namespace TheAlchemistsCrypt.UI
                     sprintIndicatorGo.anchorMin = sprintIndicatorGo.anchorMax = new Vector2(0.5f, 0.15f);
                     sprintIndicatorGo.anchoredPosition = new Vector2(0, 0);
                     sprintIndicatorGo.sizeDelta = new Vector2(60, 60);
-                    sprintIconImage = sprintIndicatorGo.GetComponent<Image>();
-                    sprintIconImage.sprite = sprintIcon;
-                    sprintIconImage.color = new Color(1f, 1f, 1f, 0f);
+                    sprintIndicatorImg = sprintIndicatorGo.GetComponent<Image>();
+                    sprintIndicatorImg.sprite = sprintIcon;
+                    sprintIndicatorImg.color = new Color(1f, 1f, 1f, 0f);
                 }
 
 
@@ -559,16 +561,18 @@ namespace TheAlchemistsCrypt.UI
 
                     var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
                     iconGo.SetParent(go, false); iconGo.anchorMin = Vector2.zero; iconGo.anchorMax = Vector2.one; iconGo.offsetMin = iconGo.offsetMax = Vector2.zero;
-                    sprintIconImage = iconGo.GetComponent<Image>(); sprintIconImage.sprite = sprintIcon; sprintIconImage.raycastTarget = false;
-                    sprintIconImage.color = new Color(1f, 1f, 1f, 0.8f); // 80% idle opacity
-                    sprintIconImage.preserveAspect = true;
+                    sprintButtonIconImg = iconGo.GetComponent<Image>(); sprintButtonIconImg.sprite = sprintIcon; sprintButtonIconImg.raycastTarget = false;
+                    sprintButtonIconImg.color = new Color(1f, 1f, 1f, 0.8f); // 80% idle opacity
+                    sprintButtonIconImg.preserveAspect = true; 
 
                     var helper = go.gameObject.AddComponent<ButtonInputHelper>();
                     helper.isDraggable = true;
                     helper.onDown = () => { sprintToggleState = !sprintToggleState; UpdateSprintVisuals(); SetSprint(sprintToggleState); };
 
                     UpdateSprintVisuals();
-                }
+                    }
 
     }
+}
+}
 }

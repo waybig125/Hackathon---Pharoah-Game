@@ -40,7 +40,8 @@ namespace TheAlchemistsCrypt.UI
         private GameObject deathPanelInstance = null;
 
         private bool sprintToggleState = false;
-        private Image sprintIconImage;
+        private Image sprintButtonIconImg;
+        private Image sprintIndicatorImg;
         private Image sprintShadowImage;
 
         private Sprite obsidianSprite;
@@ -1213,6 +1214,9 @@ namespace TheAlchemistsCrypt.UI
 
             StartCoroutine(LightningFlashesRoutine(lImg));
 
+            // --- HACKATHON: Mystic Dust Particles ---
+            StartCoroutine(MysticDustRoutine(startCanvasGo.transform));
+
             var bottomActionGo = new GameObject("BottomActionPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             bottomActionGo.SetParent(startCanvasGo.transform, false);
             bottomActionGo.anchorMin = bottomActionGo.anchorMax = new Vector2(0.5f, 0f);
@@ -1359,8 +1363,8 @@ namespace TheAlchemistsCrypt.UI
         {
             Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
             float half = size * 0.5f;
-            Color cyan = new Color(0.0f, 1.0f, 1.0f, 0.95f);
-            Color neon = new Color(0.4f, 1.0f, 1.0f, 1.0f);
+            Color reticleColor = new Color(1.0f, 1.0f, 1.0f, 0.95f);
+            Color glowColor = new Color(1.0f, 1.0f, 1.0f, 1.0f);
 
             for (int y = 0; y < size; y++)
             {
@@ -1380,17 +1384,17 @@ namespace TheAlchemistsCrypt.UI
 
                     if (isCross)
                     {
-                        tex.SetPixel(x, y, cyan);
+                        tex.SetPixel(x, y, reticleColor);
                     }
                     else if (isInner)
                     {
-                        tex.SetPixel(x, y, neon);
+                        tex.SetPixel(x, y, glowColor);
                     }
                     // Precise center dot with glow
                     else if (dist <= 0.06f)
                     {
                         float alpha = Mathf.Clamp01((1f - dist / 0.06f) * 2f);
-                        tex.SetPixel(x, y, new Color(neon.r, neon.g, neon.b, neon.a * alpha));
+                        tex.SetPixel(x, y, new Color(glowColor.r, glowColor.g, glowColor.b, glowColor.a * alpha));
                     }
                     else
                     {
@@ -1643,6 +1647,53 @@ namespace TheAlchemistsCrypt.UI
             }
         }
 
+        private IEnumerator MysticDustRoutine(Transform parent)
+        {
+            var dustContainer = new GameObject("MysticDustContainer", typeof(RectTransform)).GetComponent<RectTransform>();
+            dustContainer.SetParent(parent, false);
+            // Move behind UI elements but in front of background (Background is sibling 0)
+            dustContainer.SetSiblingIndex(1); 
+            dustContainer.anchorMin = Vector2.zero; dustContainer.anchorMax = Vector2.one;
+            dustContainer.offsetMin = dustContainer.offsetMax = Vector2.zero;
+
+            while (parent != null)
+            {
+                var dustGo = new GameObject("Dust", typeof(RectTransform), typeof(Image));
+                dustGo.transform.SetParent(dustContainer, false);
+                var rt = dustGo.GetComponent<RectTransform>();
+                
+                float size = Random.Range(4f, 12f); // Increased size
+                rt.sizeDelta = new Vector2(size, size);
+                rt.anchoredPosition = new Vector2(Random.Range(-960f, 960f), -600f);
+                
+                var img = dustGo.GetComponent<Image>();
+                img.color = new Color(0.85f, 1.0f, 1.0f, 0.7f); // Higher alpha
+                
+                StartCoroutine(AnimateDust(rt, img));
+                yield return new WaitForSeconds(Random.Range(0.1f, 0.4f));
+            }
+        }
+
+        private IEnumerator AnimateDust(RectTransform rt, Image img)
+        {
+            float speed = Random.Range(100f, 250f);
+            float drift = Random.Range(-40f, 40f);
+            float lifetime = Random.Range(4f, 8f);
+            float elapsed = 0f;
+
+            while (elapsed < lifetime && rt != null)
+            {
+                elapsed += Time.deltaTime;
+                rt.anchoredPosition += new Vector2(drift * Time.deltaTime, speed * Time.deltaTime);
+                
+                float alpha = Mathf.PingPong(elapsed * 2f / lifetime, 0.5f);
+                if (img != null) img.color = new Color(img.color.r, img.color.g, img.color.b, alpha * 0.4f);
+                
+                yield return null;
+            }
+            if (rt != null) Destroy(rt.gameObject);
+        }
+
         private IEnumerator LightningFlashesRoutine(Image img)
         {
             // Create a bolt Image sibling to the flash overlay
@@ -1711,6 +1762,12 @@ namespace TheAlchemistsCrypt.UI
                 if (img != null) img.color = new Color(1f, 1f, 1f, 0f);
                 if (boltImg != null) boltImg.color = new Color(1f, 1f, 1f, 0f);
             }
+        }
+
+        private void OnDestroy()
+        {
+            // PERFORMANCE: Explicitly kill all tweens to prevent GC handle leaks on domain reload/scene switch
+            DG.Tweening.DOTween.KillAll(true);
         }
     }
 }

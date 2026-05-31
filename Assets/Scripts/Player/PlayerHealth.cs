@@ -220,7 +220,7 @@ namespace TheAlchemistsCrypt.Player
             }
             if (source != null)
             {
-                source.GenerateImpulse(0.65f); // Solid noticeable hit shake!
+                source.GenerateImpulse(0.2f); // Further reduced from 0.35f
             }
 
             if (shakeCoroutine != null)
@@ -247,8 +247,8 @@ namespace TheAlchemistsCrypt.Player
             }
 
             float elapsed = 0f;
-            float duration = 0.2f;
-            float magnitude = 0.15f; // Solid fallback shake if Cinemachine isn't active
+            float duration = 0.2f; 
+            float magnitude = 0.05f; // Further reduced from 0.08f for a very subtle impact
 
             while (elapsed < duration)
             {

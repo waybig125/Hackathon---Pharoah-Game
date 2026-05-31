@@ -133,7 +133,7 @@ namespace TheAlchemistsCrypt.UI
 
              if (ammoBarFill != null)
              {
-                 ammoBarFill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01((float)c / 30f), 1f);
+                 ammoBarFill.fillAmount = Mathf.Clamp01((float)c / 30f);
                  ammoBarFill.color = tickColor;
              }
 
