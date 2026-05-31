@@ -15,6 +15,7 @@ namespace TheAlchemistsCrypt.Gameplay
         private GameObject loadingUiGo;
         private TextMeshProUGUI loadingText;
         private Image progressBar;
+        private bool isLightningPlaying = false;
 
         private void Start()
         {
@@ -68,7 +69,7 @@ namespace TheAlchemistsCrypt.Gameplay
             pbBgRect.anchorMin = pbBgRect.anchorMax = new Vector2(0.5f, 0.5f);
             
             // Align slightly better
-            pbBgRect.anchoredPosition = new Vector2(0f, -65f);
+            pbBgRect.anchoredPosition = new Vector2(19f, -65f);
             pbBgRect.sizeDelta = new Vector2(780f, 44f);
             
             var pbBgImg = pbBgGo.GetComponent<Image>();
@@ -335,6 +336,9 @@ namespace TheAlchemistsCrypt.Gameplay
 
                 if (displayProgress >= 0.99f && asyncLoad.progress >= 0.9f)
                 {
+                    // Wait for any active thunder sequence to complete before switching scenes
+                    while (isLightningPlaying) yield return null;
+                    
                     asyncLoad.allowSceneActivation = true;
                 }
                 
@@ -435,15 +439,17 @@ namespace TheAlchemistsCrypt.Gameplay
                 yield return new WaitForSecondsRealtime(Random.Range(2.5f, 6.5f));
                 if (img == null) break;
 
+                isLightningPlaying = true;
+
                 // Generate a fresh procedural bolt
                 if (boltImg != null)
                 {
                     boltImg.sprite = CreateProceduralLightningSprite(200, 500);
-                    // Randomize position within ±40% of screen area
-                    float rx = Random.Range(-0.4f, 0.4f) * 1920f;
-                    float ry = Random.Range(0.0f, 0.3f) * 1080f;
+                    // Randomize position across entire screen and 360 degree rotation
+                    float rx = Random.Range(-800f, 800f);
+                    float ry = Random.Range(-400f, 400f);
                     boltRect.anchoredPosition = new Vector2(rx, ry);
-                    boltRect.localRotation = Quaternion.Euler(0, 0, Random.Range(-15f, 15f));
+                    boltRect.localRotation = Quaternion.Euler(0, 0, Random.Range(0f, 360f));
                     float boltScale = Random.Range(1.5f, 3f);
                     boltRect.localScale = new Vector3(boltScale, boltScale, 1f);
                 }
@@ -486,6 +492,8 @@ namespace TheAlchemistsCrypt.Gameplay
 
                 if (img != null) img.color = new Color(1f, 1f, 1f, 0f);
                 if (boltImg != null) boltImg.color = new Color(1f, 1f, 1f, 0f);
+
+                isLightningPlaying = false;
             }
         }
 

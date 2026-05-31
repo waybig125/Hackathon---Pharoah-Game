@@ -1202,22 +1202,12 @@ namespace TheAlchemistsCrypt.UI
             else bgImg.sprite = CreateProceduralGradientSprite(1920, 1080, new Color(0.08f, 0.04f, 0f, 1f), new Color(0.02f, 0.01f, 0f, 1f));
             bgImg.color = Color.white;
 
-            // Lightning overlay
-            var lightningGo = new GameObject("LightningOverlay", typeof(RectTransform), typeof(Image));
-            lightningGo.transform.SetParent(startCanvasGo.transform, false);
-            var lRect = lightningGo.GetComponent<RectTransform>();
-            lRect.anchorMin = Vector2.zero; lRect.anchorMax = Vector2.one;
-            lRect.offsetMin = lRect.offsetMax = Vector2.zero;
-            var lImg = lightningGo.GetComponent<Image>();
-            lImg.color = new Color(1f, 1f, 1f, 0f);
-            lImg.raycastTarget = false;
-
-            StartCoroutine(LightningFlashesRoutine(lImg));
-
             // --- HACKATHON: Mystic Dust Particles ---
+            // Positioned above the background image
             StartCoroutine(MysticDustRoutine(startCanvasGo.transform));
 
-            var bottomActionGo = new GameObject("BottomActionPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            // Lightning overlay
+            var lightningGo = new GameObject("LightningOverlay", typeof(RectTransform), typeof(Image));
             bottomActionGo.SetParent(startCanvasGo.transform, false);
             bottomActionGo.anchorMin = bottomActionGo.anchorMax = new Vector2(0.5f, 0f);
             bottomActionGo.pivot = new Vector2(0.5f, 0f);
@@ -1737,14 +1727,15 @@ namespace TheAlchemistsCrypt.UI
                 if (boltImg != null)
                 {
                     boltImg.sprite = CreateProceduralLightningSprite(200, 500);
-                    float rx = Random.Range(-0.4f, 0.4f) * 1920f;
-                    float ry = Random.Range(0.0f, 0.3f) * 1080f;
+                    // Truly random positioning across the whole screen and 360 degree rotation
+                    float rx = Random.Range(-800f, 800f);
+                    float ry = Random.Range(-400f, 400f);
                     boltRect.anchoredPosition = new Vector2(rx, ry);
-                    boltRect.localRotation = Quaternion.Euler(0, 0, Random.Range(-15f, 15f));
+                    boltRect.localRotation = Quaternion.Euler(0, 0, Random.Range(0f, 360f));
                     float boltScale = Random.Range(1.5f, 3f);
                     boltRect.localScale = new Vector3(boltScale, boltScale, 1f);
                 }
- 
+
                 float flashIntensity = Random.Range(0.4f, 0.75f);
                 // img.color = new Color(1f, 0.95f, 0.85f, flashIntensity); // Removed background flash
                 if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, flashIntensity * 1.2f);
