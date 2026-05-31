@@ -54,7 +54,8 @@ namespace TheAlchemistsCrypt.Editor
                 int count = 0;
                 foreach (var child in children)
                 {
-                    if (child != null && child != desertTerrain.transform &&
+                    // Only remove if it's a direct child of the terrain to avoid nuking city palm trees
+                    if (child != null && child.parent == desertTerrain.transform &&
                         (child.name.StartsWith("Tree", System.StringComparison.OrdinalIgnoreCase) ||
                          child.name.Contains("Tree") ||
                          child.name.Contains("tree")))

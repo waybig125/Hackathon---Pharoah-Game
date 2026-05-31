@@ -139,10 +139,15 @@ namespace TheAlchemistsCrypt.AI
 
             float fillPct = Mathf.Clamp01(currentHealth / maxHealth);
             
-            // Scaling from left pivot
-            healthBarFillSr.gameObject.transform.localScale = new Vector3(fillPct * 0.88f, 0.10f, 1f);
-            // Move position to keep left edge fixed
-            healthBarFillSr.gameObject.transform.localPosition = new Vector3(-0.44f + (fillPct * 0.44f), 0f, 0f);
+            // Scaling and positioning
+            float maxScaleX = 0.88f;
+            healthBarFillSr.gameObject.transform.localScale = new Vector3(fillPct * maxScaleX, 0.10f, 1f);
+            
+            // Adjust local position so it stays left-aligned. 
+            // The fill starts at -0.44 (left edge of a 0.88 wide bar)
+            float leftEdge = -0.44f;
+            float currentWidth = fillPct * maxScaleX;
+            healthBarFillSr.gameObject.transform.localPosition = new Vector3(leftEdge + (currentWidth * 0.5f), 0f, 0f);
             
             healthBarFillSr.color = Color.Lerp(Color.red, Color.green, fillPct);
         }

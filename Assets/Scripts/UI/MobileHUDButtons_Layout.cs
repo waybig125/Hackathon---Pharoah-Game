@@ -342,8 +342,9 @@ namespace TheAlchemistsCrypt.UI
                     amBgBar.anchoredPosition = new Vector2(105, 0);
                     amBgBar.sizeDelta = new Vector2(220, 24);
                     var amBgImg = amBgBar.GetComponent<Image>();
-                    amBgImg.sprite = CreateRoundedRectSprite(220, 24, Color.white, 12);
-                    amBgImg.color = new Color(0.02f, 0.08f, 0.04f, 1f);
+                    // Increase procedural resolution (512x64) and set color to transparent or light grey
+                    amBgImg.sprite = CreateRoundedRectSprite(512, 64, Color.white, 32); 
+                    amBgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.5f); // Subtle transparent background
                     var amMask = amBgBar.GetComponent<Mask>();
                     amMask.showMaskGraphic = true;
 
@@ -353,7 +354,7 @@ namespace TheAlchemistsCrypt.UI
                     amFillGo.anchorMin = Vector2.zero; amFillGo.anchorMax = Vector2.one;
                     amFillGo.offsetMin = amFillGo.offsetMax = Vector2.zero;
                     ammoBarFill = amFillGo.GetComponent<Image>();
-                    ammoBarFill.sprite = CreateRoundedRectSprite(24, 24, Color.white, 12);
+                    ammoBarFill.sprite = CreateRoundedRectSprite(512, 64, Color.white, 32);
                     ammoBarFill.type = Image.Type.Filled;
                     ammoBarFill.fillMethod = Image.FillMethod.Horizontal;
                     ammoBarFill.fillOrigin = (int)Image.OriginHorizontal.Left;
