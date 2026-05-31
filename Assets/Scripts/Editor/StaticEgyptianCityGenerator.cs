@@ -566,8 +566,8 @@ namespace TheAlchemistsCrypt.Editor
                 if (rName.Contains("terrain") || rName.Contains("sea") || rName.Contains("bounds") || rName.Contains("palm") || rName.Contains("tree")) continue;
                 
                 Bounds b = r.bounds;
-                // Add a 1.5m safety margin around every building to prevent clipping
-                b.Expand(new Vector3(1.5f, 0f, 1.5f)); 
+                // INCREASED: Added a 2.5m safety margin around every building to absolutely prevent clipping
+                b.Expand(new Vector3(2.5f, 0f, 2.5f)); 
                 obstacleBounds.Add(b);
             }
             
@@ -577,7 +577,9 @@ namespace TheAlchemistsCrypt.Editor
                 if (cName.Contains("palm") || cName.Contains("tree")) continue;
                 
                 Bounds b = c.bounds;
-                b.Expand(new Vector3(1.0f, 0f, 1.0f));
+                // Ensure monuments like the AlchemistTomb are represented with extra buffer
+                float extraBuffer = (cName.Contains("tomb") || cName.Contains("house")) ? 1.5f : 1.0f;
+                b.Expand(new Vector3(extraBuffer, 0f, extraBuffer));
                 obstacleBounds.Add(b);
             }
 

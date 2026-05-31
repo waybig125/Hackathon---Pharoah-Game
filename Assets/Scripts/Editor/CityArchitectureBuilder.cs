@@ -640,15 +640,12 @@ namespace TheAlchemistsCrypt.Editor
                     lintel.transform.localPosition = new Vector3(0f, archStartY + 5f, 0f);
                     lintel.transform.localScale = new Vector3(12f, 3f, 5f);
                     lintel.GetComponent<Renderer>().sharedMaterial = stoneMat;
-                    lintel.isStatic = false;
+                    lintel.isStatic = true;
 
-                    // Add Compound Rigidbody so it drops to the uneven terrain and has massive weight
-                    var rb = root.AddComponent<Rigidbody>();
-                    rb.mass = 20000000f; // 20,000 tonnes (extremely heavy)
-                    rb.useGravity = true;
-                    // Freeze horizontal translation and all rotation to make them completely immovable by player or mummies, only allowing vertical gravity drop
-                    rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
-                    rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+                    // REMOVED: Heavy Rigidbody that caused "dancing" physics issues.
+                    // Converting to a rock-solid static structure.
+                    root.isStatic = true;
+                    }
 
                     // Add NavMeshObstacle to carve the NavMesh around the tomb
                     var nmoTomb = root.AddComponent<UnityEngine.AI.NavMeshObstacle>();
