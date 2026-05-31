@@ -433,7 +433,8 @@ namespace TheAlchemistsCrypt.Gameplay
             boltRect.sizeDelta = new Vector2(200, 500);
             var boltImg = boltGo.GetComponent<Image>();
             boltImg.raycastTarget = false;
-
+            boltImg.color = new Color(1f, 1f, 1f, 0f); // Fix: Start transparent to avoid white box on boot
+            
             while (img != null)
             {
                 // Wait for the next flash sequence in realtime

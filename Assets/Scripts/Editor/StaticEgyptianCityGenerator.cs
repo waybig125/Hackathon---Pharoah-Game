@@ -704,7 +704,7 @@ namespace TheAlchemistsCrypt.Editor
                     tObj.name = "TempleComplex";
                     // Palm tree inside
                     Vector3 treeInsidePos = templePos + new Vector3(5f, 0f, 5f);
-                    PlaceIntegratedAsset(tObj.transform, treeInsidePos, trees[Random.Range(0, trees.Length)], 1.0f, true, false, -1.8f, Random.Range(0f, 360f), true);
+                    PlaceIntegratedAsset(tObj.transform, treeInsidePos, trees[Random.Range(0, trees.Length)], 1.0f, false, false, -0.4f, Random.Range(0f, 360f), true);
                 }
                 occupiedPositions.Add(templePos);
             }
@@ -908,11 +908,9 @@ namespace TheAlchemistsCrypt.Editor
 
             if (decimate && !isNewPalmTree) {
                 if (pName.Contains("palm") || pName.Contains("tree")) {
-                    DecimateRecursively(obj, 0.8f);
+                    // Decimation disabled for trees as requested to prevent "destroyed" look
+                    // DecimateRecursively(obj, 0.8f);
                     // PERFORMANCE: Add LOD group to cull high-poly palm trees at distance.
-                    // Date palms are 33-38 MB GLBs with very high vertex counts.
-                    // LOD0: full mesh up to 30m, LOD1: decimated mesh up to 60m, Cull beyond.
-                    // AddLODGroupToPalmTree(obj); // DISABLED to fix trees hiding when close
                 }
             }
 
@@ -925,14 +923,13 @@ namespace TheAlchemistsCrypt.Editor
 
                 // Add a single rigid BoxCollider on the root to define correct physical boundary
                 var bc = obj.AddComponent<BoxCollider>();
-                // Match the tree's vertical geometry approximately
+                // Match the tree's vertical geometry approximately - REDUCED from (3,10,3) to (0.7,10,0.7) to fix invisible blockers
                 bc.center = new Vector3(0f, 5f, 0f);
-                bc.size = new Vector3(3f, 10f, 3f);
+                bc.size = new Vector3(0.7f, 10f, 0.7f);
 
-                // Handle dark_palm_tree optimizations and underground sinking
+                // Handle dark_palm_tree optimizations
                 if (pName.Contains("dark_palm_tree")) {
-                    // Sinking it more underground (extra Y offset offset)
-                    obj.transform.position += new Vector3(0f, -1.7f, 0f);
+                    // Sinking handled via yOffset parameter in calls
 
                     // Find and hide bottom mesh so GPU doesn't render it
                     // Check children for common base/bottom mesh names or indices

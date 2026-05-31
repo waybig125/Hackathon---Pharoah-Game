@@ -395,7 +395,7 @@ namespace TheAlchemistsCrypt.Editor
                         if (prefab == null) continue;
 
                         // Use the centralized placement helper to ensure correct GLB rotation (-90 on X) and scaling
-                        PlaceIntegratedAsset(folder.transform, pos, prefab, Random.Range(0.8f, 1.4f), true, false, -1.8f);
+                        PlaceIntegratedAsset(folder.transform, pos, prefab, Random.Range(0.8f, 1.4f), false, false, -0.4f);
 
                         spawnedCount++;
                     }
@@ -444,8 +444,8 @@ namespace TheAlchemistsCrypt.Editor
                         var prefab = treePrefabs[treeIndex];
                         if (prefab == null) continue;
 
-                        // Use the centralized placement helper (yOffset = -1.8f to sink root)
-                        PlaceIntegratedAsset(folder.transform, pos, prefab, Random.Range(0.8f, 1.4f), true, false, -1.8f);
+                        // Use the centralized placement helper (yOffset = -0.4f to sink root slightly)
+                        PlaceIntegratedAsset(folder.transform, pos, prefab, Random.Range(0.8f, 1.4f), false, false, -0.4f);
 
                         spawnedCount++;
                     }

@@ -324,7 +324,7 @@ namespace TheAlchemistsCrypt.Editor
                             }
 
                             GameObject treePrefab = trees[Random.Range(0, trees.Length)];
-                            PlaceIntegratedAsset(p.transform, spawnLoc, treePrefab, 1.0f, true, false, -1.8f);
+                            PlaceIntegratedAsset(p.transform, spawnLoc, treePrefab, 1.0f, false, false, -0.4f);
                         }
                     }
 
