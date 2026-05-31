@@ -435,7 +435,7 @@ namespace TheAlchemistsCrypt.Editor
                         pos.y = GetTerrainHeight(pos);
 
                         // Relaxed height check (allow on lower dunes)
-                        if (pos.z < -95f || pos.y < 0.2f || pos.y > 8.0f) continue;
+                        if (pos.z < -95f || pos.y < -0.2f || pos.y > 8.0f) continue;
 
                         var prefab = treePrefabs[Random.Range(0, treePrefabs.Length)];
                         if (prefab == null) continue;

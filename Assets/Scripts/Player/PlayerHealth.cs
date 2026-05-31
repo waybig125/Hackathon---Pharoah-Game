@@ -220,48 +220,10 @@ namespace TheAlchemistsCrypt.Player
             }
             if (source != null)
             {
-                source.GenerateImpulse(0.2f); // Further reduced from 0.35f
+                // Generate a subtle impulse. The glitchy shake was caused by
+                // manually modifying Camera.main.transform.localPosition while Cinemachine was active.
+                source.GenerateImpulse(0.15f); 
             }
-
-            if (shakeCoroutine != null)
-            {
-                StopCoroutine(shakeCoroutine);
-                Camera cam = Camera.main;
-                if (cam != null && isShaking)
-                {
-                    cam.transform.localPosition = originalCameraLocalPos;
-                }
-            }
-            shakeCoroutine = StartCoroutine(ShakeTransformCoroutine());
-        }
-
-        private IEnumerator ShakeTransformCoroutine()
-        {
-            Camera cam = Camera.main;
-            if (cam == null) yield break;
-
-            if (!isShaking)
-            {
-                originalCameraLocalPos = cam.transform.localPosition;
-                isShaking = true;
-            }
-
-            float elapsed = 0f;
-            float duration = 0.2f; 
-            float magnitude = 0.05f; // Further reduced from 0.08f for a very subtle impact
-
-            while (elapsed < duration)
-            {
-                float x = Random.Range(-1f, 1f) * magnitude;
-                float y = Random.Range(-1f, 1f) * magnitude;
-                cam.transform.localPosition = originalCameraLocalPos + new Vector3(x, y, 0);
-                elapsed += Time.deltaTime;
-                yield return null;
-            }
-
-            cam.transform.localPosition = originalCameraLocalPos;
-            isShaking = false;
-            shakeCoroutine = null;
         }
     }
 

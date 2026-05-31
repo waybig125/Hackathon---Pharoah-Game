@@ -766,7 +766,7 @@ namespace TheAlchemistsCrypt.Editor
             string pName = prefab.name.ToLower();
             if (pName.Contains("palm") || pName.Contains("tree"))
             {
-                if (pos.z < -90f || GetTerrainHeight(pos) < 0.5f)
+                if (pos.z < -90f || GetTerrainHeight(pos) < -0.2f)
                 {
                     return null; // Prevent spawning trees in/near the water
                 }

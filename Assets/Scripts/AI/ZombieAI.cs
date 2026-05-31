@@ -124,7 +124,6 @@ namespace TheAlchemistsCrypt.AI
         {
             if (isDead)
             {
-                if (healthBarObj != null) healthBarObj.SetActive(false);
                 return;
             }
 

@@ -620,7 +620,22 @@ namespace TheAlchemistsCrypt.Editor
                         }
 
                         EditorUtility.SetDirty(prefab);
+                    string[] casingMats = {
+                        "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Art/Materials/Casings/M_WEP_Casings.mat"
+                    };
+                    foreach (var path in casingMats)
+                    {
+                        Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+                        if (mat != null)
+                        {
+                            mat.shader = Shader.Find("Universal Render Pipeline/Simple Lit");
+                            mat.SetColor("_BaseColor", new Color(0.8f, 0.6f, 0.2f));
+                            mat.SetFloat("_Smoothness", 0.8f);
+                            mat.SetFloat("_Metallic", 0.9f);
+                            EditorUtility.SetDirty(mat);
+                        }
                     }
+
                     AssetDatabase.SaveAssets();
                 }
 

@@ -1608,11 +1608,11 @@ namespace TheAlchemistsCrypt.UI
             return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
         }
 
-        private void DrawBoltSegment(Color[] pixels, int width, int height, Vector2 pos, float angle, float remaining, int thickness, bool canBranch)
+        private void DrawBoltSegment(Color[] pixels, int width, int height, Vector2 pos, float angle, float remaining, float thickness, bool canBranch)
         {
             if (remaining < 5f) return;
-            float segLen = Random.Range(18f, 40f);
-            float newAngle = angle + Random.Range(-35f, 35f);
+            float segLen = Random.Range(8f, 25f);
+            float newAngle = angle + Random.Range(-45f, 45f);
             float rad = newAngle * Mathf.Deg2Rad;
             Vector2 end = pos + new Vector2(Mathf.Sin(rad) * segLen, -Mathf.Cos(rad) * segLen);
             end.x = Mathf.Clamp(end.x, 0, width - 1);
@@ -1624,26 +1624,45 @@ namespace TheAlchemistsCrypt.UI
                 float t = (float)s / steps;
                 int px = Mathf.RoundToInt(Mathf.Lerp(pos.x, end.x, t));
                 int py = Mathf.RoundToInt(Mathf.Lerp(pos.y, end.y, t));
-                float bright = Mathf.Lerp(1f, 0.6f, t);
-                Color c = new Color(0.9f, 0.95f, 1f, bright);
-                for (int dy = -thickness; dy <= thickness; dy++)
-                    for (int dx = -thickness; dx <= thickness; dx++)
+                float bright = Mathf.Lerp(1f, 0.3f, t);
+                
+                // Draw outer cyan/blue glow (Additive-like blending)
+                int glowRad = Mathf.RoundToInt(thickness * 2.5f);
+                for (int dy = -glowRad; dy <= glowRad; dy++)
+                    for (int dx = -glowRad; dx <= glowRad; dx++)
                     {
                         float dist = Mathf.Sqrt(dx * dx + dy * dy);
-                        if (dist > thickness) continue;
+                        if (dist > glowRad) continue;
                         int nx = Mathf.Clamp(px + dx, 0, width - 1);
                         int ny = Mathf.Clamp(py + dy, 0, height - 1);
-                        float falloff = 1f - (dist / (thickness + 0.01f));
+                        float falloff = Mathf.Pow(1f - (dist / glowRad), 1.5f);
                         Color existing = pixels[ny * width + nx];
-                        pixels[ny * width + nx] = new Color(c.r, c.g, c.b, Mathf.Max(existing.a, c.a * falloff));
+                        Color glow = new Color(0.1f, 0.5f, 1f, bright * 0.7f * falloff);
+                        pixels[ny * width + nx] = new Color(
+                            Mathf.Min(1f, existing.r + glow.r * glow.a),
+                            Mathf.Min(1f, existing.g + glow.g * glow.a),
+                            Mathf.Min(1f, existing.b + glow.b * glow.a),
+                            Mathf.Max(existing.a, glow.a)
+                        );
+                    }
+
+                // Draw sharp pure white core
+                int coreRad = Mathf.Max(1, Mathf.RoundToInt(thickness * 0.3f));
+                for (int dy = -coreRad; dy <= coreRad; dy++)
+                    for (int dx = -coreRad; dx <= coreRad; dx++)
+                    {
+                        if (dx * dx + dy * dy > coreRad * coreRad) continue;
+                        int nx = Mathf.Clamp(px + dx, 0, width - 1);
+                        int ny = Mathf.Clamp(py + dy, 0, height - 1);
+                        pixels[ny * width + nx] = new Color(1f, 1f, 1f, 1f);
                     }
             }
 
-            DrawBoltSegment(pixels, width, height, end, newAngle, remaining - segLen, Mathf.Max(1, thickness - 1), canBranch);
-            if (canBranch && remaining > 30f && Random.value < 0.45f)
+            DrawBoltSegment(pixels, width, height, end, newAngle, remaining - segLen, Mathf.Max(1f, thickness * 0.85f), canBranch);
+            if (canBranch && remaining > 20f && Random.value < 0.65f)
             {
-                float branchAngle = newAngle + Random.Range(20f, 55f) * (Random.value > 0.5f ? 1 : -1);
-                DrawBoltSegment(pixels, width, height, end, branchAngle, remaining * Random.Range(0.3f, 0.5f), Mathf.Max(1, thickness - 2), false);
+                float branchAngle = newAngle + Random.Range(25f, 70f) * (Random.value > 0.5f ? 1 : -1);
+                DrawBoltSegment(pixels, width, height, end, branchAngle, remaining * Random.Range(0.3f, 0.6f), thickness * 0.5f, false);
             }
         }
 
