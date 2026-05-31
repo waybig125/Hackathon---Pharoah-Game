@@ -553,7 +553,23 @@ namespace TheAlchemistsCrypt.Editor
             } 
 
             SpawnDesertBrokenPillars(root, wallMat);
-            SpawnPalmTreeOasis(root, trees);
+
+            // GATHER ALL BUILDING/LANDMARK BOUNDS TO PREVENT TREES SPAWNING INSIDE THEM
+            List<Bounds> obstacleBounds = new List<Bounds>();
+            var allMeshRenderers = root.GetComponentsInChildren<MeshRenderer>(true);
+            foreach (var r in allMeshRenderers) {
+                string rName = r.gameObject.name.ToLower();
+                // Ignore terrain, sea, bounds, and other non-buildings
+                if (rName.Contains("terrain") || rName.Contains("sea") || rName.Contains("bounds") || rName.Contains("door")) continue;
+                
+                // Expand bounds slightly to ensure a safe perimeter around the building
+                Bounds b = r.bounds;
+                b.Expand(1f);
+                obstacleBounds.Add(b);
+            }
+
+            SpawnPalmTreeOasis(root, trees, obstacleBounds);
+            SpawnCityPalmTrees(root, trees, obstacleBounds);
             SpawnLowPolyEnvironmentObjects(root);
             SpawnDesertMedicinePickups(root);
 
@@ -718,9 +734,6 @@ namespace TheAlchemistsCrypt.Editor
                     occupiedPositions.Add(extraTemplePositions[i]);
                 }
             }
-
-            // Fill empty city spaces with palm trees
-            SpawnCityPalmTrees(root, trees, occupiedPositions);
 
             CreateSeaAndCoastline(root);
             CreateWorldBounds(root);

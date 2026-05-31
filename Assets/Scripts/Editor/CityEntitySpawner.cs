@@ -369,15 +369,12 @@ namespace TheAlchemistsCrypt.Editor
                     }
                 }
 
-        private void SpawnPalmTreeOasis(GameObject root, GameObject[] treePrefabs)
+        private void SpawnPalmTreeOasis(GameObject root, GameObject[] treePrefabs, List<Bounds> obstacleBounds)
                 {
                     if (treePrefabs == null || treePrefabs.Length == 0 || treePrefabs[0] == null) return;
 
                     var folder = new GameObject("PalmTreeOasis");
                     folder.transform.SetParent(root.transform);
-
-                    // Sync physics transforms so newly placed buildings have active colliders
-                    Physics.SyncTransforms();
 
                     int spawnedCount = 0;
                     int attempts = 0;
@@ -394,19 +391,25 @@ namespace TheAlchemistsCrypt.Editor
                         // Make sure it doesn't spawn in water, shoreline shallows, or extremely high up
                         if (pos.z < -70f || pos.y < 1.1f || pos.y > 6.0f) continue;
 
-                        // Ensure no two trees are too close (Min 5m distance)
+                        // Ensure no two trees are too close (Min 3.5m distance to allow small clumps but prevent exact overlap)
                         bool tooCloseToTree = false;
                         foreach (var otherPos in oasisTreePositions) {
-                            if (Vector3.Distance(pos, otherPos) < 5f) {
+                            if (Vector3.Distance(pos, otherPos) < 3.5f) {
                                 tooCloseToTree = true;
                                 break;
                             }
                         }
                         if (tooCloseToTree) continue;
 
-                        // PREVENT SPAWNING INSIDE OBJECTS
-                        // Check a 3m radius sphere at trunk height (to avoid ground hits but catch buildings/walls)
-                        if (Physics.CheckSphere(pos + Vector3.up * 2f, 3f)) continue;
+                        // PREVENT SPAWNING INSIDE OBJECTS USING DETERMINISTIC BOUNDS
+                        bool insideObject = false;
+                        foreach (var b in obstacleBounds) {
+                            if (pos.x >= b.min.x && pos.x <= b.max.x && pos.z >= b.min.z && pos.z <= b.max.z) {
+                                insideObject = true;
+                                break;
+                            }
+                        }
+                        if (insideObject) continue;
 
                         // 70% palm_tree (index 1), 30% dark_palm_tree (index 0)
                         int treeIndex = Random.value < 0.7f ? 1 : 0;
@@ -421,15 +424,12 @@ namespace TheAlchemistsCrypt.Editor
                     }
                 }
 
-        private void SpawnCityPalmTrees(GameObject root, GameObject[] treePrefabs, List<Vector3> occupiedPositions)
+        private void SpawnCityPalmTrees(GameObject root, GameObject[] treePrefabs, List<Bounds> obstacleBounds)
                 {
                     if (treePrefabs == null || treePrefabs.Length == 0 || treePrefabs[0] == null) return;
 
                     var folder = new GameObject("City_Vegetation_Safe"); // Renamed to bypass 'tree' removal
                     folder.transform.SetParent(root.transform);
-
-                    // Sync physics transforms so newly placed buildings have active colliders
-                    Physics.SyncTransforms();
 
                     int spawnedCount = 0;
                     int attempts = 0;
@@ -446,36 +446,30 @@ namespace TheAlchemistsCrypt.Editor
                         // Ensure it's at least 18 units away from player spawn
                         if (Vector3.Distance(new Vector3(rx, 0f, rz), playerSpawn) < 18f) continue;
 
-                        // Ensure it's at least 18 units away from occupiedPositions (buildings/temples)
-                        bool tooClose = false;
-                        foreach (var occupied in occupiedPositions)
-                        {
-                            if (Vector3.Distance(new Vector3(rx, 0f, rz), new Vector3(occupied.x, 0f, occupied.z)) < 20f)
-                            {
-                                tooClose = true;
-                                break;
-                            }
-                        }
-                        if (tooClose) continue;
-
                         pos.y = GetTerrainHeight(pos);
 
                         // Relaxed height check (allow on lower dunes)
                         if (pos.z < -95f || pos.y < -0.2f || pos.y > 8.0f) continue;
 
-                        // Ensure no two trees are too close (Min 5m distance)
+                        // Ensure no two trees are too close (Min 3.5m distance to allow natural clustering)
                         bool tooCloseToTree = false;
                         foreach (var otherPos in cityTreePositions) {
-                            if (Vector3.Distance(pos, otherPos) < 5f) {
+                            if (Vector3.Distance(pos, otherPos) < 3.5f) {
                                 tooCloseToTree = true;
                                 break;
                             }
                         }
                         if (tooCloseToTree) continue;
 
-                        // PREVENT SPAWNING INSIDE OBJECTS
-                        // Check a 3m radius sphere at trunk height (to avoid ground hits but catch buildings/walls/pyramids)
-                        if (Physics.CheckSphere(pos + Vector3.up * 2f, 3f)) continue;
+                        // PREVENT SPAWNING INSIDE OBJECTS USING DETERMINISTIC BOUNDS
+                        bool insideObject = false;
+                        foreach (var b in obstacleBounds) {
+                            if (pos.x >= b.min.x && pos.x <= b.max.x && pos.z >= b.min.z && pos.z <= b.max.z) {
+                                insideObject = true;
+                                break;
+                            }
+                        }
+                        if (insideObject) continue;
 
                         // 70% palm_tree (index 1), 30% dark_palm_tree (index 0)
                         int treeIndex = Random.value < 0.7f ? 1 : 0;
