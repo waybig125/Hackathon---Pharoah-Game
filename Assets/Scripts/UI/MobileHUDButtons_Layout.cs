@@ -574,5 +574,3 @@ namespace TheAlchemistsCrypt.UI
 
     }
 }
-}
-}

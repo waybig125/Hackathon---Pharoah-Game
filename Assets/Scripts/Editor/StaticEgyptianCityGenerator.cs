@@ -1080,11 +1080,3 @@ namespace TheAlchemistsCrypt.Editor
         
     }
 }
-s beyond 60m are invisible at
-        ///                   typical mobile resolution and camera FOV anyway.
-        ///
-        /// Expected FPS gain: 5–12 FPS depending on how many palms are visible at once.
-        /// </summary>
-        
-    }
-}

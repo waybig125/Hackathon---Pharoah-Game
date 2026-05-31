@@ -265,6 +265,9 @@ namespace InfimaGames.LowPolyShooterPack
             light.range = 8f;
             light.intensity = 5f;
             Destroy(flash, 0.05f); 
+
+            // --- HACKATHON: Restore Casing Ejection (Dropped Bullets) ---
+            EjectCasing();
         }
 
         public override void FillAmmunition(int amount)
