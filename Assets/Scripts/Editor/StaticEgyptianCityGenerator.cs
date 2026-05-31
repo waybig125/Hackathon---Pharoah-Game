@@ -727,6 +727,20 @@ namespace TheAlchemistsCrypt.Editor
             FixPlayerAndWeapons();
             SetupMummyAnimations();
 
+            // Re-enable all renderers that might have been hidden by LODs
+            var allRenderers = root.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in allRenderers) {
+                if (r.gameObject.name.ToLower().Contains("tree") || r.gameObject.name.ToLower().Contains("palm")) {
+                    r.enabled = true;
+                }
+            }
+
+            // Final scene-wide cleanup to ensure requested visual standards (Remove all LODGroups)
+            var allLODs = root.GetComponentsInChildren<LODGroup>(true);
+            foreach (var lod in allLODs) {
+                UnityEngine.Object.DestroyImmediate(lod);
+            }
+
             // Build NavMesh surface at the end to include all generated city items correctly
             var surface = root.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.Children;
