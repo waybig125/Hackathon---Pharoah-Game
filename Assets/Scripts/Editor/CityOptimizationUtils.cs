@@ -760,7 +760,9 @@ namespace TheAlchemistsCrypt.Editor
                         lowerPath.Contains("flare") || 
                         lowerPath.Contains("character") || 
                         lowerPath.Contains("mummy") || 
-                        lowerPath.Contains("zombie"))
+                        lowerPath.Contains("zombie") ||
+                        lowerPath.Contains("gamestartimage") ||
+                        lowerPath.Contains("bootbackground"))
                     {
                         targetResolution = 1024;
                     }

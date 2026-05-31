@@ -897,7 +897,8 @@ namespace TheAlchemistsCrypt.Editor
 
             // Step 5: Optimization and Collision
             // Keep 80% decimation for trees (date palm), disable for all other models as requested to preserve quality and prevent offsets.
-            if (decimate) {
+            bool isNewPalmTree = pName.Contains("dark_palm_tree") || (pName.Contains("palm_tree") && !pName.Contains("realistic_hd_date_palm"));
+            if (decimate && !isNewPalmTree) {
                 if (pName.Contains("palm") || pName.Contains("tree")) {
                     DecimateRecursively(obj, 0.8f);
                     // PERFORMANCE: Add LOD group to cull high-poly palm trees at distance.
@@ -907,7 +908,35 @@ namespace TheAlchemistsCrypt.Editor
                 }
             }
 
-            if (enterable) {
+            if (isNewPalmTree) {
+                // Remove all child mesh colliders from the imported GLB to avoid multi-mesh collider overhead
+                var childColliders = obj.GetComponentsInChildren<Collider>(true);
+                foreach (var c in childColliders) {
+                    UnityEngine.Object.DestroyImmediate(c);
+                }
+
+                // Add a single rigid BoxCollider on the root to define correct physical boundary
+                var bc = obj.AddComponent<BoxCollider>();
+                // Match the tree's vertical geometry approximately
+                bc.center = new Vector3(0f, 5f, 0f);
+                bc.size = new Vector3(3f, 10f, 3f);
+
+                // Handle dark_palm_tree optimizations and underground sinking
+                if (pName.Contains("dark_palm_tree")) {
+                    // Sinking it more underground (extra Y offset offset)
+                    obj.transform.position += new Vector3(0f, -1.7f, 0f);
+
+                    // Find and hide bottom mesh so GPU doesn't render it
+                    // Check children for common base/bottom mesh names or indices
+                    foreach (var mr in obj.GetComponentsInChildren<MeshRenderer>(true)) {
+                        string mrName = mr.gameObject.name.ToLower();
+                        if (mrName.Contains("bottom") || mrName.Contains("base") || mrName.Contains("cap") || mrName.Contains("ground")) {
+                            mr.enabled = false;
+                        }
+                    }
+                }
+            }
+            else if (enterable) {
                 foreach (var mf in obj.GetComponentsInChildren<MeshFilter>(true)) {
                     if (mf.sharedMesh == null) continue;
                     var collider = mf.gameObject.GetComponent<MeshCollider>();

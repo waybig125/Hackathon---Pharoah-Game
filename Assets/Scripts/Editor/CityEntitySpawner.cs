@@ -389,7 +389,9 @@ namespace TheAlchemistsCrypt.Editor
                         // Make sure it doesn't spawn in water, shoreline shallows, or extremely high up
                         if (pos.z < -70f || pos.y < 1.1f || pos.y > 6.0f) continue;
 
-                        var prefab = treePrefabs[Random.Range(0, treePrefabs.Length)];
+                        // 70% palm_tree (index 1), 30% dark_palm_tree (index 0)
+                        int treeIndex = Random.value < 0.7f ? 1 : 0;
+                        var prefab = treePrefabs[treeIndex];
                         if (prefab == null) continue;
 
                         // Use the centralized placement helper to ensure correct GLB rotation (-90 on X) and scaling
@@ -437,7 +439,9 @@ namespace TheAlchemistsCrypt.Editor
                         // Relaxed height check (allow on lower dunes)
                         if (pos.z < -95f || pos.y < -0.2f || pos.y > 8.0f) continue;
 
-                        var prefab = treePrefabs[Random.Range(0, treePrefabs.Length)];
+                        // 70% palm_tree (index 1), 30% dark_palm_tree (index 0)
+                        int treeIndex = Random.value < 0.7f ? 1 : 0;
+                        var prefab = treePrefabs[treeIndex];
                         if (prefab == null) continue;
 
                         // Use the centralized placement helper (yOffset = -1.8f to sink root)
