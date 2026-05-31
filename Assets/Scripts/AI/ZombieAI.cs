@@ -75,8 +75,6 @@ namespace TheAlchemistsCrypt.AI
         // elemental status-effect hit. Cached once in Start().
         private Renderer[] cachedRenderers;
         private MaterialPropertyBlock cachedMPB;
-        // Dirty flag: only rebuild health-bar fill geometry when HP actually changes
-        private float lastHealthForBar = -1f;
 
         private void CreateHealthBar()
         {

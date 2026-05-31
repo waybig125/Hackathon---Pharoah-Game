@@ -24,9 +24,6 @@ namespace TheAlchemistsCrypt.Player
         }
 
         private float lastShakeTime = 0f;
-        private Coroutine shakeCoroutine = null;
-        private Vector3 originalCameraLocalPos;
-        private bool isShaking = false;
 
         private bool isLowHealthPlaying = false;
         private AudioSource lowHealthAudioSource;

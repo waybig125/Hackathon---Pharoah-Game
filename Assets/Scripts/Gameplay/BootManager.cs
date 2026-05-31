@@ -125,13 +125,13 @@ namespace TheAlchemistsCrypt.Gameplay
                 dustGo.transform.SetParent(dustContainer, false);
                 var rt = dustGo.GetComponent<RectTransform>();
                 
-                float size = Random.Range(4f, 12f);
+                float size = Random.Range(6f, 16f);
                 rt.sizeDelta = new Vector2(size, size);
                 rt.anchoredPosition = new Vector2(Random.Range(-960f, 960f), -600f);
                 
                 var img = dustGo.GetComponent<Image>();
                 img.sprite = dustSprite;
-                img.color = new Color(0.85f, 1.0f, 1.0f, 0.7f);
+                img.color = new Color(0.95f, 0.85f, 0.5f, 0.9f); // Gorgeous premium gold dust
                 
                 StartCoroutine(AnimateDust(rt, img));
                 yield return new WaitForSeconds(Random.Range(0.1f, 0.4f));
@@ -151,8 +151,8 @@ namespace TheAlchemistsCrypt.Gameplay
                 rt.anchoredPosition += new Vector2(drift * Time.deltaTime, speed * Time.deltaTime);
                 
                 // Fade in and out
-                float alpha = Mathf.PingPong(elapsed * 2f / lifetime, 0.5f);
-                if (img != null) img.color = new Color(img.color.r, img.color.g, img.color.b, alpha * 0.4f);
+                float alpha = Mathf.PingPong(elapsed * 2f / lifetime, 1.0f);
+                if (img != null) img.color = new Color(img.color.r, img.color.g, img.color.b, alpha * 0.8f);
                 
                 yield return null;
             }
@@ -397,15 +397,21 @@ namespace TheAlchemistsCrypt.Gameplay
                         );
                     }
 
-                // Draw sharp pure white core
-                int coreRad = Mathf.Max(1, Mathf.RoundToInt(thickness * 0.3f));
-                for (int dy = -coreRad; dy <= coreRad; dy++)
-                    for (int dx = -coreRad; dx <= coreRad; dx++)
+                // Draw sharp pure white core with soft radial falloff
+                float coreRad = thickness * 0.12f;
+                int iCoreRad = Mathf.Max(1, Mathf.RoundToInt(coreRad));
+                for (int dy = -iCoreRad; dy <= iCoreRad; dy++)
+                    for (int dx = -iCoreRad; dx <= iCoreRad; dx++)
                     {
-                        if (dx * dx + dy * dy > coreRad * coreRad) continue;
+                        float distSq = dx * dx + dy * dy;
+                        float dist = Mathf.Sqrt(distSq);
+                        if (dist > coreRad) continue;
                         int nx = Mathf.Clamp(px + dx, 0, width - 1);
                         int ny = Mathf.Clamp(py + dy, 0, height - 1);
-                        pixels[ny * width + nx] = new Color(1f, 1f, 1f, 1f);
+                        float ratio = coreRad > 0f ? Mathf.Clamp01(dist / coreRad) : 0f;
+                        float coreAlpha = 1f - Mathf.Pow(ratio, 0.5f);
+                        Color existing = pixels[ny * width + nx];
+                        pixels[ny * width + nx] = Color.Lerp(existing, new Color(1f, 1f, 1f, Mathf.Max(existing.a, coreAlpha)), coreAlpha);
                     }
             }
 
@@ -447,7 +453,7 @@ namespace TheAlchemistsCrypt.Gameplay
                     boltRect.localScale = new Vector3(boltScale, boltScale, 1f);
                 }
 
-                float flashIntensity = Random.Range(0.4f, 0.75f);
+                float flashIntensity = Random.Range(0.15f, 0.45f);
                 img.color = new Color(1f, 0.95f, 0.85f, flashIntensity);
                 if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, flashIntensity * 1.2f);
 
@@ -467,7 +473,7 @@ namespace TheAlchemistsCrypt.Gameplay
                     yield return new WaitForSecondsRealtime(Random.Range(0.05f, 0.12f));
                     if (img == null) break;
 
-                    flashIntensity = Random.Range(0.2f, 0.45f);
+                    flashIntensity = Random.Range(0.08f, 0.25f);
                     img.color = new Color(1f, 0.95f, 0.85f, flashIntensity);
                     if (boltImg != null) boltImg.color = new Color(0.85f, 0.95f, 1f, flashIntensity);
 

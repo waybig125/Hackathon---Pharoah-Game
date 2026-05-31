@@ -620,6 +620,8 @@ namespace TheAlchemistsCrypt.Editor
                         }
 
                         EditorUtility.SetDirty(prefab);
+                    } // Add this closing brace for the wPrefabs foreach loop
+
                     string[] casingMats = {
                         "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Art/Materials/Casings/M_WEP_Casings.mat"
                     };
@@ -638,6 +640,91 @@ namespace TheAlchemistsCrypt.Editor
 
                     AssetDatabase.SaveAssets();
                 }
+
+        [MenuItem("Tools/Egyptian City/Optimize Palm Trees and Casings")]
+        public static void OptimizePalmTreesAndCasings()
+        {
+            // 1. Optimize Casing Prefabs
+            string[] casingPaths = {
+                "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Prefabs/Casings/P_LPSP_Casing_Small.prefab",
+                "Assets/Infima Games/Low Poly Shooter Pack - Free Sample/Prefabs/Casings/P_LPSP_Casing_Big.prefab"
+            };
+
+            foreach (var path in casingPaths)
+            {
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab != null)
+                {
+                    var col = prefab.GetComponent<Collider>();
+                    if (col == null)
+                    {
+                        string tempPath = AssetDatabase.GetAssetPath(prefab);
+                        var instance = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+                        var mc = instance.AddComponent<MeshCollider>();
+                        mc.convex = true;
+                        
+                        var rb = instance.GetComponent<Rigidbody>();
+                        if (rb != null)
+                        {
+                            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+                        }
+                        
+                        PrefabUtility.SaveAsPrefabAsset(instance, tempPath);
+                        DestroyImmediate(instance);
+                        Debug.Log("Successfully optimized and added convex MeshCollider to casing: " + path);
+                    }
+                }
+            }
+
+            // 2. Compress Palm Tree and City Textures to extremely small mobile size
+            string[] allTextureGuids = AssetDatabase.FindAssets("t:Texture");
+            int textureCount = 0;
+            foreach (var guid in allTextureGuids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                string lowerPath = path.ToLower();
+                
+                // Only optimize textures associated with palm trees, dates, phoenix, or desert/Egyptian city assets
+                if (lowerPath.Contains("palm") || lowerPath.Contains("phoenix") || lowerPath.Contains("date") || lowerPath.Contains("egyptian") || lowerPath.Contains("desert"))
+                {
+                    TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                    if (importer != null)
+                    {
+                        bool changed = false;
+                        if (importer.maxTextureSize > 512)
+                        {
+                            importer.maxTextureSize = 512;
+                            changed = true;
+                        }
+                        if (importer.textureCompression != TextureImporterCompression.CompressedHQ)
+                        {
+                            importer.textureCompression = TextureImporterCompression.CompressedHQ;
+                            changed = true;
+                        }
+                        if (!importer.crunchedCompression)
+                        {
+                            importer.crunchedCompression = true;
+                            importer.compressionQuality = 50;
+                            changed = true;
+                        }
+                        if (!importer.mipmapEnabled)
+                        {
+                            importer.mipmapEnabled = true;
+                            changed = true;
+                        }
+                        
+                        if (changed)
+                        {
+                            importer.SaveAndReimport();
+                            textureCount++;
+                        }
+                    }
+                }
+            }
+            Debug.Log($"Successfully optimized and compressed {textureCount} palm tree and city textures to 512px with crunch compression and mipmapping!");
+
+            AssetDatabase.SaveAssets();
+        }
 
         private static Material GetOrCreateMaterial(string name, Color baseColor, float smoothness, float metallic, Color emissionColor, bool useEmission)
                 {
