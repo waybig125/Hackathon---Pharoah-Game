@@ -896,26 +896,19 @@ namespace TheAlchemistsCrypt.Editor
             }
 
             // Step 5: Optimization and Collision
-            // Keep 80% decimation for trees (date palm), disable for all other models as requested to preserve quality and prevent offsets.
             string origName = prefab.name.ToLower();
-            bool isNewPalmTree = origName.Contains("dark_palm_tree") || origName.Contains("palm_tree") || 
-                                 pName.Contains("dark_palm_tree") || pName.Contains("palm_tree");
+            bool isTree = origName.Contains("tree") || origName.Contains("palm") || 
+                          pName.Contains("tree") || pName.Contains("palm");
             
-            // Exclude the old realistic HD date palms from the "new palm tree" bypass just in case
-            if (origName.Contains("realistic_hd") || pName.Contains("realistic_hd")) {
-                isNewPalmTree = false;
+            // Special handling for the new GLB palm trees
+            bool isNewPalmTree = isTree && (pName.Contains("dark_palm_tree") || pName.Contains("palm_tree"));
+
+            if (decimate && !isTree) {
+                DecimateRecursively(obj, 0.8f);
             }
 
-            if (decimate && !isNewPalmTree) {
-                if (pName.Contains("palm") || pName.Contains("tree")) {
-                    // Decimation disabled for trees as requested to prevent "destroyed" look
-                    // DecimateRecursively(obj, 0.8f);
-                    // PERFORMANCE: Add LOD group to cull high-poly palm trees at distance.
-                }
-            }
-
-            if (isNewPalmTree) {
-                // Remove all child mesh colliders from the imported GLB to avoid multi-mesh collider overhead
+            if (isTree) {
+                // Remove all child mesh colliders from the imported GLB/FBX to avoid multi-mesh collider overhead
                 var childColliders = obj.GetComponentsInChildren<Collider>(true);
                 foreach (var c in childColliders) {
                     UnityEngine.Object.DestroyImmediate(c);
@@ -923,7 +916,7 @@ namespace TheAlchemistsCrypt.Editor
 
                 // Add a single rigid BoxCollider on the root to define correct physical boundary
                 var bc = obj.AddComponent<BoxCollider>();
-                // Match the tree's vertical geometry approximately - REDUCED from (3,10,3) to (0.7,10,0.7) to fix invisible blockers
+                // Match the tree's vertical geometry approximately - REDUCED to fix invisible blockers
                 bc.center = new Vector3(0f, 5f, 0f);
                 bc.size = new Vector3(0.7f, 10f, 0.7f);
 
@@ -932,7 +925,6 @@ namespace TheAlchemistsCrypt.Editor
                     // Sinking handled via yOffset parameter in calls
 
                     // Find and hide bottom mesh so GPU doesn't render it
-                    // Check children for common base/bottom mesh names or indices
                     foreach (var mr in obj.GetComponentsInChildren<MeshRenderer>(true)) {
                         string mrName = mr.gameObject.name.ToLower();
                         if (mrName.Contains("bottom") || mrName.Contains("base") || mrName.Contains("cap") || mrName.Contains("ground")) {
