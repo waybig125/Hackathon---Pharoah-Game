@@ -65,8 +65,8 @@ namespace TheAlchemistsCrypt.UI
                         out localPos
                     );
                     backgroundRing.anchoredPosition = localPos;
-                    PlayerPrefs.SetFloat("ButtonPos_JoystickBg_X", localPos.x);
-                    PlayerPrefs.SetFloat("ButtonPos_JoystickBg_Y", localPos.y);
+                    PlayerPrefs.SetFloat("ButtonPos_NativeJoystick_Bg_X", localPos.x);
+                    PlayerPrefs.SetFloat("ButtonPos_NativeJoystick_Bg_Y", localPos.y);
                     PlayerPrefs.Save();
                 }
                 return;

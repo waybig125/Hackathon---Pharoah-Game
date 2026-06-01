@@ -500,7 +500,7 @@ private Sprite buildingSprite;
             if (playerTransform == null) return;
             float playerYaw = playerTransform.eulerAngles.y;
             if (mapRotator != null) mapRotator.localEulerAngles = new Vector3(0, 0, playerYaw);
-            if (playerIndicator != null) playerIndicator.localEulerAngles = new Vector3(0, 0, -playerYaw);
+            if (playerIndicator != null) playerIndicator.localEulerAngles = Vector3.zero;
             if (compassRing != null) compassRing.localEulerAngles = new Vector3(0, 0, playerYaw);
             
             if (radarSweep != null)
@@ -629,7 +629,8 @@ private Sprite buildingSprite;
             mapRotator.localEulerAngles = Vector3.zero;
 
             // Player dot position
-            playerIndicator.localEulerAngles = Vector3.zero;
+            float playerYaw = playerTransform.eulerAngles.y;
+            playerIndicator.localEulerAngles = new Vector3(0, 0, -playerYaw);
             playerIndicator.anchoredPosition = new Vector2(playerPos.x * expandedScale, playerPos.z * expandedScale);
 
             foreach (var s in staticIndicators)

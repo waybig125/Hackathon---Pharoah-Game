@@ -640,18 +640,7 @@ namespace TheAlchemistsCrypt.UI
             if (joystickBg != null)
             {
                 joystickBg.SetAsLastSibling();
-                var sHelper = joystickBg.gameObject.AddComponent<ButtonInputHelper>();
-                sHelper.isDraggable = true;
-                sHelper.allowClicksDuringCustomization = true;
-
-                var handleTarget = joystickBg.Find("HandleTarget");
-                if (handleTarget != null)
-                {
-                    var dragHandler = handleTarget.GetComponent<JoystickDragHandler>();
-                    if (dragHandler != null) dragHandler.enabled = false;
-                    var img = handleTarget.GetComponent<Image>();
-                    if (img != null) img.raycastTarget = false;
-                }
+                // Keep JoystickDragHandler active so it can handle its own dragging during customization
             }
 
             // Create a premium, full-width top horizontal menu bar of height 85
@@ -1989,7 +1978,7 @@ namespace TheAlchemistsCrypt.UI
                 img.color = new Color(0.95f, 0.85f, 0.5f, 0.9f); // Gorgeous premium gold dust
                 
                 StartCoroutine(AnimateDust(rt, img));
-                yield return new WaitForSeconds(Random.Range(0.1f, 0.4f));
+                yield return new WaitForSecondsRealtime(Random.Range(0.1f, 0.4f));
             }
         }
 
@@ -2002,8 +1991,8 @@ namespace TheAlchemistsCrypt.UI
 
             while (elapsed < lifetime && rt != null)
             {
-                elapsed += Time.deltaTime;
-                rt.anchoredPosition += new Vector2(drift * Time.deltaTime, speed * Time.deltaTime);
+                elapsed += Time.unscaledDeltaTime;
+                rt.anchoredPosition += new Vector2(drift * Time.unscaledDeltaTime, speed * Time.unscaledDeltaTime);
                 
                 // Fade in and out beautifully
                 float alpha = Mathf.PingPong(elapsed * 2f / lifetime, 1.0f);

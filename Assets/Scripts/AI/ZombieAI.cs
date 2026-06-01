@@ -440,6 +440,24 @@ namespace TheAlchemistsCrypt.AI
             combatMusicTriggered = false;
             stuckTimer = 0f;
             
+            if (animator != null)
+            {
+                animator.Rebind();
+                animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                animator.applyRootMotion = false;
+                currentAnimState = "";
+            }
+
+            // Force visibility and check offscreen issues on reuse
+            foreach (var smr in GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
+                smr.enabled = true;
+                smr.updateWhenOffscreen = true;
+                smr.localBounds = new Bounds(Vector3.zero, new Vector3(200f, 200f, 200f));
+            }
+            foreach (var mr in GetComponentsInChildren<MeshRenderer>(true)) {
+                mr.enabled = true;
+            }
+
             if (agent != null)
             {
                 agent.enabled = true;
@@ -496,17 +514,11 @@ namespace TheAlchemistsCrypt.AI
                 yield return null;
             }
 
-            // Ensure fully opaque at the end and clear the property block override
+            // Ensure fully opaque at the end and clear the property block override to restore normal textures/shaders
             foreach (var r in cachedRenderers)
             {
                 if (r == null) continue;
-                r.GetPropertyBlock(cachedMPB);
-                Color col = cachedMPB.GetColor("_BaseColor");
-                if (col == Color.clear) col = Color.white;
-                col.a = 1f;
-                cachedMPB.SetColor("_BaseColor", col);
-                cachedMPB.SetColor("_Color",     col);
-                r.SetPropertyBlock(cachedMPB);
+                r.SetPropertyBlock(null);
             }
         }
 

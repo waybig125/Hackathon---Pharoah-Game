@@ -60,6 +60,9 @@ namespace TheAlchemistsCrypt.UI
 
                 public void BuildHUD()
                 {
+                    // Kill all active HUD/UI tweens before rebuilding to avoid DOTween Safe Mode errors
+                    DG.Tweening.DOTween.KillAll(false);
+
                     foreach (Transform t in transform) 
                     {
                         if (t.name != "BootFader") Destroy(t.gameObject);
