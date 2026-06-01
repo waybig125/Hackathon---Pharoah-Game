@@ -16,12 +16,11 @@ public static class SetupNewMummy
         string resourcePath = "Assets/Resources";
         if (!Directory.Exists(resourcePath)) Directory.CreateDirectory(resourcePath);
 
-        // 1. Extract Animations
         string[] fbxs = {
-            "Assets/Mummy/Idle.fbx",
-            "Assets/Mummy/Zombie Attack.fbx",
-            "Assets/Mummy/Zombie Running.fbx",
-            "Assets/Mummy/Falling Back Death.fbx"
+            "Assets/Art/Mummy_Assets/mummy_idle.fbx",
+            "Assets/Art/Mummy_Assets/mummy_attack.fbx",
+            "Assets/Art/Mummy_Assets/mummy_run.fbx",
+            "Assets/Art/Mummy_Assets/mummy_death.fbx"
         };
 
         string[] names = { "Mummy_Idle", "Mummy_Attack", "Mummy_Run", "Mummy_Die" };
