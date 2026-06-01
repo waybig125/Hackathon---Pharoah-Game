@@ -256,6 +256,31 @@ namespace TheAlchemistsCrypt.AI
             }
             string nearbyEnv = $"{treeCount} trees, {houseCount} houses";
 
+            // ── Dynamic Combat Rules ──────────────────────────────────────────
+            float attackRangeVal = 2.5f;   // ZombieAI.attackDistance default
+            float chaseRangeVal = 15.0f;   // ZombieAI player detection range threshold
+            int mummyDamageVal = 12;       // ZombieAI melee damage per second
+            bool playerCanShootVal = true;
+
+            if (playerObj != null)
+            {
+                var pHealth = playerObj.GetComponent<TheAlchemistsCrypt.Player.PlayerHealth>();
+                if (pHealth != null && pHealth.currentHealth <= 0)
+                {
+                    playerCanShootVal = false;
+                }
+
+                var alchemicalFocus = playerObj.GetComponentInChildren<TheAlchemistsCrypt.Weapons.AlchemicalFocus>(true);
+                if (alchemicalFocus == null) alchemicalFocus = focus; // Use outer scope focus if local search returns null
+                if (alchemicalFocus != null)
+                {
+                    if (alchemicalFocus.IsReloading || alchemicalFocus.CurrentAmmo <= 0)
+                    {
+                        playerCanShootVal = false;
+                    }
+                }
+            }
+
             // ── 3. Construct GameState payload ─────────────────────────────────
             var payload = new GameStatePayload
             {
@@ -268,10 +293,10 @@ namespace TheAlchemistsCrypt.AI
                 },
                 combat_rules = new CombatRules
                 {
-                    attack_range = 2.0f,
-                    chase_range = 8.0f,
-                    mummy_damage = 15,
-                    player_can_shoot = true
+                    attack_range = attackRangeVal,
+                    chase_range = chaseRangeVal,
+                    mummy_damage = mummyDamageVal,
+                    player_can_shoot = playerCanShootVal
                 },
                 player             = pState,
                 mummies            = mStates,
