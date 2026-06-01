@@ -16,7 +16,15 @@ namespace TheAlchemistsCrypt.Gameplay
         public AudioSource sfxSource;
         public AudioSource voiceSource;
 
+        [Header("Mix Volumes")]
+        [Range(0f, 1f)] public float ambientVolume = 0.10f;
+        [Range(0f, 1f)] public float musicVolume = 0.18f;
+        [Range(0f, 1f)] public float voiceVolume = 0.95f;
+
         private Dictionary<string, AudioClip> clipCache = new Dictionary<string, AudioClip>();
+        private List<int> recentTaunts = new List<int>();
+        private int activeMonsterVocalizations = 0;
+        private Coroutine musicCrossfade;
 
         private void Awake()
         {
@@ -65,7 +73,7 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private IEnumerator CheckNearbyMummiesDeferred()
         {
-            yield return null; // Wait for the dying mummy to deactivate/complete its state change
+            yield return null; 
 
             var allMummies = GameObject.FindObjectsByType<TheAlchemistsCrypt.AI.ZombieAI>(FindObjectsInactive.Exclude);
             bool anyNearby = false;
@@ -96,48 +104,82 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void InitializeSources()
         {
-            // Clean up existing sources if they exist (to avoid duplicates in editor)
-            var existing = GetComponents<AudioSource>();
-            foreach (var s in existing) {
-                // We keep them if they are assigned, otherwise we might double up
-            }
-
             if (mainMusicSource == null) mainMusicSource = gameObject.AddComponent<AudioSource>();
             mainMusicSource.loop = true;
-            mainMusicSource.volume = 0.35f; // Lowered from 0.6
-            mainMusicSource.spatialBlend = 0f; // 2D
+            mainMusicSource.volume = 0f; 
+            mainMusicSource.spatialBlend = 0f; 
             
             if (combatMusicSource == null) combatMusicSource = gameObject.AddComponent<AudioSource>();
             combatMusicSource.loop = true;
-            combatMusicSource.volume = 0.45f; // Lowered from 0.7
+            combatMusicSource.volume = 0f;
             combatMusicSource.spatialBlend = 0f;
             
             if (ambientSource == null) ambientSource = gameObject.AddComponent<AudioSource>();
             ambientSource.loop = true;
-            ambientSource.volume = 0.15f; // Lowered from 0.25
+            ambientSource.volume = ambientVolume;
             ambientSource.spatialBlend = 0f;
             
             if (sfxSource == null) sfxSource = gameObject.AddComponent<AudioSource>();
-            sfxSource.volume = 0.6f; // Lowered from 0.9
-            sfxSource.spatialBlend = 0f; // Global SFX
+            sfxSource.volume = 0.5f;
+            sfxSource.spatialBlend = 0f;
             
             if (voiceSource == null) voiceSource = gameObject.AddComponent<AudioSource>();
-            voiceSource.volume = 0.8f; // Lowered from 1.0
-            voiceSource.spatialBlend = 0f; // Global Voice
+            voiceSource.volume = voiceVolume;
+            voiceSource.spatialBlend = 0f;
 
             if (Application.isPlaying)
             {
-                // Start base ambiance and music
-                PlayMainTheme();
                 AudioClip ambient = LoadClip("ambient/amb_sand_fog_loop");
-                if (ambient != null)
-                {
-                    ambientSource.clip = ambient;
-                    ambientSource.Play();
-                }
+                if (ambient != null) { ambientSource.clip = ambient; ambientSource.Play(); }
 
+                PlayMainTheme();
                 StartCoroutine(RandomTauntRoutine());
             }
+        }
+
+        public static void PlayMainTheme() { if (Instance != null) Instance.CrossfadeTo(Instance.mainMusicSource, "music/bgm_tomb_main"); }
+        public static void PlayCombatTheme() { if (Instance != null) Instance.CrossfadeTo(Instance.combatMusicSource, "music/bgm_tomb_combat"); }
+
+        private void CrossfadeTo(AudioSource targetSource, string clipPath)
+        {
+            if (musicCrossfade != null) StopCoroutine(musicCrossfade);
+            musicCrossfade = StartCoroutine(CrossfadeRoutine(targetSource, clipPath));
+        }
+
+        private IEnumerator CrossfadeRoutine(AudioSource target, string path)
+        {
+            if (target.clip == null) target.clip = LoadClip(path);
+            if (!target.isPlaying) target.Play();
+
+            AudioSource other = (target == mainMusicSource) ? combatMusicSource : mainMusicSource;
+            float duration = 2.5f;
+            float elapsed = 0f;
+            float startOtherVol = other.volume;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                target.volume = Mathf.Lerp(0f, musicVolume, t);
+                other.volume = Mathf.Lerp(startOtherVol, 0f, t);
+                yield return null;
+            }
+            other.Stop();
+        }
+
+        public static bool RequestMonsterVocalization()
+        {
+            if (Instance == null) return true;
+            if (Instance.activeMonsterVocalizations >= 2) return false;
+            Instance.activeMonsterVocalizations++;
+            Instance.StartCoroutine(Instance.ReleaseVocalizationSlot());
+            return true;
+        }
+
+        private IEnumerator ReleaseVocalizationSlot()
+        {
+            yield return new WaitForSeconds(1.8f);
+            activeMonsterVocalizations = Mathf.Max(0, activeMonsterVocalizations - 1);
         }
 
         public static AudioClip LoadClip(string relativePath)
@@ -147,38 +189,12 @@ namespace TheAlchemistsCrypt.Gameplay
             
             AudioClip clip = Resources.Load<AudioClip>("egypt_game_audio/" + relativePath);
             if (clip != null) Instance.clipCache[relativePath] = clip;
-            else Debug.LogWarning($"[AudioManager] Clip not found at Resources/egypt_game_audio/{relativePath}");
             return clip;
         }
-
-        public static void PlayMainTheme()
-        {
-            if (Instance == null) return;
-            if (Instance.combatMusicSource != null && Instance.combatMusicSource.isPlaying) Instance.combatMusicSource.Stop();
-            if (Instance.mainMusicSource != null && !Instance.mainMusicSource.isPlaying)
-            {
-                Instance.mainMusicSource.clip = LoadClip("music/bgm_tomb_main");
-                if (Instance.mainMusicSource.clip != null) Instance.mainMusicSource.Play();
-            }
-        }
-
-        public static void PlayCombatTheme()
-        {
-            if (Instance == null) return;
-            if (Instance.mainMusicSource != null && Instance.mainMusicSource.isPlaying) Instance.mainMusicSource.Stop();
-            if (Instance.combatMusicSource != null && !Instance.combatMusicSource.isPlaying)
-            {
-                Instance.combatMusicSource.clip = LoadClip("music/bgm_tomb_combat");
-                if (Instance.combatMusicSource.clip != null) Instance.combatMusicSource.Play();
-            }
-        }
-
-        private static Dictionary<string, float> sfxThrottles = new Dictionary<string, float>();
 
         public static void PlaySFX(string clipPath, bool loop = false, float volumeScale = 1.0f, float throttleTime = 0f)
         {
             if (Instance == null) return;
-
             if (throttleTime > 0f)
             {
                 if (sfxThrottles.TryGetValue(clipPath, out float lastTime))
@@ -187,44 +203,39 @@ namespace TheAlchemistsCrypt.Gameplay
                 }
                 sfxThrottles[clipPath] = Time.time;
             }
-
             AudioClip clip = LoadClip(clipPath);
             if (clip == null) return;
-
-            Instance.sfxSource.PlayOneShot(clip, volumeScale);
+            Instance.sfxSource.PlayOneShot(clip, volumeScale * 0.7f); // Global SFX pad
         }
+
+        private static Dictionary<string, float> sfxThrottles = new Dictionary<string, float>();
 
         public static void PlayVoiceLine(string clipPath, bool interrupt = true)
         {
             if (Instance == null) return;
-            
-            // If we shouldn't interrupt and something is playing, skip
             if (!interrupt && Instance.voiceSource.isPlaying) return;
-
             AudioClip clip = LoadClip(clipPath);
             if (clip == null) return;
-
             Instance.voiceSource.Stop();
             Instance.voiceSource.clip = clip;
+            Instance.voiceSource.volume = Instance.voiceVolume;
             Instance.voiceSource.Play();
-            Debug.Log($"[AudioManager] Playing voice line: {clipPath}");
         }
 
         private IEnumerator RandomTauntRoutine()
         {
-            string[] taunts = new string[]
-            {
-                "Voice/vo_taunt_01", "Voice/vo_taunt_02", "Voice/vo_taunt_03", "Voice/vo_taunt_04",
-                "Voice/vo_taunt_05", "Voice/vo_taunt_06", "Voice/vo_taunt_07", "Voice/vo_taunt_08"
-            };
-
+            string[] taunts = { "Voice/vo_taunt_01", "Voice/vo_taunt_02", "Voice/vo_taunt_03", "Voice/vo_taunt_04", 
+                                "Voice/vo_taunt_05", "Voice/vo_taunt_06", "Voice/vo_taunt_07", "Voice/vo_taunt_08" };
             while (true)
             {
-                yield return new WaitForSeconds(30f);
+                yield return new WaitForSeconds(Random.Range(35f, 60f));
                 if (!voiceSource.isPlaying)
                 {
-                    string randomTaunt = taunts[Random.Range(0, taunts.Length)];
-                    PlayVoiceLine(randomTaunt);
+                    int idx;
+                    do { idx = Random.Range(0, taunts.Length); } while (recentTaunts.Contains(idx));
+                    recentTaunts.Add(idx);
+                    if (recentTaunts.Count > 4) recentTaunts.RemoveAt(0);
+                    PlayVoiceLine(taunts[idx]);
                 }
             }
         }

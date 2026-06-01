@@ -130,7 +130,12 @@ private Sprite buildingSprite;
             BuildMinimapUI();
             CacheStaticElements();
 
+            // Disable Fog of War on mobile for massive performance win (texture manipulation is slow)
+#if !UNITY_ANDROID && !UNITY_IOS
             fowCoroutine = StartCoroutine(UpdateFogOfWarRoutine());
+#else
+            if (fowImage != null) fowImage.gameObject.SetActive(false);
+#endif
         }
 
         private void GenerateSprites()
@@ -436,6 +441,9 @@ private Sprite buildingSprite;
             staticIndicators.Add(indicator);
         }
 
+        private Vector3 lastUpdatePlayerPos;
+        private float movementThreshold = 0.2f;
+
         private void Update()
         {
             if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.mKey.wasPressedThisFrame)
@@ -454,6 +462,16 @@ private Sprite buildingSprite;
                 if (playerTransform == null) return;
             }
 
+            Vector3 playerPos = playerTransform.position;
+            
+            // OPTIMIZATION: Only update UI positions if the player has moved significantly
+            if (Vector3.Distance(playerPos, lastUpdatePlayerPos) < movementThreshold && !isExpanded)
+            {
+                UpdateSmoothingRotations();
+                return;
+            }
+            lastUpdatePlayerPos = playerPos;
+
             if (isExpanded)
             {
                 UpdateExpandedPositions();
@@ -469,9 +487,24 @@ private Sprite buildingSprite;
                 radarSweep.Rotate(Vector3.forward, -60f * Time.deltaTime);
             }
 
-            // Update dynamic indicators
-            UpdateZombieIndicators();
-            UpdateMedicineIndicators();
+            // Update dynamic indicators (Throttled: every 2nd/3rd frame)
+            if (Time.frameCount % 2 == 0) UpdateZombieIndicators();
+            if (Time.frameCount % 3 == 0) UpdateMedicineIndicators();
+        }
+
+        private void UpdateSmoothingRotations()
+        {
+            // Keep the map and indicators aligned even when standing still but turning
+            if (playerTransform == null) return;
+            float playerYaw = playerTransform.eulerAngles.y;
+            if (mapRotator != null) mapRotator.localEulerAngles = new Vector3(0, 0, playerYaw);
+            if (playerIndicator != null) playerIndicator.localEulerAngles = new Vector3(0, 0, -playerYaw);
+            if (compassRing != null) compassRing.localEulerAngles = new Vector3(0, 0, playerYaw);
+            
+            if (radarSweep != null)
+            {
+                radarSweep.Rotate(Vector3.forward, -60f * Time.deltaTime);
+            }
         }
 
         private IEnumerator UpdateFogOfWarRoutine()

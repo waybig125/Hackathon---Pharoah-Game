@@ -17,11 +17,11 @@ namespace TheAlchemistsCrypt.Core
     {
         [Header("Frame Rate")]
         [Tooltip("Target FPS. 30 is ideal for mobile battery life and thermals.")]
-        [SerializeField] private int targetFrameRate = 30;
+        [SerializeField] private int targetFrameRate = 30; // CHANGED FROM 60: Stable 30 FPS is smoother than jittery 60.
 
         [Header("Shadows")]
         [Tooltip("Shadow render distance in metres. Default Unity is 150. 35 is plenty for this game.")]
-        [SerializeField] private float shadowDistance = 35f;
+        [SerializeField] private float shadowDistance = 15f;
 
         [Tooltip("0 = no cascades (cheapest). 1–4 = higher quality but heavier GPU load.")]
         [SerializeField] [Range(0, 4)] private int shadowCascades = 0;

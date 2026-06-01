@@ -73,10 +73,7 @@ namespace TheAlchemistsCrypt.UI
         private void Awake()
         {
             Instance = this;
-            LoadSprites();
-            GenerateProceduralSprites();
-            SetupCanvas();
-            BuildHUD();
+            // Heavy initialization moved to Start() coroutine to prevent startup hitches
         }
 
 
@@ -1132,6 +1129,16 @@ namespace TheAlchemistsCrypt.UI
 
         private IEnumerator Start()
         {
+            // 1. Defer heavy procedural generation to prevent startup freeze
+            LoadSprites();
+            yield return null;
+            GenerateProceduralSprites();
+            yield return null;
+            SetupCanvas();
+            yield return null;
+            BuildHUD();
+            yield return null;
+
             var canvas = GetComponent<Canvas>();
             if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera && canvas.worldCamera == null)
             {
@@ -1151,8 +1158,8 @@ namespace TheAlchemistsCrypt.UI
             int[] unityQualityLevels = { 1, 3, 5 };
             QualitySettings.SetQualityLevel(unityQualityLevels[Mathf.Clamp(currentQualityIdx, 0, 2)], true);
 
-            // Limit framerate to 60 FPS for battery and performance optimization on mobile devices
-            Application.targetFrameRate = 60;
+            // Limit framerate to 30 FPS for battery and performance optimization on mobile devices
+            Application.targetFrameRate = 30;
 
             if (!HasStartedGame)
             {

@@ -296,9 +296,18 @@ namespace TheAlchemistsCrypt.Weapons
 
             switch (currentMode)
             {
-                case FireMode.Sulfur: TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_sulfur_shot"); break;
-                case FireMode.Mercury: TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mercury_shot"); break;
-                case FireMode.Salt: TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_salt_shot"); break;
+                case FireMode.Sulfur: 
+                    TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_sulfur_shot", false, 0.45f); 
+                    if (UnityEngine.Random.value < 0.15f) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_sulfur_01", false);
+                    break;
+                case FireMode.Mercury: 
+                    TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mercury_shot", false, 0.45f); 
+                    if (UnityEngine.Random.value < 0.15f) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_mercury_01", false);
+                    break;
+                case FireMode.Salt: 
+                    TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_salt_shot", false, 0.45f); 
+                    if (UnityEngine.Random.value < 0.15f) TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_salt_01", false);
+                    break;
             }
 
             // Flash muzzle light briefly when firing

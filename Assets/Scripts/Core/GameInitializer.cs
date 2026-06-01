@@ -5,7 +5,7 @@ namespace TheAlchemistsCrypt.Core
     public class GameInitializer : MonoBehaviour
     {
         [Header("Performance Settings")]
-        [SerializeField] private int targetFrameRate = 30;
+        [SerializeField] private int targetFrameRate = 30; // 30 FPS lock for mobile stability
 
         private void Awake()
         {

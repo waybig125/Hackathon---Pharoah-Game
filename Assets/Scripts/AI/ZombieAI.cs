@@ -864,11 +864,21 @@ namespace TheAlchemistsCrypt.AI
                 if (animator != null) animator.speed = 1.0f;
                 
                 if (cachedPlayerHealth == null) FindPlayer();
-                if (cachedPlayerHealth != null) cachedPlayerHealth.TakeDamage(12f * Time.deltaTime);
+                if (cachedPlayerHealth != null) {
+                    cachedPlayerHealth.TakeDamage(12f * Time.deltaTime);
+                    // Play attack sound periodically
+                    if (Time.frameCount % 45 == 0) PlayVocalSFX("sfx/sfx_mummy_attack", 0.35f);
+                }
             }
             else {
                 PlayAnimation("Idle");
                 if (animator != null) animator.speed = 1.0f;
+            }
+
+            // Play walking sound periodically if moving fast enough
+            if (!isDead && agent.velocity.sqrMagnitude > 0.1f && Time.frameCount % 90 == 0)
+            {
+                PlayVocalSFX("sfx/sfx_mummy_walk", 0.15f);
             }
         }
 
@@ -933,6 +943,15 @@ namespace TheAlchemistsCrypt.AI
             }
         }
 
+        protected void PlayVocalSFX(string path, float vol = 0.5f)
+        {
+            // SCREAM GATE: Only play if the global limit hasn't been reached
+            if (TheAlchemistsCrypt.Gameplay.AudioManager.RequestMonsterVocalization())
+            {
+                TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX(path, false, vol, 0.2f);
+            }
+        }
+
         private void Die()
         {
             isDead = true;
@@ -969,7 +988,7 @@ namespace TheAlchemistsCrypt.AI
             {
                 audioSource.Stop();
                 // Use throttled global SFX for death too
-                TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_mummy_death", false, 0.6f, 0.2f);
+                PlayVocalSFX("sfx/sfx_mummy_death", 0.45f);
             }
 
             // Trigger decoupled death event

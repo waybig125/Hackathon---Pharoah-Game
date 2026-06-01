@@ -61,14 +61,14 @@ namespace TheAlchemistsCrypt.Player
             
             if (!isReflected)
             {
-                TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_player_grunt");
+                TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_player_grunt", false, 0.45f);
             }
             else
             {
                 if (Time.time - lastReflectSoundTime > 0.4f)
                 {
                     lastReflectSoundTime = Time.time;
-                    TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_player_grunt", false, 0.4f);
+                    TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_player_grunt", false, 0.3f);
                 }
             }
             
@@ -97,6 +97,9 @@ namespace TheAlchemistsCrypt.Player
             currentHealth += amount;
             if (currentHealth > maxHealth) currentHealth = maxHealth;
             Debug.Log($"Player healed by {amount}. Current health: {currentHealth}/{maxHealth}");
+            
+            // Play pickup sound on heal (shared with orbs)
+            TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_pickup", false, 0.7f);
         }
 
         private void Update()
@@ -105,13 +108,21 @@ namespace TheAlchemistsCrypt.Player
 
             // Low health audio logic
             float healthPct = currentHealth / maxHealth;
-            if (healthPct < 0.3f && !isLowHealthPlaying)
+            if (healthPct < 0.25f && !isLowHealthPlaying) // Lowered threshold to 25% for more tension
             {
                 isLowHealthPlaying = true;
-                if (lowHealthAudioSource != null && lowHealthAudioSource.clip != null) lowHealthAudioSource.Play();
-                if (heartbeatAudioSource != null && heartbeatAudioSource.clip != null) heartbeatAudioSource.Play();
+                if (lowHealthAudioSource != null && lowHealthAudioSource.clip != null) {
+                    lowHealthAudioSource.volume = 0.6f;
+                    lowHealthAudioSource.Play();
+                }
+                if (heartbeatAudioSource != null && heartbeatAudioSource.clip != null) {
+                    heartbeatAudioSource.volume = 0.5f;
+                    heartbeatAudioSource.Play();
+                }
+                // Also play tactical voice line
+                TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_lowhealth_01", false);
             }
-            else if (healthPct >= 0.3f && isLowHealthPlaying)
+            else if (healthPct >= 0.25f && isLowHealthPlaying)
             {
                 isLowHealthPlaying = false;
                 if (lowHealthAudioSource != null) lowHealthAudioSource.Stop();
