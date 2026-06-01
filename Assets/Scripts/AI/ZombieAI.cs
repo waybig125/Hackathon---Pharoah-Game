@@ -185,25 +185,9 @@ namespace TheAlchemistsCrypt.AI
         {
             // PERFORMANCE: Use pre-cached array — avoids allocation on every status expiry.
             if (cachedRenderers == null) cachedRenderers = GetComponentsInChildren<Renderer>(true);
-            if (cachedMPB == null) cachedMPB = new MaterialPropertyBlock();
-
             foreach (Renderer r in cachedRenderers)
             {
-                if (r == null) continue;
-                
-                // Clear the property block first to restore material defaults
-                r.SetPropertyBlock(null);
-                
-                // Then explicitly force alpha to 1.0 in case the material default was somehow corrupted
-                r.GetPropertyBlock(cachedMPB);
-                Color col = cachedMPB.GetColor("_BaseColor");
-                if (col.a < 0.99f)
-                {
-                    col.a = 1.0f;
-                    cachedMPB.SetColor("_BaseColor", col);
-                    cachedMPB.SetColor("_Color", col);
-                    r.SetPropertyBlock(cachedMPB);
-                }
+                if (r != null) r.SetPropertyBlock(null);
             }
         }
 
@@ -458,6 +442,15 @@ namespace TheAlchemistsCrypt.AI
             // Ensure scale is reset to 1 (prevents invisible zombies due to zero scale)
             transform.localScale = Vector3.one;
 
+            // Robust Physics Reset: Ensure they aren't thrown back by projectiles or gravity if reused
+            var rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+
             if (animator != null)
             {
                 animator.Rebind();
@@ -484,11 +477,13 @@ namespace TheAlchemistsCrypt.AI
                 Debug.LogWarning($"[ZombieAI] {name} spawned with NO renderers found in children!");
             }
 
+            if (agent == null) agent = GetComponent<NavMeshAgent>();
             if (agent != null)
             {
                 agent.enabled = true;
                 agent.speed = baseSpeed;
                 agent.stoppingDistance = attackDistance;
+                if (agent.isOnNavMesh) agent.ResetPath();
             }
 
             var colls = GetComponents<Collider>();
@@ -520,7 +515,7 @@ namespace TheAlchemistsCrypt.AI
                 StartCoroutine(SnapToNavMeshDelayed());
             }
             
-            Debug.Log($"[ZombieAI] {name} activated from pool. Renderers: {cachedRenderers?.Length ?? 0}");
+            Debug.Log($"[ZombieAI] {name} activated from pool. Renderers: {cachedRenderers?.Length ?? 0}. Kinematic: {rb?.isKinematic ?? false}");
         }
 
         private void OnDisable()
@@ -1037,6 +1032,15 @@ namespace TheAlchemistsCrypt.AI
             if (agent != null)
             {
                 agent.enabled = false;
+            }
+
+            // Robust Physics Reset on Death: Ensure they don't fly away if shot while dying
+            var rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
             }
 
             // Disable all colliders to allow player and projectiles to pass through
