@@ -238,12 +238,8 @@ namespace TheAlchemistsCrypt.Editor
                         ladderRamp.isStatic = true;
                     }
 
-                    // Add NavMeshObstacle to the house root to carve the NavMesh
-                    var nmoHouse = h.AddComponent<UnityEngine.AI.NavMeshObstacle>();
-                    nmoHouse.carving = true;
-                    nmoHouse.size = new Vector3(25f, 20f, 19f);
-                    nmoHouse.center = new Vector3(0f, 7f, 0f);
-
+                    // Physics and collision handled by children MeshColliders in StaticEgyptianCityGenerator
+                    }
                     if (crate != null) {
                         Vector3 cratePos = pos + new Vector3(15f, 0f, 13f);
                         var cObj = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
@@ -291,13 +287,9 @@ namespace TheAlchemistsCrypt.Editor
                         colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
                         AlignToGroundAndAddCollider(colObj, pos + new Vector3(-14.5f, 0f, -14.5f), Quaternion.Euler(-90f, 0f, 0f), 0f);
 
-                        // Add NavMeshObstacle to column to carve the NavMesh
-                        var nmoCol = colObj.AddComponent<UnityEngine.AI.NavMeshObstacle>();
-                        nmoCol.carving = true;
-                        nmoCol.size = new Vector3(3f, 12f, 3f);
-                        nmoCol.center = new Vector3(0f, 6f, 0f);
-                    }
-                    
+                        // Physics handled by collider
+                        }
+                        }
                     if (trees != null && trees.Length > 0) {
                         int numTrees = Random.Range(1, 4); // 1 to 3 trees Max
                         var sectors = new List<Vector3>() {
@@ -520,37 +512,7 @@ namespace TheAlchemistsCrypt.Editor
                 obRoot.transform.rotation = Quaternion.Euler(Random.Range(85f, 95f), Random.Range(0f, 360f), Random.Range(-5f, 5f));
             }
             
-            var nmoObelisk = obRoot.AddComponent<UnityEngine.AI.NavMeshObstacle>();
-            nmoObelisk.carving = true;
-            if (isFallen)
-            {
-                nmoObelisk.size = new Vector3(3f, 3f, height + 2f);
-                nmoObelisk.center = new Vector3(0f, 0f, height / 2f);
-            }
-            else
-            {
-                nmoObelisk.size = new Vector3(3f, height + 2f, 3f);
-                nmoObelisk.center = new Vector3(0f, height / 2f, 0f);
-            }
-
-            if (isBroken && isFallen)
-            {
-                int pieces = Random.Range(1, 3);
-                for (int p = 0; p < pieces; p++)
-                {
-                    var piece = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    piece.name = "ObeliskShatteredChunk";
-                    piece.transform.SetParent(dynamicProps.transform);
-                    
-                    Vector3 piecePos = pos + new Vector3(Random.Range(-4f, 4f), 0.5f, Random.Range(-4f, 4f));
-                    piecePos.y = GetTerrainHeight(piecePos) + 0.3f;
-                    piece.transform.position = piecePos;
-                    piece.transform.localScale = new Vector3(Random.Range(1.2f, 1.8f), Random.Range(1.0f, 2.0f), Random.Range(1.2f, 1.8f));
-                    piece.transform.rotation = Quaternion.Euler(Random.Range(0f, 360f), Random.Range(0f, 360f), Random.Range(0f, 360f));
-                    piece.GetComponent<Renderer>().sharedMaterial = stoneMat;
-                    piece.isStatic = true;
-                }
-            }
+            // Physics handled by MeshCollider
         }
 
         private void BuildAlchemistTomb(Transform parent, Vector3 pos, Material stoneMat)
@@ -631,11 +593,7 @@ namespace TheAlchemistsCrypt.Editor
                     // Converting to a rock-solid static structure.
                     root.isStatic = true;
 
-                    // Add NavMeshObstacle to carve the NavMesh around the tomb
-                    var nmoTomb = root.AddComponent<UnityEngine.AI.NavMeshObstacle>();
-                    nmoTomb.carving = true;
-                    nmoTomb.size = new Vector3(20f, 25f, 20f);
-                    nmoTomb.center = new Vector3(0f, 12.5f, 0f);
+                    // Physics handled by children BoxColliders
                 }
 
                 private void SpawnFallenColumn(Transform parent, Vector3 pos, GameObject columnPrefab)
@@ -658,12 +616,9 @@ namespace TheAlchemistsCrypt.Editor
                         box.size = new Vector3(2f, 10f, 2f);
                         box.center = new Vector3(0f, 5f, 0f);
                     }
-                    
-                    var nmo = colObj.AddComponent<UnityEngine.AI.NavMeshObstacle>();
-                    nmo.carving = true;
-                    nmo.size = new Vector3(3f, 3f, 10f);
-                    nmo.center = new Vector3(0f, 0f, 5f);
-                }
+
+                    // Physics handled by collider
+                    }
 
     }
 }

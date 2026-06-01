@@ -952,15 +952,20 @@ namespace TheAlchemistsCrypt.Editor
                     Material mat = mats[i];
                     if (mat == null) continue;
 
-                    // Swap internal read-only GLB/FBX materials with external extracted assets
-                    string assetPath = AssetDatabase.GetAssetPath(mat);
-                    
                     // WEAPON SHIELD: Completely ignore materials with "WEP" in the name (Mercury/Salt gun colors)
                     // This prevents shader stripping or conversion from ruining the alchemical glows.
                     if (mat.name.Contains("WEP", System.StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
                     }
+
+                    // Swap internal read-only GLB/FBX materials with external extracted assets
+                    if (!string.IsNullOrEmpty(assetPath) && 
+                        (assetPath.EndsWith(".glb", System.StringComparison.OrdinalIgnoreCase) || 
+                         assetPath.EndsWith(".gltf", System.StringComparison.OrdinalIgnoreCase) || 
+                         assetPath.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase) || 
+                         assetPath.EndsWith(".obj", System.StringComparison.OrdinalIgnoreCase)))
+                    {
                         string glbName = System.IO.Path.GetFileNameWithoutExtension(assetPath);
                         string safeName = mat.name.Replace(":", "_").Replace("/", "_");
                         string extPath = $"Assets/Art/Materials/Extracted/{glbName}_{safeName}.mat";
