@@ -976,7 +976,8 @@ namespace TheAlchemistsCrypt.Editor
                                origName.Contains("pyramid") || origName.Contains("temple") || 
                                origName.Contains("mastaba") || origName.Contains("sphinx") ||
                                origName.Contains("obelisk") || origName.Contains("pillar") ||
-                               origName.Contains("column") || origName.Contains("tomb");
+                               origName.Contains("column") || origName.Contains("tomb") ||
+                               origName.Contains("stall");
 
             // Special handling for the new GLB palm trees
             bool isNewPalmTree = isTree && (pName.Contains("dark_palm_tree") || pName.Contains("palm_tree"));

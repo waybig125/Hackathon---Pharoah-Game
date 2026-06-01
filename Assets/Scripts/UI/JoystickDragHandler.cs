@@ -64,9 +64,10 @@ namespace TheAlchemistsCrypt.UI
                         canvas.worldCamera,
                         out localPos
                     );
-                    backgroundRing.anchoredPosition = localPos;
-                    PlayerPrefs.SetFloat("ButtonPos_NativeJoystick_Bg_X", localPos.x);
-                    PlayerPrefs.SetFloat("ButtonPos_NativeJoystick_Bg_Y", localPos.y);
+                    backgroundRing.localPosition = new Vector3(localPos.x, localPos.y, 0f);
+                    var finalAnchored = backgroundRing.anchoredPosition;
+                    PlayerPrefs.SetFloat("ButtonPos_NativeJoystick_Bg_X", finalAnchored.x);
+                    PlayerPrefs.SetFloat("ButtonPos_NativeJoystick_Bg_Y", finalAnchored.y);
                     PlayerPrefs.Save();
                 }
                 return;

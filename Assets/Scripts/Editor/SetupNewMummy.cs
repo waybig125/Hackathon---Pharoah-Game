@@ -82,7 +82,7 @@ public static class SetupNewMummy
         }
 
         // 3. Build Prefab
-        string modelFbxPath = "Assets/Mummy/base_basic_shaded.fbx";
+        string modelFbxPath = "Assets/Art/Mummy_Assets/mummy_base.fbx";
         GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(modelFbxPath);
         if (model == null) {
             Debug.LogError("[MummySetup] Model not found at " + modelFbxPath);

@@ -87,9 +87,9 @@ namespace TheAlchemistsCrypt.Input
 
             // 2. Read Keyboard WASD/Arrow keys
             Vector2 keyboardInput = Vector2.zero;
-            if (UnityEngine.InputSystem.Keyboard.current != null)
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            if (kb != null)
             {
-                var kb = UnityEngine.InputSystem.Keyboard.current;
                 float x = 0;
                 float y = 0;
                 if (kb.wKey.isPressed || kb.upArrowKey.isPressed) y += 1f;
@@ -107,6 +107,29 @@ namespace TheAlchemistsCrypt.Input
             else
             {
                 SetMovement(finalMove);
+            }
+
+            // ── Desktop Keyboard: Space → Jump ────────────────────────────────
+            if (kb != null)
+            {
+                if (kb.spaceKey.wasPressedThisFrame)
+                {
+                    SetJumping(true);
+                }
+                if (kb.spaceKey.wasReleasedThisFrame)
+                {
+                    SetJumping(false);
+                    IsJumpHeld = false;
+                }
+
+                // ── Desktop Keyboard: Escape → Toggle Settings ────────────────
+                if (kb.escapeKey.wasPressedThisFrame)
+                {
+                    if (TheAlchemistsCrypt.UI.MobileHUDButtons.Instance != null)
+                    {
+                        TheAlchemistsCrypt.UI.MobileHUDButtons.Instance.ToggleSettingsFromEscape();
+                    }
+                }
             }
 
             // 4. Update Touch Active State using modern Input System API

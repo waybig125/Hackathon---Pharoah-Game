@@ -1,0 +1,12 @@
+--------------------------------------------------
+FILE: Assets/Art/Mummy_Assets/mummy_base.fbx
+Animation Type: Human, Avatar Setup: CreateFromThisModel, Global Scale: 1
+Total Renderers: 1
+SkinnedMeshRenderer: model, Bounds: (2.38, 2.07, 0.80), Verts: 125232
+Animator Avatar: mummy_baseAvatar
+--------------------------------------------------
+FILE: Assets/Mummy/base_basic_shaded.fbx
+Animation Type: Human, Avatar Setup: CreateFromThisModel, Global Scale: 1
+Total Renderers: 1
+MeshRenderer: base_basic_shaded, Verts: 88794
+Animator Avatar: base_basic_shadedAvatar

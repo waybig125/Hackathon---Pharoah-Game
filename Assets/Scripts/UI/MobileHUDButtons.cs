@@ -199,14 +199,8 @@ namespace TheAlchemistsCrypt.UI
                 if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = false;
             }
 
-            // ON desktop, escape should trigger settings toggling using modern Input System API.
-            var keyboard = UnityEngine.InputSystem.Keyboard.current;
-            if (keyboard != null && keyboard.escapeKey.isPressed) {
-                if (Time.unscaledTime - lastEscTime > 0.3f) {
-                    lastEscTime = Time.unscaledTime;
-                    ToggleSettingsFromEscape();
-                }
-            }
+            // ON desktop, escape toggle settings — handled via MobileInputManager + Character.OnLockCursor.
+            // Fallback check here for when MobileInputManager is disabled (settings modal open).
 
             // Optimize: Initialize cache periodically if not fully found, instead of every frame
             if (!isCacheInitialized || Time.frameCount % 60 == 0)
@@ -290,7 +284,9 @@ namespace TheAlchemistsCrypt.UI
         public void ToggleSettingsFromEscape()
         {
             if (deathPanelInstance != null) return;
-            
+            if (Time.unscaledTime - lastEscTime < 0.3f) return;
+            lastEscTime = Time.unscaledTime;
+
             // If settings modal is open, Escape can always close it
             if (settingsModalInstance != null)
             {
@@ -324,24 +320,20 @@ namespace TheAlchemistsCrypt.UI
 
             if (!HasStartedGame) return; // Escape does not open settings on start screen
             
-            if (Time.unscaledTime - lastEscTime > 0.3f)
+            var canvas = GetComponent<Canvas>();
+            if (canvas != null)
             {
-                lastEscTime = Time.unscaledTime;
-                var canvas = GetComponent<Canvas>();
-                if (canvas != null)
-                {
-                    OpenSettingsModal(canvas.GetComponent<RectTransform>());
-                }
-                
-                if (cachedCharacter != null)
-                {
-                    cachedCharacter.SetCursorLocked(false);
-                }
-                else
-                {
-                    Cursor.lockState = CursorLockMode.None;
-                    Cursor.visible = true;
-                }
+                OpenSettingsModal(canvas.GetComponent<RectTransform>());
+            }
+            
+            if (cachedCharacter != null)
+            {
+                cachedCharacter.SetCursorLocked(false);
+            }
+            else
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
             }
         }
 

@@ -65,7 +65,7 @@ public class BaseStateMachine : MonoBehaviour,IDamageable
         if (CurrentState != null)
             CurrentState.Execute(this);
 
-        if (Agent.remainingDistance > Agent.stoppingDistance) Move(Agent.velocity);
+        if (Agent != null && Agent.isActiveAndEnabled && Agent.isOnNavMesh && Agent.remainingDistance > Agent.stoppingDistance) Move(Agent.velocity);
         else Move(Vector3.zero);
     }
 
