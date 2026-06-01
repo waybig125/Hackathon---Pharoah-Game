@@ -17,8 +17,8 @@ namespace TheAlchemistsCrypt.Gameplay
         public AudioSource voiceSource;
 
         [Header("Mix Volumes")]
-        [Range(0f, 1f)] public float ambientVolume = 0.10f;
-        [Range(0f, 1f)] public float musicVolume = 0.18f;
+        [Range(0f, 1f)] public float ambientVolume = 0.05f;
+        [Range(0f, 1f)] public float musicVolume = 0.28f;
         [Range(0f, 1f)] public float voiceVolume = 0.95f;
 
         private Dictionary<string, AudioClip> clipCache = new Dictionary<string, AudioClip>();
@@ -337,15 +337,52 @@ namespace TheAlchemistsCrypt.Gameplay
             while (true)
             {
                 yield return new WaitForSeconds(Random.Range(35f, 60f));
+
+                // 1. Check if player has escaped
+                if (EscapeManager.Instance != null && EscapeManager.Instance.hasEscaped)
+                {
+                    Debug.Log("[AudioManager] Player has escaped. Stopping random taunts.");
+                    yield break;
+                }
+
                 if (!voiceSource.isPlaying)
                 {
-                    int idx;
-                    do { idx = Random.Range(0, taunts.Length); } while (recentTaunts.Contains(idx));
-                    recentTaunts.Add(idx);
-                    if (recentTaunts.Count > 4) recentTaunts.RemoveAt(0);
-                    PlayVoiceLine(taunts[idx]);
+                    // 2. Check for nearby attacking zombies
+                    if (AnyAttackingMummyNearby())
+                    {
+                        int idx;
+                        do { idx = Random.Range(0, taunts.Length); } while (recentTaunts.Contains(idx));
+                        recentTaunts.Add(idx);
+                        if (recentTaunts.Count > 4) recentTaunts.RemoveAt(0);
+                        PlayVoiceLine(taunts[idx]);
+                    }
                 }
             }
+        }
+
+        private bool AnyAttackingMummyNearby()
+        {
+            var player = GameObject.FindGameObjectWithTag("Player");
+            if (player == null) {
+                var character = GameObject.FindAnyObjectByType<InfimaGames.LowPolyShooterPack.Character>();
+                if (character != null) player = character.gameObject;
+            }
+            if (player == null) return false;
+
+            var allMummies = GameObject.FindObjectsByType<TheAlchemistsCrypt.AI.ZombieAI>(FindObjectsInactive.Exclude);
+            foreach (var m in allMummies)
+            {
+                if (m != null && !m.IsDead)
+                {
+                    float sqrDist = (m.transform.position - player.transform.position).sqrMagnitude;
+                    // Proximity check (20 units) and not stunned
+                    if (sqrDist < 400f)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
     }
 }

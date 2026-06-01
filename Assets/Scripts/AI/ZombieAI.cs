@@ -184,11 +184,26 @@ namespace TheAlchemistsCrypt.AI
         private void RestoreColors()
         {
             // PERFORMANCE: Use pre-cached array — avoids allocation on every status expiry.
-            if (cachedRenderers == null) return;
+            if (cachedRenderers == null) cachedRenderers = GetComponentsInChildren<Renderer>(true);
+            if (cachedMPB == null) cachedMPB = new MaterialPropertyBlock();
+
             foreach (Renderer r in cachedRenderers)
             {
                 if (r == null) continue;
+                
+                // Clear the property block first to restore material defaults
                 r.SetPropertyBlock(null);
+                
+                // Then explicitly force alpha to 1.0 in case the material default was somehow corrupted
+                r.GetPropertyBlock(cachedMPB);
+                Color col = cachedMPB.GetColor("_BaseColor");
+                if (col.a < 0.99f)
+                {
+                    col.a = 1.0f;
+                    cachedMPB.SetColor("_BaseColor", col);
+                    cachedMPB.SetColor("_Color", col);
+                    r.SetPropertyBlock(cachedMPB);
+                }
             }
         }
 
@@ -440,22 +455,33 @@ namespace TheAlchemistsCrypt.AI
             combatMusicTriggered = false;
             stuckTimer = 0f;
             
+            // Ensure scale is reset to 1 (prevents invisible zombies due to zero scale)
+            transform.localScale = Vector3.one;
+
             if (animator != null)
             {
                 animator.Rebind();
                 animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
                 animator.applyRootMotion = false;
                 currentAnimState = "";
+                animator.speed = 1.0f;
             }
 
             // Force visibility and check offscreen issues on reuse
-            foreach (var smr in GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
+            var skinnedRenderers = GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            foreach (var smr in skinnedRenderers) {
                 smr.enabled = true;
                 smr.updateWhenOffscreen = true;
                 smr.localBounds = new Bounds(Vector3.zero, new Vector3(200f, 200f, 200f));
             }
-            foreach (var mr in GetComponentsInChildren<MeshRenderer>(true)) {
+            var meshRenderers = GetComponentsInChildren<MeshRenderer>(true);
+            foreach (var mr in meshRenderers) {
                 mr.enabled = true;
+            }
+
+            if (skinnedRenderers.Length == 0 && meshRenderers.Length == 0)
+            {
+                Debug.LogWarning($"[ZombieAI] {name} spawned with NO renderers found in children!");
             }
 
             if (agent != null)
@@ -465,14 +491,24 @@ namespace TheAlchemistsCrypt.AI
                 agent.stoppingDistance = attackDistance;
             }
 
-            var colliders = GetComponents<Collider>();
-            foreach (var c in colliders) c.enabled = true;
-            var childColliders = GetComponentsInChildren<Collider>();
-            foreach (var c in childColliders) c.enabled = true;
+            var colls = GetComponents<Collider>();
+            foreach (var c in colls) c.enabled = true;
+            var childColls = GetComponentsInChildren<Collider>();
+            foreach (var c in childColls) c.enabled = true;
 
             string[] vulnerabilities = { "sulfur", "mercury", "salt" };
             vulnerableElement = vulnerabilities[Random.Range(0, vulnerabilities.Length)];
 
+            if (cachedRenderers == null) cachedRenderers = GetComponentsInChildren<Renderer>(true);
+            if (cachedMPB == null) cachedMPB = new MaterialPropertyBlock();
+            
+            // Clean up any stale health bar from previous life (especially if it was pending destruction)
+            if (healthBarObj != null)
+            {
+                Destroy(healthBarObj);
+                healthBarObj = null;
+            }
+            
             RestoreColors();
             if (healthBarObj == null && sharedHealthBarSprite != null)
             {
@@ -482,9 +518,17 @@ namespace TheAlchemistsCrypt.AI
             if (gameObject.activeInHierarchy)
             {
                 StartCoroutine(SnapToNavMeshDelayed());
-                // ── Fade in over 3 seconds so mummies materialize instead of popping ──
-                StartCoroutine(FadeInOnSpawn(3.0f));
             }
+            
+            Debug.Log($"[ZombieAI] {name} activated from pool. Renderers: {cachedRenderers?.Length ?? 0}");
+        }
+
+        private void OnDisable()
+        {
+            StopAllCoroutines();
+            // Kill any tweens running on this object or its children to prevent state leaks
+            transform.DOKill(true);
+            foreach (Transform child in transform) child.DOKill(true);
         }
 
         /// <summary>Fades all renderers from fully transparent to fully opaque over <paramref name="duration"/> seconds.</summary>
