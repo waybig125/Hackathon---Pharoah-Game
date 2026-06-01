@@ -931,7 +931,7 @@ namespace TheAlchemistsCrypt.Editor
                 Transform protCheck = renderer.transform;
                 while (protCheck != null) {
                     string n = protCheck.name.ToLower();
-                    if (n.Contains("mummy") || n.Contains("zombie") || n.Contains("player") || n.Contains("alchemisttomb") || n.Contains("house")) {
+                    if (n.Contains("mummy") || n.Contains("zombie") || n.Contains("player") || n.Contains("alchemisttomb") || n.Contains("house") || n.Contains("stall")) {
                         isProtected = true;
                         break;
                     }

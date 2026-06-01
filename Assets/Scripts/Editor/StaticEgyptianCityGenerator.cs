@@ -492,13 +492,13 @@ namespace TheAlchemistsCrypt.Editor
                                  string houseName = housePrefab != null ? housePrefab.name.ToLower() : "";
                                  bool isFlatRoofHouse = houseName.Contains("arabic_house_4") || houseName.Contains("egyptian_house");
                                  float distanceToPlayer = Vector3.Distance(pos, new Vector3(16f, pos.y, 48f));
-                                 if (isFlatRoofHouse && distanceToPlayer > 35f && Random.value < 0.50f && houseObj != null) {
-                                     float houseHeight = 12f;
+                                 if (isFlatRoofHouse && distanceToPlayer > 60f && Random.value < 0.40f && houseObj != null) {
+                                     float houseHeight = 10f;
                                      var mf = houseObj.GetComponentInChildren<MeshFilter>(true);
                                      if (mf != null && mf.sharedMesh != null) {
-                                         houseHeight = mf.sharedMesh.bounds.size.y * houseObj.transform.localScale.y;
+                                         houseHeight = Mathf.Clamp(mf.sharedMesh.bounds.size.y * houseObj.transform.localScale.y, 4f, 15f);
                                      }
-                                     Vector3 ladderBasePos = pos - Quaternion.Euler(0f, targetAngleY, 0f) * Vector3.forward * 13.5f;
+                                     Vector3 ladderBasePos = pos - Quaternion.Euler(0f, targetAngleY, 0f) * Vector3.forward * 11.0f;
                                      BuildProceduralLadderRamp(root.transform, ladderBasePos, houseHeight, targetAngleY);
                                  }
                                 
@@ -880,7 +880,7 @@ namespace TheAlchemistsCrypt.Editor
                     scaleByHeight = true;
                 }
                 else if (name.Contains("low_poly_market_stall_pack")) {
-                    targetSize = 14.4f; // Set to 3x the previous size (4.8f * 3) as requested
+                    targetSize = 9.6f; // Reduced to 2x (4.8f * 2) to prevent street blockage
                     scaleByHeight = true;
                 }
                 else if (name.Contains("stall")) {
@@ -989,15 +989,14 @@ namespace TheAlchemistsCrypt.Editor
                 bc.center = new Vector3(0f, 6f, 0f);
                 bc.size = new Vector3(1.2f, 12f, 1.2f);
 
-                // EXPAND MESH BOUNDS to fix 'disappearing leaves' when close/looking up
-                // We reset bounds in Step 1 for accurate placement, so it's now safe to expand them here 
-                // to prevent Unity's frustum culling from hiding the tree when the trunk center is off-screen.
+                // RECALCULATE MESH BOUNDS to fix placement accuracy
+                // We reset bounds in Step 1 for accurate placement. 
+                // We NO LONGER expand bounds manually, as that corrupts shared mesh assets
+                // and causes structural artifacts (blinking/missing cubes).
+                // DistanceCuller and Frustum Culling now handle this naturally.
                 foreach (var mf in obj.GetComponentsInChildren<MeshFilter>(true)) {
                     if (mf.sharedMesh != null) {
-                        Bounds b = mf.sharedMesh.bounds;
-                        // Expand by 2 units in local space (which is ~18 meters in world space for the palm trees)
-                        b.Expand(2.0f); 
-                        mf.sharedMesh.bounds = b;
+                        mf.sharedMesh.RecalculateBounds();
                     }
                 }
 

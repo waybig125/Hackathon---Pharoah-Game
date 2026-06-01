@@ -613,14 +613,14 @@ namespace TheAlchemistsCrypt.UI
             borderImg.color = new Color(0.95f, 0.8f, 0.2f, 0.9f); // Egyptian gold border line
 
             // Left-aligned instructions text
-            var textGo = new GameObject("Instructions", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+            var textGo = new GameObject("Instructions", typeof(RectTransform)).GetComponent<RectTransform>();
             textGo.SetParent(panelGo, false);
             textGo.anchorMin = new Vector2(0f, 0.5f);
             textGo.anchorMax = new Vector2(0f, 0.5f);
             textGo.pivot = new Vector2(0f, 0.5f);
             textGo.anchoredPosition = new Vector2(40f, 0f);
             textGo.sizeDelta = new Vector2(400, 60);
-            var txt = textGo.GetComponent<TextMeshProUGUI>();
+            var txt = textGo.gameObject.AddComponent<TextMeshProUGUI>();
             txt.font = GetRobustFont(); txt.fontSize = 18; txt.fontStyle = FontStyles.Bold;
             txt.alignment = TextAlignmentOptions.Left;
             txt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
@@ -726,11 +726,11 @@ namespace TheAlchemistsCrypt.UI
             hlImg.color = Color.white;
             highlight.gameObject.SetActive(false);
             
-            var txtGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+            var txtGo = new GameObject("Text", typeof(RectTransform)).GetComponent<RectTransform>();
             txtGo.SetParent(btnGo, false);
             txtGo.anchorMin = Vector2.zero; txtGo.anchorMax = Vector2.one;
             txtGo.offsetMin = txtGo.offsetMax = Vector2.zero;
-            var txt = txtGo.GetComponent<TextMeshProUGUI>();
+            var txt = txtGo.gameObject.AddComponent<TextMeshProUGUI>();
             txt.font = GetRobustFont(); txt.fontSize = 15; txt.fontStyle = FontStyles.Bold;
             txt.alignment = TextAlignmentOptions.Center; txt.color = Color.black;
             txt.text = labelText;
@@ -763,9 +763,9 @@ namespace TheAlchemistsCrypt.UI
             dialogImg.color = new Color(0.08f, 0.08f, 0.08f, 0.95f);
             
             // Title Text
-            var titleGo = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+            var titleGo = new GameObject("Title", typeof(RectTransform)).GetComponent<RectTransform>();
             titleGo.SetParent(dialog, false); titleGo.anchoredPosition = new Vector2(0, 260); titleGo.sizeDelta = new Vector2(700, 60);
-            var titleTxt = titleGo.GetComponent<TextMeshProUGUI>();
+            var titleTxt = titleGo.gameObject.AddComponent<TextMeshProUGUI>();
             titleTxt.font = GetRobustFont(); titleTxt.fontSize = 28; titleTxt.fontStyle = FontStyles.Bold;
             titleTxt.alignment = TextAlignmentOptions.Center; titleTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f);
             titleTxt.text = "THE PHARAOH'S VAULT - SETTINGS";
@@ -803,7 +803,7 @@ namespace TheAlchemistsCrypt.UI
             );
 
             // Row 4: Visual Fidelity (SELECTOR)
-            int currentQualityIdx = PlayerPrefs.GetInt("VisualQualityIdx", 2); // 0: LOW, 1: MEDIUM, 2: ULTRA (default 2)
+            int currentQualityIdx = PlayerPrefs.GetInt("VisualQualityIdx", 1); // 0: LOW, 1: MEDIUM, 2: ULTRA (default 1)
             string[] qualityNames = { "LOW", "MEDIUM", "ULTRA" };
             int[] unityQualityLevels = { 1, 3, 5 }; // Map user options to Low, High, Ultra in Unity Settings
             var qualRow = CreateSettingsRow(dialog, "VISUAL QUALITY", new Vector2(0, -40), qualityNames[Mathf.Clamp(currentQualityIdx, 0, 2)],
@@ -892,10 +892,10 @@ namespace TheAlchemistsCrypt.UI
             row.SetParent(parent, false); row.anchoredPosition = pos; row.sizeDelta = new Vector2(700, 70);
 
             // Label
-            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+            var lblGo = new GameObject("Label", typeof(RectTransform)).GetComponent<RectTransform>();
             lblGo.SetParent(row, false); lblGo.anchorMin = new Vector2(0, 0.5f); lblGo.anchorMax = new Vector2(0.4f, 0.5f);
             lblGo.pivot = new Vector2(0, 0.5f); lblGo.anchoredPosition = new Vector2(20, 0); lblGo.sizeDelta = new Vector2(250, 50);
-            var lblTxt = lblGo.GetComponent<TextMeshProUGUI>();
+            var lblTxt = lblGo.gameObject.AddComponent<TextMeshProUGUI>();
             lblTxt.font = GetRobustFont(); lblTxt.fontSize = 20; lblTxt.fontStyle = FontStyles.Bold;
             lblTxt.alignment = TextAlignmentOptions.Left; lblTxt.color = new Color(0.95f, 0.85f, 0.6f, 0.95f);
             lblTxt.text = labelText;
@@ -924,9 +924,9 @@ namespace TheAlchemistsCrypt.UI
             knobGo.GetComponent<Image>().sprite = CreateSettingsMedallionSprite(32, 32);
 
             // Value text label at the right
-            var valGo = new GameObject("SliderValueText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+            var valGo = new GameObject("SliderValueText", typeof(RectTransform)).GetComponent<RectTransform>();
             valGo.SetParent(row, false); valGo.anchoredPosition = new Vector2(400, 0); valGo.sizeDelta = new Vector2(100, 50);
-            var valTxt = valGo.GetComponent<TextMeshProUGUI>();
+            var valTxt = valGo.gameObject.AddComponent<TextMeshProUGUI>();
             valTxt.font = GetRobustFont(); valTxt.fontSize = 20; valTxt.fontStyle = FontStyles.Bold;
             valTxt.alignment = TextAlignmentOptions.Left; valTxt.color = new Color(1f, 0.95f, 0.8f, 0.95f);
             valTxt.text = formatFunc != null ? formatFunc(initialVal) : initialVal.ToString("F2");
@@ -964,10 +964,10 @@ namespace TheAlchemistsCrypt.UI
             row.SetParent(parent, false); row.anchoredPosition = pos; row.sizeDelta = new Vector2(700, 70);
 
             // Label
-            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+            var lblGo = new GameObject("Label", typeof(RectTransform)).GetComponent<RectTransform>();
             lblGo.SetParent(row, false); lblGo.anchorMin = new Vector2(0, 0.5f); lblGo.anchorMax = new Vector2(0.4f, 0.5f);
             lblGo.pivot = new Vector2(0, 0.5f); lblGo.anchoredPosition = new Vector2(20, 0); lblGo.sizeDelta = new Vector2(250, 50);
-            var lblTxt = lblGo.GetComponent<TextMeshProUGUI>();
+            var lblTxt = lblGo.gameObject.AddComponent<TextMeshProUGUI>();
             lblTxt.font = GetRobustFont(); lblTxt.fontSize = 20; lblTxt.fontStyle = FontStyles.Bold;
             lblTxt.alignment = TextAlignmentOptions.Left; lblTxt.color = new Color(0.95f, 0.85f, 0.6f, 0.95f);
             lblTxt.text = labelText;
@@ -979,9 +979,9 @@ namespace TheAlchemistsCrypt.UI
             var decHighlight = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             decHighlight.SetParent(decGo, false); decHighlight.anchorMin = Vector2.zero; decHighlight.anchorMax = Vector2.one; decHighlight.offsetMin = decHighlight.offsetMax = Vector2.zero;
             decHighlight.GetComponent<Image>().color = new Color(0.95f, 0.8f, 0.2f, 0.15f);
-            var decTxtGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+            var decTxtGo = new GameObject("Text", typeof(RectTransform)).GetComponent<RectTransform>();
             decTxtGo.SetParent(decGo, false); decTxtGo.anchorMin = Vector2.zero; decTxtGo.anchorMax = Vector2.one; decTxtGo.offsetMin = decTxtGo.offsetMax = Vector2.zero;
-            var decTxt = decTxtGo.GetComponent<TextMeshProUGUI>();
+            var decTxt = decTxtGo.gameObject.AddComponent<TextMeshProUGUI>();
             decTxt.font = GetRobustFont(); decTxt.fontSize = 24; decTxt.fontStyle = FontStyles.Bold;
             decTxt.alignment = TextAlignmentOptions.Center; decTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); decTxt.text = "-";
 
@@ -989,9 +989,9 @@ namespace TheAlchemistsCrypt.UI
             var valGo = new GameObject("ValBtn", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             valGo.SetParent(row, false); valGo.anchoredPosition = new Vector2(210, 0); valGo.sizeDelta = new Vector2(150, 50);
             valGo.GetComponent<Image>().sprite = charcoalSprite;
-            var valTxtGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+            var valTxtGo = new GameObject("Text", typeof(RectTransform)).GetComponent<RectTransform>();
             valTxtGo.SetParent(valGo, false); valTxtGo.anchorMin = Vector2.zero; valTxtGo.anchorMax = Vector2.one; valTxtGo.offsetMin = valTxtGo.offsetMax = Vector2.zero;
-            var valTxt = valTxtGo.GetComponent<TextMeshProUGUI>();
+            var valTxt = valTxtGo.gameObject.AddComponent<TextMeshProUGUI>();
             valTxt.font = GetRobustFont(); valTxt.fontSize = 20; valTxt.fontStyle = FontStyles.Bold;
             valTxt.alignment = TextAlignmentOptions.Center; valTxt.color = new Color(1f, 0.95f, 0.8f, 0.95f); valTxt.text = initialVal;
 
@@ -1002,9 +1002,9 @@ namespace TheAlchemistsCrypt.UI
             var incHighlight = new GameObject("Highlight", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             incHighlight.SetParent(incGo, false); incHighlight.anchorMin = Vector2.zero; incHighlight.anchorMax = Vector2.one; incHighlight.offsetMin = incHighlight.offsetMax = Vector2.zero;
             incHighlight.GetComponent<Image>().color = new Color(0.95f, 0.8f, 0.2f, 0.15f);
-            var incTxtGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+            var incTxtGo = new GameObject("Text", typeof(RectTransform)).GetComponent<RectTransform>();
             incTxtGo.SetParent(incGo, false); incTxtGo.anchorMin = Vector2.zero; incTxtGo.anchorMax = Vector2.one; incTxtGo.offsetMin = incTxtGo.offsetMax = Vector2.zero;
-            var incTxt = incTxtGo.GetComponent<TextMeshProUGUI>();
+            var incTxt = incTxtGo.gameObject.AddComponent<TextMeshProUGUI>();
             incTxt.font = GetRobustFont(); incTxt.fontSize = 24; incTxt.fontStyle = FontStyles.Bold;
             incTxt.alignment = TextAlignmentOptions.Center; incTxt.color = new Color(0.95f, 0.8f, 0.2f, 0.95f); incTxt.text = "+";
 
@@ -1050,11 +1050,11 @@ namespace TheAlchemistsCrypt.UI
                 narrationPanel = panelGo.gameObject;
 
                 // Text (No golden border, clean modern look, pure white and MedievalSharp)
-                var txtGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+                var txtGo = new GameObject("Text", typeof(RectTransform)).GetComponent<RectTransform>();
                 txtGo.SetParent(panelGo, false);
                 txtGo.anchorMin = Vector2.zero; txtGo.anchorMax = Vector2.one;
                 txtGo.offsetMin = new Vector2(30, 5); txtGo.offsetMax = new Vector2(-30, -5);
-                narrationText = txtGo.GetComponent<TextMeshProUGUI>();
+                narrationText = txtGo.gameObject.AddComponent<TextMeshProUGUI>();
                 narrationText.font = GetTitleFont();
                 narrationText.fontSize = 21;
                 narrationText.fontStyle = FontStyles.Normal;
@@ -1147,7 +1147,7 @@ namespace TheAlchemistsCrypt.UI
             AudioListener.volume = currentVol;
 
             // Apply visual quality setting on boot
-            int currentQualityIdx = PlayerPrefs.GetInt("VisualQualityIdx", 2); // default to ULTRA
+            int currentQualityIdx = PlayerPrefs.GetInt("VisualQualityIdx", 1); // default to MEDIUM
             int[] unityQualityLevels = { 1, 3, 5 };
             QualitySettings.SetQualityLevel(unityQualityLevels[Mathf.Clamp(currentQualityIdx, 0, 2)], true);
 
@@ -1234,10 +1234,10 @@ namespace TheAlchemistsCrypt.UI
             var startBtnImg = startBtnGo.GetComponent<Image>();
             startBtnImg.color = new Color(0.95f, 0.8f, 0.2f, 1f);
 
-            var startBtnTextGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+            var startBtnTextGo = new GameObject("Text", typeof(RectTransform)).GetComponent<RectTransform>();
             startBtnTextGo.SetParent(startBtnGo, false);
             startBtnTextGo.anchorMin = Vector2.zero; startBtnTextGo.anchorMax = Vector2.one;
-            var startBtnTxt = startBtnTextGo.GetComponent<TextMeshProUGUI>();
+            var startBtnTxt = startBtnTextGo.gameObject.AddComponent<TextMeshProUGUI>();
             startBtnTxt.font = GetTitleFont();
             startBtnTxt.fontSize = 32;
             startBtnTxt.fontStyle = FontStyles.Bold;
@@ -1265,10 +1265,10 @@ namespace TheAlchemistsCrypt.UI
             var quitBtnImg = quitBtnGo.GetComponent<Image>();
             quitBtnImg.color = new Color(0.95f, 0.8f, 0.2f, 1f);
 
-            var quitBtnTextGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+            var quitBtnTextGo = new GameObject("Text", typeof(RectTransform)).GetComponent<RectTransform>();
             quitBtnTextGo.SetParent(quitBtnGo, false);
             quitBtnTextGo.anchorMin = Vector2.zero; quitBtnTextGo.anchorMax = Vector2.one;
-            var quitBtnTxt = quitBtnTextGo.GetComponent<TextMeshProUGUI>();
+            var quitBtnTxt = quitBtnTextGo.gameObject.AddComponent<TextMeshProUGUI>();
             quitBtnTxt.font = GetTitleFont();
             quitBtnTxt.fontSize = 32;
             quitBtnTxt.fontStyle = FontStyles.Bold;
@@ -1302,10 +1302,10 @@ namespace TheAlchemistsCrypt.UI
             row.SetParent(parent, false); row.anchoredPosition = pos; row.sizeDelta = new Vector2(700, 70);
 
             // Label
-            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+            var lblGo = new GameObject("Label", typeof(RectTransform)).GetComponent<RectTransform>();
             lblGo.SetParent(row, false); lblGo.anchorMin = new Vector2(0, 0.5f); lblGo.anchorMax = new Vector2(0.4f, 0.5f);
             lblGo.pivot = new Vector2(0, 0.5f); lblGo.anchoredPosition = new Vector2(20, 0); lblGo.sizeDelta = new Vector2(250, 50);
-            var lblTxt = lblGo.GetComponent<TextMeshProUGUI>();
+            var lblTxt = lblGo.gameObject.AddComponent<TextMeshProUGUI>();
             lblTxt.font = GetRobustFont(); lblTxt.fontSize = 20; lblTxt.fontStyle = FontStyles.Bold;
             lblTxt.alignment = TextAlignmentOptions.Left; lblTxt.color = new Color(0.95f, 0.85f, 0.6f, 0.95f);
             lblTxt.text = labelText;
@@ -1503,10 +1503,10 @@ namespace TheAlchemistsCrypt.UI
             var cardGroup = contentContainerGo.gameObject.AddComponent<CanvasGroup>();
             cardGroup.alpha = 0f;
 
-            var titleGo = new GameObject("TitleText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+            var titleGo = new GameObject("TitleText", typeof(RectTransform)).GetComponent<RectTransform>();
             titleGo.SetParent(contentContainerGo, false);
             titleGo.anchoredPosition = new Vector2(0, 100); titleGo.sizeDelta = new Vector2(900, 150);
-            var titleText = titleGo.GetComponent<TextMeshProUGUI>();
+            var titleText = titleGo.gameObject.AddComponent<TextMeshProUGUI>();
             titleText.font = GetTitleFont();
             titleText.fontSize = 130; // Massive Impact Title
             titleText.fontStyle = FontStyles.Bold;

@@ -392,13 +392,14 @@ namespace TheAlchemistsCrypt.Editor
                     }
 
                     // Invisible collision ramp for walking up
-                    var rampCollider = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    rampCollider.name = "CollisionRamp";
+                    var rampCollider = new GameObject("CollisionRamp");
                     rampCollider.transform.SetParent(ladder.transform);
-                    rampCollider.transform.localPosition = new Vector3(0f, -0.05f, 0f);
-                    rampCollider.transform.localScale = new Vector3(railSpacing, 0.1f, length);
-                    var rampRenderer = rampCollider.GetComponent<Renderer>();
-                    if (rampRenderer != null) DestroyImmediate(rampRenderer); // Invisible
+                    rampCollider.transform.localPosition = new Vector3(0f, 0f, 0f);
+                    
+                    var box = rampCollider.AddComponent<BoxCollider>();
+                    box.size = new Vector3(railSpacing, 0.05f, length);
+                    box.center = Vector3.zero;
+                    
                     rampCollider.isStatic = true;
 
                     // Position and rotation of the whole ladder ramp
