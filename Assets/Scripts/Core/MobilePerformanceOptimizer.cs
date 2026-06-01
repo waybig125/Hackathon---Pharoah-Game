@@ -88,7 +88,7 @@ namespace TheAlchemistsCrypt.Core
             QualitySettings.maximumLODLevel             = 0; // Allow all LOD levels
             QualitySettings.streamingMipmapsActive      = enableMipmapStreaming;
             QualitySettings.streamingMipmapsMemoryBudget = mipmapMemoryBudgetMB;
-            QualitySettings.globalTextureMipmapLimit    = 0; // Full resolution (streaming handles it)
+            QualitySettings.globalTextureMipmapLimit    = 1; // Limit texture resolution to half on mobile to cut VRAM/bandwidth
 
             // ── Anisotropic filtering ────────────────────────────────────────
             QualitySettings.anisotropicFiltering = AnisotropicFiltering.Disable; // Cheap, minor visual impact on mobile

@@ -22,6 +22,7 @@ namespace TheAlchemistsCrypt.AI
         [Header("Tactical AI Settings")]
         public int mummyId = 0;
         public float baseSpeed = 3.2f;
+        private float initialBaseSpeed = 3.2f;
         [HideInInspector] public Vector3 tacticalTarget;
         [HideInInspector] public float tacticalSpeedMult = 1f;
         [HideInInspector] public bool hasTacticalTarget = false;
@@ -344,6 +345,15 @@ namespace TheAlchemistsCrypt.AI
             // FORCE DYNAMIC: Ensure zombies are never accidentally marked as static by other scripts
             // Static objects cannot move, which is why they appear invisible or "stuck" when batched.
             gameObject.isStatic = false;
+
+            initialBaseSpeed = baseSpeed;
+            float speedMultiplier = 1.0f;
+            int difficulty = PlayerPrefs.GetInt("DifficultyLevel", 1);
+            if (difficulty == 0) speedMultiplier = 0.85f;
+            else if (difficulty == 1) speedMultiplier = 1.0f;
+            else if (difficulty == 2) speedMultiplier = 1.15f;
+            else if (difficulty == 3) speedMultiplier = 1.30f;
+            baseSpeed = initialBaseSpeed * speedMultiplier;
             
             agent = GetComponent<NavMeshAgent>();
             if (agent == null) agent = gameObject.AddComponent<NavMeshAgent>();

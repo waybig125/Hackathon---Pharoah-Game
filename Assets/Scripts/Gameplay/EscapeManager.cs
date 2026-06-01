@@ -47,10 +47,21 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void Start()
         {
+            int difficulty = PlayerPrefs.GetInt("DifficultyLevel", 1); // default NORMAL
+            SetDifficulty(difficulty);
+
             SpawnBoat();
             SetupUI();
             // Cache player once at start — see Update() for null-check fallback
             cachedPlayer = GameObject.FindGameObjectWithTag("Player");
+        }
+
+        public void SetDifficulty(int diffIndex)
+        {
+            if (diffIndex == 0) requiredKills = 5;
+            else if (diffIndex == 1) requiredKills = 10;
+            else if (diffIndex == 2) requiredKills = 20;
+            else if (diffIndex == 3) requiredKills = 35;
         }
 
         private void SetupUI()

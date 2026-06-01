@@ -494,6 +494,7 @@ namespace TheAlchemistsCrypt.UI
                 SaveButtonPos("SPRINT", new Vector2(-487, 225));
                 SaveButtonPos("FOCUS", new Vector2(-337, 315));
                 SaveButtonPos("JUMP", new Vector2(-112, 390));
+                SaveButtonPos("NativeJoystick_Bg", new Vector2(300, 300));
             }
             else if (presetName == "COMPACT")
             {
@@ -503,6 +504,7 @@ namespace TheAlchemistsCrypt.UI
                 SaveButtonPos("SPRINT", new Vector2(-390, 180));
                 SaveButtonPos("FOCUS", new Vector2(-270, 255));
                 SaveButtonPos("JUMP", new Vector2(-90, 315));
+                SaveButtonPos("NativeJoystick_Bg", new Vector2(250, 250));
             }
             else if (presetName == "LEFTY")
             {
@@ -512,6 +514,7 @@ namespace TheAlchemistsCrypt.UI
                 SaveButtonPos("SPRINT", new Vector2(487, 225));
                 SaveButtonPos("FOCUS", new Vector2(337, 315));
                 SaveButtonPos("JUMP", new Vector2(112, 390));
+                SaveButtonPos("NativeJoystick_Bg", new Vector2(1620, 300));
             }
             PlayerPrefs.Save();
 
@@ -540,6 +543,8 @@ namespace TheAlchemistsCrypt.UI
             PlayerPrefs.DeleteKey("ButtonPos_FOCUS_Y");
             PlayerPrefs.DeleteKey("ButtonPos_JUMP_X");
             PlayerPrefs.DeleteKey("ButtonPos_JUMP_Y");
+            PlayerPrefs.DeleteKey("ButtonPos_NativeJoystick_Bg_X");
+            PlayerPrefs.DeleteKey("ButtonPos_NativeJoystick_Bg_Y");
             PlayerPrefs.Save();
 
             if (IsCustomizingHUD)
@@ -577,6 +582,24 @@ namespace TheAlchemistsCrypt.UI
             if (btnContainer != null)
             {
                 btnContainer.SetAsLastSibling();
+            }
+
+            var joystickBg = hudRootGo != null ? hudRootGo.transform.Find("NativeJoystick_Bg") : null;
+            if (joystickBg != null)
+            {
+                joystickBg.SetAsLastSibling();
+                var sHelper = joystickBg.gameObject.AddComponent<ButtonInputHelper>();
+                sHelper.isDraggable = true;
+                sHelper.allowClicksDuringCustomization = true;
+
+                var handleTarget = joystickBg.Find("HandleTarget");
+                if (handleTarget != null)
+                {
+                    var dragHandler = handleTarget.GetComponent<JoystickDragHandler>();
+                    if (dragHandler != null) dragHandler.enabled = false;
+                    var img = handleTarget.GetComponent<Image>();
+                    if (img != null) img.raycastTarget = false;
+                }
             }
 
             // Create a premium, full-width top horizontal menu bar of height 85
@@ -700,6 +723,14 @@ namespace TheAlchemistsCrypt.UI
                     }
                 }
             }
+
+            var joystickBg = hudRootGo.transform.Find("NativeJoystick_Bg") as RectTransform;
+            if (joystickBg != null)
+            {
+                Vector2 defaultPos = isLefty ? new Vector2(1620, 300) : new Vector2(300, 300);
+                Vector2 savedPos = GetButtonPosition("NativeJoystick_Bg", defaultPos);
+                joystickBg.anchoredPosition = savedPos;
+            }
         }
 
         private GameObject CreateSettingsActionButton(RectTransform parent, string labelText, Vector2 pos, Vector2 size, System.Action onClick, Color highlightColor)
@@ -800,19 +831,19 @@ namespace TheAlchemistsCrypt.UI
             );
 
             // Row 4: Visual Fidelity (SELECTOR)
-            int currentQualityIdx = PlayerPrefs.GetInt("VisualQualityIdx", 1); // 0: LOW, 1: MEDIUM, 2: ULTRA (default 1)
-            string[] qualityNames = { "LOW", "MEDIUM", "ULTRA" };
-            int[] unityQualityLevels = { 1, 3, 5 }; // Map user options to Low, High, Ultra in Unity Settings
-            var qualRow = CreateSettingsRow(dialog, "VISUAL QUALITY", new Vector2(0, -40), qualityNames[Mathf.Clamp(currentQualityIdx, 0, 2)],
+            int currentQualityIdx = PlayerPrefs.GetInt("VisualQualityIdx", 1); // 0: LOW, 1: MEDIUM, 2: HIGH, 3: ULTRA (default 1)
+            string[] qualityNames = { "LOW", "MEDIUM", "HIGH", "ULTRA" };
+            int[] unityQualityLevels = { 1, 2, 3, 5 }; // Map user options to Low, Medium, High, Ultra in Unity Settings
+            var qualRow = CreateSettingsRow(dialog, "VISUAL QUALITY", new Vector2(0, -40), qualityNames[Mathf.Clamp(currentQualityIdx, 0, 3)],
                 () => {
-                    currentQualityIdx = Mathf.Clamp(currentQualityIdx - 1, 0, 2);
+                    currentQualityIdx = Mathf.Clamp(currentQualityIdx - 1, 0, 3);
                     PlayerPrefs.SetInt("VisualQualityIdx", currentQualityIdx);
                     PlayerPrefs.Save();
                     QualitySettings.SetQualityLevel(unityQualityLevels[currentQualityIdx], true);
                     return qualityNames[currentQualityIdx];
                 },
                 () => {
-                    currentQualityIdx = Mathf.Clamp(currentQualityIdx + 1, 0, 2);
+                    currentQualityIdx = Mathf.Clamp(currentQualityIdx + 1, 0, 3);
                     PlayerPrefs.SetInt("VisualQualityIdx", currentQualityIdx);
                     PlayerPrefs.Save();
                     QualitySettings.SetQualityLevel(unityQualityLevels[currentQualityIdx], true);
@@ -861,26 +892,39 @@ namespace TheAlchemistsCrypt.UI
                 new Color(0.9f, 0.2f, 0.2f, 0.15f)
             );
 
-            CreateSettingsActionButton(dialog, "MAIN MENU / HOME", new Vector2(-160, -250), new Vector2(300, 50),
-                () => {
-                    Time.timeScale = 1f;
-                    HasStartedGame = false;
-                    UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
-                },
-                new Color(0.2f, 0.5f, 0.8f, 0.15f)
-            );
+            if (HasStartedGame)
+            {
+                CreateSettingsActionButton(dialog, "MAIN MENU / HOME", new Vector2(-160, -250), new Vector2(300, 50),
+                    () => {
+                        Time.timeScale = 1f;
+                        HasStartedGame = false;
+                        UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+                    },
+                    new Color(0.2f, 0.5f, 0.8f, 0.15f)
+                );
 
-            CreateSettingsActionButton(dialog, "RETURN TO GAME", new Vector2(160, -250), new Vector2(300, 50),
-                () => {
-                    Destroy(modalBg.gameObject);
-                    settingsModalInstance = null;
-                    Time.timeScale = 1f; // RESUME THE GAME!
-                    if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
-                    Cursor.lockState = CursorLockMode.Locked;
-                    Cursor.visible = false;
-                },
-                new Color(0.95f, 0.8f, 0.2f, 0.15f)
-            );
+                CreateSettingsActionButton(dialog, "RETURN TO GAME", new Vector2(160, -250), new Vector2(300, 50),
+                    () => {
+                        Destroy(modalBg.gameObject);
+                        settingsModalInstance = null;
+                        Time.timeScale = 1f; // RESUME THE GAME!
+                        if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
+                        Cursor.lockState = CursorLockMode.Locked;
+                        Cursor.visible = false;
+                    },
+                    new Color(0.95f, 0.8f, 0.2f, 0.15f)
+                );
+            }
+            else
+            {
+                CreateSettingsActionButton(dialog, "BACK TO MENU", new Vector2(0, -250), new Vector2(300, 50),
+                    () => {
+                        Destroy(modalBg.gameObject);
+                        settingsModalInstance = null;
+                    },
+                    new Color(0.95f, 0.8f, 0.2f, 0.15f)
+                );
+            }
         }
 
         private GameObject CreateSettingsSliderRow(RectTransform parent, string labelText, Vector2 pos, float minVal, float maxVal, float initialVal, System.Action<float> onValueChange, System.Func<float, string> formatFunc)
@@ -1154,9 +1198,9 @@ namespace TheAlchemistsCrypt.UI
             AudioListener.volume = currentVol;
 
             // Apply visual quality setting on boot
-            int currentQualityIdx = PlayerPrefs.GetInt("VisualQualityIdx", 1); // default to MEDIUM
-            int[] unityQualityLevels = { 1, 3, 5 };
-            QualitySettings.SetQualityLevel(unityQualityLevels[Mathf.Clamp(currentQualityIdx, 0, 2)], true);
+            int currentQualityIdxOnBoot = PlayerPrefs.GetInt("VisualQualityIdx", 1); // default to MEDIUM
+            int[] unityQualityLevelsOnBoot = { 1, 2, 3, 5 };
+            QualitySettings.SetQualityLevel(unityQualityLevelsOnBoot[Mathf.Clamp(currentQualityIdxOnBoot, 0, 3)], true);
 
             // Limit framerate to 30 FPS for battery and performance optimization on mobile devices
             Application.targetFrameRate = 30;
@@ -1230,14 +1274,14 @@ namespace TheAlchemistsCrypt.UI
             bottomActionGo.anchorMin = bottomActionGo.anchorMax = new Vector2(0.5f, 0f);
             bottomActionGo.pivot = new Vector2(0.5f, 0f);
             bottomActionGo.anchoredPosition = new Vector2(0, 100);
-            bottomActionGo.sizeDelta = new Vector2(1000, 200);
+            bottomActionGo.sizeDelta = new Vector2(1000, 240); // slightly taller bottom action panel for 2 rows of 80px buttons
             bottomActionGo.GetComponent<Image>().color = Color.clear;
 
             var startBtnGo = new GameObject("StartButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             startBtnGo.SetParent(bottomActionGo, false);
             startBtnGo.anchorMin = startBtnGo.anchorMax = new Vector2(0.5f, 0.5f);
-            startBtnGo.anchoredPosition = new Vector2(-220, 0);
-            startBtnGo.sizeDelta = new Vector2(380, 100);
+            startBtnGo.anchoredPosition = new Vector2(-200, 50);
+            startBtnGo.sizeDelta = new Vector2(380, 80);
             var startBtnImg = startBtnGo.GetComponent<Image>();
             startBtnImg.color = new Color(0.95f, 0.8f, 0.2f, 1f);
 
@@ -1246,7 +1290,7 @@ namespace TheAlchemistsCrypt.UI
             startBtnTextGo.anchorMin = Vector2.zero; startBtnTextGo.anchorMax = Vector2.one;
             var startBtnTxt = startBtnTextGo.gameObject.AddComponent<TextMeshProUGUI>();
             startBtnTxt.font = GetTitleFont();
-            startBtnTxt.fontSize = 32;
+            startBtnTxt.fontSize = 24;
             startBtnTxt.fontStyle = FontStyles.Bold;
             startBtnTxt.alignment = TextAlignmentOptions.Center;
             startBtnTxt.color = Color.black;
@@ -1267,8 +1311,8 @@ namespace TheAlchemistsCrypt.UI
             var quitBtnGo = new GameObject("QuitButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
             quitBtnGo.SetParent(bottomActionGo, false);
             quitBtnGo.anchorMin = quitBtnGo.anchorMax = new Vector2(0.5f, 0.5f);
-            quitBtnGo.anchoredPosition = new Vector2(220, 0);
-            quitBtnGo.sizeDelta = new Vector2(380, 100);
+            quitBtnGo.anchoredPosition = new Vector2(200, 50);
+            quitBtnGo.sizeDelta = new Vector2(380, 80);
             var quitBtnImg = quitBtnGo.GetComponent<Image>();
             quitBtnImg.color = new Color(0.95f, 0.8f, 0.2f, 1f);
 
@@ -1277,7 +1321,7 @@ namespace TheAlchemistsCrypt.UI
             quitBtnTextGo.anchorMin = Vector2.zero; quitBtnTextGo.anchorMax = Vector2.one;
             var quitBtnTxt = quitBtnTextGo.gameObject.AddComponent<TextMeshProUGUI>();
             quitBtnTxt.font = GetTitleFont();
-            quitBtnTxt.fontSize = 32;
+            quitBtnTxt.fontSize = 24;
             quitBtnTxt.fontStyle = FontStyles.Bold;
             quitBtnTxt.alignment = TextAlignmentOptions.Center;
             quitBtnTxt.color = Color.black;
@@ -1291,6 +1335,71 @@ namespace TheAlchemistsCrypt.UI
 #else
                 Application.Quit();
 #endif
+            };
+
+            // --- DIFFICULTY BUTTON ---
+            var diffBtnGo = new GameObject("DifficultyButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            diffBtnGo.SetParent(bottomActionGo, false);
+            diffBtnGo.anchorMin = diffBtnGo.anchorMax = new Vector2(0.5f, 0.5f);
+            diffBtnGo.anchoredPosition = new Vector2(-200, -50);
+            diffBtnGo.sizeDelta = new Vector2(380, 80);
+            var diffBtnImg = diffBtnGo.GetComponent<Image>();
+            diffBtnImg.color = new Color(0.95f, 0.8f, 0.2f, 1f);
+
+            var diffBtnTextGo = new GameObject("Text", typeof(RectTransform)).GetComponent<RectTransform>();
+            diffBtnTextGo.SetParent(diffBtnGo, false);
+            diffBtnTextGo.anchorMin = Vector2.zero; diffBtnTextGo.anchorMax = Vector2.one;
+            var diffBtnTxt = diffBtnTextGo.gameObject.AddComponent<TextMeshProUGUI>();
+            diffBtnTxt.font = GetTitleFont();
+            diffBtnTxt.fontSize = 24;
+            diffBtnTxt.fontStyle = FontStyles.Bold;
+            diffBtnTxt.alignment = TextAlignmentOptions.Center;
+            diffBtnTxt.color = Color.black;
+
+            int currentDiff = PlayerPrefs.GetInt("DifficultyLevel", 1); // default NORMAL
+            string[] diffNames = { "EASY", "NORMAL", "HARD", "NIGHTMARE" };
+            int[] diffKills = { 5, 10, 20, 35 };
+            diffBtnTxt.text = $"DIFFICULTY: {diffNames[currentDiff]} ({diffKills[currentDiff]} KILLS)";
+
+            var diffHelper = diffBtnGo.gameObject.AddComponent<ButtonInputHelper>();
+            diffHelper.onClick = () =>
+            {
+                currentDiff = (currentDiff + 1) % 4;
+                PlayerPrefs.SetInt("DifficultyLevel", currentDiff);
+                PlayerPrefs.Save();
+                diffBtnTxt.text = $"DIFFICULTY: {diffNames[currentDiff]} ({diffKills[currentDiff]} KILLS)";
+                
+                // Update EscapeManager dynamically if running
+                if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null)
+                {
+                    TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.SetDifficulty(currentDiff);
+                }
+            };
+
+            // --- SETTINGS BUTTON ---
+            var settingsBtnGo = new GameObject("SettingsButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            settingsBtnGo.SetParent(bottomActionGo, false);
+            settingsBtnGo.anchorMin = settingsBtnGo.anchorMax = new Vector2(0.5f, 0.5f);
+            settingsBtnGo.anchoredPosition = new Vector2(200, -50);
+            settingsBtnGo.sizeDelta = new Vector2(380, 80);
+            var settingsBtnImg = settingsBtnGo.GetComponent<Image>();
+            settingsBtnImg.color = new Color(0.95f, 0.8f, 0.2f, 1f);
+
+            var settingsBtnTextGo = new GameObject("Text", typeof(RectTransform)).GetComponent<RectTransform>();
+            settingsBtnTextGo.SetParent(settingsBtnGo, false);
+            settingsBtnTextGo.anchorMin = Vector2.zero; settingsBtnTextGo.anchorMax = Vector2.one;
+            var settingsBtnTxt = settingsBtnTextGo.gameObject.AddComponent<TextMeshProUGUI>();
+            settingsBtnTxt.font = GetTitleFont();
+            settingsBtnTxt.fontSize = 24;
+            settingsBtnTxt.fontStyle = FontStyles.Bold;
+            settingsBtnTxt.alignment = TextAlignmentOptions.Center;
+            settingsBtnTxt.color = Color.black;
+            settingsBtnTxt.text = "SETTINGS";
+
+            var settingsHelper = settingsBtnGo.gameObject.AddComponent<ButtonInputHelper>();
+            settingsHelper.onClick = () =>
+            {
+                OpenSettingsModal(startCanvasGo.GetComponent<RectTransform>());
             };
 
             SetLayerRecursively(startCanvasGo, 5);
