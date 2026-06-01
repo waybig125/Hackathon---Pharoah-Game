@@ -922,23 +922,29 @@ namespace TheAlchemistsCrypt.Editor
             {
                 if (renderer == null) continue;
 
-                // HOTFIX: Native GLB importer leaves collision meshes visible. We must hide/destroy them so they don't render as blue/red boxes.
-                bool isCollider = renderer.name.Contains("COLLIDER", System.StringComparison.OrdinalIgnoreCase) ||
-                                  renderer.name.Contains("Collider", System.StringComparison.OrdinalIgnoreCase);
-
-                // PROTECT DYNAMIC ENTITIES: Never destroy renderers on mummies, zombies, players or specific landmarks
+                // PROTECT DYNAMIC ENTITIES: Completely skip optimization for mummies, zombies, players or specific landmarks
+                // This prevents them from becoming invisible or losing their rigged mesh functionality.
                 bool isProtected = false;
                 Transform protCheck = renderer.transform;
                 while (protCheck != null) {
                     string n = protCheck.name.ToLower();
-                    if (n.Contains("mummy") || n.Contains("zombie") || n.Contains("player") || n.Contains("alchemisttomb") || n.Contains("house") || n.Contains("stall")) {
+                    if (n.Contains("mummy") || n.Contains("zombie") || n.Contains("player") || 
+                        n.Contains("alchemisttomb") || n.Contains("house") || n.Contains("stall") ||
+                        n.Contains("enemy") || n.Contains("character") || n.Contains("hero") ||
+                        n.Contains("boat") || n.Contains("ship")) {
                         isProtected = true;
                         break;
                     }
                     protCheck = protCheck.parent;
                 }
 
-                if (isCollider && !isProtected)
+                if (isProtected) continue; // Skip everything for protected entities
+
+                // HOTFIX: Native GLB importer leaves collision meshes visible. We must hide/destroy them so they don't render as blue/red boxes.
+                bool isCollider = renderer.name.Contains("COLLIDER", System.StringComparison.OrdinalIgnoreCase) ||
+                                  renderer.name.Contains("Collider", System.StringComparison.OrdinalIgnoreCase);
+
+                if (isCollider)
                 {
                     renderer.enabled = false;
                     Object.DestroyImmediate(renderer);

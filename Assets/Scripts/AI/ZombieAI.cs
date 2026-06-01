@@ -341,6 +341,10 @@ namespace TheAlchemistsCrypt.AI
 
         protected virtual void Start()
         {
+            // FORCE DYNAMIC: Ensure zombies are never accidentally marked as static by other scripts
+            // Static objects cannot move, which is why they appear invisible or "stuck" when batched.
+            gameObject.isStatic = false;
+            
             agent = GetComponent<NavMeshAgent>();
             if (agent == null) agent = gameObject.AddComponent<NavMeshAgent>();
             

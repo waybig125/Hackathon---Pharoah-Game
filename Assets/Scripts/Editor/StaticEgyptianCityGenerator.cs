@@ -488,7 +488,7 @@ namespace TheAlchemistsCrypt.Editor
                                 var houseObj = PlaceIntegratedAsset(root.transform, pos, housePrefab, 1.0f, true, false, 0f, targetAngleY, false);
                                 occupiedPositions.Add(pos);
 
-                                 // Add ladder to roof occasionally (e.g. 50% chance) for specific flat-roof buildings
+                                 // Add ladder to roof occasionally (e.g. 40% chance) for specific flat-roof buildings
                                  string houseName = housePrefab != null ? housePrefab.name.ToLower() : "";
                                  bool isFlatRoofHouse = houseName.Contains("arabic_house_4") || houseName.Contains("egyptian_house");
                                  float distanceToPlayer = Vector3.Distance(pos, new Vector3(16f, pos.y, 48f));
@@ -498,7 +498,21 @@ namespace TheAlchemistsCrypt.Editor
                                      if (mf != null && mf.sharedMesh != null) {
                                          houseHeight = Mathf.Clamp(mf.sharedMesh.bounds.size.y * houseObj.transform.localScale.y, 4f, 15f);
                                      }
-                                     Vector3 ladderBasePos = pos - Quaternion.Euler(0f, targetAngleY, 0f) * Vector3.forward * 11.0f;
+                                     
+                                     // DYNAMIC CLEARANCE CHECK: Avoid spawning inside walls
+                                     float ladderOffset = 11.0f;
+                                     Vector3 ladderBasePos = pos - Quaternion.Euler(0f, targetAngleY, 0f) * Vector3.forward * ladderOffset;
+                                     
+                                     // Use a simple raycast check to see if we're hitting the house itself
+                                     RaycastHit wallHit;
+                                     Vector3 rayStart = ladderBasePos + Vector3.up * 1.0f;
+                                     Vector3 rayDir = (pos - ladderBasePos).normalized;
+                                     if (Physics.Raycast(rayStart, rayDir, out wallHit, 5.0f)) {
+                                         // If we hit something too early, push the ladder back more
+                                         ladderOffset += 2.5f; 
+                                         ladderBasePos = pos - Quaternion.Euler(0f, targetAngleY, 0f) * Vector3.forward * ladderOffset;
+                                     }
+
                                      BuildProceduralLadderRamp(root.transform, ladderBasePos, houseHeight, targetAngleY);
                                  }
                                 

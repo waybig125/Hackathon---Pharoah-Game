@@ -18,7 +18,7 @@ namespace TheAlchemistsCrypt.Gameplay
         private float initialBoatY = 3.2f;
 
         [Header("Progression")]
-        public int requiredKills = 20;
+        public int requiredKills = 7;
         public int currentKills = 0;
         public bool papyrusSpawned = false;
         
@@ -371,7 +371,10 @@ namespace TheAlchemistsCrypt.Gameplay
         {
             float groundY = 0f;
             RaycastHit hit;
-            if (Physics.Raycast(new Vector3(0f, 250f, -74f), Vector3.down, out hit, 300f))
+            int terrainLayer = LayerMask.GetMask("Terrain", "Default");
+            
+            // Raycast strictly against the terrain to avoid "landing" on invisible ghost meshes in the sky
+            if (Physics.Raycast(new Vector3(0f, 250f, -74f), Vector3.down, out hit, 300f, terrainLayer))
             {
                 groundY = hit.point.y;
             }
@@ -381,6 +384,10 @@ namespace TheAlchemistsCrypt.Gameplay
                 if (terrain != null) groundY = terrain.SampleHeight(new Vector3(0f, 0f, -74f));
             }
             
+            // HARD-FLOOR CAP: The boat should never be higher than the beach level (approx 1.6m above terrain base)
+            // This prevents it from flying if a ghost mesh is still detected.
+            if (groundY > 5.0f) groundY = 0.5f; 
+
             // Raised by +1.6f so the hull sits on top of the sand instead of being buried in it.
             Vector3 spawnPos = new Vector3(0f, groundY + 1.6f, -74f); // Sits on beach sand
             
@@ -533,7 +540,8 @@ namespace TheAlchemistsCrypt.Gameplay
             var playerCam = player.GetComponentInChildren<Camera>();
             if (playerCam != null)
             {
-                playerCam.transform.localRotation = Quaternion.Euler(10f, 0f, 0f); // Cinematic slight downward tilt
+                // Cinematic view: Look slightly up at the city center as we depart
+                playerCam.transform.localRotation = Quaternion.Euler(-5f, 0f, 0f); 
             }
 
             if (promptUiGo != null)
