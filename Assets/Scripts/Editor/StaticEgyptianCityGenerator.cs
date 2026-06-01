@@ -121,7 +121,6 @@ namespace TheAlchemistsCrypt.Editor
             // root.isStatic = true; // REMOVED: Managed selectively to prevent tree merging artifacts
 
             var trees = new GameObject[] {
-                AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/palm_trees/dark_palm_tree.glb"),
                 AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/palm_trees/palm_tree.glb")
             };
             var crate = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/EgyptianAssets/crate.glb");
@@ -581,8 +580,9 @@ namespace TheAlchemistsCrypt.Editor
                 if (rName.Contains("terrain") || rName.Contains("sea") || rName.Contains("bounds") || rName.Contains("palm") || rName.Contains("tree")) continue;
                 
                 Bounds b = r.bounds;
-                // INCREASED: Added a 6.0m safety margin around every building to absolutely prevent trees from spawning inside
-                b.Expand(new Vector3(6.0f, 0f, 6.0f)); 
+                // INCREASED: Added an 8.0m safety margin around every building and 12.0m for monuments
+                float extraBuffer = (rName.Contains("pyramid") || rName.Contains("tomb") || rName.Contains("temple") || rName.Contains("sphinx")) ? 12.0f : 8.0f;
+                b.Expand(new Vector3(extraBuffer, 0f, extraBuffer)); 
                 obstacleBounds.Add(b);
             }
             
@@ -593,7 +593,7 @@ namespace TheAlchemistsCrypt.Editor
                 
                 Bounds b = c.bounds;
                 // Ensure monuments like the AlchemistTomb are represented with extra buffer
-                float extraBuffer = (cName.Contains("tomb") || cName.Contains("house")) ? 4.0f : 2.0f;
+                float extraBuffer = (cName.Contains("pyramid") || cName.Contains("tomb") || cName.Contains("house")) ? 12.0f : 8.0f;
                 b.Expand(new Vector3(extraBuffer, 0f, extraBuffer));
                 obstacleBounds.Add(b);
             }

@@ -380,28 +380,27 @@ namespace TheAlchemistsCrypt.Editor
                     int attempts = 0;
                     List<Vector3> oasisTreePositions = new List<Vector3>();
 
-                    while (spawnedCount < 30 && attempts < 800) // REDUCED: Max 30 trees in empty space
+                    while (spawnedCount < 30 && attempts < 1000) // FINAL LIMIT: 30 trees outside city
                     {
                         attempts++;
                         float rx = Random.Range(-450f, 450f);
-                        float rz = Random.Range(-70f, -40f); // Constrain to dry beach sand zone
+                        float rz = Random.Range(-70f, -40f); 
                         Vector3 pos = new Vector3(rx, 0f, rz);
                         pos.y = GetTerrainHeight(pos);
 
-                        // Make sure it doesn't spawn in water, shoreline shallows, or extremely high up
                         if (pos.z < -70f || pos.y < 1.1f || pos.y > 15.0f) continue;
 
-                        // Ensure no two trees are too close (Min 8.0m distance)
+                        // Ensure trees are very well spaced (Min 10m)
                         bool tooCloseToTree = false;
                         foreach (var otherPos in oasisTreePositions) {
-                            if (Vector3.Distance(pos, otherPos) < 8.0f) {
+                            if (Vector3.Distance(pos, otherPos) < 10.0f) {
                                 tooCloseToTree = true;
                                 break;
                             }
                         }
                         if (tooCloseToTree) continue;
 
-                        // PREVENT SPAWNING INSIDE OBJECTS USING DETERMINISTIC BOUNDS
+                        // PREVENT SPAWNING INSIDE OBJECTS
                         bool insideObject = false;
                         foreach (var b in obstacleBounds) {
                             if (pos.x >= b.min.x && pos.x <= b.max.x && pos.z >= b.min.z && pos.z <= b.max.z) {
@@ -411,14 +410,10 @@ namespace TheAlchemistsCrypt.Editor
                         }
                         if (insideObject) continue;
 
-                        // 70% palm_tree (index 1), 30% dark_palm_tree (index 0)
-                        int treeIndex = Random.value < 0.7f ? 1 : 0;
-                        var prefab = treePrefabs[treeIndex];
+                        var prefab = treePrefabs[0]; // Only one variety now
                         if (prefab == null) continue;
 
-                        // Use the centralized placement helper to ensure correct GLB rotation (-90 on X) and scaling
                         PlaceIntegratedAsset(folder.transform, pos, prefab, Random.Range(0.8f, 1.4f), false, false, -0.4f);
-
                         oasisTreePositions.Add(pos);
                         spawnedCount++;
                     }
@@ -428,7 +423,7 @@ namespace TheAlchemistsCrypt.Editor
                 {
                     if (treePrefabs == null || treePrefabs.Length == 0 || treePrefabs[0] == null) return;
 
-                    var folder = new GameObject("City_Vegetation_Safe"); // Renamed to bypass 'tree' removal
+                    var folder = new GameObject("City_Vegetation_Safe");
                     folder.transform.SetParent(root.transform);
 
                     int spawnedCount = 0;
@@ -436,32 +431,28 @@ namespace TheAlchemistsCrypt.Editor
                     Vector3 playerSpawn = new Vector3(16f, 0f, 48f);
                     List<Vector3> cityTreePositions = new List<Vector3>();
 
-                    while (spawnedCount < 10 && attempts < 800) // REDUCED: Max 10 trees in the city
+                    while (spawnedCount < 10 && attempts < 800) // FINAL LIMIT: 10 trees inside city
                     {
                         attempts++;
                         float rx = Random.Range(-240f, 240f);
-                        float rz = Random.Range(-90f, 240f); // Relaxed Z range
+                        float rz = Random.Range(-90f, 240f); 
                         Vector3 pos = new Vector3(rx, 0f, rz);
 
-                        // Ensure it's at least 18 units away from player spawn
-                        if (Vector3.Distance(new Vector3(rx, 0f, rz), playerSpawn) < 18f) continue;
+                        if (Vector3.Distance(new Vector3(rx, 0f, rz), playerSpawn) < 25f) continue;
 
                         pos.y = GetTerrainHeight(pos);
-
-                        // Relaxed height check (allow on much higher dunes and slopes)
                         if (pos.z < -95f || pos.y < -0.2f || pos.y > 18.0f) continue;
 
-                        // Ensure no two trees are too close (Min 8.0m distance)
+                        // Well spaced
                         bool tooCloseToTree = false;
                         foreach (var otherPos in cityTreePositions) {
-                            if (Vector3.Distance(pos, otherPos) < 8.0f) {
+                            if (Vector3.Distance(pos, otherPos) < 10.0f) {
                                 tooCloseToTree = true;
                                 break;
                             }
                         }
                         if (tooCloseToTree) continue;
 
-                        // PREVENT SPAWNING INSIDE OBJECTS USING DETERMINISTIC BOUNDS
                         bool insideObject = false;
                         foreach (var b in obstacleBounds) {
                             if (pos.x >= b.min.x && pos.x <= b.max.x && pos.z >= b.min.z && pos.z <= b.max.z) {
@@ -471,14 +462,10 @@ namespace TheAlchemistsCrypt.Editor
                         }
                         if (insideObject) continue;
 
-                        // 70% palm_tree (index 1), 30% dark_palm_tree (index 0)
-                        int treeIndex = Random.value < 0.7f ? 1 : 0;
-                        var prefab = treePrefabs[treeIndex];
+                        var prefab = treePrefabs[0];
                         if (prefab == null) continue;
 
-                        // Use the centralized placement helper (yOffset = -0.4f to sink root slightly)
                         PlaceIntegratedAsset(folder.transform, pos, prefab, Random.Range(0.8f, 1.4f), false, false, -0.4f);
-
                         cityTreePositions.Add(pos);
                         spawnedCount++;
                     }

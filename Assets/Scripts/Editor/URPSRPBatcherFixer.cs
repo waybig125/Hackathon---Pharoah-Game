@@ -293,11 +293,11 @@ namespace TheAlchemistsCrypt.Editor
                 srcLower.Contains("house") || srcLower.Contains("building") ||
                 srcLower.Contains("temple") || srcLower.Contains("tomb") ||
                 srcLower.Contains("sphinx") || srcLower.Contains("mastaba") ||
-                srcLower.Contains("ruin")   || srcLower.Contains("fort") ||
+                srcLower.Contains("pyramid") || srcLower.Contains("ruin") ||
                 glbLower.Contains("house") || glbLower.Contains("building") ||
                 glbLower.Contains("temple") || glbLower.Contains("tomb") ||
                 glbLower.Contains("sphinx") || glbLower.Contains("mastaba") ||
-                glbLower.Contains("ruin")   || glbLower.Contains("fort");
+                glbLower.Contains("pyramid") || glbLower.Contains("ruin");
 
             // PROPS PROTECTION: Never apply common stone maps to these items
             if (srcLower.Contains("pillar") || srcLower.Contains("column") || 

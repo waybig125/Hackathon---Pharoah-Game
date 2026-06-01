@@ -627,9 +627,14 @@ namespace TheAlchemistsCrypt.Gameplay
 
             if (boatObj != null)
             {
-                float distToBoat = Vector3.Distance(playerObj.transform.position, boatObj.transform.position);
-                nearBoat = (distToBoat <= 30f);
-                canEscape = (distToBoat <= 18f);
+                // Calculate distance to the boat's center (more reliable than pivot which might be at the bottom/back)
+                Vector3 boatCenter = boatObj.transform.position;
+                var boatRenderer = boatObj.GetComponentInChildren<Renderer>();
+                if (boatRenderer != null) boatCenter = boatRenderer.bounds.center;
+
+                float distToBoat = Vector3.Distance(playerObj.transform.position, boatCenter);
+                nearBoat = (distToBoat <= 35f); // Increased detection radius
+                canEscape = (distToBoat <= 22f); // Increased interaction radius
             }
             else
             {
