@@ -88,12 +88,15 @@ namespace TheAlchemistsCrypt.Weapons
                 UpdateWeaponColor();
                 TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_element_switch");
 
+                // Notify AudioManager of weapon switch to reset element voice limitations
+                TheAlchemistsCrypt.Gameplay.AudioManager.OnWeaponSwitched();
+
                 // Play voice lines immediately on element switch
                 string[] voiceClips = null;
                 switch (currentMode)
                 {
                     case FireMode.Sulfur:
-                        voiceClips = new string[] { "Voice/vo_sulfur_01", "Voice/vo_sulfur_02" };
+                        voiceClips = new string[] { "Voice/vo_sulfur_01", "Voice/vo_sulfur_02", "Voice/vo_taunt_08" };
                         break;
                     case FireMode.Mercury:
                         voiceClips = new string[] { "Voice/vo_mercury_01", "Voice/vo_mercury_02" };
@@ -264,12 +267,15 @@ namespace TheAlchemistsCrypt.Weapons
                 UpdateWeaponColor();
                 TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_element_switch");
 
+                // Notify AudioManager of weapon switch to reset element voice limitations
+                TheAlchemistsCrypt.Gameplay.AudioManager.OnWeaponSwitched();
+
                 // Play voice lines immediately on element switch
                 string[] voiceClips = null;
                 switch (currentMode)
                 {
                     case FireMode.Sulfur:
-                        voiceClips = new string[] { "Voice/vo_sulfur_01", "Voice/vo_sulfur_02" };
+                        voiceClips = new string[] { "Voice/vo_sulfur_01", "Voice/vo_sulfur_02", "Voice/vo_taunt_08" };
                         break;
                     case FireMode.Mercury:
                         voiceClips = new string[] { "Voice/vo_mercury_01", "Voice/vo_mercury_02" };

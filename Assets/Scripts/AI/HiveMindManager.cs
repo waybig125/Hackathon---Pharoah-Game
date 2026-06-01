@@ -15,6 +15,15 @@ namespace TheAlchemistsCrypt.AI
     }
 
     [Serializable]
+    public class CombatRules
+    {
+        public float attack_range;
+        public float chase_range;
+        public int mummy_damage;
+        public bool player_can_shoot;
+    }
+
+    [Serializable]
     public class PlayerState
     {
         public List<float> pos;
@@ -31,6 +40,7 @@ namespace TheAlchemistsCrypt.AI
         public List<float> pos;
         public int hp;
         public string state;
+        public float distance_to_player;
     }
 
     [Serializable]
@@ -38,6 +48,7 @@ namespace TheAlchemistsCrypt.AI
     {
         public string gameState;
         public SessionMetadata session_metadata;
+        public CombatRules combat_rules;
         public PlayerState player;
         public List<MummyState> mummies;
         public bool pharaoh_active;
@@ -210,12 +221,14 @@ namespace TheAlchemistsCrypt.AI
             foreach (var z in cachedZombieArray)
             {
                 if (z == null || z.IsDead) continue;
+                float distance = Vector3.Distance(z.transform.position, playerObj.transform.position);
                 var mState = new MummyState
                 {
                     id    = z.mummyId,
                     pos   = new List<float> { z.transform.position.x, z.transform.position.y, z.transform.position.z },
                     hp    = Mathf.RoundToInt(z.currentHealth),
-                    state = "walk"
+                    state = "walk",
+                    distance_to_player = distance
                 };
                 mStates.Add(mState);
             }
@@ -252,6 +265,13 @@ namespace TheAlchemistsCrypt.AI
                     tick_id             = ++currentTick,
                     last_tactic_success = lastTacticSuccess,
                     difficulty_scaling  = difficultyScaling
+                },
+                combat_rules = new CombatRules
+                {
+                    attack_range = 2.0f,
+                    chase_range = 8.0f,
+                    mummy_damage = 15,
+                    player_can_shoot = true
                 },
                 player             = pState,
                 mummies            = mStates,
@@ -340,8 +360,8 @@ namespace TheAlchemistsCrypt.AI
                                 {
                                     if (activeElement == "sulfur" || activeElement == "sulphur")
                                     {
-                                        string[] sulfurVoices = { "Voice/vo_sulfur_01", "Voice/vo_sulfur_02" };
-                                        selectedVoice = sulfurVoices[UnityEngine.Random.Range(0, 2)];
+                                        string[] sulfurVoices = { "Voice/vo_sulfur_01", "Voice/vo_sulfur_02", "Voice/vo_taunt_08" };
+                                        selectedVoice = sulfurVoices[UnityEngine.Random.Range(0, 3)];
                                     }
                                     else if (activeElement == "mercury")
                                     {

@@ -563,7 +563,7 @@ namespace TheAlchemistsCrypt.Gameplay
                 }
             }
 
-            TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_taunt_01");
+            TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_taunt_01", true, true);
             TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_pickup", false, 1.0f);
         }
 
@@ -667,7 +667,7 @@ namespace TheAlchemistsCrypt.Gameplay
                     nearKey = false;
                     canPickupKey = false;
                     
-                    TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_taunt_01");
+                    TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_taunt_01", true, true);
                     TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_pickup", false, 0.8f);
                 }
                 else

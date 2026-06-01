@@ -26,6 +26,18 @@ namespace TheAlchemistsCrypt.Gameplay
         private int activeMonsterVocalizations = 0;
         private Coroutine musicCrossfade;
 
+        private static HashSet<string> playedElementLines = new HashSet<string>();
+        private static float lastElementVoiceTime = 0f;
+        private static float lastTacticalVoiceTime = 0f;
+        private static float lastLowHealthVoiceTime = 0f;
+        private static float lastVoicePlayTime = 0f;
+        private static string lastPlayedTacticalVoice = "";
+
+        private const float ElementVoiceCooldown = 20f;
+        private const float TacticalVoiceCooldown = 45f;
+        private const float LowHealthVoiceCooldown = 45f;
+        private const float GlobalVoiceCooldown = 6f;
+
         private void Awake()
         {
             if (Instance == null)
@@ -104,6 +116,13 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private void InitializeSources()
         {
+            playedElementLines.Clear();
+            lastElementVoiceTime = 0f;
+            lastTacticalVoiceTime = 0f;
+            lastLowHealthVoiceTime = 0f;
+            lastVoicePlayTime = 0f;
+            lastPlayedTacticalVoice = "";
+
             if (mainMusicSource == null) mainMusicSource = gameObject.AddComponent<AudioSource>();
             mainMusicSource.loop = true;
             mainMusicSource.volume = 0f; 
@@ -210,10 +229,99 @@ namespace TheAlchemistsCrypt.Gameplay
 
         private static Dictionary<string, float> sfxThrottles = new Dictionary<string, float>();
 
-        public static void PlayVoiceLine(string clipPath, bool interrupt = true)
+        public static void OnWeaponSwitched()
+        {
+            playedElementLines.Clear();
+            lastElementVoiceTime = 0f;
+            lastVoicePlayTime = 0f;
+        }
+
+        public static void PlayVoiceLine(string clipPath, bool interrupt = true, bool bypassCooldown = false)
         {
             if (Instance == null) return;
-            if (!interrupt && Instance.voiceSource.isPlaying) return;
+
+            if (Application.isPlaying && !bypassCooldown)
+            {
+                float currentTime = Time.time;
+
+                // 1. Global cooldown check (prevent rapid back-to-back voice lines)
+                if (currentTime - lastVoicePlayTime < GlobalVoiceCooldown)
+                {
+                    return;
+                }
+
+                // 2. Classify the voice line
+                bool isLowHealth = clipPath.Contains("vo_tactical_lowhealth");
+                bool isTactical = clipPath.Contains("vo_tactical");
+                bool isElement = clipPath.Contains("vo_sulfur") || clipPath.Contains("vo_mercury") || clipPath.Contains("vo_salt") || clipPath.Contains("vo_taunt_08");
+
+                if (isLowHealth)
+                {
+                    // Enforce low health voice cooldown
+                    if (currentTime - lastLowHealthVoiceTime < LowHealthVoiceCooldown)
+                    {
+                        return;
+                    }
+                }
+                else if (isTactical)
+                {
+                    // Enforce tactical voice cooldown
+                    // If it's a new tactic, we allow it (subject to global cooldown), but if it's the same tactic, we enforce cooldown.
+                    if (clipPath == lastPlayedTacticalVoice)
+                    {
+                        if (currentTime - lastTacticalVoiceTime < TacticalVoiceCooldown)
+                        {
+                            return;
+                        }
+                    }
+                }
+                else if (isElement)
+                {
+                    // Enforce element voice cooldown
+                    if (currentTime - lastElementVoiceTime < ElementVoiceCooldown)
+                    {
+                        return;
+                    }
+
+                    // Enforce no-repeat rule for element lines
+                    if (playedElementLines.Contains(clipPath))
+                    {
+                        return;
+                    }
+                }
+
+                // If not interrupting and currently playing, do not play
+                if (!interrupt && Instance.voiceSource.isPlaying) return;
+
+                // Update trackers
+                if (isLowHealth)
+                {
+                    lastLowHealthVoiceTime = currentTime;
+                }
+                else if (isTactical)
+                {
+                    lastTacticalVoiceTime = currentTime;
+                    lastPlayedTacticalVoice = clipPath;
+                }
+                else if (isElement)
+                {
+                    lastElementVoiceTime = currentTime;
+                    playedElementLines.Add(clipPath);
+                }
+
+                lastVoicePlayTime = currentTime;
+            }
+            else
+            {
+                // If not interrupting and currently playing, do not play
+                if (!interrupt && Instance.voiceSource.isPlaying) return;
+
+                if (Application.isPlaying)
+                {
+                    lastVoicePlayTime = Time.time;
+                }
+            }
+
             AudioClip clip = LoadClip(clipPath);
             if (clip == null) return;
             Instance.voiceSource.Stop();

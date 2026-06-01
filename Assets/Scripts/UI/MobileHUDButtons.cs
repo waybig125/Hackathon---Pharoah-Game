@@ -1552,7 +1552,7 @@ namespace TheAlchemistsCrypt.UI
             }
 
             // Play celebratory audio on victory!
-            TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_vision");
+            TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine("Voice/vo_tactical_vision", true, true);
             TheAlchemistsCrypt.Gameplay.AudioManager.PlaySFX("sfx/sfx_pickup", false, 1.0f);
 
             SetLayerRecursively(victoryCanvasGo, 5);

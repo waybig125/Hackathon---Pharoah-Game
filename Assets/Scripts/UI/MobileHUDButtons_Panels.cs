@@ -62,10 +62,10 @@ namespace TheAlchemistsCrypt.UI
                     var cardGroup = contentContainerGo.gameObject.AddComponent<CanvasGroup>();
                     cardGroup.alpha = 0f;
 
-                    var titleGo = new GameObject("TitleText", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+                    var titleGo = new GameObject("TitleText", typeof(RectTransform)).GetComponent<RectTransform>();
                     titleGo.SetParent(contentContainerGo, false);
                     titleGo.anchoredPosition = new Vector2(0, 100); titleGo.sizeDelta = new Vector2(900, 150);
-                    var titleText = titleGo.GetComponent<TextMeshProUGUI>();
+                    var titleText = titleGo.gameObject.AddComponent<TextMeshProUGUI>();
                     titleText.font = GetTitleFont();
                     titleText.fontSize = 130; // Massive Impact Title
                     titleText.fontStyle = FontStyles.Bold;
@@ -107,7 +107,7 @@ namespace TheAlchemistsCrypt.UI
                     // Play a scary voice line on death to make it feel dangerous!
                     string[] deathTaunts = { "Voice/vo_taunt_01", "Voice/vo_taunt_02", "Voice/vo_taunt_03", "Voice/vo_taunt_04", "Voice/vo_taunt_05", "Voice/vo_taunt_06", "Voice/vo_taunt_07", "Voice/vo_taunt_08" };
                     string randomDeathTaunt = deathTaunts[UnityEngine.Random.Range(0, deathTaunts.Length)];
-                    TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(randomDeathTaunt);
+                    TheAlchemistsCrypt.Gameplay.AudioManager.PlayVoiceLine(randomDeathTaunt, true, true);
 
                     SetLayerRecursively(deathCanvasGo, 5);
 
@@ -133,11 +133,11 @@ namespace TheAlchemistsCrypt.UI
                         orbTooltipPanel = panelGo.gameObject;
 
                         // Text
-                        var txtGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<RectTransform>();
+                        var txtGo = new GameObject("Text", typeof(RectTransform)).GetComponent<RectTransform>();
                         txtGo.SetParent(panelGo, false);
                         txtGo.anchorMin = Vector2.zero; txtGo.anchorMax = Vector2.one;
                         txtGo.offsetMin = new Vector2(15, 5); txtGo.offsetMax = new Vector2(-15, -5);
-                        orbTooltipText = txtGo.GetComponent<TextMeshProUGUI>();
+                        orbTooltipText = txtGo.gameObject.AddComponent<TextMeshProUGUI>();
                         orbTooltipText.font = GetRobustFont();
                         orbTooltipText.fontSize = 18;
                         orbTooltipText.fontStyle = FontStyles.Bold;
