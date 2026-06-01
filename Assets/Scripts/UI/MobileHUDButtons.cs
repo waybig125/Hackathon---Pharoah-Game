@@ -617,6 +617,12 @@ namespace TheAlchemistsCrypt.UI
                 hudRootGo.SetActive(true);
             }
 
+            var minimap = transform.Find("MinimapCanvasContainer");
+            if (minimap != null)
+            {
+                minimap.gameObject.SetActive(true);
+            }
+
             var canvas = transform.GetComponent<RectTransform>();
             
             // Add customRoot to HUD_Root so it blocks under-layers (joystick, looking) but sits behind the buttons
@@ -1391,6 +1397,12 @@ namespace TheAlchemistsCrypt.UI
                 startScreenBottomPanelGo = null;
                 DisableCompetingCanvases();
                 SetHUDVisible(true);
+
+                var minimap = transform.Find("MinimapCanvasContainer");
+                if (minimap != null)
+                {
+                    minimap.gameObject.SetActive(true);
+                }
             };
 
             var quitBtnGo = new GameObject("QuitButton", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
