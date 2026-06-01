@@ -19,7 +19,7 @@ public static class SetupNewMummy
         string[] fbxs = {
             "Assets/Mummy/Idle.fbx",
             "Assets/Mummy/Zombie Attack.fbx",
-            "Assets/Mummy/Zombie Running.fbx",
+            "Assets/Mummy/Walking (1).fbx",
             "Assets/Mummy/Falling Back Death.fbx"
         };
 
@@ -82,6 +82,15 @@ public static class SetupNewMummy
 
         // 3. Build Prefab
         string modelFbxPath = "Assets/Mummy/new_base_basic_shaded.fbx";
+
+        // Extract embedded textures from the FBX into the same folder
+        ModelImporter importer = AssetImporter.GetAtPath(modelFbxPath) as ModelImporter;
+        if (importer != null)
+        {
+            importer.ExtractTextures("Assets/Mummy");
+            AssetDatabase.ImportAsset(modelFbxPath, ImportAssetOptions.ForceUpdate);
+        }
+
         GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(modelFbxPath);
         if (model == null) {
             Debug.LogError("[MummySetup] Model not found at " + modelFbxPath);
@@ -119,21 +128,7 @@ public static class SetupNewMummy
         animator.runtimeAnimatorController = controller;
         animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
-        // Apply correct texture/material
-        Material mummyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/MummyMat.mat");
-        if (mummyMat != null)
-        {
-            var renderers = mummyObj.GetComponentsInChildren<Renderer>(true);
-            foreach (var r in renderers)
-            {
-                r.sharedMaterial = mummyMat;
-            }
-            Debug.Log("[MummySetup] Assigned MummyMat material successfully.");
-        }
-        else
-        {
-            Debug.LogWarning("[MummySetup] Could not load Assets/Resources/MummyMat.mat!");
-        }
+        // Keep model's default imported materials (which now reference the extracted textures)
 
         string prefabPath = resourcePath + "/Mummy_Dynamic_Prefab.prefab";
         PrefabUtility.SaveAsPrefabAsset(mummyObj, prefabPath);
