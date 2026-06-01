@@ -17,10 +17,10 @@ public static class SetupNewMummy
         if (!Directory.Exists(resourcePath)) Directory.CreateDirectory(resourcePath);
 
         string[] fbxs = {
-            "Assets/Art/Mummy_Assets/mummy_idle.fbx",
-            "Assets/Art/Mummy_Assets/mummy_attack.fbx",
-            "Assets/Art/Mummy_Assets/mummy_run.fbx",
-            "Assets/Art/Mummy_Assets/mummy_death.fbx"
+            "Assets/Mummy/Idle.fbx",
+            "Assets/Mummy/Zombie Attack.fbx",
+            "Assets/Mummy/Zombie Running.fbx",
+            "Assets/Mummy/Falling Back Death.fbx"
         };
 
         string[] names = { "Mummy_Idle", "Mummy_Attack", "Mummy_Run", "Mummy_Die" };
@@ -81,7 +81,7 @@ public static class SetupNewMummy
         }
 
         // 3. Build Prefab
-        string modelFbxPath = "Assets/Art/Mummy_Assets/mummy_base.fbx";
+        string modelFbxPath = "Assets/Mummy/new_base_basic_shaded.fbx";
         GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(modelFbxPath);
         if (model == null) {
             Debug.LogError("[MummySetup] Model not found at " + modelFbxPath);
@@ -90,10 +90,11 @@ public static class SetupNewMummy
 
         GameObject mummyObj = (GameObject)PrefabUtility.InstantiatePrefab(model);
         mummyObj.name = "Mummy_Dynamic_Prefab";
+        mummyObj.transform.localScale = new Vector3(1.6f, 1.6f, 1.6f);
 
         var agent = mummyObj.GetComponent<UnityEngine.AI.NavMeshAgent>();
         if (agent == null) agent = mummyObj.AddComponent<UnityEngine.AI.NavMeshAgent>();
-        agent.radius = 0.8f;
+        agent.radius = 0.4f;
         agent.height = 2.0f;
         agent.speed = 3.2f;
         agent.acceleration = 12f;
@@ -107,7 +108,7 @@ public static class SetupNewMummy
         var col = mummyObj.GetComponent<CapsuleCollider>();
         if (col == null) col = mummyObj.AddComponent<CapsuleCollider>();
         col.center = new Vector3(0, 1, 0);
-        col.radius = 0.5f;
+        col.radius = 0.4f;
         col.height = 2.0f;
 
         var ai = mummyObj.GetComponent<TheAlchemistsCrypt.AI.ZombieAI>();

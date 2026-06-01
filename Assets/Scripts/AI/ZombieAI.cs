@@ -426,8 +426,19 @@ namespace TheAlchemistsCrypt.AI
             StartCoroutine(SnapToNavMeshDelayed());
         }
 
+        private Vector3 originalLocalScale = new Vector3(1.6f, 1.6f, 1.6f);
+        private bool hasCachedScale = false;
+
         private void OnEnable()
         {
+            if (!hasCachedScale)
+            {
+                originalLocalScale = transform.localScale;
+                if (originalLocalScale.sqrMagnitude < 0.01f) originalLocalScale = new Vector3(1.6f, 1.6f, 1.6f);
+                hasCachedScale = true;
+            }
+            transform.localScale = originalLocalScale;
+
             // Reset state for object pooling
             isDead = false;
             deathTimer = 0f;
@@ -438,9 +449,6 @@ namespace TheAlchemistsCrypt.AI
             pathfindCooldown = 0f;
             combatMusicTriggered = false;
             stuckTimer = 0f;
-            
-            // Ensure scale is reset to 1 (prevents invisible zombies due to zero scale)
-            transform.localScale = Vector3.one;
 
             // Robust Physics Reset: Ensure they aren't thrown back by projectiles or gravity if reused
             var rb = GetComponent<Rigidbody>();
