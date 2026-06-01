@@ -366,7 +366,7 @@ namespace TheAlchemistsCrypt.Editor
                     leftRail.transform.localScale = new Vector3(railWidth, railWidth, length);
                     leftRail.GetComponent<Renderer>().sharedMaterial = woodMat;
                     leftRail.isStatic = true;
-                    DestroyImmediate(leftRail.GetComponent<Collider>());
+                    // Keep the collider on rails!
 
                     var rightRail = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     rightRail.name = "Rail_R";
@@ -375,7 +375,7 @@ namespace TheAlchemistsCrypt.Editor
                     rightRail.transform.localScale = new Vector3(railWidth, railWidth, length);
                     rightRail.GetComponent<Renderer>().sharedMaterial = woodMat;
                     rightRail.isStatic = true;
-                    DestroyImmediate(rightRail.GetComponent<Collider>());
+                    // Keep the collider on rails!
 
                     // Rungs
                     int numRungs = Mathf.RoundToInt(length / 0.8f);
@@ -388,19 +388,10 @@ namespace TheAlchemistsCrypt.Editor
                         rung.transform.localScale = new Vector3(railSpacing, 0.08f, 0.15f);
                         rung.GetComponent<Renderer>().sharedMaterial = woodMat;
                         rung.isStatic = true;
-                        DestroyImmediate(rung.GetComponent<Collider>());
+                        // Keep the collider on rungs for solid physical presence!
                     }
 
-                    // Invisible collision ramp for walking up
-                    var rampCollider = new GameObject("CollisionRamp");
-                    rampCollider.transform.SetParent(ladder.transform);
-                    rampCollider.transform.localPosition = new Vector3(0f, 0f, 0f);
-                    
-                    var box = rampCollider.AddComponent<BoxCollider>();
-                    box.size = new Vector3(railSpacing, 0.05f, length);
-                    box.center = Vector3.zero;
-                    
-                    rampCollider.isStatic = true;
+                    // No more separate 'CollisionRamp' - the ladder components are now physical themselves!
 
                     // Position and rotation of the whole ladder ramp
                     float halfHeight = (length / 2f) * Mathf.Sin(rad);
@@ -475,7 +466,7 @@ namespace TheAlchemistsCrypt.Editor
                     
                     var mc = pGo.AddComponent<MeshCollider>();
                     mc.sharedMesh = mesh;
-                    mc.convex = true;
+                    mc.convex = false; // Accurate mesh collision
                 }
 
         private void BuildProceduralObelisk(Transform parent, Vector3 pos, Material stoneMat, bool isBroken = false, bool isFallen = false)

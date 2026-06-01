@@ -880,7 +880,7 @@ namespace TheAlchemistsCrypt.Editor
                     scaleByHeight = true;
                 }
                 else if (name.Contains("low_poly_market_stall_pack")) {
-                    targetSize = 9.6f; // Reduced to 2x (4.8f * 2) to prevent street blockage
+                    targetSize = 14.4f; // Restored to 3x as requested
                     scaleByHeight = true;
                 }
                 else if (name.Contains("stall")) {
@@ -900,6 +900,13 @@ namespace TheAlchemistsCrypt.Editor
                         finalScale = (targetSize / dimensionToScale) * scaleMultiplier;
                         if (name.Contains("palm")) Debug.Log($"[CityGen] Palm Scale: {finalScale} (Dimension: {dimensionToScale})");
                     }
+                    
+                    // ENSURE ALL BUILDINGS ARE WALKABLE: Use visual geometry as collision.
+                    // This prevents 'ghost' blockers by making the model itself physical.
+                    if (name.Contains("stall") || name.Contains("house") || name.Contains("temple") || name.Contains("building")) {
+                        enterable = true;
+                    }
+
                     if (name.Contains("stall")) {
                         Debug.Log($"[StallScale] Name: {prefab.name}, TargetSize: {targetSize}, DimensionToScale(Y): {dimensionToScale}, FinalScale: {finalScale}, scaleMultiplier: {scaleMultiplier}");
                     }
