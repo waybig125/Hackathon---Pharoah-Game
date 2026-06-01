@@ -1014,7 +1014,6 @@ namespace TheAlchemistsCrypt.Editor
                 if (rootCol != null) UnityEngine.Object.DestroyImmediate(rootCol);
 
                 // 2. Add MeshColliders to VISIBLE parts only, ignoring giant invisible "ghost" meshes
-                var meshFilters = obj.GetComponentsInChildren<MeshFilter>(true);
                 foreach (var mf in meshFilters)
                 {
                     if (mf.sharedMesh == null) continue;

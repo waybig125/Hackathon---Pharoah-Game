@@ -238,8 +238,6 @@ namespace TheAlchemistsCrypt.Editor
                         ladderRamp.isStatic = true;
                     }
 
-                    // Physics and collision handled by children MeshColliders in StaticEgyptianCityGenerator
-                    }
                     if (crate != null) {
                         Vector3 cratePos = pos + new Vector3(15f, 0f, 13f);
                         var cObj = (GameObject)PrefabUtility.InstantiatePrefab(crate, parent);
@@ -268,28 +266,12 @@ namespace TheAlchemistsCrypt.Editor
         private void PlacePlaza(Transform parent, Vector3 pos, GameObject[] trees, GameObject columnPrefab, Material floorMat = null)
                 {
                     var p = new GameObject("Plaza"); p.transform.SetParent(parent); p.transform.position = pos; p.isStatic = true;
-                    // Plaza floor plane removed to prevent double floors / z-fighting with the desert terrain
-                    /*
-                    if (floorMat != null) {
-                        var floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
-                        floor.name = "PlazaFloor";
-                        floor.transform.SetParent(p.transform);
-                        floor.transform.localPosition = new Vector3(0f, 0.01f, 0f);
-                        floor.transform.localScale = new Vector3(3.2f, 1f, 3.2f);
-
-                        floor.GetComponent<Renderer>().sharedMaterial = floorMat;
-                        floor.isStatic = true;
-                    }
-                    */
                     
                     if (columnPrefab != null) {
                         var colObj = (GameObject)PrefabUtility.InstantiatePrefab(columnPrefab, p.transform);
                         colObj.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
                         AlignToGroundAndAddCollider(colObj, pos + new Vector3(-14.5f, 0f, -14.5f), Quaternion.Euler(-90f, 0f, 0f), 0f);
-
-                        // Physics handled by collider
-                        }
-                        }
+                    }
                     if (trees != null && trees.Length > 0) {
                         int numTrees = Random.Range(1, 4); // 1 to 3 trees Max
                         var sectors = new List<Vector3>() {
@@ -618,7 +600,7 @@ namespace TheAlchemistsCrypt.Editor
                     }
 
                     // Physics handled by collider
-                    }
+                }
 
     }
 }

@@ -960,6 +960,7 @@ namespace TheAlchemistsCrypt.Editor
                     }
 
                     // Swap internal read-only GLB/FBX materials with external extracted assets
+                    string assetPath = AssetDatabase.GetAssetPath(mat);
                     if (!string.IsNullOrEmpty(assetPath) && 
                         (assetPath.EndsWith(".glb", System.StringComparison.OrdinalIgnoreCase) || 
                          assetPath.EndsWith(".gltf", System.StringComparison.OrdinalIgnoreCase) || 
