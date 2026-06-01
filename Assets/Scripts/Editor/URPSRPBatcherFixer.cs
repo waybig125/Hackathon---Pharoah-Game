@@ -299,15 +299,18 @@ namespace TheAlchemistsCrypt.Editor
                 glbLower.Contains("sphinx") || glbLower.Contains("mastaba") ||
                 glbLower.Contains("ruin")   || glbLower.Contains("fort");
 
-            bool isUnifiedAlbedoAsset = isStoneAsset;
-            if (srcLower.Contains("column") || srcLower.Contains("pillar") || 
-                srcLower.Contains("ladder") || srcLower.Contains("crate") || srcLower.Contains("barrel") || 
-                glbLower.Contains("column") || glbLower.Contains("pillar") || 
-                glbLower.Contains("ladder") || glbLower.Contains("crate") || glbLower.Contains("barrel"))
+            // PROPS PROTECTION: Never apply common stone maps to these items
+            if (srcLower.Contains("pillar") || srcLower.Contains("column") || 
+                srcLower.Contains("barrel") || srcLower.Contains("crate") || 
+                srcLower.Contains("ladder") || srcLower.Contains("stall") ||
+                glbLower.Contains("pillar") || glbLower.Contains("column") || 
+                glbLower.Contains("barrel") || glbLower.Contains("crate") || 
+                glbLower.Contains("ladder") || glbLower.Contains("stall"))
             {
                 isStoneAsset = false;
-                isUnifiedAlbedoAsset = false;
             }
+
+            bool isUnifiedAlbedoAsset = isStoneAsset;
 
             if (isStoneAsset) {
                 // Sandstone: warm golden-tan, the colour of Egyptian limestone
@@ -343,13 +346,15 @@ namespace TheAlchemistsCrypt.Editor
             }
             
             // 2. Normal Map
-            Texture normalTex = null;
-            string normalTexProp = null;
-            if (src.HasProperty("normalTexture")) normalTexProp = "normalTexture";
-            else if (src.HasProperty("_BumpMap")) normalTexProp = "_BumpMap";
-            else if (src.HasProperty("_NormalMap")) normalTexProp = "_NormalMap";
-            
-            if (normalTexProp != null)
+            // FORCE COMMON NORMAL MAP FOR CITY ASSETS: Ensures consistent stone detail
+            if (isUnifiedAlbedoAsset && commonNormal != null)
+            {
+                dst.SetTexture("_BumpMap", commonNormal);
+                dst.EnableKeyword("_NORMALMAP");
+                dst.SetTextureScale("_BumpMap", new Vector2(4, 4));
+                dst.SetFloat("_BumpScale", 1.0f);
+            }
+            else if (normalTexProp != null)
             {
                 normalTex = src.GetTexture(normalTexProp);
                 if (normalTex != null)

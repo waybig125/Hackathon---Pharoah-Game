@@ -380,7 +380,7 @@ namespace TheAlchemistsCrypt.Editor
                     int attempts = 0;
                     List<Vector3> oasisTreePositions = new List<Vector3>();
 
-                    while (spawnedCount < 55 && attempts < 1000) // REDUCED BY 50%: Thinner desert foliage
+                    while (spawnedCount < 30 && attempts < 800) // REDUCED: Max 30 trees in empty space
                     {
                         attempts++;
                         float rx = Random.Range(-450f, 450f);
@@ -391,10 +391,10 @@ namespace TheAlchemistsCrypt.Editor
                         // Make sure it doesn't spawn in water, shoreline shallows, or extremely high up
                         if (pos.z < -70f || pos.y < 1.1f || pos.y > 15.0f) continue;
 
-                        // Ensure no two trees are too close (Min 6.0m distance)
+                        // Ensure no two trees are too close (Min 8.0m distance)
                         bool tooCloseToTree = false;
                         foreach (var otherPos in oasisTreePositions) {
-                            if (Vector3.Distance(pos, otherPos) < 6.0f) {
+                            if (Vector3.Distance(pos, otherPos) < 8.0f) {
                                 tooCloseToTree = true;
                                 break;
                             }
@@ -436,7 +436,7 @@ namespace TheAlchemistsCrypt.Editor
                     Vector3 playerSpawn = new Vector3(16f, 0f, 48f);
                     List<Vector3> cityTreePositions = new List<Vector3>();
 
-                    while (spawnedCount < 20 && attempts < 800) // REDUCED BY 50%: Only 20 trees in the city
+                    while (spawnedCount < 10 && attempts < 800) // REDUCED: Max 10 trees in the city
                     {
                         attempts++;
                         float rx = Random.Range(-240f, 240f);
@@ -451,10 +451,10 @@ namespace TheAlchemistsCrypt.Editor
                         // Relaxed height check (allow on much higher dunes and slopes)
                         if (pos.z < -95f || pos.y < -0.2f || pos.y > 18.0f) continue;
 
-                        // Ensure no two trees are too close (Min 6.0m distance)
+                        // Ensure no two trees are too close (Min 8.0m distance)
                         bool tooCloseToTree = false;
                         foreach (var otherPos in cityTreePositions) {
-                            if (Vector3.Distance(pos, otherPos) < 6.0f) {
+                            if (Vector3.Distance(pos, otherPos) < 8.0f) {
                                 tooCloseToTree = true;
                                 break;
                             }
