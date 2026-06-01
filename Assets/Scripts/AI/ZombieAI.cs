@@ -446,9 +446,13 @@ namespace TheAlchemistsCrypt.AI
             var rb = GetComponent<Rigidbody>();
             if (rb != null)
             {
+                // Fix: Setting velocity on a kinematic body is not supported in newer Unity versions.
+                if (!rb.isKinematic)
+                {
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                }
                 rb.isKinematic = true;
-                rb.linearVelocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
             }
 
             if (animator != null)
@@ -495,7 +499,7 @@ namespace TheAlchemistsCrypt.AI
             vulnerableElement = vulnerabilities[Random.Range(0, vulnerabilities.Length)];
 
             if (cachedRenderers == null) cachedRenderers = GetComponentsInChildren<Renderer>(true);
-            if (cachedMPB == null) cachedMPB = new MaterialPropertyBlock();
+            if (cachedMPB == null)       cachedMPB = new MaterialPropertyBlock();
             
             // Clean up any stale health bar from previous life (especially if it was pending destruction)
             if (healthBarObj != null)
@@ -1038,9 +1042,12 @@ namespace TheAlchemistsCrypt.AI
             var rb = GetComponent<Rigidbody>();
             if (rb != null)
             {
+                if (!rb.isKinematic)
+                {
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                }
                 rb.isKinematic = true;
-                rb.linearVelocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
             }
 
             // Disable all colliders to allow player and projectiles to pass through
