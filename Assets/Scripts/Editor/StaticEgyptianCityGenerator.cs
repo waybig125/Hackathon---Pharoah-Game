@@ -428,7 +428,7 @@ namespace TheAlchemistsCrypt.Editor
 
             GameObject terrainGo = unityTerrainGo;
 
-            float spacing = 28f; // INCREASED: Set to 28m to give houses much more breathing room and prevent street clipping
+            float spacing = 42f; // DRASTICALLY INCREASED: Set to 42m for maximum urban isolation and clear streets
             float halfSpan = (gridSize * spacing) / 2f;
             var enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Enemy-AI/Prefabs/TestZombie.prefab");
 
@@ -581,8 +581,8 @@ namespace TheAlchemistsCrypt.Editor
                 if (rName.Contains("terrain") || rName.Contains("sea") || rName.Contains("bounds") || rName.Contains("palm") || rName.Contains("tree")) continue;
                 
                 Bounds b = r.bounds;
-                // INCREASED: Added a 4.0m safety margin around every building to absolutely prevent trees from spawning inside
-                b.Expand(new Vector3(4.0f, 0f, 4.0f)); 
+                // INCREASED: Added a 6.0m safety margin around every building to absolutely prevent trees from spawning inside
+                b.Expand(new Vector3(6.0f, 0f, 6.0f)); 
                 obstacleBounds.Add(b);
             }
             
@@ -593,7 +593,7 @@ namespace TheAlchemistsCrypt.Editor
                 
                 Bounds b = c.bounds;
                 // Ensure monuments like the AlchemistTomb are represented with extra buffer
-                float extraBuffer = (cName.Contains("tomb") || cName.Contains("house")) ? 2.5f : 1.5f;
+                float extraBuffer = (cName.Contains("tomb") || cName.Contains("house")) ? 4.0f : 2.0f;
                 b.Expand(new Vector3(extraBuffer, 0f, extraBuffer));
                 obstacleBounds.Add(b);
             }
