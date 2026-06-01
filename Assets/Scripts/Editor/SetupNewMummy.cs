@@ -119,6 +119,22 @@ public static class SetupNewMummy
         animator.runtimeAnimatorController = controller;
         animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
+        // Apply correct texture/material
+        Material mummyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/MummyMat.mat");
+        if (mummyMat != null)
+        {
+            var renderers = mummyObj.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in renderers)
+            {
+                r.sharedMaterial = mummyMat;
+            }
+            Debug.Log("[MummySetup] Assigned MummyMat material successfully.");
+        }
+        else
+        {
+            Debug.LogWarning("[MummySetup] Could not load Assets/Resources/MummyMat.mat!");
+        }
+
         string prefabPath = resourcePath + "/Mummy_Dynamic_Prefab.prefab";
         PrefabUtility.SaveAsPrefabAsset(mummyObj, prefabPath);
 
