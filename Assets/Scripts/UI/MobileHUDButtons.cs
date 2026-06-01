@@ -201,8 +201,11 @@ namespace TheAlchemistsCrypt.UI
 
             // ON desktop, escape should trigger settings toggling using modern Input System API.
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
-            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame) {
-                ToggleSettingsFromEscape();
+            if (keyboard != null && keyboard.escapeKey.isPressed) {
+                if (Time.unscaledTime - lastEscTime > 0.3f) {
+                    lastEscTime = Time.unscaledTime;
+                    ToggleSettingsFromEscape();
+                }
             }
 
             // Optimize: Initialize cache periodically if not fully found, instead of every frame

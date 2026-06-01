@@ -60,7 +60,10 @@ namespace TheAlchemistsCrypt.UI
 
                 public void BuildHUD()
                 {
-                    foreach (Transform t in transform) Destroy(t.gameObject);
+                    foreach (Transform t in transform) 
+                    {
+                        if (t.name != "BootFader") Destroy(t.gameObject);
+                    }
 
                     var root = new GameObject("HUD_Root", typeof(RectTransform)).GetComponent<RectTransform>();
                     root.SetParent(transform, false);

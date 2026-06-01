@@ -378,6 +378,7 @@ namespace TheAlchemistsCrypt.AI
                 foreach (var smr in GetComponentsInChildren<SkinnedMeshRenderer>(true)) {
                     smr.enabled = true;
                     smr.updateWhenOffscreen = true; // Prevents "invisible mummy" when pivot is off-screen
+                    smr.localBounds = new Bounds(Vector3.zero, new Vector3(200f, 200f, 200f)); // Absolute brute-force fix for invisible meshes
                 }
                 foreach (var mr in GetComponentsInChildren<MeshRenderer>(true)) {
                     mr.enabled = true;

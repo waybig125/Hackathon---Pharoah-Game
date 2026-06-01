@@ -40,6 +40,8 @@ namespace TheAlchemistsCrypt.UI
 
         public void OnPointerDown(PointerEventData eventData)
         {
+            if (TheAlchemistsCrypt.UI.MobileHUDButtons.IsCustomizingHUD) return;
+
             if (trackedPointerId == -1)
             {
                 trackedPointerId = eventData.pointerId;
@@ -50,6 +52,26 @@ namespace TheAlchemistsCrypt.UI
 
         public void OnDrag(PointerEventData eventData)
         {
+            if (TheAlchemistsCrypt.UI.MobileHUDButtons.IsCustomizingHUD)
+            {
+                var canvas = GetComponentInParent<Canvas>();
+                if (canvas != null && backgroundRing != null)
+                {
+                    Vector2 localPos;
+                    RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                        backgroundRing.parent as RectTransform,
+                        eventData.position,
+                        canvas.worldCamera,
+                        out localPos
+                    );
+                    backgroundRing.anchoredPosition = localPos;
+                    PlayerPrefs.SetFloat("ButtonPos_JoystickBg_X", localPos.x);
+                    PlayerPrefs.SetFloat("ButtonPos_JoystickBg_Y", localPos.y);
+                    PlayerPrefs.Save();
+                }
+                return;
+            }
+
             if (eventData.pointerId != trackedPointerId) return;
 
             Vector2 localPoint;
@@ -71,6 +93,8 @@ namespace TheAlchemistsCrypt.UI
 
         public void OnPointerUp(PointerEventData eventData)
         {
+            if (TheAlchemistsCrypt.UI.MobileHUDButtons.IsCustomizingHUD) return;
+
             if (eventData.pointerId == trackedPointerId)
             {
                 trackedPointerId = -1;

@@ -9,6 +9,9 @@ public class PartrolAction : FSMAction
         if (stateMachine.Animator.GetBool(AIConstants.IsAttacking))
             return;
 
+        if (!stateMachine.Agent.isActiveAndEnabled || !stateMachine.Agent.isOnNavMesh)
+            return;
+
         if (stateMachine.Agent.remainingDistance > stateMachine.Data.StopDistance)
         {
             return;
