@@ -110,7 +110,7 @@ namespace TheAlchemistsCrypt.UI
             threatEyeGlyphImg.preserveAspect = true;
             threatEyeGlyphImg.color = new Color(1.0f, 0.2f, 0.05f, 0.85f);
             
-            var lblGo = new GameObject("ThreatLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
+            var lblGo = new GameObject("ThreatLabel", typeof(RectTransform));
             lblGo.transform.SetParent(threatMeterGo.transform, false);
             var lblRect = lblGo.GetComponent<RectTransform>();
             lblRect.anchorMin = new Vector2(0.5f, 0f);
@@ -119,7 +119,7 @@ namespace TheAlchemistsCrypt.UI
             lblRect.anchoredPosition = new Vector2(0, -12f);
             lblRect.sizeDelta = new Vector2(120, 25);
             
-            var lblTxt = lblGo.GetComponent<TextMeshProUGUI>();
+            var lblTxt = lblGo.gameObject.AddComponent<TextMeshProUGUI>();
             lblTxt.text = "THREAT LEVEL";
             lblTxt.font = GetTitleFont();
             lblTxt.fontSize = 11;
@@ -281,6 +281,8 @@ namespace TheAlchemistsCrypt.UI
         private void UpdateScrollSlide()
         {
             if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance == null) return;
+            if (scrollUiGo == null || scrollUiRect == null) return;
+
             bool hasScroll = TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.hasKey;
             if (hasScroll != lastHasScroll)
             {

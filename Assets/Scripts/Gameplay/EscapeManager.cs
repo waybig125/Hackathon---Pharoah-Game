@@ -177,7 +177,10 @@ namespace TheAlchemistsCrypt.Gameplay
             beamGo.transform.localPosition = Vector3.up * 150f;
             beamGo.transform.localRotation = Quaternion.identity;
             beamGo.transform.localScale = new Vector3(2.5f, 375f, 2.5f); // scaled to go high up (key is 0.4f scale)
-            DestroyImmediate(beamGo.GetComponent<Collider>());
+            
+            // FIX: Using Destroy instead of DestroyImmediate to avoid illegal call during physics contact
+            var beamCol = beamGo.GetComponent<Collider>();
+            if (beamCol != null) Destroy(beamCol);
 
             Shader beamShader = Shader.Find("Custom/VolumetricBeam");
             if (beamShader == null) beamShader = Shader.Find("Universal Render Pipeline/Unlit");
@@ -498,37 +501,43 @@ namespace TheAlchemistsCrypt.Gameplay
             var immersiveBody = player.GetComponent<TheAlchemistsCrypt.Player.PlayerImmersiveBody>();
             if (immersiveBody != null) immersiveBody.enabled = false;
 
+            var rb = player.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                // Reset velocity BEFORE making kinematic
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.isKinematic = true;
+                rb.useGravity = false;
+            }
+
             // Reset all animators under the player to stop the running animations
             var animators = player.GetComponentsInChildren<Animator>();
             foreach (var anim in animators)
             {
-                if (anim == null) continue;
-                for (int i = 0; i < anim.parameterCount; i++)
-                {
-                    var param = anim.GetParameter(i);
-                    if (param.type == AnimatorControllerParameterType.Float)
+                if (anim == null || anim.runtimeAnimatorController == null) continue;
+                
+                try {
+                    for (int i = 0; i < anim.parameterCount; i++)
                     {
-                        anim.SetFloat(param.nameHash, 0f);
+                        var param = anim.GetParameter(i);
+                        if (param.type == AnimatorControllerParameterType.Float)
+                        {
+                            anim.SetFloat(param.nameHash, 0f);
+                        }
+                        else if (param.type == AnimatorControllerParameterType.Bool)
+                        {
+                            anim.SetBool(param.nameHash, false);
+                        }
+                        else if (param.type == AnimatorControllerParameterType.Int)
+                        {
+                            anim.SetInteger(param.nameHash, 0);
+                        }
                     }
-                    else if (param.type == AnimatorControllerParameterType.Bool)
-                    {
-                        anim.SetBool(param.nameHash, false);
-                    }
-                    else if (param.type == AnimatorControllerParameterType.Int)
-                    {
-                        anim.SetInteger(param.nameHash, 0);
-                    }
+                    anim.Play("Idle", 0, 0f);
+                } catch (System.Exception) {
+                    // Silently skip if animator state "Idle" doesn't exist
                 }
-                anim.Play("Idle", 0, 0f);
-                anim.Play("idle", 0, 0f);
-            }
-
-            var rb = player.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.isKinematic = true;
-                rb.useGravity = false;
-                rb.linearVelocity = Vector3.zero;
             }
 
             // Snugly seat the player on the escape boat
