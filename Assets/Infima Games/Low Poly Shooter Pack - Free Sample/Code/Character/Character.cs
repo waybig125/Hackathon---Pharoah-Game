@@ -674,6 +674,9 @@ namespace InfimaGames.LowPolyShooterPack
 		/// <param name="value">Value.</param>
 		public void OnLockCursor(InputValue value)
 		{
+			// Only trigger when the key is pressed down, not on release!
+			if (value != null && !value.isPressed) return;
+
 			//Flip the value!
 			cursorLocked = !cursorLocked;
 			//Update the cursor's state.

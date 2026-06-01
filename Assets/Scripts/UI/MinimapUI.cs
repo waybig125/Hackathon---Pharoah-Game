@@ -464,21 +464,23 @@ private Sprite buildingSprite;
 
             Vector3 playerPos = playerTransform.position;
             
-            // OPTIMIZATION: Only update UI positions if the player has moved significantly
+            // OPTIMIZATION: Only update map background if the player has moved significantly
             if (Vector3.Distance(playerPos, lastUpdatePlayerPos) < movementThreshold && !isExpanded)
             {
                 UpdateSmoothingRotations();
-                return;
-            }
-            lastUpdatePlayerPos = playerPos;
-
-            if (isExpanded)
-            {
-                UpdateExpandedPositions();
             }
             else
             {
-                UpdateRadarPositions();
+                lastUpdatePlayerPos = playerPos;
+
+                if (isExpanded)
+                {
+                    UpdateExpandedPositions();
+                }
+                else
+                {
+                    UpdateRadarPositions();
+                }
             }
 
             // Animate dynamic radar sweep rotation

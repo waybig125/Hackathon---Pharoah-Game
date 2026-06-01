@@ -383,10 +383,9 @@ namespace TheAlchemistsCrypt.AI
                     mr.enabled = true;
                 }
                 
-                // PERFORMANCE: Stop GPU bone skinning and CPU blend-tree updates when off-screen.
-                // With 20 mummies all animating every frame regardless of visibility,
-                // SkinnedMeshRenderer was updating bone transforms even for mummies behind the player.
-                animator.cullingMode = AnimatorCullingMode.CullCompletely;
+                // FORCE ANIMATION: Always animate to prevent culling calculation glitches
+                // where mummies render invisibly after being culled offscreen.
+                animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
                 hasSpeedParameter = HasParameter("Speed");
                 if (hasSpeedParameter)
                 {

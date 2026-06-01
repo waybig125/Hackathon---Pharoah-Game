@@ -500,7 +500,7 @@ namespace TheAlchemistsCrypt.Gameplay
         private void OnDestroy()
         {
             // PERFORMANCE: Explicitly kill all tweens to prevent GC handle leaks on domain reload/scene switch
-            DG.Tweening.DOTween.KillAll(true);
+            DG.Tweening.DOTween.KillAll(false);
         }
     }
 }

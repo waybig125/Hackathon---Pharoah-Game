@@ -70,10 +70,37 @@ namespace TheAlchemistsCrypt.UI
         private Image guideArrowImage;
         private Image guideArrowOutlineImage;
 
+        private GameObject bootFader = null;
+        private GameObject startScreenCanvasInstance = null;
+        private GameObject startScreenBgGo = null;
+        private GameObject startScreenBottomPanelGo = null;
+        private GameObject activeDifficultyDropdown = null;
+
         private void Awake()
         {
             Instance = this;
-            // Heavy initialization moved to Start() coroutine to prevent startup hitches
+            
+            // Create a temporary black overlay immediately on Awake to prevent city flash
+            if (!HasStartedGame)
+            {
+                var canvas = GetComponent<Canvas>();
+                if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 9998; // right under BootCanvas (9999) but above game camera
+
+                var scaler = GetComponent<CanvasScaler>();
+                if (scaler == null) scaler = gameObject.AddComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920, 1080);
+                scaler.matchWidthOrHeight = 1.0f;
+
+                bootFader = new GameObject("BootFader", typeof(RectTransform), typeof(Image));
+                bootFader.transform.SetParent(transform, false);
+                var r = bootFader.GetComponent<RectTransform>();
+                r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one;
+                r.offsetMin = r.offsetMax = Vector2.zero;
+                bootFader.GetComponent<Image>().color = Color.black;
+            }
         }
 
 
@@ -174,7 +201,7 @@ namespace TheAlchemistsCrypt.UI
 
             // ON desktop, escape should trigger settings toggling using modern Input System API.
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
-            if (keyboard != null && (keyboard.escapeKey.wasPressedThisFrame || keyboard.escapeKey.wasReleasedThisFrame)) {
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame) {
                 ToggleSettingsFromEscape();
             }
 
@@ -259,14 +286,17 @@ namespace TheAlchemistsCrypt.UI
 
         public void ToggleSettingsFromEscape()
         {
-            if (!HasStartedGame || deathPanelInstance != null) return;
+            if (deathPanelInstance != null) return;
             
-            if (Time.unscaledTime - lastEscTime > 0.3f) {
-                lastEscTime = Time.unscaledTime;
-                if (settingsModalInstance != null) {
-                    var bg = settingsModalInstance;
-                    Destroy(bg);
-                    settingsModalInstance = null;
+            // If settings modal is open, Escape can always close it
+            if (settingsModalInstance != null)
+            {
+                var bg = settingsModalInstance;
+                Destroy(bg);
+                settingsModalInstance = null;
+                
+                if (HasStartedGame)
+                {
                     Time.timeScale = 1f; // RESUME THE GAME!
                     if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
                     
@@ -279,21 +309,35 @@ namespace TheAlchemistsCrypt.UI
                         Cursor.lockState = CursorLockMode.Locked;
                         Cursor.visible = false;
                     }
-                } else {
-                    var canvas = GetComponent<Canvas>();
-                    if (canvas != null) {
-                        OpenSettingsModal(canvas.GetComponent<RectTransform>());
-                    }
-                    
-                    if (cachedCharacter != null)
-                    {
-                        cachedCharacter.SetCursorLocked(false);
-                    }
-                    else
-                    {
-                        Cursor.lockState = CursorLockMode.None;
-                        Cursor.visible = true;
-                    }
+                }
+                else
+                {
+                    // Start screen settings cleanup: show start screen background/buttons again!
+                    if (startScreenBgGo != null) startScreenBgGo.SetActive(true);
+                    if (startScreenBottomPanelGo != null) startScreenBottomPanelGo.SetActive(true);
+                }
+                return;
+            }
+
+            if (!HasStartedGame) return; // Escape does not open settings on start screen
+            
+            if (Time.unscaledTime - lastEscTime > 0.3f)
+            {
+                lastEscTime = Time.unscaledTime;
+                var canvas = GetComponent<Canvas>();
+                if (canvas != null)
+                {
+                    OpenSettingsModal(canvas.GetComponent<RectTransform>());
+                }
+                
+                if (cachedCharacter != null)
+                {
+                    cachedCharacter.SetCursorLocked(false);
+                }
+                else
+                {
+                    Cursor.lockState = CursorLockMode.None;
+                    Cursor.visible = true;
                 }
             }
         }
@@ -568,6 +612,11 @@ namespace TheAlchemistsCrypt.UI
             IsCustomizingHUD = true;
             Time.timeScale = 0f;
 
+            if (!HasStartedGame && startScreenCanvasInstance != null)
+            {
+                startScreenCanvasInstance.SetActive(false);
+            }
+
             var canvas = transform.GetComponent<RectTransform>();
             
             // Add customRoot to HUD_Root so it blocks under-layers (joystick, looking) but sits behind the buttons
@@ -668,16 +717,31 @@ namespace TheAlchemistsCrypt.UI
                 () => {
                     IsCustomizingHUD = false;
                     Destroy(customRoot.gameObject);
-                    if (settingsModalInstance != null)
-                    {
-                        Destroy(settingsModalInstance);
-                        settingsModalInstance = null;
-                    }
                     BuildHUD();
-                    Time.timeScale = 1f; // RESUME THE GAME!
-                    if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
-                    Cursor.lockState = CursorLockMode.Locked;
-                    Cursor.visible = false;
+                    
+                    if (!HasStartedGame)
+                    {
+                        // Return to settings modal on Start Screen
+                        if (startScreenCanvasInstance != null)
+                        {
+                            startScreenCanvasInstance.SetActive(true);
+                            if (startScreenBgGo != null) startScreenBgGo.SetActive(true);
+                            if (startScreenBottomPanelGo != null) startScreenBottomPanelGo.SetActive(true);
+                            OpenSettingsModal(startScreenCanvasInstance.GetComponent<RectTransform>());
+                        }
+                    }
+                    else
+                    {
+                        if (settingsModalInstance != null)
+                        {
+                            Destroy(settingsModalInstance);
+                            settingsModalInstance = null;
+                        }
+                        Time.timeScale = 1f; // RESUME THE GAME!
+                        if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
+                        Cursor.lockState = CursorLockMode.Locked;
+                        Cursor.visible = false;
+                    }
                 }, new Color(0.1f, 0.9f, 0.3f, 0.2f));
             var saveRect = saveBtn.GetComponent<RectTransform>();
             saveRect.anchorMin = saveRect.anchorMax = new Vector2(1f, 0.5f);
@@ -777,6 +841,13 @@ namespace TheAlchemistsCrypt.UI
             if (settingsModalInstance != null) return;
             Time.timeScale = 0f; // PAUSE THE GAME!
             if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = false;
+            
+            // Hide Start Screen background and bottom panel when settings modal is open
+            if (!HasStartedGame)
+            {
+                if (startScreenBgGo != null) startScreenBgGo.SetActive(false);
+                if (startScreenBottomPanelGo != null) startScreenBottomPanelGo.SetActive(false);
+            }
             
             // Background blur overlay
             var modalBg = new GameObject("SettingsModal", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
@@ -921,6 +992,11 @@ namespace TheAlchemistsCrypt.UI
                     () => {
                         Destroy(modalBg.gameObject);
                         settingsModalInstance = null;
+                        if (!HasStartedGame)
+                        {
+                            if (startScreenBgGo != null) startScreenBgGo.SetActive(true);
+                            if (startScreenBottomPanelGo != null) startScreenBottomPanelGo.SetActive(true);
+                        }
                     },
                     new Color(0.95f, 0.8f, 0.2f, 0.15f)
                 );
@@ -1224,6 +1300,12 @@ namespace TheAlchemistsCrypt.UI
 
         private void CreateStartScreen()
         {
+            if (bootFader != null)
+            {
+                Destroy(bootFader);
+                bootFader = null;
+            }
+
             Time.timeScale = 0f;
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
@@ -1234,6 +1316,7 @@ namespace TheAlchemistsCrypt.UI
             }
 
             var startCanvasGo = new GameObject("StartScreenOverlay", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            startScreenCanvasInstance = startCanvasGo;
             var canvas = startCanvasGo.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 1000;
@@ -1244,6 +1327,7 @@ namespace TheAlchemistsCrypt.UI
             scaler.matchWidthOrHeight = 1.0f;
 
             var bgGo = new GameObject("StartBackground", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            startScreenBgGo = bgGo.gameObject;
             bgGo.SetParent(startCanvasGo.transform, false);
             bgGo.anchorMin = Vector2.zero; bgGo.anchorMax = Vector2.one;
             bgGo.offsetMin = bgGo.offsetMax = Vector2.zero;
@@ -1270,6 +1354,7 @@ namespace TheAlchemistsCrypt.UI
             StartCoroutine(LightningFlashesRoutine(lImg));
 
             var bottomActionGo = new GameObject("BottomActionPanel", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            startScreenBottomPanelGo = bottomActionGo.gameObject;
             bottomActionGo.SetParent(startCanvasGo.transform, false);
             bottomActionGo.anchorMin = bottomActionGo.anchorMax = new Vector2(0.5f, 0f);
             bottomActionGo.pivot = new Vector2(0.5f, 0f);
@@ -1304,7 +1389,17 @@ namespace TheAlchemistsCrypt.UI
                 Cursor.visible = false;
                 Cursor.lockState = CursorLockMode.Locked;
                 if (TheAlchemistsCrypt.Input.MobileInputManager.Instance) TheAlchemistsCrypt.Input.MobileInputManager.Instance.enabled = true;
+                
+                if (activeDifficultyDropdown != null)
+                {
+                    Destroy(activeDifficultyDropdown);
+                    activeDifficultyDropdown = null;
+                }
+                
                 Destroy(startCanvasGo);
+                startScreenCanvasInstance = null;
+                startScreenBgGo = null;
+                startScreenBottomPanelGo = null;
                 DisableCompetingCanvases();
             };
 
@@ -1351,7 +1446,10 @@ namespace TheAlchemistsCrypt.UI
             diffBtnTextGo.anchorMin = Vector2.zero; diffBtnTextGo.anchorMax = Vector2.one;
             var diffBtnTxt = diffBtnTextGo.gameObject.AddComponent<TextMeshProUGUI>();
             diffBtnTxt.font = GetTitleFont();
-            diffBtnTxt.fontSize = 24;
+            diffBtnTxt.fontSize = 18; // Smaller font size to prevent clipping
+            diffBtnTxt.enableAutoSizing = true;
+            diffBtnTxt.fontSizeMin = 12;
+            diffBtnTxt.fontSizeMax = 20;
             diffBtnTxt.fontStyle = FontStyles.Bold;
             diffBtnTxt.alignment = TextAlignmentOptions.Center;
             diffBtnTxt.color = Color.black;
@@ -1364,16 +1462,7 @@ namespace TheAlchemistsCrypt.UI
             var diffHelper = diffBtnGo.gameObject.AddComponent<ButtonInputHelper>();
             diffHelper.onClick = () =>
             {
-                currentDiff = (currentDiff + 1) % 4;
-                PlayerPrefs.SetInt("DifficultyLevel", currentDiff);
-                PlayerPrefs.Save();
-                diffBtnTxt.text = $"DIFFICULTY: {diffNames[currentDiff]} ({diffKills[currentDiff]} KILLS)";
-                
-                // Update EscapeManager dynamically if running
-                if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null)
-                {
-                    TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.SetDifficulty(currentDiff);
-                }
+                ToggleDifficultyDropdown(bottomActionGo, diffBtnTxt);
             };
 
             // --- SETTINGS BUTTON ---
@@ -1399,10 +1488,99 @@ namespace TheAlchemistsCrypt.UI
             var settingsHelper = settingsBtnGo.gameObject.AddComponent<ButtonInputHelper>();
             settingsHelper.onClick = () =>
             {
+                if (activeDifficultyDropdown != null)
+                {
+                    Destroy(activeDifficultyDropdown);
+                    activeDifficultyDropdown = null;
+                }
                 OpenSettingsModal(startCanvasGo.GetComponent<RectTransform>());
             };
 
             SetLayerRecursively(startCanvasGo, 5);
+        }
+
+        private void ToggleDifficultyDropdown(Transform parent, TextMeshProUGUI buttonText)
+        {
+            if (activeDifficultyDropdown != null)
+            {
+                Destroy(activeDifficultyDropdown);
+                activeDifficultyDropdown = null;
+                return;
+            }
+
+            // Create dropdown container (using outline-offset pattern)
+            var outlineGo = new GameObject("DifficultyDropdownOutline", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            outlineGo.SetParent(parent, false);
+            outlineGo.anchorMin = outlineGo.anchorMax = new Vector2(0.5f, 0.5f);
+            outlineGo.pivot = new Vector2(0.5f, 0f);
+            outlineGo.anchoredPosition = new Vector2(-200, -10); // Grow upwards starting right above the button
+            outlineGo.sizeDelta = new Vector2(384, 244);
+            var outlineImg = outlineGo.GetComponent<Image>();
+            outlineImg.color = new Color(0.95f, 0.8f, 0.2f, 1f); // Egyptian gold border line
+            
+            var dropdownGo = new GameObject("DifficultyDropdown", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+            dropdownGo.SetParent(outlineGo, false);
+            dropdownGo.anchorMin = Vector2.zero; dropdownGo.anchorMax = Vector2.one;
+            dropdownGo.offsetMin = new Vector2(2, 2); dropdownGo.offsetMax = new Vector2(-2, -2);
+            var img = dropdownGo.GetComponent<Image>();
+            img.color = new Color(0.08f, 0.08f, 0.08f, 0.98f);
+            
+            outlineGo.SetAsLastSibling();
+            activeDifficultyDropdown = outlineGo.gameObject;
+
+            string[] diffNames = { "EASY", "NORMAL", "HARD", "NIGHTMARE" };
+            int[] diffKills = { 5, 10, 20, 35 };
+
+            for (int i = 0; i < 4; i++)
+            {
+                int index = i;
+                var optionGo = new GameObject("Option_" + diffNames[i], typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+                optionGo.SetParent(dropdownGo, false);
+                optionGo.anchorMin = optionGo.anchorMax = new Vector2(0.5f, 0f);
+                optionGo.pivot = new Vector2(0.5f, 0f);
+                optionGo.anchoredPosition = new Vector2(0, index * 60);
+                optionGo.sizeDelta = new Vector2(376, 58);
+                
+                var optImg = optionGo.GetComponent<Image>();
+                optImg.color = new Color(0.12f, 0.12f, 0.12f, 1f);
+                
+                // Option Text
+                var optTextGo = new GameObject("Text", typeof(RectTransform)).GetComponent<RectTransform>();
+                optTextGo.SetParent(optionGo, false);
+                optTextGo.anchorMin = Vector2.zero; optTextGo.anchorMax = Vector2.one;
+                var optTxt = optTextGo.gameObject.AddComponent<TextMeshProUGUI>();
+                optTxt.font = GetTitleFont();
+                optTxt.fontSize = 18;
+                optTxt.fontStyle = FontStyles.Bold;
+                optTxt.alignment = TextAlignmentOptions.Center;
+                optTxt.color = new Color(0.95f, 0.85f, 0.6f, 1f);
+                optTxt.text = $"{diffNames[index]} ({diffKills[index]} KILLS)";
+                
+                // Highlight currently selected difficulty
+                int currentSelected = PlayerPrefs.GetInt("DifficultyLevel", 1);
+                if (index == currentSelected)
+                {
+                    optImg.color = new Color(0.95f, 0.8f, 0.2f, 0.2f);
+                    optTxt.color = new Color(0.95f, 0.8f, 0.2f, 1f);
+                }
+
+                var helper = optionGo.gameObject.AddComponent<ButtonInputHelper>();
+                helper.allowClicksDuringCustomization = true;
+                helper.onClick = () =>
+                {
+                    PlayerPrefs.SetInt("DifficultyLevel", index);
+                    PlayerPrefs.Save();
+                    buttonText.text = $"DIFFICULTY: {diffNames[index]} ({diffKills[index]} KILLS)";
+                    
+                    if (TheAlchemistsCrypt.Gameplay.EscapeManager.Instance != null)
+                    {
+                        TheAlchemistsCrypt.Gameplay.EscapeManager.Instance.SetDifficulty(index);
+                    }
+                    
+                    Destroy(activeDifficultyDropdown);
+                    activeDifficultyDropdown = null;
+                };
+            }
         }
 
         private TMP_FontAsset GetTitleFont()
@@ -1907,7 +2085,7 @@ namespace TheAlchemistsCrypt.UI
         private void OnDestroy()
         {
             // PERFORMANCE: Explicitly kill all tweens to prevent GC handle leaks on domain reload/scene switch
-            DG.Tweening.DOTween.KillAll(true);
+            DG.Tweening.DOTween.KillAll(false);
         }
     }
 }
