@@ -926,20 +926,19 @@ namespace TheAlchemistsCrypt.Editor
                 bool isCollider = renderer.name.Contains("COLLIDER", System.StringComparison.OrdinalIgnoreCase) ||
                                   renderer.name.Contains("Collider", System.StringComparison.OrdinalIgnoreCase);
 
-                if (!isCollider && renderer.sharedMaterials != null)
-                {
-                    foreach (var mat in renderer.sharedMaterials)
-                    {
-                        if (mat != null && (mat.name.Contains("COLLIDER", System.StringComparison.OrdinalIgnoreCase) ||
-                                            mat.name.Contains("Collider", System.StringComparison.OrdinalIgnoreCase)))
-                        {
-                            isCollider = true;
-                            break;
-                        }
+                // PROTECT DYNAMIC ENTITIES: Never destroy renderers on mummies, zombies, players or specific landmarks
+                bool isProtected = false;
+                Transform protCheck = renderer.transform;
+                while (protCheck != null) {
+                    string n = protCheck.name.ToLower();
+                    if (n.Contains("mummy") || n.Contains("zombie") || n.Contains("player") || n.Contains("alchemisttomb") || n.Contains("house")) {
+                        isProtected = true;
+                        break;
                     }
+                    protCheck = protCheck.parent;
                 }
 
-                if (isCollider)
+                if (isCollider && !isProtected)
                 {
                     renderer.enabled = false;
                     Object.DestroyImmediate(renderer);
@@ -1257,32 +1256,38 @@ namespace TheAlchemistsCrypt.Editor
                 if (t == null) continue;
                 string nameLower = t.gameObject.name.ToLower();
                 bool isDynamic = false;
-                foreach (string kw in dynamicKeywords)
-                {
-                    if (nameLower.Contains(kw)) { isDynamic = true; break; }
-                }
-
-                // EXCLUDE TREES from static batching to fix detail loss at close range
-                // Check the object itself and all its parents up to the city root.
-                bool isPartOfTree = false;
+                
+                // Check the object itself and all its parents up to the city root for dynamic keywords
                 Transform checkT = t;
                 while (checkT != null && checkT != cityRoot.transform) {
                     string checkName = checkT.gameObject.name.ToLower();
-                    if (checkName.Contains("tree") || checkName.Contains("palm")) {
-                        isPartOfTree = true;
-                        break;
+                    
+                    // Check standard dynamic keywords
+                    foreach (string kw in dynamicKeywords)
+                    {
+                        if (checkName.Contains(kw)) { isDynamic = true; break; }
                     }
+                    
+                    // Check for tree/palm keywords
+                    if (checkName.Contains("tree") || checkName.Contains("palm")) {
+                        isDynamic = true;
+                    }
+                    
+                    // Check for dynamic rigidbodies or specific custom props
+                    if (checkName.Contains("alchemisttomb") || checkName.Contains("tombpylon")) {
+                        isDynamic = true;
+                    }
+
+                    if (isDynamic) break;
                     checkT = checkT.parent;
                 }
 
-                if (isPartOfTree) {
-                    // Force-clear any existing static flags if this object is part of a tree
+                if (isDynamic) {
+                    // Force-clear any existing static flags if this object is part of a dynamic hierarchy
                     GameObjectUtility.SetStaticEditorFlags(t.gameObject, 0);
                     skipped++; 
                     continue; 
                 }
-
-                if (isDynamic) { skipped++; continue; }
 
                 GameObjectUtility.SetStaticEditorFlags(t.gameObject, staticFlags);
                 marked++;

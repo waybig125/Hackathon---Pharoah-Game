@@ -18,10 +18,31 @@ namespace TheAlchemistsCrypt.Weapons
 
         [Header("Ammo Settings")]
         [SerializeField] private int maxAmmo = 30;
-        public int MaxAmmo => maxAmmo;
+        public int MaxAmmo {
+            get {
+                var weapon = GetEquippedWeapon();
+                return weapon != null ? weapon.GetAmmunitionTotal() : maxAmmo;
+            }
+        }
         [SerializeField] private int currentAmmo = 30;
-        public int CurrentAmmo => currentAmmo;
+        public int CurrentAmmo {
+            get {
+                var weapon = GetEquippedWeapon();
+                return weapon != null ? weapon.GetAmmunitionCurrent() : currentAmmo;
+            }
+        }
         [SerializeField] private float reloadDuration = 1.2f;
+
+        private InfimaGames.LowPolyShooterPack.Weapon GetEquippedWeapon()
+        {
+            var character = GetComponentInParent<InfimaGames.LowPolyShooterPack.Character>();
+            if (character == null)
+            {
+                var player = GameObject.FindWithTag("Player");
+                if (player != null) character = player.GetComponentInChildren<InfimaGames.LowPolyShooterPack.Character>();
+            }
+            return character != null ? character.GetEquippedWeapon() as InfimaGames.LowPolyShooterPack.Weapon : null;
+        }
 
         [Header("Pool Tags")]
         [SerializeField] private string sulfurPoolTag = "SulfurProjectile";
