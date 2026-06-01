@@ -997,74 +997,47 @@ namespace TheAlchemistsCrypt.Editor
                 bc.size = new Vector3(1.2f, 12f, 1.2f);
 
                 // RECALCULATE MESH BOUNDS to fix placement accuracy
-                // We reset bounds in Step 1 for accurate placement. 
-                // We NO LONGER expand bounds manually, as that corrupts shared mesh assets
-                // and causes structural artifacts (blinking/missing cubes).
-                // DistanceCuller and Frustum Culling now handle this naturally.
                 foreach (var mf in obj.GetComponentsInChildren<MeshFilter>(true)) {
                     if (mf.sharedMesh != null) {
                         mf.sharedMesh.RecalculateBounds();
                     }
                 }
-
-                // Handle dark_palm_tree optimizations
-                if (pName.Contains("dark_palm_tree")) {
-                    // Sinking handled via yOffset parameter in calls
-
-                    // Find and hide bottom mesh so GPU doesn't render it
-                    foreach (var mr in obj.GetComponentsInChildren<MeshRenderer>(true)) {
-                        string mrName = mr.gameObject.name.ToLower();
-                        if (mrName.Contains("bottom") || mrName.Contains("base") || mrName.Contains("cap") || mrName.Contains("ground")) {
-                            mr.enabled = false;
-                        }
-                    }
-                }
             }
-            else if (enterable) {
-                foreach (var mf in obj.GetComponentsInChildren<MeshFilter>(true)) {
-                    if (mf.sharedMesh == null) continue;
-                    var collider = mf.gameObject.GetComponent<MeshCollider>();
-                    if (collider == null) {
-                        collider = mf.gameObject.AddComponent<MeshCollider>();
-                    }
-                    collider.sharedMesh = mf.sharedMesh;
-                    collider.convex = false;
-                }
-            } else {
-                var colliders = obj.GetComponentsInChildren<Collider>(true);
-                if (colliders.Length == 0) {
-                    var filters = obj.GetComponentsInChildren<MeshFilter>(true);
-                    if (filters.Length > 0) {
-                        foreach (var filterObj in filters) {
-                            if (filterObj.sharedMesh == null) continue;
-                            
-                            string filterName = filterObj.gameObject.name.ToLower();
-                            if (filterName.Contains("meat") || filterName.Contains("food") || 
-                                filterName.Contains("utensil") || filterName.Contains("plate") || 
-                                filterName.Contains("cup") || filterName.Contains("detail") || 
-                                filterName.Contains("prop") || filterName.Contains("casing") ||
-                                filterName.Contains("barrel") || filterName.Contains("crate")) 
-                            {
-                                continue;
-                            }
+            else {
+                // PRECISION PHYSICS FOR BUILDINGS: Use actual visible mesh for collision.
+                // NO MORE BOX COLLIDERS for houses/stalls - they are too inaccurate and cause "ghost blockers".
+                
+                // 1. First, strip out all existing colliders (imported GLB boxes etc)
+                var existingCols = obj.GetComponentsInChildren<Collider>(true);
+                foreach (var c in existingCols) UnityEngine.Object.DestroyImmediate(c);
+                var rootCol = obj.GetComponent<Collider>();
+                if (rootCol != null) UnityEngine.Object.DestroyImmediate(rootCol);
 
-                            // PERFORMANCE: Use MeshCollider for complex structures like houses to support roof walking, otherwise BoxCollider
-                            if (pName.Contains("house") || filterName.Contains("house") || pName.Contains("building")) {
-                                var mc = filterObj.gameObject.GetComponent<MeshCollider>();
-                                if (mc == null) {
-                                    mc = filterObj.gameObject.AddComponent<MeshCollider>();
-                                }
-                                mc.sharedMesh = filterObj.sharedMesh;
-                                mc.convex = false;
-                            } else {
-                                var bc = filterObj.gameObject.GetComponent<BoxCollider>();
-                                if (bc == null) {
-                                    bc = filterObj.gameObject.AddComponent<BoxCollider>();
-                                }
-                            }
-                        }
-                    } else {
-                        obj.AddComponent<BoxCollider>();
+                // 2. Add MeshColliders to VISIBLE parts only, ignoring giant invisible "ghost" meshes
+                var meshFilters = obj.GetComponentsInChildren<MeshFilter>(true);
+                foreach (var mf in meshFilters)
+                {
+                    if (mf.sharedMesh == null) continue;
+                    
+                    string filterName = mf.gameObject.name.ToLower();
+                    
+                    // BLACKLIST: Ignore giant invisible meshes that Unity often imports from GLBs
+                    // "wood 4" is the giant 25m floor in the spawn house. 
+                    // "proxy", "shadow", "room" are common invisible utility meshes.
+                    if (filterName.Contains("wood 4") || filterName.Contains("proxy") || 
+                        filterName.Contains("shadow") || filterName.Contains("room") ||
+                        filterName.Contains("collider_mesh") || filterName.Contains("bounds"))
+                    {
+                        continue; 
+                    }
+
+                    // Only add collider if it's a visible mesh
+                    var ren = mf.GetComponent<Renderer>();
+                    if (ren != null)
+                    {
+                        var mc = mf.gameObject.AddComponent<MeshCollider>();
+                        mc.sharedMesh = mf.sharedMesh;
+                        mc.convex = false; // Precision walking inside and on roofs
                     }
                 }
             }
