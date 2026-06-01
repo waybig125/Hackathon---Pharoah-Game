@@ -526,6 +526,11 @@ namespace TheAlchemistsCrypt.UI
                     sprintIndicatorImg = sprintIndicatorGo.GetComponent<Image>();
                     sprintIndicatorImg.sprite = sprintIcon;
                     sprintIndicatorImg.color = new Color(1f, 1f, 1f, 0f);
+
+                    if (!HasStartedGame)
+                    {
+                        hudRootGo.SetActive(false);
+                    }
                 }
 
 
