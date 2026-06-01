@@ -428,7 +428,7 @@ namespace TheAlchemistsCrypt.Editor
 
             GameObject terrainGo = unityTerrainGo;
 
-            float spacing = 20f; // Decreased spacing to bring houses closer together for a denser residential feel
+            float spacing = 28f; // INCREASED: Set to 28m to give houses much more breathing room and prevent street clipping
             float halfSpan = (gridSize * spacing) / 2f;
             var enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Enemy-AI/Prefabs/TestZombie.prefab");
 
@@ -458,7 +458,8 @@ namespace TheAlchemistsCrypt.Editor
                         int numStalls = Random.Range(3, 7);
                         for (int i = 0; i < numStalls; i++) {
                             if (stallPrefabs.Count > 0) {
-                                Vector3 sOffset = new Vector3(Random.Range(-25f, 25f), 0f, Random.Range(-25f, 25f));
+                                // Spaced further apart to prevent overlapping stalls
+                                Vector3 sOffset = new Vector3(Random.Range(-10f, 10f), 0f, Random.Range(-10f, 10f));
                                 Vector3 sPos = pos + sOffset;
                                 sPos.y = GetTerrainHeight(sPos);
                                 
@@ -580,8 +581,8 @@ namespace TheAlchemistsCrypt.Editor
                 if (rName.Contains("terrain") || rName.Contains("sea") || rName.Contains("bounds") || rName.Contains("palm") || rName.Contains("tree")) continue;
                 
                 Bounds b = r.bounds;
-                // INCREASED: Added a 2.5m safety margin around every building to absolutely prevent clipping
-                b.Expand(new Vector3(2.5f, 0f, 2.5f)); 
+                // INCREASED: Added a 4.0m safety margin around every building to absolutely prevent trees from spawning inside
+                b.Expand(new Vector3(4.0f, 0f, 4.0f)); 
                 obstacleBounds.Add(b);
             }
             
@@ -592,7 +593,7 @@ namespace TheAlchemistsCrypt.Editor
                 
                 Bounds b = c.bounds;
                 // Ensure monuments like the AlchemistTomb are represented with extra buffer
-                float extraBuffer = (cName.Contains("tomb") || cName.Contains("house")) ? 1.5f : 1.0f;
+                float extraBuffer = (cName.Contains("tomb") || cName.Contains("house")) ? 2.5f : 1.5f;
                 b.Expand(new Vector3(extraBuffer, 0f, extraBuffer));
                 obstacleBounds.Add(b);
             }

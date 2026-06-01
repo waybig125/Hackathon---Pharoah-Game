@@ -1294,13 +1294,20 @@ namespace TheAlchemistsCrypt.Editor
                     if (isDynamic) break;
                     checkT = checkT.parent;
                 }
+if (isDynamic) {
+    // Force-clear any existing static flags if this object is part of a dynamic hierarchy.
+    // This is the primary fix for "invisible zombies" - rigged models MUST be dynamic to move/render.
+    GameObjectUtility.SetStaticEditorFlags(t.gameObject, 0);
 
-                if (isDynamic) {
-                    // Force-clear any existing static flags if this object is part of a dynamic hierarchy
-                    GameObjectUtility.SetStaticEditorFlags(t.gameObject, 0);
-                    skipped++; 
-                    continue; 
-                }
+    // If it's an enemy or character, ensure all renderers are active
+    if (nameLower.Contains("zombie") || nameLower.Contains("mummy") || nameLower.Contains("player")) {
+        var renderer = t.GetComponent<Renderer>();
+        if (renderer != null) renderer.enabled = true;
+    }
+
+    skipped++; 
+    continue; 
+}
 
                 GameObjectUtility.SetStaticEditorFlags(t.gameObject, staticFlags);
                 marked++;
