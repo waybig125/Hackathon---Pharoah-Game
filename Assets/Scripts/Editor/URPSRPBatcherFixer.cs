@@ -346,6 +346,12 @@ namespace TheAlchemistsCrypt.Editor
             }
             
             // 2. Normal Map
+            Texture normalTex = null;
+            string normalTexProp = null;
+            if (src.HasProperty("normalTexture")) normalTexProp = "normalTexture";
+            else if (src.HasProperty("_BumpMap")) normalTexProp = "_BumpMap";
+            else if (src.HasProperty("_NormalMap")) normalTexProp = "_NormalMap";
+
             // FORCE COMMON NORMAL MAP FOR CITY ASSETS: Ensures consistent stone detail
             if (isUnifiedAlbedoAsset && commonNormal != null)
             {
