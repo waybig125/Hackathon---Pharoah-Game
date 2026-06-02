@@ -18,8 +18,8 @@ public static class SetupNewMummy
 
         string[] fbxs = {
             "Assets/Mummy/Idle.fbx",
-            "Assets/Mummy/Zombie Attack.fbx",
-            "Assets/Mummy/Walking (1).fbx",
+            "Assets/Mummy/New_anims2/Zombie Attack.fbx",
+            "Assets/Mummy/New_anims2/Walking.fbx",
             "Assets/Mummy/Falling Back Death.fbx"
         };
 
